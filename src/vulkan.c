@@ -43,7 +43,12 @@ VkInstance uvc_vk_create_instance(const char *app_name,
 
   /* Create the instance */
   VkResult res = vkCreateInstance(&create_info, NULL, &instance);
-  if (res) return VK_NULL_HANDLE;
+  if (res) {
+    uvc_utils_log(UVC_DANGER, "[x] kmsVkCreateVkInstance: vkCreateInstance Failed");
+    return VK_NULL_HANDLE;
+  }
+
+  uvc_utils_log(UVC_SUCCESS, "kmsVkCreateVkInstance: VkInstance created retval(%p)", instance);
 
   return instance;
 }

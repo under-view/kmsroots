@@ -4,6 +4,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdarg.h>
+#include <time.h>
 
 #define UNUSED __attribute__((unused))
 #define ARRAY_LEN(_arr) (sizeof(_arr) / sizeof(_arr[0]))
