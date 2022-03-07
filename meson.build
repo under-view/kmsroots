@@ -1,0 +1,29 @@
+project(
+  'underviewcomp',
+  'c',
+  version: '0.0.1',
+  license: 'MIT',
+  meson_version: '>=0.53.0',
+  default_options: [
+    'warning_level=2',
+    'werror=true',
+    'prefix=/usr/'
+  ],
+)
+
+so_version = ['0']
+cc = meson.get_compiler('c')
+
+inc = include_directories('include')
+
+subdir('src')
+
+lib_underviewcomp = library(
+  meson.project_name(),
+  version: '.'.join(so_version),
+  link_whole: lib_underviewcomp_static,
+  include_directories: inc,
+  install: true
+)
+
+subdir('examples')
