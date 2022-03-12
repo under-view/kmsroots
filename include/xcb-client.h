@@ -1,14 +1,14 @@
 
-#ifndef UVC_XCB_CLIENT_H
-#define UVC_XCB_CLIENT_H
+#ifndef UVR_XCB_CLIENT_H
+#define UVR_XCB_CLIENT_H
 
 #include "common.h"
 #include <xcb/xcb.h>
 
-typedef struct _uvcxcb {
+typedef struct _uvrxcb {
   xcb_connection_t *conn;
   xcb_window_t window;
-} uvcxcb;
+} uvrxcb;
 
 /*
  * Function creates a fullscreen xcb client
@@ -27,12 +27,12 @@ typedef struct _uvcxcb {
  * return on failure:
  *    conn = NULL, window = UINT32_MAX
  */
-uvcxcb uvc_xcb_create_client(const char *display, int *screen, const char *appname, bool fullscreen);
+uvrxcb uvr_xcb_create_client(const char *display, int *screen, const char *appname, bool fullscreen);
 
 /* Displays the window */
-void uvc_xcb_display_window(uvcxcb *client);
+void uvr_xcb_display_window(uvrxcb *client);
 
-/* frees all allocated memory contained in uvcxcb */
-void uvc_xcb_destory(uvcxcb *client);
+/* frees all allocated memory contained in uvrxcb */
+void uvr_xcb_destory(uvrxcb *client);
 
 #endif

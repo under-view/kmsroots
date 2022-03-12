@@ -1,6 +1,6 @@
-# libunderviewcomp
+# libunderview-renderer
 
-Library used to build Vulkan applications and compositors that utilize KMS directly.
+Library for building X11, Wayland, & KMS Vulkan Applications
 
 **Dependencies (Debian)**
 ```sh
@@ -18,5 +18,7 @@ $ ninja -C build
 
 **Running Examples**
 ```sh
-$ ./build/examples/underviewcomp-x11
+$ ./build/examples/underview-renderer-x11
+$ ./build/examples/underview-renderer-wayland
+$ ./build/examples/underview-renderer-kms
 ```

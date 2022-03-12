@@ -5,19 +5,19 @@ libxcb = cc.find_library('libxcb', required: false)
 libxcbewmh = cc.find_library('libxcb-ewmh', required: false)
 
 fs = [ 'vulkan.c', 'utils.c' ]
-lib_uvc_deps = [vulkan, libmath]
+lib_uvr_deps = [vulkan, libmath]
 
 if libdrm.found()
-  lib_uvc_deps += [libdrm]
+  lib_uvr_deps += [libdrm]
 endif
 
 if libxcb.found() and libxcbewmh.found()
   fs += ['xcb-client.c']
-  lib_uvc_deps += [libxcb, libxcbewmh]
+  lib_uvr_deps += [libxcb, libxcbewmh]
 endif
 
-lib_underviewcomp_static = static_library(
-  'uvc', files(fs),
-  dependencies: lib_uvc_deps,
+lib_underview_renderer_static = static_library(
+  'uvr', files(fs),
+  dependencies: lib_uvr_deps,
   include_directories: inc
 )

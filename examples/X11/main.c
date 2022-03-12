@@ -16,13 +16,13 @@ const char *instance_extensions[] = {
 };
 
 struct appwhole {
-  uvcvk app;
-  uvcxcb xclient;
+  uvrvk app;
+  uvrxcb xclient;
 };
 
 void appwhole_destory(struct appwhole *whole) {
-  uvc_xcb_destory(&whole->xclient);
-  uvc_vk_destory(&whole->app);
+  uvr_xcb_destory(&whole->xclient);
+  uvr_vk_destory(&whole->app);
 }
 
 /*
@@ -31,17 +31,17 @@ void appwhole_destory(struct appwhole *whole) {
 int main(void) {
   struct appwhole whole;
 
-  whole.app.instance = uvc_vk_create_instance("Example App", "No Engine",
+  whole.app.instance = uvr_vk_create_instance("Example App", "No Engine",
                                               ARRAY_LEN(validation_layers), validation_layers,
                                               ARRAY_LEN(instance_extensions), instance_extensions);
 
-  whole.xclient = uvc_xcb_create_client(NULL, NULL, "Example App", true);
+  whole.xclient = uvr_xcb_create_client(NULL, NULL, "Example App", true);
   if (!whole.xclient.conn || whole.xclient.window == UINT32_MAX) {
     appwhole_destory(&whole);
     exit(1);
   }
 
-  uvc_xcb_display_window(&whole.xclient);
+  uvr_xcb_display_window(&whole.xclient);
 
   /* Wait for 5 seconds to display */
   sleep(5);

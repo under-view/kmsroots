@@ -1,11 +1,11 @@
 #include "vulkan.h"
 
-VkInstance uvc_vk_create_instance(const char *app_name,
+VkInstance uvr_vk_create_instance(const char *app_name,
                                   const char *engine_name,
                                   uint32_t enabledLayerCount,
-                                  const char *ppEnabledLayerNames[],
+                                  const char **ppEnabledLayerNames,
                                   uint32_t enabledExtensionCount,
-                                  const char *ppEnabledExtensionNames[])
+                                  const char **ppEnabledExtensionNames)
 {
 
   VkInstance instance = VK_NULL_HANDLE;
@@ -44,16 +44,16 @@ VkInstance uvc_vk_create_instance(const char *app_name,
   /* Create the instance */
   VkResult res = vkCreateInstance(&create_info, NULL, &instance);
   if (res) {
-    uvc_utils_log(UVC_DANGER, "[x] uvc_vk_create_instance: vkCreateInstance Failed");
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_instance: vkCreateInstance Failed");
     return VK_NULL_HANDLE;
   }
 
-  uvc_utils_log(UVC_SUCCESS, "uvc_vk_create_instance: VkInstance created retval(%p)", instance);
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_create_instance: VkInstance created retval(%p)", instance);
 
   return instance;
 }
 
-void uvc_vk_destory(uvcvk *app) {
+void uvr_vk_destory(uvrvk *app) {
   if (app->instance)
     vkDestroyInstance(app->instance, NULL);
 }

@@ -18,13 +18,13 @@ const char *instance_extensions[] = {
  * Example code demonstrating how to connect Vulkan to X11
  */
 int main(void) {
-  uvcvk app;
+  uvrvk app;
 
-  app.instance = uvc_vk_create_instance("Example App", "No Engine",
+  app.instance = uvr_vk_create_instance("Example App", "No Engine",
                                         ARRAY_LEN(validation_layers), validation_layers,
                                         ARRAY_LEN(instance_extensions), instance_extensions);
 
-  uvc_vk_destory(&app);
+  uvr_vk_destory(&app);
 
   return 0;
 }

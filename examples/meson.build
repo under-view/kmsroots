@@ -1,16 +1,16 @@
 
-executable('underviewcomp-x11',
+executable('underview-renderer-x11',
   'X11/main.c',
-  link_with: lib_underviewcomp,
-  dependencies: lib_uvc_deps,
+  link_with: lib_underview_renderer,
+  dependencies: lib_uvr_deps,
   include_directories: inc,
   install: true
 )
 
-executable('underviewcomp-wayland',
+executable('underview-renderer-wayland',
   'wayland/main.c',
-  link_with: lib_underviewcomp,
-  dependencies: lib_uvc_deps,
+  link_with: lib_underview_renderer,
+  dependencies: lib_uvr_deps,
   include_directories: inc,
   install: true
 )

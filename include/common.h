@@ -1,6 +1,6 @@
 
-#ifndef UVC_COMMON_H
-#define UVC_COMMON_H
+#ifndef UVR_COMMON_H
+#define UVR_COMMON_H
 
 #include <stdlib.h>
 #include <stdio.h>

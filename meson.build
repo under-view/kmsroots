@@ -1,5 +1,5 @@
 project(
-  'underviewcomp',
+  'underview-renderer',
   'c',
   version: '0.0.1',
   license: 'MIT',
@@ -18,10 +18,10 @@ inc = include_directories('include')
 
 subdir('src')
 
-lib_underviewcomp = library(
+lib_underview_renderer = library(
   meson.project_name(),
   version: '.'.join(so_version),
-  link_whole: lib_underviewcomp_static,
+  link_whole: lib_underview_renderer_static,
   include_directories: inc,
   install: true
 )

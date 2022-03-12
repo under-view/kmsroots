@@ -2,24 +2,24 @@
 #include "xcb-client.h"
 #include <xcb/xcb_ewmh.h>
 
-uvcxcb uvc_xcb_create_client(const char *display, int *screen, const char *appname, bool fullscreen) {
-  uvcxcb ret = {NULL,UINT32_MAX};
+uvrxcb uvr_xcb_create_client(const char *display, int *screen, const char *appname, bool fullscreen) {
+  uvrxcb ret = {NULL,UINT32_MAX};
   const xcb_setup_t *xcbsetup = NULL;
   xcb_screen_t *xcbscreen = NULL;
 
   /* Connect to Xserver */
   ret.conn = xcb_connect(display, screen);
   if (xcb_connection_has_error(ret.conn)) {
-    uvc_utils_log(UVC_DANGER, "[x] uvc_xcb_create_client: xcb_connect Failed");
+    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_connect Failed");
     if (!display)
-      uvc_utils_log(UVC_INFO, "Try setting the DISPLAY environment variable");
+      uvr_utils_log(UVR_INFO, "Try setting the DISPLAY environment variable");
     return ret;
   }
 
   /* access properties of the X server and its display environment */
   xcbsetup = xcb_get_setup(ret.conn);
   if (!xcbsetup) {
-    uvc_utils_log(UVC_DANGER, "[x] uvc_xcb_create_client: xcb_get_setup Failed");
+    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_get_setup Failed");
     return ret;
   }
 
@@ -31,12 +31,12 @@ uvcxcb uvc_xcb_create_client(const char *display, int *screen, const char *appna
    */
   xcbscreen = xcb_setup_roots_iterator(xcbsetup).data;
   if (!xcbscreen) {
-    uvc_utils_log(UVC_DANGER, "[x] uvc_xcb_create_client: xcb_setup_roots_iterator data member NULL");
+    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_setup_roots_iterator data member NULL");
     return ret;
   }
 
-  uvc_utils_log(UVC_INFO, "Informations of screen %" PRIu32, xcbscreen->root);
-  uvc_utils_log(UVC_WARNING, "Screen dimensions: %d, %d", xcbscreen->width_in_pixels, xcbscreen->height_in_pixels);
+  uvr_utils_log(UVR_INFO, "Informations of screen %" PRIu32, xcbscreen->root);
+  uvr_utils_log(UVR_WARNING, "Screen dimensions: %d, %d", xcbscreen->width_in_pixels, xcbscreen->height_in_pixels);
 
   /* Create window */
   uint32_t prop_name = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
@@ -58,7 +58,7 @@ uvcxcb uvc_xcb_create_client(const char *display, int *screen, const char *appna
   if (fullscreen) {
     xcb_ewmh_connection_t xcbewmh = {};
     if (!xcb_ewmh_init_atoms_replies(&xcbewmh, xcb_ewmh_init_atoms(ret.conn, &xcbewmh), NULL)) {
-      uvc_utils_log(UVC_DANGER, "[x] uvc_xcb_create_client: xcb_ewmh_init_atoms_replies Couldn't initialise ewmh atom");
+      uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_ewmh_init_atoms_replies Couldn't initialise ewmh atom");
       return ret;
     }
 
@@ -70,12 +70,12 @@ uvcxcb uvc_xcb_create_client(const char *display, int *screen, const char *appna
   return ret;
 }
 
-void uvc_xcb_display_window(uvcxcb *client) {
+void uvr_xcb_display_window(uvrxcb *client) {
   xcb_map_window(client->conn, client->window);
   xcb_flush(client->conn);
 }
 
-void uvc_xcb_destory(uvcxcb *client) {
+void uvr_xcb_destory(uvrxcb *client) {
   if (client->window != UINT32_MAX)
     xcb_destroy_window(client->conn, client->window);
 
