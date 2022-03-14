@@ -1,7 +1,7 @@
 
 #include "common.h"
 #include "vulkan.h"
-#include "xcb-client.h"
+#include "xclient.h"
 
 /*
  * "VK_LAYER_KHRONOS_validation"

@@ -1,5 +1,5 @@
 
-#include "xcb-client.h"
+#include "xclient.h"
 #include <xcb/xcb_ewmh.h>
 
 uvrxcb uvr_xcb_create_client(const char *display, int *screen, const char *appname, bool fullscreen) {
