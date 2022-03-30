@@ -30,6 +30,7 @@ void appwhole_destory(struct appwhole *whole) {
  */
 int main(void) {
   struct appwhole whole;
+  memset(&whole, 0, sizeof(struct appwhole));
 
   whole.app.instance = uvr_vk_create_instance("Example App", "No Engine",
                                               ARRAY_LEN(validation_layers), validation_layers,
