@@ -38,6 +38,12 @@ int main(void) {
   if (uvr_wclient_alloc_interfaces(&whole.wclient) == -1)
     goto exit_error;
 
+  int buffer_count = 1, width = 3840, height = 2160, bytes_per_pixel = 4;
+  if (uvr_wclient_alloc_shm_buffers(&whole.wclient, buffer_count,
+                                    width, height, bytes_per_pixel,
+                                    WL_SHM_FORMAT_XRGB8888) == -1)
+    goto exit_error;
+
   whole.app.instance = uvr_vk_create_instance("Example App", "No Engine",
                                               ARRAY_LEN(validation_layers), validation_layers,
                                               ARRAY_LEN(instance_extensions), instance_extensions);

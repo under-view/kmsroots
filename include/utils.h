@@ -15,6 +15,7 @@ typedef enum _uvr_log_type {
   UVR_MAX_LOG_ENUM = 0xFFFF
 } uvr_log_type;
 
+int allocate_shm_file(size_t size);
 void _uvr_utils_log(uvr_log_type type, FILE *stream, const char *fmt, ...);
 const char *_uvr_utils_strip_path(const char *filepath);
 

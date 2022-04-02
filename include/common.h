@@ -11,6 +11,10 @@
 #include <time.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <errno.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define UNUSED __attribute__((unused))
 #define ARRAY_LEN(_arr) (sizeof(_arr) / sizeof(_arr[0]))

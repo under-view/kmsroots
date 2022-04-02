@@ -1,12 +1,14 @@
 vulkan = dependency('vulkan', required: true)
 libmath = cc.find_library('m', required: true)
+# Needed by `utils.c` for shm_{open/close}
+librt = cc.find_library('rt', required: true)
 libdrm = dependency('libdrm', required: false)
 libxcb = cc.find_library('libxcb', required: false)
 libxcbewmh = cc.find_library('libxcb-ewmh', required: false)
 wayland_client = dependency('wayland-client', required: false)
 
 fs = [ 'vulkan.c', 'utils.c' ]
-lib_uvr_deps = [vulkan, libmath]
+lib_uvr_deps = [vulkan, libmath, librt]
 
 ##################################
 # KMS libs and files
