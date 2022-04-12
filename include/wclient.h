@@ -16,8 +16,10 @@
  * @compositor    - a global singleton representing the compositor itself
  *                  largely utilized to allocate surfaces & regions to put
  *                  pixels into
- * @shell -
- * @xdg_toplevel  -
+ * @shell         - An interface/global object that enables clients to turn
+ *                  their wl_surfaces into windows in a desktop environment.
+ * @xdg_toplevel  - An interface with many requests and events to manage
+ *                  application windows
  * @shm_fd        - A file descriptor to an open shm object
  * @shm           - Shared memory, used to transfer a file descriptor for the
  *                  compositor to mmap.
@@ -28,16 +30,20 @@
  *                  width * height * bytes_per_pixel * @buffer_count
  * @shm_pool_data - Actual pixel data to be displayed
  * @buffer_count  - The amount of buffers contained in a given memory pool
- * @buffer        -
- * @surface       -
- * @xdg_surface   -
+ * @buffers       - An array of type struct wl_buffer. Pixel storage place.
+ * @surface       - The image displayed on screen, must attach a wl_buffer to
+ *                  display pixels on screen. Depending on rendering backend
+ *                  wl_buffer may not need to be allocated.
+ * @xdg_surface   - Top level surface for the window. Useful if one wants to create
+ *                  a tree of surfaces. Provides additional requests for assigning
+ *                  roles.
  */
 typedef struct _uvrwc {
   struct wl_display *display;
   struct wl_registry *registry;
   struct wl_compositor *compositor;
 
-  struct xdg_wm_base *shell;
+  struct xdg_wm_base *wm_base;
   struct xdg_toplevel *xdg_toplevel;
 
   int shm_fd;
@@ -99,6 +105,21 @@ int uvr_wclient_alloc_shm_buffers(uvrwc *client,
                                   const int height,
                                   const int bytes_per_pixel,
                                   uint64_t format);
+
+
+/*
+ * uvr_wclient_create_window: Adds way to get pixels from client to compositor
+ *                            by creating writable shared buffers.
+ * args:
+ * @client - pointer to a struct _uvrwc contains all objects/interfaces
+ *           necessary for a client to run.
+ * @appname - Sets the window name.
+ * @fullscreen - Determines if window should be fullscreen or not
+ * return:
+ *    0 on success
+ *   -1 on failure
+ */
+int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fullscreen);
 
 
 /*

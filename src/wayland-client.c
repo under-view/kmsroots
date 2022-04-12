@@ -32,13 +32,13 @@ static void registry_handle_global(void *data,
 
   uvr_utils_log(UVR_INFO, "interface: '%s', version: %d, name: %d", interface, version, name);
 
-  struct _uvrwc *wc = (struct _uvrwc *) data;
+  struct _uvrwc *client = (struct _uvrwc *) data;
   if (!strcmp(interface, wl_compositor_interface.name)) {
-    wc->compositor = wl_registry_bind(registry, name, &wl_compositor_interface, version);
+    client->compositor = wl_registry_bind(registry, name, &wl_compositor_interface, version);
   } else if (!strcmp(interface, xdg_wm_base_interface.name)) {
-    wc->shell = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
+    client->wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
   } else if (!strcmp(interface, wl_shm_interface.name)) {
-    wc->shm = wl_registry_bind(registry, name, &wl_shm_interface, version);
+    client->shm = wl_registry_bind(registry, name, &wl_shm_interface, version);
   }
 
 }
@@ -77,16 +77,18 @@ int uvr_wclient_alloc_interfaces(uvrwc *client) {
   /* synchronously wait for the server respondes */
   if (!wl_display_roundtrip(client->display)) return -1;
 
-  /* Important globals to create buffers from */
+  /* Important globals to create buffers/surfaces from */
   if (!client->compositor) {
     uvr_utils_log(UVR_DANGER, "[x] Can't find compositor");
     return -1;
   }
 
-  if (!client->shell) {
+  if (!client->wm_base) {
     uvr_utils_log(UVR_DANGER, "[x] No xdg_wm_base support");
     return -1;
   }
+
+  client->shm_fd = -1;
 
   return 0;
 }
@@ -146,6 +148,94 @@ int uvr_wclient_alloc_shm_buffers(uvrwc *client,
 }
 
 
+static void noop() {
+  // This space intentionally left blank
+}
+
+
+static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
+  struct _uvrwc *client = (struct _uvrwc *) data;
+  static int cur_buff = 0;
+
+  xdg_surface_ack_configure(xdg_surface, serial);
+  wl_surface_attach(client->surface, client->buffers[cur_buff], 0, 0);
+  wl_surface_commit(client->surface);
+
+  cur_buff = (cur_buff + 1) % client->buffer_count;
+}
+
+
+static void xdg_toplevel_handle_close(void UNUSED *data, struct xdg_toplevel UNUSED *xdg_toplevel) {
+  // This space intentionally left blank
+}
+
+
+static const struct xdg_surface_listener xdg_surface_listener = {
+  .configure = xdg_surface_handle_configure,
+};
+
+
+static const struct xdg_toplevel_listener xdg_toplevel_listener = {
+  .configure = noop,
+  .close = xdg_toplevel_handle_close,
+};
+
+
+int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fullscreen) {
+
+  /* Important globals to create buffers from */
+  if (!client->compositor) {
+    uvr_utils_log(UVR_DANGER, "[x] Can't find compositor");
+    return -1;
+  }
+
+  if (!client->wm_base) {
+    uvr_utils_log(UVR_DANGER, "[x] No xdg_wm_base support");
+    return -1;
+  }
+
+  /* Use wl_compositor interface to create a wl_surface */
+  client->surface = wl_compositor_create_surface(client->compositor);
+  if (!client->surface) {
+    return -1;
+  }
+
+  /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface */
+  client->xdg_surface = xdg_wm_base_get_xdg_surface(client->wm_base, client->surface);
+  if (!client->xdg_surface) {
+    uvr_utils_log(UVR_DANGER, "[x] Can't create xdg_wm_base_get_xdg_surface");
+    return -1;
+  }
+
+  /* Create XDG xdg_toplevel interface from which we manage application window from */
+  client->xdg_toplevel = xdg_surface_get_toplevel(client->xdg_surface);
+  if (!client->xdg_toplevel) {
+    uvr_utils_log(UVR_DANGER, "[x] Can't create xdg_surface_get_toplevel");
+    return -1;
+  }
+
+  if (xdg_surface_add_listener(client->xdg_surface, &xdg_surface_listener, client)) {
+    return -1;
+  }
+
+  if (xdg_toplevel_add_listener(client->xdg_toplevel, &xdg_toplevel_listener, client)) {
+    return -1;
+  }
+
+  xdg_toplevel_set_title(client->xdg_toplevel, appname);
+
+  /*
+  TODO
+  if (fullscreen)
+    xdg_toplevel_set_fullscreen(client->xdg_toplevel, client->output);
+  */
+
+  wl_surface_commit(client->surface);
+
+  return 0;
+}
+
+
 int uvr_wclient_process_events(uvrwc *client) {
   return wl_display_dispatch(client->display);
 }
@@ -157,7 +247,13 @@ int uvr_wclient_flush_request(uvrwc *client) {
 
 
 void uvr_wclient_destory(uvrwc *client) {
-  if (client->shm_fd)
+  if (client->xdg_toplevel)
+    xdg_toplevel_destroy(client->xdg_toplevel);
+  if (client->xdg_surface)
+    xdg_surface_destroy(client->xdg_surface);
+  if (client->surface)
+    wl_surface_destroy(client->surface);
+  if (client->shm_fd != -1)
     close(client->shm_fd);
   if (client->shm_pool_data)
     munmap(client->shm_pool_data, client->shm_pool_size);
@@ -171,8 +267,8 @@ void uvr_wclient_destory(uvrwc *client) {
     wl_shm_pool_destroy(client->shm_pool);
   if (client->shm)
     wl_shm_destroy(client->shm);
-  if (client->shell)
-    xdg_wm_base_destroy(client->shell);
+  if (client->wm_base)
+    xdg_wm_base_destroy(client->wm_base);
   if (client->compositor)
     wl_compositor_destroy(client->compositor);
   if (client->registry)
