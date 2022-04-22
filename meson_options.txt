@@ -1,0 +1,23 @@
+
+option(
+  'kms',
+  type : 'boolean',
+  value : true,
+  description : 'Build drm/kms wrapper api',
+)
+
+
+option(
+  'xcb',
+  type : 'boolean',
+  value : false,
+  description : 'Build xcb wrapper api',
+)
+
+
+option(
+  'wayland',
+  type : 'boolean',
+  value : false,
+  description : 'Build wayland wrapper api',
+)

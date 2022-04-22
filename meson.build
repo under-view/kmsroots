@@ -14,6 +14,10 @@ project(
 so_version = ['0']
 cc = meson.get_compiler('c')
 
+build_kms = get_option('kms')
+build_xcb = get_option('xcb')
+build_wayland = get_option('wayland')
+
 inc = include_directories('include')
 
 subdir('src')
