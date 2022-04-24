@@ -36,8 +36,7 @@ int main(void) {
                                               ARRAY_LEN(validation_layers), validation_layers,
                                               ARRAY_LEN(instance_extensions), instance_extensions);
 
-  whole.xclient = uvr_xcb_create_client(NULL, NULL, "Example App", true);
-  if (!whole.xclient.conn || whole.xclient.window == UINT32_MAX) {
+  if (uvr_xcb_create_client(&whole.xclient, NULL, NULL, "Example App", true) == -1) {
     appwhole_destory(&whole);
     exit(1);
   }

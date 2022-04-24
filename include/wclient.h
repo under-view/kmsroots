@@ -61,6 +61,7 @@ typedef struct _uvrwc {
 
 /*
  * uvr_wclient_display_connect: Establish connection to Wayland display server
+ *
  * args:
  * @wl_display_name - Specify the Wayland display to run a client on. This will set
  *                    the $WAYLAND_DISPLAY variable to the desired display.
@@ -73,9 +74,13 @@ struct wl_display *uvr_wclient_display_connect(const char *wl_display_name);
 
 /*
  * uvr_wclient_get_interfaces: Sets up global objects/interfaces.
+ *
  * args:
  * @client - pointer to a struct _uvrwc contains all objects/interfaces
- *           necessary for a client to run.
+ *           necessary for a wayland client to run.
+ *
+ *           Members that recieve addresses and values:
+ *           @registry, @compositor, @wm_base, @shm
  * return:
  *    0 on success
  *   -1 on failure
@@ -86,15 +91,20 @@ int uvr_wclient_alloc_interfaces(uvrwc *client);
 /*
  * uvr_wclient_alloc_shm_buffers: Adds way to get pixels from client to compositor
  *                                by creating writable shared buffers.
+ *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects/interfaces
- *           necessary for a client to run.
- * @buffer_count - the amount of buffers to allocate when storing pixel data
- *                 2 is generally a good option as it allows for double buffering
- * @width - pixel width (i.e 3840, 1920, ...)
- * @height - pixel height (i.e 2160, 1080, ...)
+ * @client          - pointer to a struct _uvrwc contains all objects/interfaces
+ *                    necessary for a client to run.
+ *
+ *                    Members that recieve addresses and values:
+ *                    @buffer_count, @shm_pool_size, @shm_fd,
+ *                    @shm_pool_data @shm_pool, @buffers
+ * @buffer_count    - the amount of buffers to allocate when storing pixel data
+ *                    2 is generally a good option as it allows for double buffering
+ * @width           - amount of pixel horizontally (i.e 3840, 1920, ...)
+ * @height          - amount of pixel vertically (i.e 2160, 1080, ...)
  * @bytes_per_pixel - The amount of bytes per pixel generally going to 4 bytes (32 bits)
- * @format - memory layout of an individual pixel
+ * @format          - memory layout of an individual pixel
  * return:
  *    0 on success
  *   -1 on failure
@@ -110,10 +120,14 @@ int uvr_wclient_alloc_shm_buffers(uvrwc *client,
 /*
  * uvr_wclient_create_window: Adds way to get pixels from client to compositor
  *                            by creating writable shared buffers.
+ *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects/interfaces
- *           necessary for a client to run.
- * @appname - Sets the window name.
+ * @client     - pointer to a struct _uvrwc contains all objects/interfaces
+ *               necessary for a client to run.
+ *
+ *               Members that recieve addresses and values:
+ *               @surface, @xdg_surface, @xdg_toplevel
+ * @appname    - Sets the window name.
  * @fullscreen - Determines if window should be fullscreen or not
  * return:
  *    0 on success
@@ -125,6 +139,7 @@ int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fu
 /*
  * uvr_wclient_process_events: Processes incoming Wayland server events.
  *                             Best utilized with epoll(POLLIN)
+ *
  * args:
  * @client - pointer to a struct _uvrwc contains all objects/interfaces
  *           necessary for a client to run.
@@ -136,6 +151,7 @@ int uvr_wclient_process_events(uvrwc *client);
 
 /*
  * uvr_wclient_flush_request: Flush all outgoing request to a Wayland server.
+ *
  * args:
  * @client - pointer to a struct _uvrwc contains all objects/interfaces
  *           necessary for a client to run.
@@ -145,6 +161,13 @@ int uvr_wclient_process_events(uvrwc *client);
 int uvr_wclient_flush_request(uvrwc *client);
 
 
+/*
+ * uvr_wclient_destory: frees any remaining allocated memory contained in struct _uvrwc
+ *
+ * args:
+ * @client - pointer to a struct _uvrwc contains all objects/interfaces
+ *           necessary for an xcb client to run.
+ */
 void uvr_wclient_destory(uvrwc *client);
 
 #endif

@@ -20,7 +20,6 @@ $ sudo aptitude install -y libdrm-dev libgbm-dev libudev-dev libsystemd-dev
 
 **Building**
 ```sh
-$ mkdir build
 $ meson -Dkms=true -Dxcb=true -Dwayland=false build
 $ ninja -C build
 ```
