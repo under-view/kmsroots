@@ -32,7 +32,7 @@ static void registry_handle_global(void *data,
 
   uvr_utils_log(UVR_INFO, "interface: '%s', version: %d, name: %d", interface, version, name);
 
-  struct _uvrwc *client = (struct _uvrwc *) data;
+  struct uvrwc *client = (struct uvrwc *) data;
   if (!strcmp(interface, wl_compositor_interface.name)) {
     client->compositor = wl_registry_bind(registry, name, &wl_compositor_interface, version);
   } else if (!strcmp(interface, xdg_wm_base_interface.name)) {
@@ -59,7 +59,7 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 
-int uvr_wclient_alloc_interfaces(uvrwc *client) {
+int uvr_wclient_alloc_interfaces(struct uvrwc *client) {
 
   if (!client->display) {
     uvr_utils_log(UVR_DANGER, "[x] Not connected to Wayland display server");
@@ -95,7 +95,7 @@ int uvr_wclient_alloc_interfaces(uvrwc *client) {
 }
 
 
-int uvr_wclient_alloc_shm_buffers(uvrwc *client,
+int uvr_wclient_alloc_shm_buffers(struct uvrwc *client,
                                   const int buffer_count,
                                   const int width,
                                   const int height,
@@ -155,7 +155,7 @@ static void noop() {
 
 
 static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
-  struct _uvrwc *client = (struct _uvrwc *) data;
+  struct uvrwc *client = (struct uvrwc *) data;
   static int cur_buff = 0;
 
   xdg_surface_ack_configure(xdg_surface, serial);
@@ -182,7 +182,7 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
 };
 
 
-int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fullscreen) {
+int uvr_wclient_create_window(struct uvrwc *client, const char *appname, bool UNUSED fullscreen) {
 
   /* Important globals to create buffers from */
   if (!client->compositor) {
@@ -237,17 +237,17 @@ int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fu
 }
 
 
-int uvr_wclient_process_events(uvrwc *client) {
+int uvr_wclient_process_events(struct uvrwc *client) {
   return wl_display_dispatch(client->display);
 }
 
 
-int uvr_wclient_flush_request(uvrwc *client) {
+int uvr_wclient_flush_request(struct uvrwc *client) {
   return wl_display_flush(client->display);
 }
 
 
-void uvr_wclient_destory(uvrwc *client) {
+void uvr_wclient_destory(struct uvrwc *client) {
   if (client->seat)
     wl_seat_destroy(client->seat);
   if (client->xdg_toplevel)

@@ -11,7 +11,7 @@ static const char *term_colors[] = {
   [UVR_RESET]   = "\x1b[0m"
 };
 
-void _uvr_utils_log(uvr_log_type type, FILE *stream, const char *fmt, ...) {
+void _uvr_utils_log(enum uvr_log_type type, FILE *stream, const char *fmt, ...) {
   char buffer[26];
   va_list args; /* type that holds variable arguments */
 

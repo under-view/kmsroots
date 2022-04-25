@@ -7,9 +7,9 @@
 #define VK_USE_PLATFORM_XCB_KHR
 #include <vulkan/vulkan.h>
 
-typedef struct _uvrvk {
+struct uvrvk {
   VkInstance instance;
-} uvrvk;
+};
 
 VkInstance uvr_vk_create_instance(const char *app_name,
                                   const char *engine_name,
@@ -18,6 +18,6 @@ VkInstance uvr_vk_create_instance(const char *app_name,
                                   uint32_t enabledExtensionCount,
                                   const char *ppEnabledExtensionNames[]);
 
-void uvr_vk_destory(uvrvk *app);
+void uvr_vk_destory(struct uvrvk *app);
 
 #endif

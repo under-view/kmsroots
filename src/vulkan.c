@@ -17,7 +17,7 @@ VkInstance uvr_vk_create_instance(const char *app_name,
   app_info.pApplicationName = app_name;
   app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
   app_info.pEngineName = engine_name;
-  app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
+  app_info.engineVersion = VK_MAKE_VERSION(1, 1, 0);
   app_info.apiVersion = VK_MAKE_VERSION(1, 1, 0);
 
   /* enable validation layers best practice */
@@ -53,7 +53,7 @@ VkInstance uvr_vk_create_instance(const char *app_name,
   return instance;
 }
 
-void uvr_vk_destory(uvrvk *app) {
+void uvr_vk_destory(struct uvrvk *app) {
   if (app->instance)
     vkDestroyInstance(app->instance, NULL);
 }

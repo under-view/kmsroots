@@ -16,8 +16,8 @@ const char *instance_extensions[] = {
 };
 
 struct appwhole {
-  uvrvk app;
-  uvrxcb xclient;
+  struct uvrvk app;
+  struct uvrxcb xclient;
 };
 
 void appwhole_destory(struct appwhole *whole) {

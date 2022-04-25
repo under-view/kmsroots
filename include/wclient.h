@@ -6,7 +6,7 @@
 #include <wayland-client.h>
 
 /*
- * typedef struct _uvrwc uvrwc (Underview Renderer Wayland Client)
+ * struct uvrwc (Underview Renderer Wayland Client)
  *
  * @wl_display_fd - file descriptor associated with a given display
  * @display       - a global singleton representing the whole connection
@@ -38,7 +38,7 @@
  *                  a tree of surfaces. Provides additional requests for assigning
  *                  roles.
  */
-typedef struct _uvrwc {
+struct uvrwc {
   struct wl_display *display;
   struct wl_registry *registry;
   struct wl_compositor *compositor;
@@ -58,7 +58,7 @@ typedef struct _uvrwc {
   struct xdg_surface *xdg_surface;
 
   struct wl_seat *seat;
-} uvrwc;
+};
 
 
 /*
@@ -87,7 +87,7 @@ struct wl_display *uvr_wclient_display_connect(const char *wl_display_name);
  *    0 on success
  *   -1 on failure
  */
-int uvr_wclient_alloc_interfaces(uvrwc *client);
+int uvr_wclient_alloc_interfaces(struct uvrwc *client);
 
 
 /*
@@ -111,7 +111,7 @@ int uvr_wclient_alloc_interfaces(uvrwc *client);
  *    0 on success
  *   -1 on failure
  */
-int uvr_wclient_alloc_shm_buffers(uvrwc *client,
+int uvr_wclient_alloc_shm_buffers(struct uvrwc *client,
                                   const int buffer_count,
                                   const int width,
                                   const int height,
@@ -135,7 +135,7 @@ int uvr_wclient_alloc_shm_buffers(uvrwc *client,
  *    0 on success
  *   -1 on failure
  */
-int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fullscreen);
+int uvr_wclient_create_window(struct uvrwc *client, const char *appname, bool UNUSED fullscreen);
 
 
 /*
@@ -148,7 +148,7 @@ int uvr_wclient_create_window(uvrwc *client, const char *appname, bool UNUSED fu
  * return:
  *    -1 on failure
  */
-int uvr_wclient_process_events(uvrwc *client);
+int uvr_wclient_process_events(struct uvrwc *client);
 
 
 /*
@@ -160,7 +160,7 @@ int uvr_wclient_process_events(uvrwc *client);
  * return:
  *    -1 on failure
  */
-int uvr_wclient_flush_request(uvrwc *client);
+int uvr_wclient_flush_request(struct uvrwc *client);
 
 
 /*
@@ -170,6 +170,6 @@ int uvr_wclient_flush_request(uvrwc *client);
  * @client - pointer to a struct _uvrwc contains all objects/interfaces
  *           necessary for an xcb client to run.
  */
-void uvr_wclient_destory(uvrwc *client);
+void uvr_wclient_destory(struct uvrwc *client);
 
 #endif

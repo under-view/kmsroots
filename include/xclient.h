@@ -6,17 +6,17 @@
 #include <xcb/xcb.h>
 
 /*
- * typedef struct _uvrxcb uvrxcb (Underview Renderer XCB Client)
+ * struct uvrxcb (Underview Renderer XCB Client)
  *
  * @conn   - value of the DISPLAY environment variable and our connection
  *           to the Xserver
  * @window - stores the XID of the current window. XID is neeed to create
  *           windows and manage its properties
  */
-typedef struct _uvrxcb {
+struct uvrxcb {
   xcb_connection_t *conn;
   xcb_window_t window;
-} uvrxcb;
+};
 
 
 /*
@@ -38,7 +38,7 @@ typedef struct _uvrxcb {
  *    0 on success
  *   -1 on failure
  */
-int uvr_xcb_create_client(uvrxcb *client,
+int uvr_xcb_create_client(struct uvrxcb *client,
                           const char *display,
                           int *screen,
                           const char *appname,
@@ -52,7 +52,7 @@ int uvr_xcb_create_client(uvrxcb *client,
  * @client - pointer to a struct _uvrwc contains all objects necessary
  *           for an xcb client to run.
  */
-void uvr_xcb_display_window(uvrxcb *client);
+void uvr_xcb_display_window(struct uvrxcb *client);
 
 
 /*
@@ -62,6 +62,6 @@ void uvr_xcb_display_window(uvrxcb *client);
  * @client - pointer to a struct _uvrxcb contains all objects necessary
  *           for an xcb client to run.
  */
-void uvr_xcb_destory(uvrxcb *client);
+void uvr_xcb_destory(struct uvrxcb *client);
 
 #endif

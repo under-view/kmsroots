@@ -2,7 +2,7 @@
 #include "xclient.h"
 #include <xcb/xcb_ewmh.h>
 
-int uvr_xcb_create_client(uvrxcb *client,
+int uvr_xcb_create_client(struct uvrxcb *client,
                           const char *display,
                           int *screen,
                           const char *appname,
@@ -75,12 +75,14 @@ int uvr_xcb_create_client(uvrxcb *client,
   return 0;
 }
 
-void uvr_xcb_display_window(uvrxcb *client) {
+
+void uvr_xcb_display_window(struct uvrxcb *client) {
   xcb_map_window(client->conn, client->window);
   xcb_flush(client->conn);
 }
 
-void uvr_xcb_destory(uvrxcb *client) {
+
+void uvr_xcb_destory(struct uvrxcb *client) {
   if (client->window != UINT32_MAX)
     xcb_destroy_window(client->conn, client->window);
 
