@@ -39,8 +39,9 @@ static void registry_handle_global(void *data,
     client->wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
   } else if (!strcmp(interface, wl_shm_interface.name)) {
     client->shm = wl_registry_bind(registry, name, &wl_shm_interface, version);
+  } else if (!strcmp(interface, wl_seat_interface.name)) {
+    client->seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
   }
-
 }
 
 
@@ -247,6 +248,8 @@ int uvr_wclient_flush_request(uvrwc *client) {
 
 
 void uvr_wclient_destory(uvrwc *client) {
+  if (client->seat)
+    wl_seat_destroy(client->seat);
   if (client->xdg_toplevel)
     xdg_toplevel_destroy(client->xdg_toplevel);
   if (client->xdg_surface)

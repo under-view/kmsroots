@@ -56,6 +56,8 @@ typedef struct _uvrwc {
   struct wl_buffer **buffers;
   struct wl_surface *surface;
   struct xdg_surface *xdg_surface;
+
+  struct wl_seat *seat;
 } uvrwc;
 
 
