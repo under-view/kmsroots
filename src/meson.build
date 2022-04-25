@@ -4,6 +4,7 @@ libmath = cc.find_library('m', required: true)
 librt = cc.find_library('rt', required: true)
 
 fs = [ 'vulkan.c', 'utils.c' ]
+cglue_code = []
 lib_uvr_deps = [vulkan, libmath, librt]
 
 
@@ -62,7 +63,7 @@ if build_wayland
     # Create corresponding C glue code from wayland xml protocls extension files
     foreach p : wayland_protos
       xml = join_paths(p)
-      fs += [
+      cglue_code += [
         wayland_scanner_client.process(xml),
         wayland_scanner_code.process(xml)
       ]
@@ -74,7 +75,7 @@ if build_wayland
 endif
 
 lib_underview_renderer_static = static_library(
-  'uvr', files(fs),
+  'uvr', cglue_code, files(fs),
   dependencies: lib_uvr_deps,
   include_directories: inc
 )
