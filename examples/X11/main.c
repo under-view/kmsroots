@@ -1,5 +1,3 @@
-
-#include "common.h"
 #include "vulkan.h"
 #include "xclient.h"
 
@@ -32,9 +30,12 @@ int main(void) {
   struct appwhole whole;
   memset(&whole, 0, sizeof(struct appwhole));
 
-  whole.app.instance = uvr_vk_create_instance("Example App", "No Engine",
-                                              ARRAY_LEN(validation_layers), validation_layers,
-                                              ARRAY_LEN(instance_extensions), instance_extensions);
+  if (uvr_vk_create_instance(&whole.app, "Example App", "No Engine",
+                             ARRAY_LEN(validation_layers), validation_layers,
+                             ARRAY_LEN(instance_extensions), instance_extensions) == -1) {
+    appwhole_destory(&whole);
+    exit(1);
+  }
 
   if (uvr_xcb_create_client(&whole.xclient, NULL, NULL, "Example App", true) == -1) {
     appwhole_destory(&whole);

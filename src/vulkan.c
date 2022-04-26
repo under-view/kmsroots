@@ -1,14 +1,14 @@
 #include "vulkan.h"
 
-VkInstance uvr_vk_create_instance(const char *app_name,
-                                  const char *engine_name,
-                                  uint32_t enabledLayerCount,
-                                  const char **ppEnabledLayerNames,
-                                  uint32_t enabledExtensionCount,
-                                  const char **ppEnabledExtensionNames)
-{
 
-  VkInstance instance = VK_NULL_HANDLE;
+int uvr_vk_create_instance(struct uvrvk *app,
+                           const char *app_name,
+                           const char *engine_name,
+                           uint32_t enabledLayerCount,
+                           const char **ppEnabledLayerNames,
+                           uint32_t enabledExtensionCount,
+                           const char **ppEnabledExtensionNames)
+{
 
   /* initialize the VkApplicationInfo structure */
   VkApplicationInfo app_info = {};
@@ -42,18 +42,23 @@ VkInstance uvr_vk_create_instance(const char *app_name,
   create_info.ppEnabledExtensionNames = ppEnabledExtensionNames;
 
   /* Create the instance */
-  VkResult res = vkCreateInstance(&create_info, NULL, &instance);
+  VkResult res = vkCreateInstance(&create_info, NULL, &app->instance);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_instance: vkCreateInstance Failed");
-    return VK_NULL_HANDLE;
+    return -1;
   }
 
-  uvr_utils_log(UVR_SUCCESS, "uvr_vk_create_instance: VkInstance created retval(%p)", instance);
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_create_instance: VkInstance created retval(%p)", app->instance);
 
-  return instance;
+  return 0;
 }
 
+
 void uvr_vk_destory(struct uvrvk *app) {
+#if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
+  if (app->surface)
+    vkDestroySurfaceKHR(app->instance, app->surface, NULL);
+#endif
   if (app->instance)
     vkDestroyInstance(app->instance, NULL);
 }

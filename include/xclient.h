@@ -23,7 +23,7 @@ struct uvrxcb {
  * uvr_xcb_create_client: create a fullscreen xcb client. Only works on one screen
  *
  * args:
- * @client     - pointer to a struct _uvrxcb contains all objects necessary
+ * @client     - pointer to a struct uvrxcb contains all objects necessary
  *               for an xcb client to run.
  *
  *               Members that recieve addresses and values:
@@ -49,17 +49,17 @@ int uvr_xcb_create_client(struct uvrxcb *client,
  * uvr_xcb_display_window: Displays the window
  *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects necessary
+ * @client - pointer to a struct uvrwc contains all objects necessary
  *           for an xcb client to run.
  */
 void uvr_xcb_display_window(struct uvrxcb *client);
 
 
 /*
- * uvr_xcb_destory: frees all allocated memory contained in struct _uvrxcb
+ * uvr_xcb_destory: frees all allocated memory contained in struct uvrxcb
  *
  * args:
- * @client - pointer to a struct _uvrxcb contains all objects necessary
+ * @client - pointer to a struct uvrxcb contains all objects necessary
  *           for an xcb client to run.
  */
 void uvr_xcb_destory(struct uvrxcb *client);

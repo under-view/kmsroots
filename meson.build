@@ -18,6 +18,14 @@ build_kms = get_option('kms')
 build_xcb = get_option('xcb')
 build_wayland = get_option('wayland')
 
+if build_wayland
+  add_project_arguments(['-DINCLUDE_WAYLAND=1'], language: 'c')
+endif
+
+if build_xcb
+  add_project_arguments(['-DINCLUDE_XCB=1'], language: 'c')
+endif
+
 inc = include_directories('include')
 
 subdir('src')

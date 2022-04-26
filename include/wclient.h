@@ -78,7 +78,7 @@ struct wl_display *uvr_wclient_display_connect(const char *wl_display_name);
  * uvr_wclient_get_interfaces: Sets up global objects/interfaces.
  *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvrwc contains all objects/interfaces
  *           necessary for a wayland client to run.
  *
  *           Members that recieve addresses and values:
@@ -95,7 +95,7 @@ int uvr_wclient_alloc_interfaces(struct uvrwc *client);
  *                                by creating writable shared buffers.
  *
  * args:
- * @client          - pointer to a struct _uvrwc contains all objects/interfaces
+ * @client          - pointer to a struct uvrwc contains all objects/interfaces
  *                    necessary for a client to run.
  *
  *                    Members that recieve addresses and values:
@@ -124,7 +124,7 @@ int uvr_wclient_alloc_shm_buffers(struct uvrwc *client,
  *                            by creating writable shared buffers.
  *
  * args:
- * @client     - pointer to a struct _uvrwc contains all objects/interfaces
+ * @client     - pointer to a struct uvrwc contains all objects/interfaces
  *               necessary for a client to run.
  *
  *               Members that recieve addresses and values:
@@ -143,7 +143,7 @@ int uvr_wclient_create_window(struct uvrwc *client, const char *appname, bool UN
  *                             Best utilized with epoll(POLLIN)
  *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvrwc contains all objects/interfaces
  *           necessary for a client to run.
  * return:
  *    -1 on failure
@@ -155,7 +155,7 @@ int uvr_wclient_process_events(struct uvrwc *client);
  * uvr_wclient_flush_request: Flush all outgoing request to a Wayland server.
  *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvrwc contains all objects/interfaces
  *           necessary for a client to run.
  * return:
  *    -1 on failure
@@ -164,10 +164,10 @@ int uvr_wclient_flush_request(struct uvrwc *client);
 
 
 /*
- * uvr_wclient_destory: frees any remaining allocated memory contained in struct _uvrwc
+ * uvr_wclient_destory: frees any remaining allocated memory contained in struct uvrwc
  *
  * args:
- * @client - pointer to a struct _uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvrwc contains all objects/interfaces
  *           necessary for an xcb client to run.
  */
 void uvr_wclient_destory(struct uvrwc *client);

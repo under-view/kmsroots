@@ -1,5 +1,3 @@
-
-#include "common.h"
 #include "vulkan.h"
 #include "wclient.h"
 
@@ -59,10 +57,11 @@ int main(void) {
   if (uvr_wclient_create_window(&whole.wclient, "Example Window", true))
     goto exit_error;
 
-  whole.app.instance = uvr_vk_create_instance("Example App", "No Engine",
-                                              ARRAY_LEN(validation_layers), validation_layers,
-                                              ARRAY_LEN(instance_extensions), instance_extensions);
-  if (!whole.app.instance) goto exit_error;
+  if (uvr_vk_create_instance(&whole.app, "Example App", "No Engine",
+                             ARRAY_LEN(validation_layers), validation_layers,
+                             ARRAY_LEN(instance_extensions), instance_extensions) == -1)
+    goto exit_error;
+
 
   int cbuff = 0, stride = width * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;
