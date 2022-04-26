@@ -49,9 +49,8 @@ int main(void) {
     goto exit_error;
 
   int buffer_count = 2, width = 3840, height = 2160, bytes_per_pixel = 4;
-  if (uvr_wclient_alloc_shm_buffers(&whole.wclient, buffer_count,
-                                    width, height, bytes_per_pixel,
-                                    WL_SHM_FORMAT_XRGB8888) == -1)
+  if (uvr_wclient_alloc_shm_buffers(&whole.wclient, buffer_count, width, height,
+                                    bytes_per_pixel, WL_SHM_FORMAT_XRGB8888) == -1)
     goto exit_error;
 
   if (uvr_wclient_create_window(&whole.wclient, "Example Window", true))
@@ -62,6 +61,9 @@ int main(void) {
                              ARRAY_LEN(instance_extensions), instance_extensions) == -1)
     goto exit_error;
 
+  if (uvr_vk_create_surfaceKHR(&whole.app, WAYLAND_CLIENT_SURFACE, "c:s",
+                               whole.wclient.display, whole.wclient.surface) == -1)
+    goto exit_error;
 
   int cbuff = 0, stride = width * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;

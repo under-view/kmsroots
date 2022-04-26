@@ -3,6 +3,7 @@
 #define UVR_VULKAN_H
 
 #include "common.h"
+#include "utils.h"
 
 #ifdef INCLUDE_WAYLAND
 #define VK_USE_PLATFORM_WAYLAND_KHR
@@ -26,6 +27,17 @@ struct uvrvk {
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
   VkSurfaceKHR surface;
 #endif
+};
+
+
+/*
+ * enum uvrvk_surface_type (Underview Renderer Surface Type)
+ * Display server protocol options used by uvr_vk_create_surfaceKHR
+ * to create a VkSurfaceKHR object based upon platform specific information
+ */
+enum uvrvk_surface_type {
+  WAYLAND_CLIENT_SURFACE,
+  XCB_CLIENT_SURFACE,
 };
 
 
@@ -65,6 +77,30 @@ int uvr_vk_create_instance(struct uvrvk *app,
                            const char **ppEnabledLayerNames,
                            uint32_t enabledExtensionCount,
                            const char **ppEnabledExtensionNames);
+
+
+/*
+ * uvr_vk_create_surfaceKHR: Creates a VkSurfaceKHR object based upon platform specific
+ *                           information about the surface
+ *
+ * args:
+ * @app - pointer to a struct uvrwc contains all objects
+ *        necessary to run a vulkan application.
+ *
+ *        Members that recieve addresses and values:
+ *        @surface
+ * @st  - an enum above to help select
+ * @fmt - Used to describe what argument is passed and in what order
+ *        Character Codes:
+ *            * c - Pass the address that gives reference to the underlying display protocol.
+ *                  Usually will be (struct wl_display *), (xcb_connection_t *conn)
+ *            * s - Pass struct wl_surface interface
+ *            * w - Pass xcb_window_t window or an unsigned int representing XID
+ * return:
+ *    0 on success
+ *   -1 on failure
+ */
+int uvr_vk_create_surfaceKHR(struct uvrvk *app, enum uvrvk_surface_type st, char *fmt, ...);
 
 
 /*

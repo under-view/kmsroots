@@ -42,6 +42,11 @@ int main(void) {
     exit(1);
   }
 
+  if (uvr_vk_create_surfaceKHR(&whole.app, XCB_CLIENT_SURFACE, "c:w", whole.xclient.conn, whole.xclient.window) == -1) {
+    appwhole_destory(&whole);
+    exit(1);
+  }
+
   uvr_xcb_display_window(&whole.xclient);
 
   /* Wait for 5 seconds to display */

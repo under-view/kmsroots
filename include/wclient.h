@@ -3,6 +3,7 @@
 #define UVR_WAYLAND_CLIENT_H
 
 #include "common.h"
+#include "utils.h"
 #include <wayland-client.h>
 
 /*

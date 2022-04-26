@@ -3,6 +3,7 @@
 #define UVR_XCB_CLIENT_H
 
 #include "common.h"
+#include "utils.h"
 #include <xcb/xcb.h>
 
 /*
