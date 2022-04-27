@@ -17,6 +17,26 @@
 
 
 /*
+ * Dynamically retrieve or acquire the address of a VkInstance func.
+ * Via token concatenation and String-izing Tokens
+ */
+#define UVR_VK_INSTANCE_PROC_ADDR(inst, var, func) \
+  do { \
+    var = (PFN_vk##func) vkGetInstanceProcAddr(inst, "vk" #func); \
+  } while(0);
+
+
+/*
+ * Dynamically retrieve or acquire the address of a VkDevice (logical device) func.
+ * Via token concatenation and String-izing Tokens
+ */
+#define UVR_VK_DEVICE_PROC_ADDR(dev, var, func) \
+  do { \
+    var = (PFN_vk##func) vkGetDeviceProcAddr(dev, "vk" #func); \
+  } while(0);
+
+
+/*
  * struct uvrvk (Underview Renderer Vulkan)
  *
  * @instance - Keeps track of all application state. The connection to the vulkan loader.
