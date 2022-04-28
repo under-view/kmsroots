@@ -7,7 +7,7 @@ Library for building X11, Wayland, & KMS Vulkan Applications
 $ sudo apt install -y aptitude
 # Build depends
 $ sudo aptitude install -y build-essential python3 python3-pip pkg-config ninja-build
-$ sudo python3 -m pip install meson
+$ sudo python3 -m pip install meson==0.61.4
 # Vulkan depends
 $ sudo aptitude install -y libvulkan-dev vulkan-validationlayers vulkan-utils vulkan-tools
 # XCB depends
