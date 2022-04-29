@@ -83,7 +83,7 @@ void uvr_xcb_display_window(struct uvrxcb *client) {
 
 
 void uvr_xcb_destory(struct uvrxcb *client) {
-  if (client->window != UINT32_MAX)
+  if (client->window)
     xcb_destroy_window(client->conn, client->window);
 
   /* Disconnect from X server */

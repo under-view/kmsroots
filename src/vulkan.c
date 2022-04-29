@@ -203,7 +203,76 @@ int uvr_vk_create_surfaceKHR(struct uvrvk *app, enum uvrvk_surface_type st, char
 }
 
 
+int uvr_vk_create_phdev(struct uvrvk *app, VkPhysicalDeviceType vkpdtype, char *fmt, ...) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkPhysicalDevice *devices = VK_NULL_HANDLE;
+  uint32_t device_count = 0;
+
+  if (!app->instance) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev: VkInstance not instantiated");
+    uvr_utils_log(UVR_DANGER, "[x] Make a call to uvr_vk_create_instance");
+    return -1;
+  }
+
+  res = vkEnumeratePhysicalDevices(app->instance, &device_count, NULL);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(vkEnumeratePhysicalDevices): %s", vkres_msg(res));
+    return -1;
+  }
+
+  if (device_count == 0) {
+    uvr_utils_log(UVR_DANGER, "[x] failed to find GPU with Vulkan support!!!");
+    return -1;
+  }
+
+  devices = (VkPhysicalDevice *) alloca(device_count * sizeof(VkPhysicalDevice));
+
+  res = vkEnumeratePhysicalDevices(app->instance, &device_count, devices);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(vkEnumeratePhysicalDevices): %s", vkres_msg(res));
+    return -1;
+  }
+
+  /* Get KMS fd stats */
+  int drmfd=-1; va_list ap;
+  if (fmt) {
+    va_start(ap, fmt);
+    drmfd = va_arg(ap, int);
+    va_end(ap);
+  }
+
+  struct stat drm_stat = {0};
+  if (drmfd != -1) {
+    if (fstat(drmfd, &drm_stat) == -1) {
+      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(fstat): %s", strerror(errno));
+      return -1;
+    }
+  }
+
+  VkPhysicalDeviceProperties devprops;
+  VkPhysicalDeviceFeatures devfeats;
+
+  /*
+   * get a physical device that is suitable
+   * to do the graphics related task that we need
+   */
+  for (uint32_t i = 0; i < device_count; i++) {
+    vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
+    vkGetPhysicalDeviceFeatures(devices[i], &devfeats); /* Query device features */
+    if (devprops.deviceType == vkpdtype) {
+      memmove(&app->phdev, &devices[i], sizeof(devices[i]));
+      uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s", devprops.deviceName);
+      break;
+    }
+  }
+
+  return 0;
+}
+
+
 void uvr_vk_destory(struct uvrvk *app) {
+  if (app->lgdev)
+    vkDestroyDevice(app->lgdev, NULL);
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
   if (app->surface)
     vkDestroySurfaceKHR(app->instance, app->surface, NULL);

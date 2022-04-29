@@ -19,8 +19,8 @@ struct appwhole {
 };
 
 void appwhole_destory(struct appwhole *whole) {
-  uvr_xcb_destory(&whole->xclient);
   uvr_vk_destory(&whole->app);
+  uvr_xcb_destory(&whole->xclient);
 }
 
 /*
@@ -32,20 +32,17 @@ int main(void) {
 
   if (uvr_vk_create_instance(&whole.app, "Example App", "No Engine",
                              ARRAY_LEN(validation_layers), validation_layers,
-                             ARRAY_LEN(instance_extensions), instance_extensions) == -1) {
-    appwhole_destory(&whole);
-    exit(1);
-  }
+                             ARRAY_LEN(instance_extensions), instance_extensions) == -1)
+    goto exit_error;
 
-  if (uvr_xcb_create_client(&whole.xclient, NULL, NULL, "Example App", true) == -1) {
-    appwhole_destory(&whole);
-    exit(1);
-  }
+  if (uvr_vk_create_phdev(&whole.app, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, NULL) == -1)
+    goto exit_error;
 
-  if (uvr_vk_create_surfaceKHR(&whole.app, XCB_CLIENT_SURFACE, "c:w", whole.xclient.conn, whole.xclient.window) == -1) {
-    appwhole_destory(&whole);
-    exit(1);
-  }
+  if (uvr_xcb_create_client(&whole.xclient, NULL, NULL, "Example App", true) == -1)
+    goto exit_error;
+
+  if (uvr_vk_create_surfaceKHR(&whole.app, XCB_CLIENT_SURFACE, "c:w", whole.xclient.conn, whole.xclient.window) == -1)
+    goto exit_error;
 
   uvr_xcb_display_window(&whole.xclient);
 
@@ -53,6 +50,9 @@ int main(void) {
   sleep(5);
 
   appwhole_destory(&whole);
-
   return 0;
+
+exit_error:
+  appwhole_destory(&whole);
+  return 1;
 }

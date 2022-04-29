@@ -65,6 +65,9 @@ int main(void) {
                                whole.wclient.display, whole.wclient.surface) == -1)
     goto exit_error;
 
+  if (uvr_vk_create_phdev(&whole.app, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, NULL) == -1)
+    goto exit_error;
+
   int cbuff = 0, stride = width * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;
 

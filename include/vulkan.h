@@ -41,9 +41,14 @@
  *
  * @instance - Keeps track of all application state. The connection to the vulkan loader.
  * @surface  - Containing the platform-specific information about the surface
+ * @phdev    - Physical device handle representing actual connection to the physical device (GPU, CPU, etc...)
+ * @lgdev    -
  */
 struct uvrvk {
   VkInstance instance;
+  VkPhysicalDevice phdev;
+  VkDevice lgdev;
+
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
   VkSurfaceKHR surface;
 #endif
@@ -52,6 +57,7 @@ struct uvrvk {
 
 /*
  * enum uvrvk_surface_type (Underview Renderer Surface Type)
+ *
  * Display server protocol options used by uvr_vk_create_surfaceKHR
  * to create a VkSurfaceKHR object based upon platform specific information
  */
@@ -121,6 +127,29 @@ int uvr_vk_create_instance(struct uvrvk *app,
  *   -1 on failure
  */
 int uvr_vk_create_surfaceKHR(struct uvrvk *app, enum uvrvk_surface_type st, char *fmt, ...);
+
+
+/*
+ * uvr_vk_create_phdev: Creates a VkSurfaceKHR object based upon platform specific
+ *                       information about the surface
+ *
+ * args:
+ * @app - pointer to a struct uvrwc contains all objects
+ *        necessary to run a vulkan application.
+ *
+ *        Members that recieve addresses and values:
+ *        @phdev, @lgdev
+ * @vkpdtype  - an enum above to help select
+ * @fmt - Used to describe what argument is passed and in what order
+ *        Character Codes:
+ *            * d - Pass the address that gives reference to the underlying display protocol.
+ *                  Usually will be (struct wl_display *), (xcb_connection_t *conn)
+ *            * NULL - If drm file descriptor doesn't exist
+ * return:
+ *    0 on success
+ *   -1 on failure
+ */
+int uvr_vk_create_phdev(struct uvrvk *app, VkPhysicalDeviceType vkpdtype, char *fmt, ...);
 
 
 /*
