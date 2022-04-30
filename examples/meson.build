@@ -1,3 +1,4 @@
+example_inc = include_directories('common')
 
 if build_kms
   if libdrm.found()
@@ -5,7 +6,7 @@ if build_kms
       'kms/main.c',
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
-      include_directories: inc,
+      include_directories: [inc, example_inc],
       install: true
     )
   endif
@@ -18,7 +19,7 @@ if build_xcb
       'X11/main.c',
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
-      include_directories: inc,
+      include_directories: [inc, example_inc],
       install: true
     )
   endif
@@ -31,7 +32,7 @@ if build_wayland
       'wayland/main.c',
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
-      include_directories: inc,
+      include_directories: [inc, example_inc],
       install: true
     )
   endif

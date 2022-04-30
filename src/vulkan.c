@@ -62,24 +62,17 @@ static const char *vkres_msg(int err) {
 }
 
 
-int uvr_vk_create_instance(struct uvrvk *app,
-                           const char *app_name,
-                           const char *engine_name,
-                           uint32_t enabledLayerCount,
-                           const char **ppEnabledLayerNames,
-                           uint32_t enabledExtensionCount,
-                           const char **ppEnabledExtensionNames)
-{
-
+VkInstance uvr_vk_instance_create(struct uvrvk_instance *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
+  VkInstance instance = VK_NULL_HANDLE;
 
   /* initialize the VkApplicationInfo structure */
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   app_info.pNext = NULL;
-  app_info.pApplicationName = app_name;
+  app_info.pApplicationName = uvrvk->app_name;
   app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.pEngineName = engine_name;
+  app_info.pEngineName = uvrvk->engine_name;
   app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
   app_info.apiVersion = VK_MAKE_VERSION(1, 3, 0);
 
@@ -96,158 +89,126 @@ int uvr_vk_create_instance(struct uvrvk *app,
    */
   VkInstanceCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  create_info.pNext = (ppEnabledLayerNames) ? &features : NULL;
+  create_info.pNext = (uvrvk->ppEnabledLayerNames) ? &features : NULL;
   create_info.flags = 0;
   create_info.pApplicationInfo = &app_info;
-  create_info.enabledLayerCount = enabledLayerCount;
-  create_info.ppEnabledLayerNames = ppEnabledLayerNames;
-  create_info.enabledExtensionCount = enabledExtensionCount;
-  create_info.ppEnabledExtensionNames = ppEnabledExtensionNames;
+  create_info.enabledLayerCount = uvrvk->enabledLayerCount;
+  create_info.ppEnabledLayerNames = uvrvk->ppEnabledLayerNames;
+  create_info.enabledExtensionCount = uvrvk->enabledExtensionCount;
+  create_info.ppEnabledExtensionNames = uvrvk->ppEnabledExtensionNames;
 
   /* Create the instance */
-  res = vkCreateInstance(&create_info, NULL, &app->instance);
+  res = vkCreateInstance(&create_info, NULL, &instance);
   if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_instance(vkCreateInstance): %s", vkres_msg(res));
-    return -1;
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_instance_create(vkCreateInstance): %s", vkres_msg(res));
+    return VK_NULL_HANDLE;
   }
 
-  uvr_utils_log(UVR_SUCCESS, "uvr_vk_create_instance: VkInstance created retval(%p)", app->instance);
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_instance_create: VkInstance created retval(%p)", instance);
 
-  return 0;
+  return instance;
 }
 
 
-int uvr_vk_create_surfaceKHR(struct uvrvk *app, enum uvrvk_surface_type st, char *fmt, ...){
+VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-  if (!app->instance) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_surfaceKHR: VkInstance not instantiated");
+  if (!uvrvk->vkinst) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_surface_create: VkInstance not instantiated");
     uvr_utils_log(UVR_DANGER, "[x] Make a call to uvr_vk_create_instance");
-    return -1;
+    return VK_NULL_HANDLE;
   }
 
-  if (st != WAYLAND_CLIENT_SURFACE && st != XCB_CLIENT_SURFACE) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_surfaceKHR: Must specify correct enum uvrvk_surface_type");
-    return -1;
+  if (uvrvk->sType != WAYLAND_CLIENT_SURFACE && uvrvk->sType != XCB_CLIENT_SURFACE) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_surface_create: Must specify correct enum uvrvk_surface_type");
+    return VK_NULL_HANDLE;
   }
-
-  /*
-   * Purposely marked as UNUSED as
-   * INCLUDE_WAYLAND/XCB may not be defined
-   */
-  VkResult UNUSED res = VK_RESULT_MAX_ENUM;
-
-  struct platform_surface_info {
-    void *surface;
-    void *connection_to_display;
-    unsigned int window;
-  } UNUSED pinfo;
-
-  va_list ap;
-  va_start(ap, fmt);
-  while (*fmt) {
-    switch (*fmt++) {
-      case 'c':
-        pinfo.connection_to_display = (void *) va_arg(ap, void *);
-        break;
-      case 's':
-        pinfo.surface = (void *) va_arg(ap, void *);
-        break;
-      case 'w':
-        pinfo.window = (unsigned int) va_arg(ap, unsigned int);
-        break;
-      default: break;
-    }
-  }
-  va_end(ap);
 
 #ifdef INCLUDE_WAYLAND
-  if (st == WAYLAND_CLIENT_SURFACE) {
+  if (uvrvk->sType == WAYLAND_CLIENT_SURFACE) {
     VkWaylandSurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     create_info.pNext = NULL;
     create_info.flags = 0;
-    create_info.display = pinfo.connection_to_display;
-    create_info.surface = pinfo.surface;
+    create_info.display = uvrvk->display;
+    create_info.surface = uvrvk->surface;
 
-    res = vkCreateWaylandSurfaceKHR(app->instance, &create_info, NULL, &app->surface);
+    res = vkCreateWaylandSurfaceKHR(uvrvk->vkinst, &create_info, NULL, &surface);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_surfaceKHR(vkCreateWaylandSurfaceKHR): %s", vkres_msg(res));
-      return -1;
+      return VK_NULL_HANDLE;
     }
   }
 #endif
 
 
 #ifdef INCLUDE_XCB
-  if (st == XCB_CLIENT_SURFACE) {
+  if (uvrvk->sType == XCB_CLIENT_SURFACE) {
     VkXcbSurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     create_info.pNext = NULL;
     create_info.flags = 0;
-    create_info.connection = pinfo.connection_to_display;
-    create_info.window = pinfo.window;
+    create_info.connection = uvrvk->display;
+    create_info.window = uvrvk->window;
 
-    res = vkCreateXcbSurfaceKHR(app->instance, &create_info, NULL, &app->surface);
+    res = vkCreateXcbSurfaceKHR(uvrvk->vkinst, &create_info, NULL, &surface);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_surfaceKHR(vkCreateXcbSurfaceKHR): %s", vkres_msg(res));
-      return -1;
+      return VK_NULL_HANDLE;
     }
   }
 #endif
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
-  uvr_utils_log(UVR_SUCCESS, "uvr_vk_create_surfaceKHR: VkSurfaceKHR created retval(%p)", app->surface);
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_create_surfaceKHR: VkSurfaceKHR created retval(%p)", surface);
 #endif
 
-  return 0;
+  return surface;
 }
 
 
-int uvr_vk_create_phdev(struct uvrvk *app, VkPhysicalDeviceType vkpdtype, char *fmt, ...) {
+VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
-  VkPhysicalDevice *devices = VK_NULL_HANDLE;
+  VkPhysicalDevice device = VK_NULL_HANDLE;
   uint32_t device_count = 0;
+  VkPhysicalDevice *devices = NULL;
 
-  if (!app->instance) {
+  if (!uvrvk->vkinst) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev: VkInstance not instantiated");
     uvr_utils_log(UVR_DANGER, "[x] Make a call to uvr_vk_create_instance");
-    return -1;
+    return VK_NULL_HANDLE;
   }
 
-  res = vkEnumeratePhysicalDevices(app->instance, &device_count, NULL);
+  res = vkEnumeratePhysicalDevices(uvrvk->vkinst, &device_count, NULL);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(vkEnumeratePhysicalDevices): %s", vkres_msg(res));
-    return -1;
+    return VK_NULL_HANDLE;
   }
 
   if (device_count == 0) {
     uvr_utils_log(UVR_DANGER, "[x] failed to find GPU with Vulkan support!!!");
-    return -1;
+    return VK_NULL_HANDLE;
   }
 
   devices = (VkPhysicalDevice *) alloca(device_count * sizeof(VkPhysicalDevice));
 
-  res = vkEnumeratePhysicalDevices(app->instance, &device_count, devices);
+  res = vkEnumeratePhysicalDevices(uvrvk->vkinst, &device_count, devices);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(vkEnumeratePhysicalDevices): %s", vkres_msg(res));
-    return -1;
+    return VK_NULL_HANDLE;
   }
 
+#ifdef INCLUDE_KMS
   /* Get KMS fd stats */
-  int drmfd=-1; va_list ap;
-  if (fmt) {
-    va_start(ap, fmt);
-    drmfd = va_arg(ap, int);
-    va_end(ap);
-  }
-
   struct stat drm_stat = {0};
-  if (drmfd != -1) {
-    if (fstat(drmfd, &drm_stat) == -1) {
+  if (uvrvk->drmfd != -1) {
+    if (fstat(uvrvk->drmfd, &drm_stat) == -1) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(fstat): %s", strerror(errno));
-      return -1;
+      return VK_NULL_HANDLE;
     }
   }
+#endif
 
   VkPhysicalDeviceProperties devprops;
   VkPhysicalDeviceFeatures devfeats;
@@ -259,24 +220,41 @@ int uvr_vk_create_phdev(struct uvrvk *app, VkPhysicalDeviceType vkpdtype, char *
   for (uint32_t i = 0; i < device_count; i++) {
     vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
     vkGetPhysicalDeviceFeatures(devices[i], &devfeats); /* Query device features */
-    if (devprops.deviceType == vkpdtype) {
-      memmove(&app->phdev, &devices[i], sizeof(devices[i]));
+    if (devprops.deviceType == uvrvk->vkpdtype) {
+      memmove(&device, &devices[i], sizeof(devices[i]));
       uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s", devprops.deviceName);
       break;
     }
   }
 
-  return 0;
+  return device;
 }
 
 
-void uvr_vk_destory(struct uvrvk *app) {
-  if (app->lgdev)
-    vkDestroyDevice(app->lgdev, NULL);
+void uvr_vk_destory(struct uvrvk_destroy *uvrvk) {
+  int i;
+
+  for (i=0; i < uvrvk->vklgdev_cnt; i++) {
+    if (uvrvk->vklgdevs[i]) {
+      vkDeviceWaitIdle(uvrvk->vklgdevs[i]);
+      vkDestroyDevice(uvrvk->vklgdevs[i], NULL);
+      uvrvk->vklgdevs[i] = VK_NULL_HANDLE;
+    }
+  }
+
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
-  if (app->surface)
-    vkDestroySurfaceKHR(app->instance, app->surface, NULL);
+  for (i=0; i < uvrvk->vksurf_cnt; i++) {
+    if (uvrvk->vksurfs[i].vksurf) {
+      vkDestroySurfaceKHR(uvrvk->vksurfs[i].vkinst, uvrvk->vksurfs[i].vksurf, NULL);
+      uvrvk->vksurfs[i].vksurf = VK_NULL_HANDLE;
+    }
+  }
 #endif
-  if (app->instance)
-    vkDestroyInstance(app->instance, NULL);
+
+  for (i=0; i < uvrvk->vkinst_cnt; i++) {
+    if (uvrvk->vkinsts[i]) {
+      vkDestroyInstance(uvrvk->vkinsts[i], NULL);
+      uvrvk->vkinsts[i] = VK_NULL_HANDLE;
+    }
+  }
 }

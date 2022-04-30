@@ -1,4 +1,4 @@
-#include "vulkan.h"
+#include "vulkan-common.h"
 #include "xclient.h"
 
 /*
@@ -13,46 +13,111 @@ const char *instance_extensions[] = {
   "VK_KHR_surface"
 };
 
-struct appwhole {
-  struct uvrvk app;
-  struct uvrxcb xclient;
-};
-
-void appwhole_destory(struct appwhole *whole) {
-  uvr_vk_destory(&whole->app);
-  uvr_xcb_destory(&whole->xclient);
-}
 
 /*
- * Example code demonstrating how to connect Vulkan to X11
+ * Example code demonstrating how to use Vulkan with XCB
  */
 int main(void) {
-  struct appwhole whole;
-  memset(&whole, 0, sizeof(struct appwhole));
+  struct uvrvk app;
+  struct uvrvk_destroy appd;
+  memset(&app, 0, sizeof(app));
+  memset(&appd, 0, sizeof(appd));
 
-  if (uvr_vk_create_instance(&whole.app, "Example App", "No Engine",
-                             ARRAY_LEN(validation_layers), validation_layers,
-                             ARRAY_LEN(instance_extensions), instance_extensions) == -1)
+  struct uvrxcb xclient;
+  struct uvrxcb_destroy xclientd;
+  memset(&xclient, 0, sizeof(xclient));
+  memset(&xclientd, 0, sizeof(xclientd));
+
+  /*
+   * Create Vulkan Instance
+   */
+  struct uvrvk_instance vkinst = {
+    .app_name = "Example App",
+    .engine_name = "No Engine",
+    .enabledLayerCount = ARRAY_LEN(validation_layers),
+    .ppEnabledLayerNames = validation_layers,
+    .enabledExtensionCount = ARRAY_LEN(instance_extensions),
+    .ppEnabledExtensionNames = instance_extensions
+  };
+
+  app.instance = uvr_vk_instance_create(&vkinst);
+  if (!app.instance)
     goto exit_error;
 
-  if (uvr_vk_create_phdev(&whole.app, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, NULL) == -1)
+  /*
+   * Let the api know how many vulkan instances where created
+   * in order to properly destroy them all.
+   */
+  appd.vkinsts = &app.instance;
+  appd.vkinst_cnt = 1;
+
+
+  /*
+   * Create Vulkan Physical Device Handle
+   */
+  struct uvrvk_phdev vkphdev = {
+    .vkinst = app.instance,
+    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+  };
+
+  app.phdev = uvr_vk_phdev_create(&vkphdev);
+  if (!app.phdev)
     goto exit_error;
 
-  if (uvr_xcb_create_client(&whole.xclient, NULL, NULL, "Example App", true) == -1)
+
+  /*
+   * Create xcb client
+   */
+  struct uvrxcb_window xcbwin = {
+    .display = NULL, .screen = NULL,
+    .appname = "Example App", .fullscreen = true
+  };
+
+  xclient.conn = uvr_xcb_client_create(&xcbwin);
+  if (!xclient.conn)
     goto exit_error;
 
-  if (uvr_vk_create_surfaceKHR(&whole.app, XCB_CLIENT_SURFACE, "c:w", whole.xclient.conn, whole.xclient.window) == -1)
+  xclient.window = xcbwin.window;
+
+  /*
+   * Let the api know how many xcb client windows where created
+   * in order to properly destroy them all.
+   */
+  xclientd.xcbwins[0].conn = xclient.conn;
+  xclientd.xcbwins[0].window = xclient.window;
+  xclientd.xcbwins_cnt = 1;
+
+  /*
+   * Create Vulkan Surface
+   */
+  struct uvrvk_surface vksurf = {
+    .vkinst = app.instance, .sType = XCB_CLIENT_SURFACE,
+    .display = xclient.conn, .window = xclient.window
+  };
+
+  app.surface = uvr_vk_surface_create(&vksurf);
+  if (!app.surface)
     goto exit_error;
 
-  uvr_xcb_display_window(&whole.xclient);
+  /*
+   * Let the api know how many vulkan surfaces where created
+   * in order to properly destroy them all.
+   */
+  appd.vksurfs[0].vkinst = app.instance;
+  appd.vksurfs[0].vksurf = app.surface;
+  appd.vksurf_cnt = 1;
+
+  uvr_xcb_display_window(&xclient);
 
   /* Wait for 5 seconds to display */
   sleep(5);
 
-  appwhole_destory(&whole);
+  uvr_vk_destory(&appd);
+  uvr_xcb_destory(&xclientd);
   return 0;
 
 exit_error:
-  appwhole_destory(&whole);
+  uvr_vk_destory(&appd);
+  uvr_xcb_destory(&xclientd);
   return 1;
 }

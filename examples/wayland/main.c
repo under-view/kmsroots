@@ -36,7 +36,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
 }
 
 /*
- * Example code demonstrating how to connect Vulkan to X11
+ * Example code demonstrating how use Vulkan with X11
  */
 int main(void) {
   struct appwhole whole;

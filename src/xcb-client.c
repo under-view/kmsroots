@@ -1,31 +1,25 @@
-
 #include "xclient.h"
 #include <xcb/xcb_ewmh.h>
 
-int uvr_xcb_create_client(struct uvrxcb *client,
-                          const char *display,
-                          int *screen,
-                          const char *appname,
-                          bool fullscreen)
-{
-
+xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window *uvrxcb) {
   const xcb_setup_t *xcbsetup = NULL;
   xcb_screen_t *xcbscreen = NULL;
+  xcb_connection_t *conn = NULL;
 
   /* Connect to Xserver */
-  client->conn = xcb_connect(display, screen);
-  if (xcb_connection_has_error(client->conn)) {
+  conn = xcb_connect(uvrxcb->display, uvrxcb->screen);
+  if (xcb_connection_has_error(conn)) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_connect Failed");
-    if (!display)
+    if (!uvrxcb->display)
       uvr_utils_log(UVR_INFO, "Try setting the DISPLAY environment variable");
-    return -1;
+    goto error_exit_xcb_client_create;
   }
 
   /* access properties of the X server and its display environment */
-  xcbsetup = xcb_get_setup(client->conn);
+  xcbsetup = xcb_get_setup(conn);
   if (!xcbsetup) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_get_setup Failed");
-    return -1;
+    goto error_exit_xcb_client_create;
   }
 
   /*
@@ -37,7 +31,7 @@ int uvr_xcb_create_client(struct uvrxcb *client,
   xcbscreen = xcb_setup_roots_iterator(xcbsetup).data;
   if (!xcbscreen) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_setup_roots_iterator data member NULL");
-    return -1;
+    goto error_exit_xcb_client_create;
   }
 
   uvr_utils_log(UVR_INFO, "Informations of screen %" PRIu32, xcbscreen->root);
@@ -47,46 +41,66 @@ int uvr_xcb_create_client(struct uvrxcb *client,
   uint32_t prop_name = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
   uint32_t prop_value[2] = { xcbscreen->black_pixel, XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_KEY_PRESS };
 
-  client->window = xcb_generate_id(client->conn);
+  uvrxcb->window = xcb_generate_id(conn);
 
-  xcb_create_window(client->conn, xcbscreen->root_depth, client->window, xcbscreen->root, 0,
+  xcb_create_window(conn, xcbscreen->root_depth, uvrxcb->window, xcbscreen->root, 0,
                     0, xcbscreen->width_in_pixels, xcbscreen->height_in_pixels, 0,
                     XCB_WINDOW_CLASS_COPY_FROM_PARENT, xcbscreen->root_visual,
                     prop_name, prop_value);
 
   /* Change window property name */
-  xcb_change_property(client->conn, XCB_PROP_MODE_REPLACE, client->window,
+  xcb_change_property(conn, XCB_PROP_MODE_REPLACE, uvrxcb->window,
                       XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8,
-                      strnlen(appname, 60), appname);
+                      strnlen(uvrxcb->appname, 60), uvrxcb->appname);
 
   /* Change window property to make fullscreen */
-  if (fullscreen) {
+  if (uvrxcb->fullscreen) {
     xcb_ewmh_connection_t xcbewmh = {};
-    if (!xcb_ewmh_init_atoms_replies(&xcbewmh, xcb_ewmh_init_atoms(client->conn, &xcbewmh), NULL)) {
+    xcb_intern_atom_cookie_t *cookie = xcb_ewmh_init_atoms(conn, &xcbewmh);
+    if (!xcb_ewmh_init_atoms_replies(&xcbewmh, cookie, NULL)) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_ewmh_init_atoms_replies Couldn't initialise ewmh atom");
-      return -1;
+      goto error_exit_xcb_client_create;
     }
 
-    xcb_change_property(client->conn, XCB_PROP_MODE_PREPEND, client->window,
+    xcb_change_property(conn, XCB_PROP_MODE_PREPEND, uvrxcb->window,
                         xcbewmh._NET_WM_STATE, XCB_ATOM_ATOM, 32, 1,
                         &(xcbewmh._NET_WM_STATE_FULLSCREEN));
   }
 
-  return 0;
+  return conn;
+
+error_exit_xcb_client_create:
+  if (uvrxcb->window) {
+    xcb_destroy_window(conn, uvrxcb->window);
+    uvrxcb->window = 0;
+  }
+
+  if (conn)
+    xcb_disconnect(conn);
+
+  return NULL;
 }
 
 
-void uvr_xcb_display_window(struct uvrxcb *client) {
-  xcb_map_window(client->conn, client->window);
-  xcb_flush(client->conn);
+void uvr_xcb_display_window(struct uvrxcb *uvrxcb) {
+  xcb_map_window(uvrxcb->conn, uvrxcb->window);
+  xcb_flush(uvrxcb->conn);
 }
 
 
-void uvr_xcb_destory(struct uvrxcb *client) {
-  if (client->window)
-    xcb_destroy_window(client->conn, client->window);
+void uvr_xcb_destory(struct uvrxcb_destroy *uvrxcb) {
+  int i;
 
-  /* Disconnect from X server */
-  if (client->conn)
-    xcb_disconnect(client->conn);
+  for (i=0; i < uvrxcb->xcbwins_cnt; i++) {
+    if (uvrxcb->xcbwins[i].window) {
+      xcb_destroy_window(uvrxcb->xcbwins[i].conn, uvrxcb->xcbwins[i].window);
+      uvrxcb->xcbwins[i].window = UINT32_MAX;
+    }
+
+    /* Disconnect from X server */
+    if (uvrxcb->xcbwins[i].conn) {
+      xcb_disconnect(uvrxcb->xcbwins[i].conn);
+      uvrxcb->xcbwins[i].conn = NULL;
+    }
+  }
 }

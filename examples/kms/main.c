@@ -1,4 +1,4 @@
-#include "vulkan.h"
+#include "vulkan-common.h"
 
 /*
  * "VK_LAYER_KHRONOS_validation"
@@ -24,32 +24,42 @@ const char *device_extensions[] = {
 };
 
 
-struct appwhole {
-  struct uvrvk app;
-};
-
-
-static void appwhole_destory(struct appwhole *whole) {
-  uvr_vk_destory(&whole->app);
-}
-
-
 /*
- * Example code demonstrating how to connect Vulkan to X11
+ * Example code demonstrating how to use Vulkan with KMS
  */
 int main(void) {
-  struct appwhole whole;
-  memset(&whole, 0, sizeof(struct appwhole));
+  struct uvrvk app;
+  struct uvrvk_destroy appd;
+  memset(&app, 0, sizeof(app));
+  memset(&appd, 0, sizeof(appd));
 
-  if (uvr_vk_create_instance(&whole.app, "Example App", "No Engine",
-                             ARRAY_LEN(validation_layers), validation_layers,
-                             ARRAY_LEN(instance_extensions), instance_extensions) == -1)
+  /*
+   * Create Vulkan Instance
+   */
+  struct uvrvk_instance vkinst = {
+    .app_name = "Example App",
+    .engine_name = "No Engine",
+    .enabledLayerCount = ARRAY_LEN(validation_layers),
+    .ppEnabledLayerNames = validation_layers,
+    .enabledExtensionCount = ARRAY_LEN(instance_extensions),
+    .ppEnabledExtensionNames = instance_extensions
+  };
+
+  app.instance = uvr_vk_instance_create(&vkinst);
+  if (!app.instance)
     goto exit_error;
 
-  appwhole_destory(&whole);
+  /*
+   * Let the api know how many vulkan instances where created
+   * in order to properly destroy them all.
+   */
+  appd.vkinsts = &app.instance;
+  appd.vkinst_cnt = 1;
+  uvr_vk_destory(&appd);
+
   return 0;
 
 exit_error:
-  appwhole_destory(&whole);
+  uvr_vk_destory(&appd);
   return 1;
 }
