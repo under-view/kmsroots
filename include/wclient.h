@@ -1,4 +1,3 @@
-
 #ifndef UVR_WAYLAND_CLIENT_H
 #define UVR_WAYLAND_CLIENT_H
 
