@@ -16,6 +16,15 @@ if build_kms
   if libdrm.found()
     lib_uvr_deps += [libdrm]
   endif
+
+  if build_sdbus
+    libsystemd = cc.find_library('systemd', required: true)
+    if libsystemd.found()
+      lib_uvr_deps += [libsystemd]
+    endif
+
+    fs += ['sd-dbus.c']
+  endif
 endif
 
 

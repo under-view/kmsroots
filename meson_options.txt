@@ -2,9 +2,15 @@ option(
   'kms',
   type : 'boolean',
   value : true,
-  description : 'Build drm/kms wrapper api',
+  description : 'Build drm/kms backend',
 )
 
+option(
+  'sd-bus',
+  type : 'boolean',
+  value : true,
+  description : 'Build with systemd dbus API if option kms true',
+)
 
 option(
   'xcb',

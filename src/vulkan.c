@@ -111,7 +111,7 @@ VkInstance uvr_vk_instance_create(struct uvrvk_instance *uvrvk) {
 
 
 VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk) {
-  VkResult res = VK_RESULT_MAX_ENUM;
+  VkResult UNUSED res = VK_RESULT_MAX_ENUM;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
   if (!uvrvk->vkinst) {

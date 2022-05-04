@@ -20,6 +20,11 @@ build_wayland = get_option('wayland')
 
 if build_kms
   add_project_arguments(['-DINCLUDE_KMS=1'], language: 'c')
+
+  build_sdbus = get_option('sd-bus')
+  if build_sdbus
+    add_project_arguments(['-DINCLUDE_SDBUS=1'], language: 'c')
+  endif
 endif
 
 if build_xcb

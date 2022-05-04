@@ -15,7 +15,7 @@ $ sudo aptitude install -y libxcb1-dev libxcb-ewmh-dev
 # Wayland depends
 $ sudo aptitude install -y wayland-protocols libwayland-client0 libwayland-bin libwayland-dev
 # KMS depends
-$ sudo aptitude install -y libdrm-dev libgbm-dev libudev-dev libsystemd-dev
+$ sudo aptitude install -y libdrm-dev libgbm-dev libudev-dev libsystemd-dev libinput-dev
 ```
 
 **Building**

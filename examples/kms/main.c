@@ -1,5 +1,9 @@
 #include "vulkan-common.h"
 
+#ifdef INCLUDE_SDBUS
+#include "sd-dbus.h"
+#endif
+
 /*
  * "VK_LAYER_KHRONOS_validation"
  * All of the useful standard validation is
@@ -55,11 +59,24 @@ int main(void) {
    */
   appd.vkinsts = &app.instance;
   appd.vkinst_cnt = 1;
-  uvr_vk_destory(&appd);
 
+#ifdef INCLUDE_SDBUS
+  struct uvrsd_session uvrsd;
+  if (uvr_sd_session_create(&uvrsd) == -1)
+    goto exit_error;
+#endif
+
+
+#ifdef INCLUDE_SDBUS
+  uvr_sd_session_destroy(&uvrsd);
+#endif
+  uvr_vk_destory(&appd);
   return 0;
 
 exit_error:
+#ifdef INCLUDE_SDBUS
+  uvr_sd_session_destroy(&uvrsd);
+#endif
   uvr_vk_destory(&appd);
   return 1;
 }
