@@ -5,37 +5,32 @@
  * https://gitlab.freedesktop.org/daniels/kms-quads/-/blob/master/logind.c
  */
 #include "sd-dbus.h"
-
-/*
- * D-Bus (Desktop Bus) daemon uses an IPC mechanism that allows
- * for the communication of multiple processes running concurrently.
- * As long as a process is D-Bus aware it can invoke functions of
- * another process.
- *
- * systemd-logind D-Bus interface:
- * https://www.freedesktop.org/software/systemd/man/org.freedesktop.login1.html
- */
 #include <sys/sysmacros.h>
 
-#define DRM_MAJOR 226
 
 /*
  * Invoking the GetSession systemd-logind D-Bus interface function gets
- * the D-Bus session object path string used in D-Bus operations
+ * the D-Bus session object path string used in communications
  */
 static char *find_session_path(sd_bus *bus, char *id) {
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
+  int ret = 0;
 
-  if (sd_bus_call_method(bus, "org.freedesktop.login1", "/org/freedesktop/login1",
-      "org.freedesktop.login1.Manager", "GetSession", &error, &msg, "s", id) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to get session path: %s", error.message);
+  ret = sd_bus_call_method(bus,
+                          "org.freedesktop.login1",
+                          "/org/freedesktop/login1",
+                          "org.freedesktop.login1.Manager",
+                          "GetSession", &error, &msg, "s", id);
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] find_session_path(sd_bus_call_method): %s", error.message);
     goto exit_session_path;
   }
 
   const char *path = NULL;
-  if (sd_bus_message_read(msg, "o", &path) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Could not parse session path: %s", error.message);
+  ret = sd_bus_message_read(msg, "o", &path);
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] find_session_path(sd_bus_message_read): %s", strerror(-ret));
     goto exit_session_path;
   }
 
@@ -53,24 +48,25 @@ exit_session_path:
 
 
 /*
- * Invoking the Activate systemd-logind D-Bus interface function
- * activates a given session via the sd_bus object and path string
+ * Invoking the Activate systemd-logind D-Bus interface function activates
+ * a given session via the sd_bus object and session object path string.
  */
 static int session_activate(sd_bus *bus, char *path) {
   int ret = 0;
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
 
-  if (sd_bus_call_method(bus, "org.freedesktop.login1", path,
-      "org.freedesktop.login1.Session", "Activate", &error, &msg, "") < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to activate session: %s\n", error.message);
-    ret = -1; goto exit_active;
+  ret = sd_bus_call_method(bus,
+                          "org.freedesktop.login1", path,
+                          "org.freedesktop.login1.Session",
+                          "Activate", &error, &msg, "");
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] session_activate(sd_bus_call_method): %s", error.message);
   }
 
-exit_active:
   sd_bus_error_free(&error);
   sd_bus_message_unref(msg);
-  return ret;
+  return ret >= 0;
 }
 
 
@@ -83,16 +79,17 @@ static int take_control(sd_bus *bus, char *path) {
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
 
-  if (sd_bus_call_method(bus, "org.freedesktop.login1", path,
-      "org.freedesktop.login1.Session", "TakeControl", &error, &msg, "b", false) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to take control of session: %s", error.message);
-    ret = -1; goto exit_take_control;
+  ret = sd_bus_call_method(bus,
+                          "org.freedesktop.login1", path,
+                          "org.freedesktop.login1.Session",
+                          "TakeControl", &error, &msg, "b", false);
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] take_control(sd_bus_call_method): %s", error.message);
   }
 
-exit_take_control:
   sd_bus_error_free(&error);
   sd_bus_message_unref(msg);
-  return ret;
+  return ret >= 0;
 }
 
 
@@ -107,7 +104,7 @@ static void release_session_control(sd_bus *bus, char *path) {
 
   if (sd_bus_call_method(bus, "org.freedesktop.login1", path,
       "org.freedesktop.login1.Session", "ReleaseControl", &error, &msg, "") < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to release control of session: %s", error.message);
+    uvr_utils_log(UVR_DANGER, "[x] release_session_control(sd_bus_call_method): %s", error.message);
   }
 
   sd_bus_error_free(&error);
@@ -118,7 +115,7 @@ static void release_session_control(sd_bus *bus, char *path) {
 
 /* Create logind session to access devices without being root */
 int uvr_sd_session_create(struct uvrsd_session *uvrsd) {
-  uvrsd->fd = -1;
+  int ret = 0;
 
   /* If there's a session active for the current process then just use that */
   if (sd_pid_get_session(getpid(), &(uvrsd->id)) == 0) goto start_session;
@@ -127,16 +124,17 @@ int uvr_sd_session_create(struct uvrsd_session *uvrsd) {
    * Find any active sessions for the user.
    * Only if the process isn't part of an active session itself
    */
-  if (sd_uid_get_display(getuid(), &(uvrsd->id)) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] sd_uid_get_display: %s", strerror(-errno));
-    uvr_utils_log(UVR_DANGER, "[x] Couldn't find an active session");
+  ret = sd_uid_get_display(getuid(), &(uvrsd->id));
+  if (ret < 0 && ret != -ENODATA) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_uid_get_display): %s", strerror(-ret));
     return -1;
   }
 
   char *type = NULL; /* Check that the available session type is a tty */
-  if (sd_session_get_type(uvrsd->id, &type) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] sd_session_get_type: %s", strerror(-errno));
-    uvr_utils_log(UVR_DANGER, "[x] Couldn't get a tty session type for session '%s'", uvrsd->id);
+  ret = sd_session_get_type(uvrsd->id, &type);
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_session_get_type): %s", strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] Couldn't get a session type for session '%s'", uvrsd->id);
     return -1;
   }
 
@@ -149,8 +147,9 @@ int uvr_sd_session_create(struct uvrsd_session *uvrsd) {
 
   /* A seat is a collection of devices */
   char *seat = NULL;
-  if (sd_session_get_seat(uvrsd->id, &seat) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] sd_session_get_seat: %s", strerror(-errno));
+  ret = sd_session_get_seat(uvrsd->id, &seat);
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_session_get_seat): %s", strerror(-ret));
     return -1;
   }
 
@@ -159,7 +158,7 @@ int uvr_sd_session_create(struct uvrsd_session *uvrsd) {
     unsigned vtn;
     /* Check if virtual terminal number exists for this session */
     if (sd_session_get_vt(uvrsd->id, &vtn) < 0) {
-      uvr_utils_log(UVR_DANGER, "[x] sd_session_get_vt: %s", strerror(-errno));
+      uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_session_get_vt): %s", strerror(errno));
       uvr_utils_log(UVR_DANGER, "[x] Session not running in virtual terminal");
       free(seat); return -1;
     }
@@ -169,8 +168,9 @@ int uvr_sd_session_create(struct uvrsd_session *uvrsd) {
 
 start_session:
   /* Connect user to system bus */
-  if (sd_bus_default_system(&(uvrsd->bus)) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] sd_bus_default_system: %s", strerror(-errno));
+  ret = sd_bus_default_system(&(uvrsd->bus));
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_bus_default_system): %s", strerror(-ret));
     uvr_utils_log(UVR_DANGER, "[x] Failed to open D-Bus connection");
     return -1;
   }
@@ -180,8 +180,6 @@ start_session:
   if (!uvrsd->path)
     return -1;
 
-  uvr_utils_log(UVR_SUCCESS, "In session %s at path %s", uvrsd->id, uvrsd->path);
-
   /* Activate the session */
   if (session_activate(uvrsd->bus, uvrsd->path) == -1)
     return -1;
@@ -190,48 +188,16 @@ start_session:
   if (take_control(uvrsd->bus, uvrsd->path) == -1)
     return -1;
 
-  uvr_utils_log(UVR_SUCCESS, "Logind session successfully loaded");
+  uvr_utils_log(UVR_SUCCESS, "Logind session successfully loaded at: id - %s | path - '%s'", uvrsd->id, uvrsd->path);
 
   return 0;
 }
 
 
-/*
- * The ReleaseDevice D-Bus function allows for one to release control over
- * a given device (i.e GPU,keyboard,mouce,etc) via the sd_bus object and
- * D-Bus object path string
- */
-void uvr_sd_session_release_device(struct uvrsd_session *uvrsd) {
+int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd, const char *devpath) {
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
-
-  struct stat st;
-  if (fstat(uvrsd->fd, &st) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] fstat: %s : %d", strerror(errno), uvrsd->fd);
-    return;
-  }
-
-  if (sd_bus_call_method(uvrsd->bus, "org.freedesktop.login1", uvrsd->path, "org.freedesktop.login1.Session",
-      "ReleaseDevice", &error, &msg, "uu", major(st.st_rdev), minor(st.st_rdev)) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to release device '%d': %s", uvrsd->fd, error.message);
-  }
-
-  sd_bus_error_free(&error);
-  sd_bus_message_unref(msg);
-  close(uvrsd->fd);
-}
-
-
-/*
- * The TakeDevice D-Bus function allows session controller to get a file descriptor
- * for a specific device for one to acquire control over a given device
- * (i.e GPU,keyboard,mouce,etc) via the sd_bus object and D-Bus object path string.
- * This functions returns a file descriptor to the device that has been acquired.
- */
-int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd) {
-  sd_bus_message *msg = NULL;
-  sd_bus_error error = SD_BUS_ERROR_NULL;
-  int fd = -1;
+  int fd = -1, ret = 0;
 
   if (!uvrsd->path) {
     uvr_utils_log(UVR_DANGER, "[x] Must have an active logind session inorder to take control over a device");
@@ -240,24 +206,25 @@ int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd) {
   }
 
   struct stat st;
-  if (stat(uvrsd->path, &st) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to stat: '%s'", uvrsd->path);
+  if (stat(devpath, &st) < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_take_control_of_device(stat): '%s'", devpath);
     return fd;
   }
 
-  /* Identify the device class (DRM) */
-  if (major(st.st_rdev) == DRM_MAJOR)
-    uvrsd->has_drm = true;
-
-  if (sd_bus_call_method(uvrsd->bus, "org.freedesktop.login1", uvrsd->path, "org.freedesktop.login1.Session",
-      "TakeDevice", &error, &msg, "uu", major(st.st_rdev), minor(st.st_rdev)) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to take device '%s': %s", path, error.message);
+  ret = sd_bus_call_method(uvrsd->bus,
+                          "org.freedesktop.login1", uvrsd->path,
+                          "org.freedesktop.login1.Session",
+                          "TakeDevice", &error, &msg, "uu",
+                          major(st.st_rdev), minor(st.st_rdev));
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_take_control_of_device(sd_bus_call_method): '%s': %s", devpath, error.message);
     goto exit_logind_take_dev;
   }
 
   int paused = 0;
-  if (sd_bus_message_read(msg, "hb", &fd, &paused) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to parse D-Bus response for '%s': %s", uvrsd->path, strerror(-errno));
+  ret = sd_bus_message_read(msg, "hb", &fd, &paused);
+  if (ret < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_take_control_of_device(sd_bus_message_read) '%s': %s", devpath, strerror(-ret));
     goto exit_logind_take_dev;
   }
 
@@ -266,9 +233,11 @@ int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd) {
    */
   fd = fcntl(fd, F_DUPFD_CLOEXEC, 0);
   if (fd == -1) {
-    uvr_utils_log(UVR_DANGER, "[x] Failed to clone file descriptor for '%s': %s", uvrsd->path, strerror(errno));
+    uvr_utils_log(UVR_DANGER, "[x] Failed to clone file descriptor for '%s': %s", devpath, strerror(errno));
     goto exit_logind_take_dev;
   }
+
+  uvr_utils_log(UVR_SUCCESS, "Allowing %s : %d to be managed", devpath, fd);
 
 exit_logind_take_dev:
   sd_bus_error_free(&error);
@@ -277,9 +246,28 @@ exit_logind_take_dev:
 }
 
 
+void uvr_sd_session_release_device(struct uvrsd_session *uvrsd, int fd) {
+  sd_bus_message *msg = NULL;
+  sd_bus_error error = SD_BUS_ERROR_NULL;
+
+  struct stat st;
+  if (fstat(fd, &st) < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_release_device(fstat): %s", strerror(errno));
+    return;
+  }
+
+  if (sd_bus_call_method(uvrsd->bus, "org.freedesktop.login1", uvrsd->path, "org.freedesktop.login1.Session",
+      "ReleaseDevice", &error, &msg, "uu", major(st.st_rdev), minor(st.st_rdev)) < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_release_device(sd_bus_call_method): '%d' - %s", fd, error.message);
+  }
+
+  sd_bus_error_free(&error);
+  sd_bus_message_unref(msg);
+  close(fd);
+}
+
+
 void uvr_sd_session_destroy(struct uvrsd_session *uvrsd) {
-  if (uvrsd->fd != -1)
-    uvr_sd_session_release_device(uvrsd);
   release_session_control(uvrsd->bus, uvrsd->path);
   free(uvrsd->id);
   free(uvrsd->path);

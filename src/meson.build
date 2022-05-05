@@ -25,6 +25,8 @@ if build_kms
 
     fs += ['sd-dbus.c']
   endif
+
+  fs += ['kms.c']
 endif
 
 

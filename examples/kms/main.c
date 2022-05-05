@@ -1,8 +1,5 @@
 #include "vulkan-common.h"
-
-#ifdef INCLUDE_SDBUS
-#include "sd-dbus.h"
-#endif
+#include "kms.h"
 
 /*
  * "VK_LAYER_KHRONOS_validation"
@@ -37,6 +34,12 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
+
+  struct uvrkms_destroy kmsdevd;
+  struct uvrkms_node_create_info kmsnodeinfo;
+  memset(&kmsdevd, 0, sizeof(kmsdevd));
+  memset(&kmsnodeinfo, 0, sizeof(kmsnodeinfo));
+
   /*
    * Create Vulkan Instance
    */
@@ -64,19 +67,31 @@ int main(void) {
   struct uvrsd_session uvrsd;
   if (uvr_sd_session_create(&uvrsd) == -1)
     goto exit_error;
+  kmsnodeinfo.uvrsd_session = &uvrsd;
+  kmsnodeinfo.use_logind = true;
+  kmsdevd.info.uvrsd_session = &uvrsd;
 #endif
 
+  kmsnodeinfo.kmsnode = NULL;
+  int kmsfd = uvr_kms_node_create(&kmsnodeinfo);
+  if (kmsfd == -1)
+    goto exit_error;
 
+  /* Let the api know of what filedescriptor to close */
+  kmsdevd.kmsfd = kmsfd;
+
+  uvr_kms_destroy(&kmsdevd);
+  uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
   uvr_sd_session_destroy(&uvrsd);
 #endif
-  uvr_vk_destory(&appd);
   return 0;
 
 exit_error:
+  uvr_kms_destroy(&kmsdevd);
+  uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
   uvr_sd_session_destroy(&uvrsd);
 #endif
-  uvr_vk_destory(&appd);
   return 1;
 }
