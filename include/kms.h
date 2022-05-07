@@ -53,7 +53,12 @@ struct uvrkms_node_create_info {
 
 
 /*
- * uvr_kms_node_create: Opens & takes control of a KMS device node
+ * uvr_kms_node_create: Function opens and if have a systemd-logind session takes control of a KMS
+ *                      device node. Returned fd is exposed to all planes (overlay, primary, and cursor)
+ *                      and has access to the aspect ratio information in modes in userspace. In order
+ *                      to drive KMS, we need to be 'master'. Function fails if we aren't DRM-Master more
+ *                      info here: https://en.wikipedia.org/wiki/Direct_Rendering_Manager#DRM-Master_and_DRM-Auth
+ *                      So, if a graphical session is already active on the current VT function falls.
  *
  * args:
  * @uvrkms - pointer to a struct uvrkms_node_create_info used to determine what operation

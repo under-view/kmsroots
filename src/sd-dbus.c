@@ -188,7 +188,7 @@ start_session:
   if (take_control(uvrsd->bus, uvrsd->path) == -1)
     return -1;
 
-  uvr_utils_log(UVR_SUCCESS, "Logind session successfully loaded at: id - %s | path - '%s'", uvrsd->id, uvrsd->path);
+  uvr_utils_log(UVR_SUCCESS, "Logind session successfully loaded at: session id - %s | session path - '%s'", uvrsd->id, uvrsd->path);
 
   return 0;
 }
