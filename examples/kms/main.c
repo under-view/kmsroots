@@ -56,11 +56,10 @@ int main(void) {
     goto exit_error;
 
   /*
-   * Let the api know how many vulkan instances where created
-   * in order to properly destroy them all.
+   * Let the api know of the vulkan instance hande we created
+   * in order to properly destroy it
    */
-  appd.vkinsts = &app.instance;
-  appd.vkinst_cnt = 1;
+  appd.vkinst = app.instance;
 
 #ifdef INCLUDE_SDBUS
   struct uvrsd_session uvrsd;

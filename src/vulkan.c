@@ -232,29 +232,15 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
 
 
 void uvr_vk_destory(struct uvrvk_destroy *uvrvk) {
-  int i;
-
-  for (i=0; i < uvrvk->vklgdev_cnt; i++) {
-    if (uvrvk->vklgdevs[i]) {
-      vkDeviceWaitIdle(uvrvk->vklgdevs[i]);
-      vkDestroyDevice(uvrvk->vklgdevs[i], NULL);
-      uvrvk->vklgdevs[i] = VK_NULL_HANDLE;
-    }
+  if (uvrvk->vklgdev) {
+    vkDeviceWaitIdle(uvrvk->vklgdev);
+    vkDestroyDevice(uvrvk->vklgdev, NULL);
   }
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
-  for (i=0; i < uvrvk->vksurf_cnt; i++) {
-    if (uvrvk->vksurfs[i].vksurf) {
-      vkDestroySurfaceKHR(uvrvk->vksurfs[i].vkinst, uvrvk->vksurfs[i].vksurf, NULL);
-      uvrvk->vksurfs[i].vksurf = VK_NULL_HANDLE;
-    }
-  }
+  if (uvrvk->vksurf)
+    vkDestroySurfaceKHR(uvrvk->vkinst, uvrvk->vksurf, NULL);
 #endif
-
-  for (i=0; i < uvrvk->vkinst_cnt; i++) {
-    if (uvrvk->vkinsts[i]) {
-      vkDestroyInstance(uvrvk->vkinsts[i], NULL);
-      uvrvk->vkinsts[i] = VK_NULL_HANDLE;
-    }
-  }
+  if (uvrvk->vkinst)
+    vkDestroyInstance(uvrvk->vkinst, NULL);
 }

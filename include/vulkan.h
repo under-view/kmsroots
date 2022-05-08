@@ -160,27 +160,14 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk);
  * struct uvrvk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst_cnt  - The amount of VkInstance handles allocated for a given application
- * @vkinsts     - Must pass an array of valid VkInstance handles
- * @vklgdev_cnt - The amount of VkDevice handles allocated for a given application
- * @vklgdevs    - Must pass an array of valid VkDevice handles
- * @vksurf_cnt  - The amount of VkSurfaceKHR handles allocated for a given application
- * @vksurfs     - struct that stores the associated VkInstance used to create a VkSurfaceKHR
- *              + @vkinst - Must pass valid VkInstance handle
- *              + @vksurf - Must pass valid VkSurfaceKHR handle
+ * @vkinst     - Must pass a valid VkInstance handle
+ * @vklgdev    - Must pass a valid VkDevice handle
+ * @vksurf     - Must pass a valid VkSurfaceKHR handle
  */
 struct uvrvk_destroy {
-  int vkinst_cnt;
-  VkInstance *vkinsts;
-
-  int vklgdev_cnt;
-  VkDevice *vklgdevs;
-
-  int vksurf_cnt;
-  struct vkinstsurfs {
-    VkInstance vkinst;
-    VkSurfaceKHR vksurf;
-  } vksurfs[WINDOW_CNT];
+  VkInstance vkinst;
+  VkDevice vklgdev;
+  VkSurfaceKHR vksurf;
 };
 
 

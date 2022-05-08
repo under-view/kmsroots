@@ -55,11 +55,10 @@ int main(void) {
     goto exit_error;
 
   /*
-   * Let the api know how many vulkan instances where created
-   * in order to properly destroy them all.
+   * Let the api know of the vulkan instance hande we created
+   * in order to properly destroy it
    */
-  appd.vkinsts = &app.instance;
-  appd.vkinst_cnt = 1;
+  appd.vkinst = app.instance;
 
   /*
    * Create Vulkan Physical Device Handle
@@ -102,12 +101,10 @@ int main(void) {
     goto exit_error;
 
   /*
-   * Let the api know how many vulkan surfaces where created
-   * in order to properly destroy them all.
+   * Let the api know of the vulkan surface hande we created
+   * in order to properly destroy it
    */
-  appd.vksurfs[0].vkinst = app.instance;
-  appd.vksurfs[0].vksurf = app.surface;
-  appd.vksurf_cnt = 1;
+  appd.vksurf = app.surface;
 
   int stride = width * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;
