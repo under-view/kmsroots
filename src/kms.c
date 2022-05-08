@@ -5,8 +5,8 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
   int num_devices = 0, err = 0, kmsfd = -1;
   drm_magic_t magic;
   char *knode = NULL;
-  drmDevicePtr candidate = NULL;
-  drmDevicePtr *devices = NULL;
+  drmDevice *candidate = NULL;
+  drmDevice **devices = NULL;
 
   /* If the const char *kmsnode member is defined attempt to open it */
   if (uvrkms->kmsnode) {
@@ -32,7 +32,8 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
     goto error_free_kms_dev;
   }
 
-  devices = alloca(num_devices * sizeof(drmDevicePtr));
+  unsigned int dev_alloc_sz = num_devices * sizeof(*devices) + 1;
+  devices = alloca(dev_alloc_sz); devices[num_devices] = 0;
 
   /* Query list of available kms nodes (GPU) to get information about it */
   num_devices = drmGetDevices2(0, devices, num_devices);
@@ -68,8 +69,9 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
       continue;
     }
 
-    drmFreeDevices(devices, num_devices); devices = NULL;
     uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", knode, kmsfd);
+
+    drmFreeDevices(devices, num_devices); devices = NULL;
 
     /*
      * TAKEN FROM Daniel Stone (gitlab/kms-quads)
@@ -115,7 +117,179 @@ error_free_kms_dev:
 }
 
 
-void uvr_kms_destroy(struct uvrkms_destroy *uvrkms) {
+struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(struct uvrkms_node_get_display_output_chain_info *uvrkms) {
+  drmModeRes *drmres = NULL;
+  drmModePlaneRes *drmplaneres = NULL;
+
+  /* Query connector->encoder->crtc->plane properties */
+	drmres = drmModeGetResources(uvrkms->kmsfd);
+	if (!drmres) {
+    uvr_utils_log(UVR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", uvrkms->kmsfd);
+		goto err_ret_null_chain_output;
+	}
+
+	drmplaneres = drmModeGetPlaneResources(uvrkms->kmsfd);
+	if (!drmplaneres) {
+    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no planes", uvrkms->kmsfd);
+		goto err_res;
+	}
+
+  /* Check if some form of a display output chain exist */
+  if (drmres->count_crtcs       <= 0 ||
+      drmres->count_connectors  <= 0 ||
+      drmres->count_encoders    <= 0 ||
+      drmplaneres->count_planes <= 0) {
+    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no display output chain", uvrkms->kmsfd);
+    goto err_plane_res;
+  }
+
+  /* Query KMS device plane info */
+  drmModePlane **planes = alloca(drmplaneres->count_planes * sizeof(drmModePlane));
+  memset(planes, 0, drmplaneres->count_planes * sizeof(drmModePlane));
+
+  for (unsigned int i = 0; i < drmplaneres->count_planes; i++) {
+		planes[i] = drmModeGetPlane(uvrkms->kmsfd, drmplaneres->planes[i]);
+    if (!planes[i]) {
+      uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetPlane): Failed to get plane");
+      goto err_free_disp_planes;
+    }
+	}
+
+  /*
+	 * Go through connectors one by one and try to find a usable output chain.
+   * OUTPUT CHAIN: connector->encoder->crtc->plane
+	 */
+  drmModeConnector *connector = NULL;
+  drmModeEncoder *encoder = NULL;
+  drmModeCrtc *crtc = NULL;
+  drmModePlane *plane = NULL;
+
+  for (int i = 0; i < drmres->count_connectors; i++) {
+    connector = drmModeGetConnector(uvrkms->kmsfd, drmres->connectors[i]);
+    if (!connector) {
+      uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetConnector): Failed to get connector");
+      goto err_free_disp_planes;
+    }
+
+    /* Find the encoder (a deprecated KMS object) for this connector. */
+    if (connector->encoder_id == 0) {
+      uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no encoder", connector->connector_id);
+      goto free_disp_connector;
+    }
+
+  	for (int e = 0; e < drmres->count_encoders; e++) {
+  		if (drmres->encoders[e] == connector->encoder_id) {
+  			encoder = drmModeGetEncoder(uvrkms->kmsfd, drmres->encoders[e]);
+        if (!encoder) {
+          uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetEncoder): Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
+          goto err_free_disp_connector;
+        }
+
+        break;
+  		}
+  	}
+
+    if (encoder->crtc_id == 0) {
+  		uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no CRTC", connector->connector_id);
+  		goto free_disp_encoder;
+  	}
+
+    for (int c = 0; c < drmres->count_crtcs; c++) {
+      if (drmres->crtcs[c] == encoder->crtc_id) {
+        crtc = drmModeGetCrtc(uvrkms->kmsfd, drmres->crtcs[c]);
+        if (!crtc) {
+          uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetCrtc): Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
+          goto err_free_disp_encoder;
+        }
+
+        break;
+      }
+    }
+
+    /* Ensure the CRTC is active. */
+  	if (crtc->buffer_id == 0) {
+  		uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: not active", connector->connector_id);
+  		goto free_disp_crtc;
+  	}
+
+    /*
+     * TAKEN FROM Daniel Stone (gitlab/kms-quads)
+     * The kernel doesn't directly tell us what it considers to be the
+     * single primary plane for this CRTC (i.e. what would be updated
+     * by drmModeSetCrtc), but if it's already active then we can cheat
+     * by looking for something displaying the same framebuffer ID,
+     * since that information is duplicated.
+     */
+    for (unsigned int p = 0; p < drmplaneres->count_planes; p++) {
+      //uvr_utils_log(UVR_INFO, "[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB %" PRIu32 "", planes[p]->plane_id, planes[p]->crtc_id, planes[p]->fb_id);
+      if (planes[p]->crtc_id == crtc->crtc_id && planes[p]->fb_id == crtc->buffer_id) {
+        plane = planes[p];
+        break;
+      }
+  	}
+
+    uvr_utils_log(UVR_SUCCESS, "Successfully created a display output chain");
+
+    /* Free all planes not in use */
+    for (unsigned int p = 0; p < drmplaneres->count_planes; p++)
+      if (planes[p]->fb_id != plane->fb_id)
+        drmModeFreePlane(planes[p]);
+
+    drmModeFreePlaneResources(drmplaneres);
+    drmModeFreeResources(drmres);
+
+    return (struct uvrkms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane };
+
+free_disp_crtc:
+    if (crtc) {
+      drmModeFreeCrtc(crtc);
+      crtc = NULL;
+    }
+free_disp_encoder:
+    if (encoder) {
+      drmModeFreeEncoder(encoder);
+      encoder = NULL;
+    }
+free_disp_connector:
+    if (connector) {
+      drmModeFreeConnector(connector);
+      connector = NULL;
+    }
+  }
+
+
+err_free_disp_encoder:
+  if (encoder)
+    drmModeFreeEncoder(encoder);
+err_free_disp_connector:
+  if (connector)
+    drmModeFreeConnector(connector);
+err_free_disp_planes:
+  for (unsigned int p = 0; p < drmplaneres->count_planes; p++)
+    if (planes[p])
+      drmModeFreePlane(planes[p]);
+err_plane_res:
+  if (drmplaneres)
+    drmModeFreePlaneResources(drmplaneres);
+err_res:
+  if (drmres)
+    drmModeFreeResources(drmres);
+err_ret_null_chain_output:
+  return (struct uvrkms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0 };
+}
+
+
+void uvr_kms_node_destroy(struct uvrkms_node_destroy *uvrkms) {
+  if (uvrkms->dochain) {
+    if (uvrkms->dochain->plane)
+      drmModeFreePlane(uvrkms->dochain->plane);
+    if (uvrkms->dochain->crtc)
+      drmModeFreeCrtc(uvrkms->dochain->crtc);
+    if (uvrkms->dochain->encoder)
+      drmModeFreeEncoder(uvrkms->dochain->encoder);
+    if (uvrkms->dochain->connector)
+      drmModeFreeConnector(uvrkms->dochain->connector);
+  }
   if (uvrkms->kmsfd != -1) {
 #ifdef INCLUDE_SDBUS
     if (uvrkms->info.use_logind)

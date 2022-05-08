@@ -268,7 +268,8 @@ void uvr_sd_session_release_device(struct uvrsd_session *uvrsd, int fd) {
 
 
 void uvr_sd_session_destroy(struct uvrsd_session *uvrsd) {
-  release_session_control(uvrsd->bus, uvrsd->path);
+  if (uvrsd->bus && uvrsd->path)
+    release_session_control(uvrsd->bus, uvrsd->path);
   free(uvrsd->id);
   free(uvrsd->path);
 }

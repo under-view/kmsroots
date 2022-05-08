@@ -34,8 +34,7 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-
-  struct uvrkms_destroy kmsdevd;
+  struct uvrkms_node_destroy kmsdevd;
   struct uvrkms_node_create_info kmsnodeinfo;
   memset(&kmsdevd, 0, sizeof(kmsdevd));
   memset(&kmsnodeinfo, 0, sizeof(kmsnodeinfo));
@@ -65,6 +64,8 @@ int main(void) {
 
 #ifdef INCLUDE_SDBUS
   struct uvrsd_session uvrsd;
+  memset(&uvrsd, 0, sizeof(uvrsd));
+
   if (uvr_sd_session_create(&uvrsd) == -1)
     goto exit_error;
   kmsnodeinfo.uvrsd_session = &uvrsd;
@@ -80,7 +81,16 @@ int main(void) {
   /* Let the api know of what filedescriptor to close */
   kmsdevd.kmsfd = kmsfd;
 
-  uvr_kms_destroy(&kmsdevd);
+  struct uvrkms_node_display_output_chain dochain;
+  struct uvrkms_node_get_display_output_chain_info dochain_info = { .kmsfd = kmsfd };
+  dochain = uvr_kms_node_get_display_output_chain(&dochain_info);
+  if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
+    goto exit_error;
+
+  /* Let the api know of what display output chain to remove */
+  kmsdevd.dochain = &dochain;
+
+  uvr_kms_node_destroy(&kmsdevd);
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
   uvr_sd_session_destroy(&uvrsd);
@@ -88,7 +98,7 @@ int main(void) {
   return 0;
 
 exit_error:
-  uvr_kms_destroy(&kmsdevd);
+  uvr_kms_node_destroy(&kmsdevd);
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
   uvr_sd_session_destroy(&uvrsd);

@@ -71,25 +71,78 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms);
 
 
 /*
- * struct uvrkms_destroy (Underview Renderer KMS Destroy)
+ * struct uvrkms_display_output_chain (Underview Renderer KMS Node Display Output Chain)
  *
  * members:
- * @kmsfd - The file descriptor associated with open KMS device node to be closed.
- * @info  - Stores information about logind session bus, id, and path needed to
- *          release control of a given device.
+ * @connector - Anything that can display pixels in some form. (i.e HDMI). Connectors can
+ *              be hotplugged and unplugged at runtime
+ * @encoder   - Takes pixel data from a crtc and converts it to an output that
+ *              the connector can understand. This is a Deprecated kms object
+ * @crtc      - Represents a part of the chip that contains a pointer to a scanout buffer.
+ * @plane     - A plane represents an image source that can be blended with or overlayed on top of
+ *              a CRTC during the scanout process. Planes are associated with a frame buffer to crop
+ *              a portion of the image memory (source) and optionally scale it to a destination size.
+ *              The result is then blended with or overlayed on top of a CRTC.
+ * For more info see https://manpages.org/drm-kms/7
  */
-struct uvrkms_destroy {
-  int kmsfd;
-  struct uvrkms_node_create_info info;
+struct uvrkms_node_display_output_chain {
+  drmModeConnector *connector;
+  drmModeEncoder *encoder;
+  drmModeCrtc *crtc;
+  drmModePlane *plane;
 };
 
 
 /*
- * uvr_kms_destroy: Destroy any and all KMS node information
+ * struct uvrkms_destroy (Underview Renderer KMS Node Get display Output Chain Information)
+ *
+ * members:
+ * @kmsfd - The file descriptor associated with open KMS device node.
+ */
+struct uvrkms_node_get_display_output_chain_info {
+  int kmsfd;
+};
+
+
+/*
+ * uvr_kms_node_create: Function takes in a pointer to a struct uvrkms_node_get_display_output_chain_info
+ *                      and produces one connector->encoder->CRTC->plane display output chain. Populating
+ *                      the members of struct uvrkms_node_display_output_chain whose information will be
+ *                      later used in modesetting.
+ *
+ * args:
+ * @uvrkms - pointer to a struct uvrkms_node_get_display_output_chain_info used to determine what operation
+ *           will happen in the function
+ * return:
+ *    struct uvrkms_display_output_chain on success
+ *    0 for all  struct uvrkms_display_output_chain members on failure
+ */
+struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(struct uvrkms_node_get_display_output_chain_info *uvrkms);
+
+
+/*
+ * struct uvrkms_node_destroy (Underview Renderer KMS Node Destroy)
+ *
+ * members:
+ * @kmsfd   - The file descriptor associated with open KMS device node to be closed.
+ * @info    - Stores information about logind session bus, id, and path needed to
+ *            release control of a given device.
+ * @dochain - Pointer to struct uvrkms_node_display_output_chain. Stores information
+ *            about KMS device node connector->encoder->crtc->plane pair
+ */
+struct uvrkms_node_destroy {
+  int kmsfd;
+  struct uvrkms_node_create_info info;
+  struct uvrkms_node_display_output_chain *dochain;
+};
+
+
+/*
+ * uvr_kms_node_destroy: Destroy any and all KMS node information
  *
  * args:
  * @uvrkms - pointer to a struct uvrkms_destroy
  */
-void uvr_kms_destroy(struct uvrkms_destroy *uvrkms);
+void uvr_kms_node_destroy(struct uvrkms_node_destroy *uvrkms);
 
 #endif
