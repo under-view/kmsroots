@@ -45,12 +45,6 @@ int main(void) {
     goto exit_error;
 
   /*
-   * Let the api know of the vulkan instance hande we created
-   * in order to properly destroy it
-   */
-  appd.vkinst = app.instance;
-
-  /*
    * Create Vulkan Physical Device Handle
    */
   struct uvrvk_phdev vkphdev = {
@@ -61,7 +55,6 @@ int main(void) {
   app.phdev = uvr_vk_phdev_create(&vkphdev);
   if (!app.phdev)
     goto exit_error;
-
 
   /*
    * Create xcb client
@@ -78,13 +71,6 @@ int main(void) {
   xclient.window = xcbwin.window;
 
   /*
-   * Let the api know how many xcb client windows where created
-   * in order to properly destroy them all.
-   */
-  xclientd.conn = xclient.conn;
-  xclientd.window = xclient.window;
-
-  /*
    * Create Vulkan Surface
    */
   struct uvrvk_surface vksurf = {
@@ -96,23 +82,21 @@ int main(void) {
   if (!app.surface)
     goto exit_error;
 
-  /*
-   * Let the api know of the vulkan surface hande we created
-   * in order to properly destroy it
-   */
-  appd.vksurf = app.surface;
-
   uvr_xcb_display_window(&xclient);
 
   /* Wait for 5 seconds to display */
   sleep(5);
 
+exit_error:
+  /*
+   * Let the api know of what addresses to free and fd's to close
+   */
+  appd.vkinst = app.instance;
+  appd.vksurf = app.surface;
+  xclientd.conn = xclient.conn;
+  xclientd.window = xclient.window;
+
   uvr_vk_destory(&appd);
   uvr_xcb_destory(&xclientd);
   return 0;
-
-exit_error:
-  uvr_vk_destory(&appd);
-  uvr_xcb_destory(&xclientd);
-  return 1;
 }

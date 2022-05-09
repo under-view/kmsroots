@@ -55,12 +55,6 @@ int main(void) {
   if (!app.instance)
     goto exit_error;
 
-  /*
-   * Let the api know of the vulkan instance hande we created
-   * in order to properly destroy it
-   */
-  appd.vkinst = app.instance;
-
 #ifdef INCLUDE_SDBUS
   struct uvrsd_session uvrsd;
   memset(&uvrsd, 0, sizeof(uvrsd));
@@ -69,7 +63,6 @@ int main(void) {
     goto exit_error;
   kmsnodeinfo.uvrsd_session = &uvrsd;
   kmsnodeinfo.use_logind = true;
-  kmsdevd.info.uvrsd_session = &uvrsd;
 #endif
 
   kmsnodeinfo.kmsnode = NULL;
@@ -77,30 +70,25 @@ int main(void) {
   if (kmsfd == -1)
     goto exit_error;
 
-  /* Let the api know of what filedescriptor to close */
-  kmsdevd.kmsfd = kmsfd;
-
   struct uvrkms_node_display_output_chain dochain;
   struct uvrkms_node_get_display_output_chain_info dochain_info = { .kmsfd = kmsfd };
   dochain = uvr_kms_node_get_display_output_chain(&dochain_info);
   if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
     goto exit_error;
 
-  /* Let the api know of what display output chain to remove */
+exit_error:
+  /*
+   * Let the api know of what addresses to free and fd's to close
+   */
+  appd.vkinst = app.instance;
   kmsdevd.dochain = &dochain;
+  kmsdevd.kmsfd = kmsfd;
 
   uvr_kms_node_destroy(&kmsdevd);
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
+  kmsdevd.info.uvrsd_session = &uvrsd;
   uvr_sd_session_destroy(&uvrsd);
 #endif
   return 0;
-
-exit_error:
-  uvr_kms_node_destroy(&kmsdevd);
-  uvr_vk_destory(&appd);
-#ifdef INCLUDE_SDBUS
-  uvr_sd_session_destroy(&uvrsd);
-#endif
-  return 1;
 }

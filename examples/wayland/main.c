@@ -55,12 +55,6 @@ int main(void) {
     goto exit_error;
 
   /*
-   * Let the api know of the vulkan instance hande we created
-   * in order to properly destroy it
-   */
-  appd.vkinst = app.instance;
-
-  /*
    * Create Vulkan Physical Device Handle
    */
   struct uvrvk_phdev vkphdev = {
@@ -100,12 +94,6 @@ int main(void) {
   if (!app.surface)
     goto exit_error;
 
-  /*
-   * Let the api know of the vulkan surface hande we created
-   * in order to properly destroy it
-   */
-  appd.vksurf = app.surface;
-
   int stride = width * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;
 
@@ -122,12 +110,13 @@ int main(void) {
     // Leave blank
   }
 
+exit_error:
+  /*
+   * Let the api know of what addresses to free and fd's to close
+   */
+  appd.vkinst = app.instance;
+  appd.vksurf = app.surface;
   uvr_vk_destory(&appd);
   uvr_wclient_destory(&wclient);
   return 0;
-
-exit_error:
-  uvr_vk_destory(&appd);
-  uvr_wclient_destory(&wclient);
-  return 1;
 }
