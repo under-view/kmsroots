@@ -68,17 +68,12 @@ void uvr_xcb_display_window(struct uvrxcb *uvrxcb);
  * struct uvrxcb (Underview Renderer XCB Client Destroy)
  *
  * members:
- * @xcbwins_cnt - The amount of xcb windows created during application lifetime
- * @xcbwins     - Struct that stores xcb_window_t associate with an xcb_connection_t
- *              + @conn   - A structure that contain all data that XCB needs to communicate with an X server.
- *              + @window - Stores the XID of the current window. XID is neeed to create windows and manage its properties.
+ * @conn   - A structure that contain all data that XCB needs to communicate with an X server.
+ * @window - Stores the XID of the current window. XID is neeed to create windows and manage its properties.
  */
 struct uvrxcb_destroy {
-  int xcbwins_cnt;
-  struct xcbwins {
-    xcb_connection_t *conn;
-    xcb_window_t window;
-  } xcbwins[WINDOW_CNT];
+  xcb_connection_t *conn;
+  xcb_window_t window;
 };
 
 /*

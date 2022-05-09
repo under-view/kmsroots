@@ -89,18 +89,10 @@ void uvr_xcb_display_window(struct uvrxcb *uvrxcb) {
 
 
 void uvr_xcb_destory(struct uvrxcb_destroy *uvrxcb) {
-  int i;
+  if (uvrxcb->window)
+    xcb_destroy_window(uvrxcb->conn, uvrxcb->window);
 
-  for (i=0; i < uvrxcb->xcbwins_cnt; i++) {
-    if (uvrxcb->xcbwins[i].window) {
-      xcb_destroy_window(uvrxcb->xcbwins[i].conn, uvrxcb->xcbwins[i].window);
-      uvrxcb->xcbwins[i].window = UINT32_MAX;
-    }
-
-    /* Disconnect from X server */
-    if (uvrxcb->xcbwins[i].conn) {
-      xcb_disconnect(uvrxcb->xcbwins[i].conn);
-      uvrxcb->xcbwins[i].conn = NULL;
-    }
-  }
+  /* Disconnect from X server */
+  if (uvrxcb->conn)
+    xcb_disconnect(uvrxcb->conn);
 }

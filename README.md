@@ -26,7 +26,7 @@ $ ninja -C build
 
 **Running Examples**
 ```sh
-$ ./build/examples/underview-renderer-x11
+$ ./build/examples/underview-renderer-xcb
 $ ./build/examples/underview-renderer-wayland
 $ ./build/examples/underview-renderer-kms
 ```

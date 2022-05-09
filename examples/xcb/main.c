@@ -81,9 +81,8 @@ int main(void) {
    * Let the api know how many xcb client windows where created
    * in order to properly destroy them all.
    */
-  xclientd.xcbwins[0].conn = xclient.conn;
-  xclientd.xcbwins[0].window = xclient.window;
-  xclientd.xcbwins_cnt = 1;
+  xclientd.conn = xclient.conn;
+  xclientd.window = xclient.window;
 
   /*
    * Create Vulkan Surface
