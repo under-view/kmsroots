@@ -71,6 +71,33 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms);
 
 
 /*
+ * struct uvrkms_node_device_capabilites (Underview Renderer KMS Node Device Capabilites)
+ *
+ * members:
+ * @ADDFB2_MODIFIERS
+ * @TIMESTAMP_MONOTONIC
+ *
+ * For more info see https://github.com/torvalds/linux/blob/master/include/uapi/drm/drm.h#L627
+ */
+struct uvrkms_node_device_capabilites {
+  bool ADDFB2_MODIFIERS;
+  bool TIMESTAMP_MONOTONIC;
+};
+
+
+/*
+ * uvr_kms_node_get_device_capabilities: Function takes in a DRM device fd and populates the struct uvrkms_node_device_capabilites
+ *                                       to give details on what capabilites the particular kms device supports.
+ *
+ * args:
+ * @kmsfd - Number associated with open KMS device node
+ * return:
+ *    struct uvrkms_node_driver_capabilites
+ */
+struct uvrkms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd);
+
+
+/*
  * struct uvrkms_display_output_chain (Underview Renderer KMS Node Display Output Chain)
  *
  * members:

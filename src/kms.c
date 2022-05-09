@@ -117,6 +117,28 @@ error_free_kms_dev:
 }
 
 
+struct uvrkms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd) {
+  struct uvrkms_node_device_capabilites kmscap;
+  memset(&kmscap, 0, sizeof(kmscap));
+
+  uint64_t cap = 0, err = 0;
+  err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &cap);
+  if (err == 0 && cap != 0) {
+    kmscap.ADDFB2_MODIFIERS = true;
+    uvr_utils_log(UVR_INFO, "device %s framebuffer modifiers", (err == 0 && cap != 0) ? "supports" : "does not support");
+  }
+
+  cap=0;
+  err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &cap);
+  if (err == 0 && cap != 0) {
+    kmscap.TIMESTAMP_MONOTONIC = true;
+    uvr_utils_log(UVR_INFO, "device %s clock monotonic timestamps", (err == 0 && cap != 0) ? "supports" : "does not support");
+  }
+
+  return kmscap;
+}
+
+
 struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(struct uvrkms_node_get_display_output_chain_info *uvrkms) {
   drmModeRes *drmres = NULL;
   drmModePlaneRes *drmplaneres = NULL;

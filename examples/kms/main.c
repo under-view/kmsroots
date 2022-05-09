@@ -76,6 +76,9 @@ int main(void) {
   if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
     goto exit_error;
 
+  struct uvrkms_node_device_capabilites UNUSED kmsnode_devcap;
+  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsfd);
+
 exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
