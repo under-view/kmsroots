@@ -1,5 +1,6 @@
 #include "vulkan-common.h"
 #include "kms.h"
+#include "buffer.h"
 
 /*
  * "VK_LAYER_KHRONOS_validation"
@@ -38,6 +39,11 @@ int main(void) {
   struct uvrkms_node_create_info kmsnodeinfo;
   memset(&kmsdevd, 0, sizeof(kmsdevd));
   memset(&kmsnodeinfo, 0, sizeof(kmsnodeinfo));
+
+  struct uvrbuff UNUSED kmsbuffs;
+  struct uvrbuff_destroy kmsbuffsd;
+  memset(&kmsbuffs, 0, sizeof(kmsbuffs));
+  memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
   /*
    * Create Vulkan Instance
@@ -79,6 +85,18 @@ int main(void) {
   struct uvrkms_node_device_capabilites UNUSED kmsnode_devcap;
   kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsfd);
 
+  struct uvrbuff_create_info kmsbuffs_info = {
+    .bType = UINT32_MAX, .kmsfd = kmsfd, .buff_cnt = 2,
+    .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
+    .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
+    .gbm_bo_pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
+    .modifiers_cnt = 0
+  };
+
+  kmsbuffs_info.bType = GBM_BUFFER;
+  kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
+  if (!kmsbuffs.gbmdev) goto exit_error;
+
 exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
@@ -86,7 +104,11 @@ exit_error:
   appd.vkinst = app.instance;
   kmsdevd.dochain = &dochain;
   kmsdevd.kmsfd = kmsfd;
+  kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
+  kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
+  kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
 
+  uvr_buffer_destory(&kmsbuffsd);
   uvr_kms_node_destroy(&kmsdevd);
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS

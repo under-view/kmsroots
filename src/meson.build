@@ -18,12 +18,18 @@ if build_kms
   endif
 
   if build_sdbus
-    libsystemd = cc.find_library('systemd', required: true)
+    libsystemd = dependency('libsystemd', required: true)
     if libsystemd.found()
       lib_uvr_deps += [libsystemd]
     endif
 
     fs += ['sd-dbus.c']
+  endif
+
+  libgbm = dependency('gbm', required: true)
+  if libgbm.found()
+    lib_uvr_deps += [libgbm]
+    fs += ['buffer.c']
   endif
 
   fs += ['kms.c']
@@ -34,8 +40,8 @@ endif
 # X11 libs and files
 ##################################
 if build_xcb
-  libxcb = cc.find_library('libxcb', required: true)
-  libxcbewmh = cc.find_library('libxcb-ewmh', required: true)
+  libxcb = dependency('xcb', required: true)
+  libxcbewmh = dependency('xcb-ewmh', required: true)
 
   if libxcb.found() and libxcbewmh.found()
     fs += ['xcb-client.c']
