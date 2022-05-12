@@ -144,17 +144,17 @@ struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(st
   drmModePlaneRes *drmplaneres = NULL;
 
   /* Query connector->encoder->crtc->plane properties */
-	drmres = drmModeGetResources(uvrkms->kmsfd);
-	if (!drmres) {
+  drmres = drmModeGetResources(uvrkms->kmsfd);
+  if (!drmres) {
     uvr_utils_log(UVR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", uvrkms->kmsfd);
-		goto err_ret_null_chain_output;
-	}
+    goto err_ret_null_chain_output;
+  }
 
-	drmplaneres = drmModeGetPlaneResources(uvrkms->kmsfd);
-	if (!drmplaneres) {
+  drmplaneres = drmModeGetPlaneResources(uvrkms->kmsfd);
+  if (!drmplaneres) {
     uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no planes", uvrkms->kmsfd);
-		goto err_res;
-	}
+    goto err_res;
+  }
 
   /* Check if some form of a display output chain exist */
   if (drmres->count_crtcs       <= 0 ||
@@ -170,17 +170,17 @@ struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(st
   memset(planes, 0, drmplaneres->count_planes * sizeof(drmModePlane));
 
   for (unsigned int i = 0; i < drmplaneres->count_planes; i++) {
-		planes[i] = drmModeGetPlane(uvrkms->kmsfd, drmplaneres->planes[i]);
+    planes[i] = drmModeGetPlane(uvrkms->kmsfd, drmplaneres->planes[i]);
     if (!planes[i]) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetPlane): Failed to get plane");
       goto err_free_disp_planes;
     }
-	}
+  }
 
   /*
-	 * Go through connectors one by one and try to find a usable output chain.
+   * Go through connectors one by one and try to find a usable output chain.
    * OUTPUT CHAIN: connector->encoder->crtc->plane
-	 */
+   */
   drmModeConnector *connector = NULL;
   drmModeEncoder *encoder = NULL;
   drmModeCrtc *crtc = NULL;
@@ -193,28 +193,27 @@ struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(st
       goto err_free_disp_planes;
     }
 
-    /* Find the encoder (a deprecated KMS object) for this connector. */
     if (connector->encoder_id == 0) {
       uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no encoder", connector->connector_id);
       goto free_disp_connector;
     }
 
-  	for (int e = 0; e < drmres->count_encoders; e++) {
-  		if (drmres->encoders[e] == connector->encoder_id) {
-  			encoder = drmModeGetEncoder(uvrkms->kmsfd, drmres->encoders[e]);
+    /* Find the encoder (a deprecated KMS object) for this connector. */
+    for (int e = 0; e < drmres->count_encoders; e++) {
+      if (drmres->encoders[e] == connector->encoder_id) {
+        encoder = drmModeGetEncoder(uvrkms->kmsfd, drmres->encoders[e]);
         if (!encoder) {
           uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetEncoder): Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
           goto err_free_disp_connector;
         }
-
         break;
-  		}
-  	}
+      }
+    }
 
     if (encoder->crtc_id == 0) {
-  		uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no CRTC", connector->connector_id);
-  		goto free_disp_encoder;
-  	}
+      uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no CRTC", connector->connector_id);
+      goto free_disp_encoder;
+    }
 
     for (int c = 0; c < drmres->count_crtcs; c++) {
       if (drmres->crtcs[c] == encoder->crtc_id) {
@@ -223,16 +222,15 @@ struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(st
           uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetCrtc): Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
           goto err_free_disp_encoder;
         }
-
         break;
       }
     }
 
     /* Ensure the CRTC is active. */
-  	if (crtc->buffer_id == 0) {
-  		uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: not active", connector->connector_id);
-  		goto free_disp_crtc;
-  	}
+    if (crtc->buffer_id == 0) {
+      uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: not active", connector->connector_id);
+      goto free_disp_crtc;
+    }
 
     /*
      * TAKEN FROM Daniel Stone (gitlab/kms-quads)
@@ -248,7 +246,7 @@ struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(st
         plane = planes[p];
         break;
       }
-  	}
+    }
 
     uvr_utils_log(UVR_SUCCESS, "Successfully created a display output chain");
 
