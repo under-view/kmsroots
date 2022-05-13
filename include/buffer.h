@@ -7,6 +7,11 @@
 
 #include <gbm.h>
 
+/*
+ * Great Info https://afrantzis.com/pixel-format-guide/
+ * https://github.com/afrantzis/pixel-format-guide
+ */
+
 
 /*
  * enum uvrbuff_type (Underview Renderer Buffer Type)
@@ -40,6 +45,7 @@ enum uvrbuff_type {
  *                More information can be found https://gitlab.freedesktop.org/mesa/drm/-/blob/main/include/drm/drm_mode.h#L589
  * @gem_handles - Stores GEM handles per plane used to query a DMA buf fd
  * @dma_buf_fds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware
+ * @kmsfd       - File descriptor to open DRI device
  */
 struct uvrbuff_object_info {
   struct gbm_bo *bo;
@@ -51,6 +57,7 @@ struct uvrbuff_object_info {
   unsigned offsets[4];
   unsigned gem_handles[4];
   int dma_buf_fds[4];
+  int kmsfd;
 };
 
 
@@ -72,23 +79,23 @@ struct uvrbuff {
  * struct uvrbuff (Underview Renderer Buffer Create Information)
  *
  * members:
- * @bType            - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
- * @kmsfd            - Used by gbm_create_device. Must be a valid file descriptor
- *                     to a DRI device (GPU character device file)
- * @buff_cnt         - The amount of buffers to allocate.
- *                     2 for double buffering
- *                     3 for triple buffering
- * @width            - Amount of pixels going width wise on screen. Need to allocate buffer of similar size.
- * @height           - Amount of pixels going height wise on screen. Need to allocate buffer of similar size.
- * @bitdepth         - Bit depth: https://petapixel.com/2018/09/19/8-12-14-vs-16-bit-depth-what-do-you-really-need/
- * @bpp              - Pass the amount of bits per pixel
- * @gbm_bo_flags     - Flags to indicate gbm_bo usage. More info here:
- *                     https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h#L213
- * @gbm_bo_pixformat - The format of an image details how each pixel color channels is laid out in
- *                     memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
- *                     ordering of each pixels color channels.
- * @modifiers        -
- * @modifiers_cnt    -
+ * @bType         - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
+ * @kmsfd         - Used by gbm_create_device. Must be a valid file descriptor
+ *                  to a DRI device (GPU character device file)
+ * @buff_cnt      - The amount of buffers to allocate.
+ *                  * 2 for double buffering
+ *                  * 3 for triple buffering
+ * @width         - Amount of pixels going width wise on screen. Need to allocate buffer of similar size.
+ * @height        - Amount of pixels going height wise on screen. Need to allocate buffer of similar size.
+ * @bitdepth      - Bit depth: https://petapixel.com/2018/09/19/8-12-14-vs-16-bit-depth-what-do-you-really-need/
+ * @bpp           - Pass the amount of bits per pixel
+ * @gbm_bo_flags  - Flags to indicate gbm_bo usage. More info here:
+ *                  https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h#L213
+ * @pixformat     - The format of an image details how each pixel color channels is laid out in
+ *                  memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
+ *                  ordering of each pixels color channels.
+ * @modifiers     - List of drm format modifier
+ * @modifiers_cnt - Number of drm format modifiers passed
  */
 struct uvrbuff_create_info {
   enum uvrbuff_type bType;
@@ -100,7 +107,7 @@ struct uvrbuff_create_info {
   unsigned int bitdepth;
   unsigned int bpp;
   unsigned int gbm_bo_flags;
-  unsigned int gbm_bo_pixformat;
+  unsigned int pixformat;
   uint64_t *modifiers;
   unsigned int modifiers_cnt;
 };
@@ -119,7 +126,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff);
 
 
 /*
- * struct uvrbuff (Underview Renderer Buffer)
+ * struct uvrbuff_destroy (Underview Renderer Buffer Destroy)
  *
  * members:
  * @gbmdev       - A handle used to allocate gbm buffers & surfaces

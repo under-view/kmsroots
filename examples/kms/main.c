@@ -89,7 +89,7 @@ int main(void) {
     .bType = UINT32_MAX, .kmsfd = kmsfd, .buff_cnt = 2,
     .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
     .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
-    .gbm_bo_pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
+    .pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
     .modifiers_cnt = 0
   };
 
