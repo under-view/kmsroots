@@ -1,10 +1,10 @@
 #include "vulkan.h"
 
 
-/**
-* Taken from lunarG vulkan API
-* https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkResult.html
-*/
+/*
+ * Taken from lunarG vulkan API
+ * https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkResult.html
+ */
 static const char *vkres_msg(int err) {
   switch (err) {
     case VK_ERROR_OUT_OF_HOST_MEMORY:
@@ -191,7 +191,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
     return VK_NULL_HANDLE;
   }
 
-  devices = (VkPhysicalDevice *) alloca(device_count * sizeof(VkPhysicalDevice));
+  devices = (VkPhysicalDevice *) alloca((device_count * sizeof(VkPhysicalDevice)) + 1);
 
   res = vkEnumeratePhysicalDevices(uvrvk->vkinst, &device_count, devices);
   if (res) {
@@ -202,25 +202,45 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
 #ifdef INCLUDE_KMS
   /* Get KMS fd stats */
   struct stat drm_stat = {0};
-  if (uvrvk->drmfd != -1) {
-    if (fstat(uvrvk->drmfd, &drm_stat) == -1) {
+  if (uvrvk->kmsfd != -1) {
+    if (fstat(uvrvk->kmsfd, &drm_stat) == -1) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev(fstat): %s", strerror(errno));
       return VK_NULL_HANDLE;
     }
   }
+
+  VkPhysicalDeviceDrmPropertiesEXT drm_props;
+  drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
 #endif
 
-  VkPhysicalDeviceProperties devprops;
+  int enter = 0;
   VkPhysicalDeviceFeatures devfeats;
+  VkPhysicalDeviceProperties devprops;
+  VkPhysicalDeviceProperties2 devprops2;
+  devprops2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
   /*
    * get a physical device that is suitable
    * to do the graphics related task that we need
    */
   for (uint32_t i = 0; i < device_count; i++) {
-    vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
+#ifdef INCLUDE_KMS
+    devprops2.pNext = &drm_props;
+#endif
+
     vkGetPhysicalDeviceFeatures(devices[i], &devfeats); /* Query device features */
-    if (devprops.deviceType == uvrvk->vkpdtype) {
+    vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
+    vkGetPhysicalDeviceProperties2(devices[i], &devprops2);
+
+#ifdef INCLUDE_KMS
+    drm_props.pNext = devprops2.pNext;
+    dev_t primary_devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
+    dev_t render_devid = makedev(drm_props.renderMajor, drm_props.renderMinor);
+    enter |= (primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev);
+#endif
+
+    enter &= (devprops.deviceType == uvrvk->vkpdtype);
+    if (enter) {
       memmove(&device, &devices[i], sizeof(devices[i]));
       uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s", devprops.deviceName);
       break;

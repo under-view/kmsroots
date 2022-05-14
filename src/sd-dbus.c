@@ -5,7 +5,6 @@
  * https://gitlab.freedesktop.org/daniels/kms-quads/-/blob/master/logind.c
  */
 #include "sd-dbus.h"
-#include <sys/sysmacros.h>
 
 
 /*

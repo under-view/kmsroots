@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/sysmacros.h>
 
 #define UNUSED __attribute__((unused))
 #define ARRAY_LEN(_arr) (sizeof(_arr) / sizeof(_arr[0]))

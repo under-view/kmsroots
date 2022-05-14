@@ -76,6 +76,19 @@ int main(void) {
   if (kmsfd == -1)
     goto exit_error;
 
+  /*
+   * Create Vulkan Physical Device Handle
+   */
+  struct uvrvk_phdev vkphdev = {
+    .vkinst = app.instance,
+    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+    .kmsfd = kmsfd
+  };
+
+  app.phdev = uvr_vk_phdev_create(&vkphdev);
+  if (!app.phdev)
+    goto exit_error;
+
   struct uvrkms_node_display_output_chain dochain;
   struct uvrkms_node_get_display_output_chain_info dochain_info = { .kmsfd = kmsfd };
   dochain = uvr_kms_node_get_display_output_chain(&dochain_info);
@@ -85,7 +98,7 @@ int main(void) {
   struct uvrkms_node_device_capabilites UNUSED kmsnode_devcap;
   kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsfd);
 
-  struct uvrbuff_create_info kmsbuffs_info = {
+  struct uvrbuff_create_info UNUSED kmsbuffs_info = {
     .bType = UINT32_MAX, .kmsfd = kmsfd, .buff_cnt = 2,
     .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
     .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,

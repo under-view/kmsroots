@@ -131,14 +131,14 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk);
  * members:
  * @vkinst   - Must pass a valid VkInstance handle to create/associate surfaces for an application
  * @vkpdtype - Must pass a valid enum uvrvk_surface_type value.
- * @drmfd    - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
+ * @kmsfd    - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
  *             if corresponding properties match
  */
 struct uvrvk_phdev {
   VkInstance vkinst;
   VkPhysicalDeviceType vkpdtype;
 #ifdef INCLUDE_KMS
-  int drmfd;
+  int kmsfd;
 #endif
 };
 

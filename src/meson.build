@@ -1,4 +1,4 @@
-vulkan = dependency('vulkan', required: true)
+vulkan = dependency('vulkan', version: '>=1.3.213', required: true)
 libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
 librt = cc.find_library('rt', required: true)
@@ -12,7 +12,7 @@ lib_uvr_deps = [vulkan, libmath, librt]
 # KMS libs and files
 ##################################
 if build_kms
-  libdrm = dependency('libdrm', required: true)
+  libdrm = dependency('libdrm', version: '>=2.4.110', required: true)
   if libdrm.found()
     lib_uvr_deps += [libdrm]
   endif
