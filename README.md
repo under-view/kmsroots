@@ -2,21 +2,9 @@
 
 Library for building X11, Wayland, & KMS Vulkan Applications
 
-**Dependencies (Debian)**
-```sh
-$ sudo apt install -y aptitude
-# Build depends
-$ sudo aptitude install -y build-essential python3 python3-pip pkg-config ninja-build
-$ sudo python3 -m pip install meson==0.61.4
-# Vulkan depends
-$ sudo aptitude install -y libvulkan-dev vulkan-validationlayers vulkan-utils vulkan-tools
-# XCB depends
-$ sudo aptitude install -y libxcb1-dev libxcb-ewmh-dev
-# Wayland depends
-$ sudo aptitude install -y wayland-protocols libwayland-client0 libwayland-bin libwayland-dev
-# KMS depends
-$ sudo aptitude install -y libdrm-dev libgbm-dev libudev-dev libsystemd-dev libinput-dev
-```
+For better dependencies version control underview builds all packages required from source. Follow
+[build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
+going.
 
 **Building**
 ```sh
