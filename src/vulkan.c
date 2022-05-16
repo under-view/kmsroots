@@ -209,37 +209,45 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
     }
   }
 
+  VkPhysicalDeviceProperties2 devprops2;
   VkPhysicalDeviceDrmPropertiesEXT drm_props;
   drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
+  devprops2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 #endif
 
   int enter = 0;
   VkPhysicalDeviceFeatures devfeats;
   VkPhysicalDeviceProperties devprops;
-  VkPhysicalDeviceProperties2 devprops2;
-  devprops2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
   /*
    * get a physical device that is suitable
    * to do the graphics related task that we need
    */
   for (uint32_t i = 0; i < device_count; i++) {
-#ifdef INCLUDE_KMS
-    devprops2.pNext = &drm_props;
-#endif
-
     vkGetPhysicalDeviceFeatures(devices[i], &devfeats); /* Query device features */
     vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
-    vkGetPhysicalDeviceProperties2(devices[i], &devprops2);
 
 #ifdef INCLUDE_KMS
-    drm_props.pNext = devprops2.pNext;
-    dev_t primary_devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
-    dev_t render_devid = makedev(drm_props.renderMajor, drm_props.renderMinor);
-    enter |= (primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev);
+    if (uvrvk->kmsfd) {
+      devprops2.pNext = &drm_props;
+      vkGetPhysicalDeviceProperties2(devices[i], &devprops2);
+
+      drm_props.pNext = devprops2.pNext;
+      dev_t primary_devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
+      dev_t render_devid = makedev(drm_props.renderMajor, drm_props.renderMinor);
+
+      /*
+       * Enter will be one if condition succeeds
+       * Enter will b zero if condition fails
+       * Need to make sure even if we have a valid DRI device node fd.
+       * That the user choosen device type is the same as the DRI device node.
+       */
+      enter |= ((primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev) && devprops.deviceType == uvrvk->vkpdtype);
+    }
 #endif
 
-    enter &= (devprops.deviceType == uvrvk->vkpdtype);
+    /* Enter will be one if condition succeeds */
+    enter |= (devprops.deviceType == uvrvk->vkpdtype);
     if (enter) {
       memmove(&device, &devices[i], sizeof(devices[i]));
       uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s", devprops.deviceName);
