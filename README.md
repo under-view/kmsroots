@@ -8,6 +8,7 @@ going.
 
 **Building**
 ```sh
+$ . ./config-env.sh "$(pwd)/../build-underview-depends/working/build_output"
 $ meson -Dkms=true -Dxcb=true -Dwayland=false build
 $ ninja -C build
 ```

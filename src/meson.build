@@ -12,7 +12,7 @@ lib_uvr_deps = [vulkan, libmath, librt]
 # KMS libs and files
 ##################################
 if build_kms
-  libdrm = dependency('libdrm', version: '>=2.4.110', required: true)
+  libdrm = dependency('libdrm', required: true)
   if libdrm.found()
     lib_uvr_deps += [libdrm]
   endif
