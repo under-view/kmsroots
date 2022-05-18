@@ -17,5 +17,12 @@ $ ninja -C build
 ```sh
 $ ./build/examples/underview-renderer-xcb
 $ ./build/examples/underview-renderer-wayland
+
+# https://github.com/swaywm/wlroots/wiki/DRM-Debugging
+# Enable verbose DRM logging
+$ echo "0x19F" | sudo tee "/sys/module/drm/parameters/debug"
+# Clear kernel logs
+$ sudo dmesg -C
+$ dmesg -w > "underview.log" &
 $ ./build/examples/underview-renderer-kms
 ```
