@@ -26,3 +26,12 @@ option(
   value : false,
   description : 'Build wayland wrapper api',
 )
+
+
+option(
+  'gpu',
+  type : 'combo',
+  value : 'discrete',
+  choices : ['other', 'integrated', 'discrete', 'virtual', 'cpu'],
+  description : 'Select VkPhysicalDeviceType to use in examples'
+)

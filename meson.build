@@ -35,6 +35,7 @@ if build_wayland
   add_project_arguments(['-DINCLUDE_WAYLAND=1'], language: 'c')
 endif
 
+
 inc = include_directories('include')
 
 subdir('src')

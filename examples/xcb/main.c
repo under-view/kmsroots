@@ -49,7 +49,7 @@ int main(void) {
    */
   struct uvrvk_phdev vkphdev = {
     .vkinst = app.instance,
-    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
   };
 
   app.phdev = uvr_vk_phdev_create(&vkphdev);

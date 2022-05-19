@@ -9,7 +9,7 @@ going.
 **Building**
 ```sh
 $ . ./config-env.sh "$(pwd)/../build-underview-depends/working/build_output"
-$ meson -Dkms=true -Dxcb=true -Dwayland=false build
+$ meson -Dkms=true -Dxcb=true -Dwayland=false -Dgpu="integrated" build
 $ ninja -C build
 ```
 
