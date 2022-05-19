@@ -255,6 +255,9 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
     }
   }
 
+  if (device == VK_NULL_HANDLE)
+    uvr_utils_log(UVR_DANGER, "Suitable GPU not found!");
+
   return device;
 }
 
