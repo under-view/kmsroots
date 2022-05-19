@@ -106,9 +106,9 @@ int main(void) {
     .modifiers_cnt = 0
   };
 
-  kmsbuffs_info.bType = GBM_BUFFER;
-  kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
-  if (!kmsbuffs.gbmdev) goto exit_error;
+  //kmsbuffs_info.bType = GBM_BUFFER;
+  //kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
+  //if (!kmsbuffs.gbmdev) goto exit_error;
 
 exit_error:
   /*
@@ -117,9 +117,9 @@ exit_error:
   appd.vkinst = app.instance;
   kmsdevd.dochain = &dochain;
   kmsdevd.kmsfd = kmsfd;
-  kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
-  kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
-  kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
+  //kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
+  //kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
+  //kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
 
   uvr_buffer_destory(&kmsbuffsd);
   uvr_kms_node_destroy(&kmsdevd);

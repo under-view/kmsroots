@@ -3,7 +3,6 @@
 
 int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
   int num_devices = 0, err = 0, kmsfd = -1;
-  drm_magic_t magic;
   char *knode = NULL;
   drmDevice *candidate = NULL;
   drmDevice **devices = NULL;
@@ -81,6 +80,7 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
      * (e.g.) trying to run this test whilst a graphical session is
      * already active on the current VT.
      */
+    drm_magic_t magic;
     if (drmGetMagic(kmsfd, &magic) || drmAuthMagic(kmsfd, magic)) {
       uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' is not master", knode);
       goto error_free_kms_dev;
