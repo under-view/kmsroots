@@ -59,7 +59,7 @@ int main(void) {
   /*
    * Create xcb client
    */
-  struct uvrxcb_window xcbwin = {
+  struct uvrxcb_window_create_info xcbwin = {
     .display = NULL, .screen = NULL,
     .appname = "Example App", .fullscreen = true
   };

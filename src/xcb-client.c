@@ -1,7 +1,7 @@
 #include "xclient.h"
 #include <xcb/xcb_ewmh.h>
 
-xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window *uvrxcb) {
+xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window_create_info *uvrxcb) {
   const xcb_setup_t *xcbsetup = NULL;
   xcb_screen_t *xcbscreen = NULL;
   xcb_connection_t *conn = NULL;

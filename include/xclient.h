@@ -6,7 +6,7 @@
 #include <xcb/xcb.h>
 
 /*
- * struct uvrxcb_window (Underview Renderer XCB Client Window)
+ * struct uvrxcb_window (Underview Renderer XCB Client Window Create Information)
  *
  * members:
  * @display    - The X server's display name. When set to NULL, the DISPLAY
@@ -18,7 +18,7 @@
  * @window     - Stores the XID of the current window. XID is neeed to create
  *               windows and manage its properties.
  */
-struct uvrxcb_window {
+struct uvrxcb_window_create_info {
   const char *display;
   int *screen;
   const char *appname;
@@ -37,7 +37,7 @@ struct uvrxcb_window {
  *    xcb_connection_t on success
  *    NULL on failure
  */
-xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window *uvrxcb);
+xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window_create_info *uvrxcb);
 
 
 /*
