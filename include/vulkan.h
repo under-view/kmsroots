@@ -38,7 +38,7 @@
 
 
 /*
- * struct uvrvk_instance (Underview Renderer Vulkan Instance)
+ * struct uvrvk_instance_create_info (Underview Renderer Vulkan Instance Create Information)
  *
  * members:
  * @app_name                - A member of the VkApplicationInfo structure reserved for
@@ -54,7 +54,7 @@
  * @ppEnabledExtensionNames - A member of the VkInstanceCreateInfo structure used to pass
  *                            the actual vulkan instance extensions one wants to enable.
  */
-struct uvrvk_instance {
+struct uvrvk_instance_create_info {
   const char *app_name;
   const char *engine_name;
   uint32_t enabledLayerCount;
@@ -77,7 +77,7 @@ struct uvrvk_instance {
  *    VkInstance handle on success
  *    VK_NULL_HANDLE on failure
  */
-VkInstance uvr_vk_instance_create(struct uvrvk_instance *uvrvk);
+VkInstance uvr_vk_instance_create(struct uvrvk_instance_create_info *uvrvk);
 
 
 /*
@@ -93,7 +93,7 @@ typedef enum uvrvk_surface_type {
 
 
 /*
- * struct uvrvk_surface (Underview Renderer Vulkan Surface)
+ * struct uvrvk_surface_create_info (Underview Renderer Vulkan Surface Create Information)
  *
  * members:
  * @vkinst   - Must pass a valid VkInstance handle to create/associate surfaces for an application
@@ -103,7 +103,7 @@ typedef enum uvrvk_surface_type {
  * @display  - Must pass either a pointer to wl_display interface or a pointer to an xcb_connection_t
  * @window   - Must pass an xcb_window_t window or an unsigned int representing XID
  */
-struct uvrvk_surface {
+struct uvrvk_surface_create_info {
   VkInstance vkinst;
   uvrvk_surface_type sType;
   void *surface;
@@ -122,11 +122,11 @@ struct uvrvk_surface {
  *    VkSurfaceKHR handle on success
  *    VK_NULL_HANDLE on failure
  */
-VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk);
+VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface_create_info *uvrvk);
 
 
 /*
- * struct uvrvk_phdev (Underview Renderer Vulkan Physical Device)
+ * struct uvrvk_phdev_create_info (Underview Renderer Vulkan Physical Device Create Information)
  *
  * members:
  * @vkinst   - Must pass a valid VkInstance handle to create/associate surfaces for an application
@@ -134,7 +134,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk);
  * @kmsfd    - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
  *             if corresponding properties match
  */
-struct uvrvk_phdev {
+struct uvrvk_phdev_create_info {
   VkInstance vkinst;
   VkPhysicalDeviceType vkpdtype;
 #ifdef INCLUDE_KMS
@@ -153,7 +153,7 @@ struct uvrvk_phdev {
  *    VkPhysicalDevice handle on success
  *    VK_NULL_HANDLE on failure
  */
-VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk);
+VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev_create_info *uvrvk);
 
 
 /*

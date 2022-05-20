@@ -48,7 +48,7 @@ int main(void) {
   /*
    * Create Vulkan Instance
    */
-  struct uvrvk_instance vkinst = {
+  struct uvrvk_instance_create_info vkinst = {
     .app_name = "Example App",
     .engine_name = "No Engine",
     .enabledLayerCount = ARRAY_LEN(validation_layers),
@@ -79,7 +79,7 @@ int main(void) {
   /*
    * Create Vulkan Physical Device Handle
    */
-  struct uvrvk_phdev vkphdev = {
+  struct uvrvk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
     .vkpdtype = VK_PHYSICAL_DEVICE_TYPE,
     .kmsfd = kmsfd

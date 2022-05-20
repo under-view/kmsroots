@@ -31,7 +31,7 @@ int main(void) {
   /*
    * Create Vulkan Instance
    */
-  struct uvrvk_instance vkinst = {
+  struct uvrvk_instance_create_info vkinst = {
     .app_name = "Example App",
     .engine_name = "No Engine",
     .enabledLayerCount = ARRAY_LEN(validation_layers),
@@ -47,7 +47,7 @@ int main(void) {
   /*
    * Create Vulkan Physical Device Handle
    */
-  struct uvrvk_phdev vkphdev = {
+  struct uvrvk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
     .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
   };
@@ -73,7 +73,7 @@ int main(void) {
   /*
    * Create Vulkan Surface
    */
-  struct uvrvk_surface vksurf = {
+  struct uvrvk_surface_create_info vksurf = {
     .vkinst = app.instance, .sType = XCB_CLIENT_SURFACE,
     .display = xclient.conn, .window = xclient.window
   };

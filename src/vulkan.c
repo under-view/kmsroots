@@ -62,7 +62,7 @@ static const char *vkres_msg(int err) {
 }
 
 
-VkInstance uvr_vk_instance_create(struct uvrvk_instance *uvrvk) {
+VkInstance uvr_vk_instance_create(struct uvrvk_instance_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkInstance instance = VK_NULL_HANDLE;
 
@@ -110,7 +110,7 @@ VkInstance uvr_vk_instance_create(struct uvrvk_instance *uvrvk) {
 }
 
 
-VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk) {
+VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface_create_info *uvrvk) {
   VkResult UNUSED res = VK_RESULT_MAX_ENUM;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
@@ -168,7 +168,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvrvk_surface *uvrvk) {
 }
 
 
-VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev *uvrvk) {
+VkPhysicalDevice uvr_vk_phdev_create(struct uvrvk_phdev_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkPhysicalDevice device = VK_NULL_HANDLE;
   uint32_t device_count = 0;
