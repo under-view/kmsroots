@@ -14,11 +14,11 @@
 
 
 /*
- * enum uvrbuff_type (Underview Renderer Buffer Type)
+ * enum uvr_buffer_type (Underview Renderer Buffer Type)
  *
  * Buffer allocation options used by uvr_buffer_create
  */
-enum uvrbuff_type {
+enum uvr_buffer_type {
   DUMP_BUFFER,
   GBM_BUFFER,
   GBM_BUFFER_WITH_MODIFIERS
@@ -26,7 +26,7 @@ enum uvrbuff_type {
 
 
 /*
- * struct uvrbuff_object_info (Underview Renderer Buffer Object Information)
+ * struct uvr_buffer_object_info (Underview Renderer Buffer Object Information)
  *
  * members:
  * @bo          - Handle to some GBM backend allocated buffer. Used to get GEM handles, DMA buf fds,
@@ -47,7 +47,7 @@ enum uvrbuff_type {
  * @dma_buf_fds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware
  * @kmsfd       - File descriptor to open DRI device
  */
-struct uvrbuff_object_info {
+struct uvr_buffer_object_info {
   struct gbm_bo *bo;
   unsigned fbid;
   unsigned format;
@@ -62,21 +62,21 @@ struct uvrbuff_object_info {
 
 
 /*
- * struct uvrbuff (Underview Renderer Buffer)
+ * struct uvr_buffer (Underview Renderer Buffer)
  *
  * members:
  * @gbmdev       - A handle used to allocate gbm buffers & surfaces
  * @info_buffers - Stores an array of gbm_bo's and corresponding information
  *                 about the individual buffer.
  */
-struct uvrbuff {
+struct uvr_buffer {
   struct gbm_device *gbmdev;
-  struct uvrbuff_object_info *info_buffers;
+  struct uvr_buffer_object_info *info_buffers;
 };
 
 
 /*
- * struct uvrbuff (Underview Renderer Buffer Create Information)
+ * struct uvr_buffer_create_info (Underview Renderer Buffer Create Information)
  *
  * members:
  * @bType         - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
@@ -97,8 +97,8 @@ struct uvrbuff {
  * @modifiers     - List of drm format modifier
  * @modifiers_cnt - Number of drm format modifiers passed
  */
-struct uvrbuff_create_info {
-  enum uvrbuff_type bType;
+struct uvr_buffer_create_info {
+  enum uvr_buffer_type bType;
   unsigned int kmsfd;
 
   unsigned int buff_cnt;
@@ -119,14 +119,14 @@ struct uvrbuff_create_info {
  * args:
  * @uvrbuff - Pointer to a struct uvrbuff_create_info
  * return:
- *    on success struct uvrbuff
- *    on failure struct uvrbuff { with members nulled }
+ *    on success struct uvr_buffer
+ *    on failure struct uvr_buffer { with members nulled }
  */
-struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff);
+struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff);
 
 
 /*
- * struct uvrbuff_destroy (Underview Renderer Buffer Destroy)
+ * struct uvr_buffer_destroy (Underview Renderer Buffer Destroy)
  *
  * members:
  * @gbmdev       - A handle used to allocate gbm buffers & surfaces
@@ -134,11 +134,11 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff);
  * @info_buffers - Stores an array of gbm_bo's and corresponding information
  *                 about the individual buffer.
  */
-struct uvrbuff_destroy {
+struct uvr_buffer_destroy {
   struct gbm_device *gbmdev;
 
   unsigned int buff_cnt;
-  struct uvrbuff_object_info *info_buffers;
+  struct uvr_buffer_object_info *info_buffers;
 };
 
 
@@ -146,9 +146,9 @@ struct uvrbuff_destroy {
  * uvr_buffer_destory: Function free's all allocate objects associated with a given buffer
  *
  * args:
- * @uvrbuff - Pointer to a struct uvrbuff_destroy
+ * @uvrbuff - Pointer to a struct uvr_buffer_destroy
  */
-void uvr_buffer_destory(struct uvrbuff_destroy *uvrbuff);
+void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff);
 
 
 #endif

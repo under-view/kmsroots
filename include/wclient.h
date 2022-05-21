@@ -6,7 +6,7 @@
 #include <wayland-client.h>
 
 /*
- * struct uvrwc (Underview Renderer Wayland Client)
+ * struct uvr_wc (Underview Renderer Wayland Client)
  *
  * @wl_display_fd - file descriptor associated with a given display
  * @display       - a global singleton representing the whole connection
@@ -38,7 +38,7 @@
  *                  a tree of surfaces. Provides additional requests for assigning
  *                  roles.
  */
-struct uvrwc {
+struct uvr_wc {
   struct wl_display *display;
   struct wl_registry *registry;
   struct wl_compositor *compositor;
@@ -62,7 +62,7 @@ struct uvrwc {
 
 
 /*
- * uvr_wclient_display_connect: Establish connection to Wayland display server
+ * uvr_wc_display_connect: Establish connection to Wayland display server
  *
  * args:
  * @wl_display_name - Specify the Wayland display to run a client on. This will set
@@ -71,14 +71,14 @@ struct uvrwc {
  *    A reference to a wl_display on success
  *    NULL on failure
  */
-struct wl_display *uvr_wclient_display_connect(const char *wl_display_name);
+struct wl_display *uvr_wc_display_connect(const char *wl_display_name);
 
 
 /*
- * uvr_wclient_get_interfaces: Sets up global objects/interfaces.
+ * uvr_wc_get_interfaces: Sets up global objects/interfaces.
  *
  * args:
- * @client - pointer to a struct uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvr_wc contains all objects/interfaces
  *           necessary for a wayland client to run.
  *
  *           Members that recieve addresses and values:
@@ -87,15 +87,15 @@ struct wl_display *uvr_wclient_display_connect(const char *wl_display_name);
  *    0 on success
  *   -1 on failure
  */
-int uvr_wclient_alloc_interfaces(struct uvrwc *client);
+int uvr_wc_alloc_interfaces(struct uvr_wc *client);
 
 
 /*
- * uvr_wclient_alloc_shm_buffers: Adds way to get pixels from client to compositor
- *                                by creating writable shared buffers.
+ * uvr_wc_alloc_shm_buffers: Adds way to get pixels from client to compositor
+ *                           by creating writable shared buffers.
  *
  * args:
- * @client          - pointer to a struct uvrwc contains all objects/interfaces
+ * @client          - pointer to a struct uvr_wc contains all objects/interfaces
  *                    necessary for a client to run.
  *
  *                    Members that recieve addresses and values:
@@ -111,20 +111,20 @@ int uvr_wclient_alloc_interfaces(struct uvrwc *client);
  *    0 on success
  *   -1 on failure
  */
-int uvr_wclient_alloc_shm_buffers(struct uvrwc *client,
-                                  const int buffer_count,
-                                  const int width,
-                                  const int height,
-                                  const int bytes_per_pixel,
-                                  uint64_t format);
+int uvr_wc_alloc_shm_buffers(struct uvr_wc *client,
+                             const int buffer_count,
+                             const int width,
+                             const int height,
+                             const int bytes_per_pixel,
+                             uint64_t format);
 
 
 /*
- * uvr_wclient_create_window: Adds way to get pixels from client to compositor
- *                            by creating writable shared buffers.
+ * uvr_wc_window_create: Adds way to get pixels from client to compositor
+ *                       by creating writable shared buffers.
  *
  * args:
- * @client     - pointer to a struct uvrwc contains all objects/interfaces
+ * @client     - pointer to a struct uvr_wc contains all objects/interfaces
  *               necessary for a client to run.
  *
  *               Members that recieve addresses and values:
@@ -135,41 +135,41 @@ int uvr_wclient_alloc_shm_buffers(struct uvrwc *client,
  *    0 on success
  *   -1 on failure
  */
-int uvr_wclient_create_window(struct uvrwc *client, const char *appname, bool UNUSED fullscreen);
+int uvr_wc_window_create(struct uvr_wc *client, const char *appname, bool UNUSED fullscreen);
 
 
 /*
- * uvr_wclient_process_events: Processes incoming Wayland server events.
- *                             Best utilized with epoll(POLLIN)
+ * uvr_wc_process_events: Processes incoming Wayland server events.
+ *                        Best utilized with epoll(POLLIN)
  *
  * args:
- * @client - pointer to a struct uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvr_wc contains all objects/interfaces
  *           necessary for a client to run.
  * return:
  *    -1 on failure
  */
-int uvr_wclient_process_events(struct uvrwc *client);
+int uvr_wc_process_events(struct uvr_wc *client);
 
 
 /*
- * uvr_wclient_flush_request: Flush all outgoing request to a Wayland server.
+ * uvr_wc_flush_request: Flush all outgoing request to a Wayland server.
  *
  * args:
- * @client - pointer to a struct uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvr_wc contains all objects/interfaces
  *           necessary for a client to run.
  * return:
  *    -1 on failure
  */
-int uvr_wclient_flush_request(struct uvrwc *client);
+int uvr_wc_flush_request(struct uvr_wc *client);
 
 
 /*
- * uvr_wclient_destory: frees any remaining allocated memory contained in struct uvrwc
+ * uvr_wc_destory: frees any remaining allocated memory contained in struct uvrwc
  *
  * args:
- * @client - pointer to a struct uvrwc contains all objects/interfaces
+ * @client - pointer to a struct uvr_wc contains all objects/interfaces
  *           necessary for an xcb client to run.
  */
-void uvr_wclient_destory(struct uvrwc *client);
+void uvr_wc_destory(struct uvr_wc *client);
 
 #endif

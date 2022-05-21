@@ -1,18 +1,18 @@
 #include "buffer.h"
 
 
-struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
+struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
   struct gbm_device *gbmdev = NULL;
-  struct uvrbuff_object_info *bois = NULL;
+  struct uvr_buffer_object_info *bois = NULL;
 
   if (uvrbuff->bType == GBM_BUFFER || uvrbuff->bType == GBM_BUFFER_WITH_MODIFIERS) {
     gbmdev = gbm_create_device(uvrbuff->kmsfd);
-    if (!gbmdev) goto exit_uvrbuff_null_struct;
+    if (!gbmdev) goto exit_uvr_buffer_null_struct;
 
-    bois = calloc(uvrbuff->buff_cnt, sizeof(struct uvrbuff_object_info));
+    bois = calloc(uvrbuff->buff_cnt, sizeof(struct uvr_buffer_object_info));
     if (!bois) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(calloc): failed to allocate space for struct uvrbuff_object_info *");
-      goto exit_uvrbuff_gbmdev_destroy;
+      goto exit_uvr_buffer_gbmdev_destroy;
     }
   }
 
@@ -22,7 +22,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
       bois[b].bo = gbm_bo_create(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->gbm_bo_flags);
       if (!bois[b].bo) {
         uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(gbm_bo_create): failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
     }
   }
@@ -33,7 +33,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
       bois[b].bo = gbm_bo_create_with_modifiers2(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->modifiers, uvrbuff->modifiers_cnt, uvrbuff->gbm_bo_flags);
       if (!bois[b].bo) {
         uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(gbm_bo_create_with_modifiers): failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
     }
   }
@@ -50,7 +50,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
       h = gbm_bo_get_handle_for_plane(bois[b].bo, p);
       if (!h.u32 || h.s32 == -1) {
         uvr_utils_log(UVR_DANGER, "[x] failed to get BO plane %d gem handle (modifier 0x%" PRIx64 ")", p, bois[b].modifier);
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
 
       bois[b].gem_handles[p] = h.u32;
@@ -58,7 +58,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
       bois[b].pitches[p] = gbm_bo_get_stride_for_plane(bois[b].bo, p);
       if (!bois[b].pitches[p]) {
         uvr_utils_log(UVR_DANGER, "[x] failed to get stride/pitch for BO plane %d (modifier 0x%" PRIx64 ")", p, bois[b].modifier);
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
 
       bois[b].offsets[p] = gbm_bo_get_offset(bois[b].bo, p);
@@ -72,7 +72,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
       /* Retrieve a DMA-BUF fd (PRIME fd) from the GEM handle/name to pass along to other processes */
       if (ioctl(bois[b].kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime_request) == -1)  {
         uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(ioctl): %s", strerror(errno));
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
 
       bois[b].dma_buf_fds[p] = prime_request.fd;
@@ -113,7 +113,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
 
       if (ioctl(bois[b].kmsfd, DRM_IOCTL_MODE_ADDFB, &f) == -1) {
         uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB): %s", strerror(errno));
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
 
       bois[b].fbid = f.fb_id;
@@ -136,7 +136,7 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
 
       if (ioctl(bois[b].kmsfd, DRM_IOCTL_MODE_ADDFB2, &f) == -1) {
         uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB2): %s", strerror(errno));
-        goto exit_uvrbuff_gbm_bo_detroy;
+        goto exit_uvr_buffer_gbm_bo_detroy;
       }
 
       bois[b].fbid = f.fb_id;
@@ -145,9 +145,9 @@ struct uvrbuff uvr_buffer_create(struct uvrbuff_create_info *uvrbuff) {
 
   uvr_utils_log(UVR_SUCCESS, "Successfully create GBM buffers");
 
-  return (struct uvrbuff) { .gbmdev = gbmdev, .info_buffers = bois };
+  return (struct uvr_buffer) { .gbmdev = gbmdev, .info_buffers = bois };
 
-exit_uvrbuff_gbm_bo_detroy:
+exit_uvr_buffer_gbm_bo_detroy:
   for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
     if (bois[b].fbid)
       ioctl(bois[b].kmsfd, DRM_IOCTL_MODE_RMFB, &bois[b].fbid);
@@ -161,15 +161,15 @@ exit_uvrbuff_gbm_bo_detroy:
     }
   }
   free(bois);
-exit_uvrbuff_gbmdev_destroy:
+exit_uvr_buffer_gbmdev_destroy:
   if (gbmdev)
     gbm_device_destroy(gbmdev);
-exit_uvrbuff_null_struct:
-  return (struct uvrbuff) { .gbmdev = NULL, .info_buffers = NULL };
+exit_uvr_buffer_null_struct:
+  return (struct uvr_buffer) { .gbmdev = NULL, .info_buffers = NULL };
 }
 
 
-void uvr_buffer_destory(struct uvrbuff_destroy *uvrbuff) {
+void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff) {
   for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
     if (uvrbuff->info_buffers[b].fbid)
       ioctl(uvrbuff->info_buffers[b].kmsfd, DRM_IOCTL_MODE_RMFB, &uvrbuff->info_buffers[b].fbid);

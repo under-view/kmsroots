@@ -1,7 +1,7 @@
 #include "xclient.h"
 #include <xcb/xcb_ewmh.h>
 
-xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window_create_info *uvrxcb) {
+xcb_connection_t *uvr_xcb_client_create(struct uvr_xcb_window_create_info *uvrxcb) {
   const xcb_setup_t *xcbsetup = NULL;
   xcb_screen_t *xcbscreen = NULL;
   xcb_connection_t *conn = NULL;
@@ -82,13 +82,13 @@ error_exit_xcb_client_create:
 }
 
 
-void uvr_xcb_display_window(struct uvrxcb *uvrxcb) {
+void uvr_xcb_display_window(struct uvr_xcb *uvrxcb) {
   xcb_map_window(uvrxcb->conn, uvrxcb->window);
   xcb_flush(uvrxcb->conn);
 }
 
 
-void uvr_xcb_destory(struct uvrxcb_destroy *uvrxcb) {
+void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb) {
   if (uvrxcb->window)
     xcb_destroy_window(uvrxcb->conn, uvrxcb->window);
 

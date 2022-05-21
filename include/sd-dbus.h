@@ -18,14 +18,14 @@
 
 
 /*
- * struct uvrsd_session (Underview Renderer Systemd Session)
+ * struct uvr_sd_session (Underview Renderer Systemd Session)
  *
  * members:
  * @bus     - An open D-Bus connection
  * @id      - Session id
  * @path    - Path to session object
  */
-struct uvrsd_session {
+struct uvr_sd_session {
   sd_bus *bus;
   char *id;
   char *path;
@@ -37,12 +37,12 @@ struct uvrsd_session {
  *                        Function populates all the members of the uvrsd_session struct
  *
  * args:
- * @uvrsd - pointer to a struct uvrsd_session stores information about the current session
+ * @uvrsd - pointer to a struct uvr_sd_session stores information about the current session
  * return:
  *    0 on success
  *   -1 on failure
  */
-int uvr_sd_session_create(struct uvrsd_session *uvrsd);
+int uvr_sd_session_create(struct uvr_sd_session *uvrsd);
 
 
 /*
@@ -53,13 +53,13 @@ int uvr_sd_session_create(struct uvrsd_session *uvrsd);
  *                                        descriptor to the device that has been acquired.
  *
  * args:
- * @uvrsd   - pointer to a struct uvrsd_session stores information about the current session
+ * @uvrsd   - pointer to a struct uvr_sd_session stores information about the current session
  * @devpath - Path to a given character device associated with a connected device
  * return:
  *    open fd on success
  *   -1 on failure
  */
-int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd, const char *devpath);
+int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const char *devpath);
 
 
 /*
@@ -68,19 +68,19 @@ int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd, const cha
  *                                function also close the passed file descriptor.
  *
  * args:
- * @uvrsd - pointer to a struct uvrsd_session stores information about the current session
+ * @uvrsd - pointer to a struct uvr_sd_session stores information about the current session
  * @fd    - file descriptor associated with a given opened character device file
  */
-void uvr_sd_session_release_device(struct uvrsd_session *uvrsd, int fd);
+void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd);
 
 
 /*
  * uvr_sd_session_destroy: Destroy logind session and free up allocated space assigning to members
  *
  * args:
- * @uvrsd - pointer to a struct uvrsd_session stores information about the current session
+ * @uvrsd - pointer to a struct uvr_sd_session stores information about the current session
  */
-void uvr_sd_session_destroy(struct uvrsd_session *uvrsd);
+void uvr_sd_session_destroy(struct uvr_sd_session *uvrsd);
 
 
 #endif

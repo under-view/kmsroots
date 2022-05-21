@@ -113,7 +113,7 @@ static void release_session_control(sd_bus *bus, char *path) {
 
 
 /* Create logind session to access devices without being root */
-int uvr_sd_session_create(struct uvrsd_session *uvrsd) {
+int uvr_sd_session_create(struct uvr_sd_session *uvrsd) {
   int ret = 0;
 
   /* If there's a session active for the current process then just use that */
@@ -193,7 +193,7 @@ start_session:
 }
 
 
-int uvr_sd_session_take_control_of_device(struct uvrsd_session *uvrsd, const char *devpath) {
+int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const char *devpath) {
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
   int fd = -1, ret = 0;
@@ -245,7 +245,7 @@ exit_logind_take_dev:
 }
 
 
-void uvr_sd_session_release_device(struct uvrsd_session *uvrsd, int fd) {
+void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd) {
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
 
@@ -266,7 +266,7 @@ void uvr_sd_session_release_device(struct uvrsd_session *uvrsd, int fd) {
 }
 
 
-void uvr_sd_session_destroy(struct uvrsd_session *uvrsd) {
+void uvr_sd_session_destroy(struct uvr_sd_session *uvrsd) {
   if (uvrsd->bus && uvrsd->path)
     release_session_control(uvrsd->bus, uvrsd->path);
   free(uvrsd->id);

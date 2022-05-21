@@ -1,7 +1,7 @@
 #include "kms.h"
 
 
-int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
+int uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms) {
   int num_devices = 0, err = 0, kmsfd = -1;
   char *knode = NULL;
   drmDevice *candidate = NULL;
@@ -11,7 +11,7 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
   if (uvrkms->kmsnode) {
 #ifdef INCLUDE_SDBUS
     if (uvrkms->use_logind)
-      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvrsd_session, uvrkms->kmsnode);
+      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, uvrkms->kmsnode);
     else
 #endif
       kmsfd = open(uvrkms->kmsnode, O_RDONLY | O_CLOEXEC, 0);
@@ -59,7 +59,7 @@ int uvr_kms_node_create(struct uvrkms_node_create_info *uvrkms) {
 
 #ifdef INCLUDE_SDBUS
     if (uvrkms->use_logind)
-      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvrsd_session, knode);
+      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, knode);
     else
 #endif
       kmsfd = open(knode, O_RDONLY | O_CLOEXEC, 0);
@@ -106,7 +106,7 @@ error_free_kms_dev:
   if (kmsfd != -1) {
 #ifdef INCLUDE_SDBUS
     if (uvrkms->use_logind)
-      uvr_sd_session_release_device(uvrkms->uvrsd_session, kmsfd);
+      uvr_sd_session_release_device(uvrkms->uvr_sd_session, kmsfd);
     else
 #endif
       close(kmsfd);
@@ -117,8 +117,8 @@ error_free_kms_dev:
 }
 
 
-struct uvrkms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd) {
-  struct uvrkms_node_device_capabilites kmscap;
+struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd) {
+  struct uvr_kms_node_device_capabilites kmscap;
   memset(&kmscap, 0, sizeof(kmscap));
 
   uint64_t cap = 0, err = 0;
@@ -139,7 +139,7 @@ struct uvrkms_node_device_capabilites uvr_kms_node_get_device_capabilities(int k
 }
 
 
-struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(struct uvrkms_node_get_display_output_chain_info *uvrkms) {
+struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_create(struct uvr_kms_node_display_output_chain_create_info *uvrkms) {
   drmModeRes *drmres = NULL;
   drmModePlaneRes *drmplaneres = NULL;
 
@@ -258,7 +258,7 @@ struct uvrkms_node_display_output_chain uvr_kms_node_get_display_output_chain(st
     drmModeFreePlaneResources(drmplaneres);
     drmModeFreeResources(drmres);
 
-    return (struct uvrkms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane };
+    return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane };
 
 free_disp_crtc:
     if (crtc) {
@@ -295,11 +295,11 @@ err_res:
   if (drmres)
     drmModeFreeResources(drmres);
 err_ret_null_chain_output:
-  return (struct uvrkms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0 };
+  return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0 };
 }
 
 
-void uvr_kms_node_destroy(struct uvrkms_node_destroy *uvrkms) {
+void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms) {
   if (uvrkms->dochain) {
     if (uvrkms->dochain->plane)
       drmModeFreePlane(uvrkms->dochain->plane);
@@ -313,7 +313,7 @@ void uvr_kms_node_destroy(struct uvrkms_node_destroy *uvrkms) {
   if (uvrkms->kmsfd != -1) {
 #ifdef INCLUDE_SDBUS
     if (uvrkms->info.use_logind)
-      uvr_sd_session_release_device(uvrkms->info.uvrsd_session, uvrkms->kmsfd);
+      uvr_sd_session_release_device(uvrkms->info.uvr_sd_session, uvrkms->kmsfd);
     else
 #endif
       close(uvrkms->kmsfd);

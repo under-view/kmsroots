@@ -30,18 +30,18 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
  * Example code demonstrating how use Vulkan with X11
  */
 int main(void) {
-  struct uvrvk app;
-  struct uvrvk_destroy appd;
+  struct uvr_vk app;
+  struct uvr_vk_destroy appd;
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-  struct uvrwc wclient;
+  struct uvr_wc wclient;
   memset(&wclient, 0, sizeof(wclient));
 
   /*
    * Create Vulkan Instance
    */
-  struct uvrvk_instance_create_info vkinst = {
+  struct uvr_vk_instance_create_info vkinst = {
     .app_name = "Example App",
     .engine_name = "No Engine",
     .enabledLayerCount = ARRAY_LEN(validation_layers),
@@ -57,7 +57,7 @@ int main(void) {
   /*
    * Create Vulkan Physical Device Handle
    */
-  struct uvrvk_phdev_create_info vkphdev = {
+  struct uvr_vk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
     .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
   };
@@ -67,25 +67,25 @@ int main(void) {
     goto exit_error;
 
 
-  wclient.display = uvr_wclient_display_connect(NULL);
+  wclient.display = uvr_wc_display_connect(NULL);
   if (!wclient.display) goto exit_error;
 
-  if (uvr_wclient_alloc_interfaces(&wclient) == -1)
+  if (uvr_wc_alloc_interfaces(&wclient) == -1)
     goto exit_error;
 
   int buffer_count = 2, width = 3840, height = 2160, bytes_per_pixel = 4;
-  if (uvr_wclient_alloc_shm_buffers(&wclient, buffer_count, width, height,
-                                    bytes_per_pixel, WL_SHM_FORMAT_XRGB8888) == -1)
+  if (uvr_wc_alloc_shm_buffers(&wclient, buffer_count, width, height,
+                               bytes_per_pixel, WL_SHM_FORMAT_XRGB8888) == -1)
     goto exit_error;
 
-  if (uvr_wclient_create_window(&wclient, "Example Window", true))
+  if (uvr_wc_window_create(&wclient, "Example Window", true))
     goto exit_error;
 
 
   /*
    * Create Vulkan Surface
    */
-  struct uvrvk_surface_create_info vksurf = {
+  struct uvr_vk_surface_create_info vksurf = {
     .vkinst = app.instance, .sType = WAYLAND_CLIENT_SURFACE,
     .display = wclient.display, .surface = wclient.surface
   };
@@ -106,7 +106,7 @@ int main(void) {
     for (int y = 0; y < height; y++)
       *(uint32_t *) &wclient.shm_pool_data[stride * x + y * bytes_per_pixel] = (r << 16) | (g << 8) | b;
 
-  while (uvr_wclient_process_events(&wclient)) {
+  while (uvr_wc_process_events(&wclient)) {
     // Leave blank
   }
 
@@ -117,6 +117,6 @@ exit_error:
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
   uvr_vk_destory(&appd);
-  uvr_wclient_destory(&wclient);
+  uvr_wc_destory(&wclient);
   return 0;
 }

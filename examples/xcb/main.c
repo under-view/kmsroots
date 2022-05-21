@@ -18,20 +18,20 @@ const char *instance_extensions[] = {
  * Example code demonstrating how to use Vulkan with XCB
  */
 int main(void) {
-  struct uvrvk app;
-  struct uvrvk_destroy appd;
+  struct uvr_vk app;
+  struct uvr_vk_destroy appd;
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-  struct uvrxcb xclient;
-  struct uvrxcb_destroy xclientd;
+  struct uvr_xcb xclient;
+  struct uvr_xcb_destroy xclientd;
   memset(&xclient, 0, sizeof(xclient));
   memset(&xclientd, 0, sizeof(xclientd));
 
   /*
    * Create Vulkan Instance
    */
-  struct uvrvk_instance_create_info vkinst = {
+  struct uvr_vk_instance_create_info vkinst = {
     .app_name = "Example App",
     .engine_name = "No Engine",
     .enabledLayerCount = ARRAY_LEN(validation_layers),
@@ -47,7 +47,7 @@ int main(void) {
   /*
    * Create Vulkan Physical Device Handle
    */
-  struct uvrvk_phdev_create_info vkphdev = {
+  struct uvr_vk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
     .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
   };
@@ -59,7 +59,7 @@ int main(void) {
   /*
    * Create xcb client
    */
-  struct uvrxcb_window_create_info xcbwin = {
+  struct uvr_xcb_window_create_info xcbwin = {
     .display = NULL, .screen = NULL,
     .appname = "Example App", .fullscreen = true
   };
@@ -73,7 +73,7 @@ int main(void) {
   /*
    * Create Vulkan Surface
    */
-  struct uvrvk_surface_create_info vksurf = {
+  struct uvr_vk_surface_create_info vksurf = {
     .vkinst = app.instance, .sType = XCB_CLIENT_SURFACE,
     .display = xclient.conn, .window = xclient.window
   };

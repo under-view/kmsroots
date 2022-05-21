@@ -4,7 +4,7 @@
 #include "common.h"
 
 /* Used to help determine which ANSI Escape Codes to use */
-enum uvr_log_type {
+enum uvr_utils_log_type {
   UVR_NONE    = 0x0000,
   UVR_SUCCESS = 0x0001,
   UVR_DANGER  = 0x0002,
@@ -15,7 +15,7 @@ enum uvr_log_type {
 };
 
 int allocate_shm_file(size_t size);
-void _uvr_utils_log(enum uvr_log_type type, FILE *stream, const char *fmt, ...);
+void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...);
 const char *_uvr_utils_strip_path(const char *filepath);
 
 /* Macros defined to help better structure the message */

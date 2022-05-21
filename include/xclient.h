@@ -6,7 +6,7 @@
 #include <xcb/xcb.h>
 
 /*
- * struct uvrxcb_window (Underview Renderer XCB Client Window Create Information)
+ * struct uvr_xcb_window (Underview Renderer XCB Client Window Create Information)
  *
  * members:
  * @display    - The X server's display name. When set to NULL, the DISPLAY
@@ -18,7 +18,7 @@
  * @window     - Stores the XID of the current window. XID is neeed to create
  *               windows and manage its properties.
  */
-struct uvrxcb_window_create_info {
+struct uvr_xcb_window_create_info {
   const char *display;
   int *screen;
   const char *appname;
@@ -37,18 +37,18 @@ struct uvrxcb_window_create_info {
  *    xcb_connection_t on success
  *    NULL on failure
  */
-xcb_connection_t *uvr_xcb_client_create(struct uvrxcb_window_create_info *uvrxcb);
+xcb_connection_t *uvr_xcb_client_create(struct uvr_xcb_window_create_info *uvrxcb);
 
 
 /*
- * struct uvrxcb (Underview Renderer XCB Client)
+ * struct uvr_xcb (Underview Renderer XCB Client)
  *
  * members:
  * @conn   - A structure that contain all data that XCB needs to communicate with an X server.
  * @window - Stores the XID of the current window. XID is neeed to create
  *           windows and manage its properties
  */
-struct uvrxcb {
+struct uvr_xcb {
   xcb_connection_t *conn;
   xcb_window_t window;
 };
@@ -61,7 +61,7 @@ struct uvrxcb {
  * @client - pointer to a struct uvrwc contains all objects necessary
  *           for an xcb client to run.
  */
-void uvr_xcb_display_window(struct uvrxcb *uvrxcb);
+void uvr_xcb_display_window(struct uvr_xcb *uvrxcb);
 
 
 /*
@@ -71,7 +71,7 @@ void uvr_xcb_display_window(struct uvrxcb *uvrxcb);
  * @conn   - A structure that contain all data that XCB needs to communicate with an X server.
  * @window - Stores the XID of the current window. XID is neeed to create windows and manage its properties.
  */
-struct uvrxcb_destroy {
+struct uvr_xcb_destroy {
   xcb_connection_t *conn;
   xcb_window_t window;
 };
@@ -83,6 +83,6 @@ struct uvrxcb_destroy {
  * @uvrxcb - pointer to a struct uvrxcb_destroy contains all objects
  *           created during window lifetime in need of destruction
  */
-void uvr_xcb_destory(struct uvrxcb_destroy *uvrxcb);
+void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb);
 
 #endif
