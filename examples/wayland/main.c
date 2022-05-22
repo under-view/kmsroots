@@ -26,6 +26,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
   return next;
 }
 
+
 /*
  * Example code demonstrating how use Vulkan with X11
  */
@@ -35,8 +36,19 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-  struct uvr_wc wclient;
-  memset(&wclient, 0, sizeof(wclient));
+  struct uvr_wc_destory wcd;
+  memset(&wcd, 0, sizeof(wcd));
+
+  struct uvr_wc_core_interface wcinterfaces;
+  memset(&wcinterfaces, 0, sizeof(struct uvr_wc_core_interface));
+
+  struct uvr_wc_core_interface_create_info wcinterfaces_info = {
+    .wl_display_name = NULL,
+    .iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE | UVR_WC_WL_SHM_INTERFACE | UVR_WC_WL_SEAT_INTERFACE
+  };
+
+  wcinterfaces = uvr_wc_core_interface_create(&wcinterfaces_info);
+  if (!wcinterfaces.display || !wcinterfaces.registry || !wcinterfaces.compositor) goto exit_error;
 
   /*
    * Create Vulkan Instance
@@ -67,27 +79,34 @@ int main(void) {
     goto exit_error;
 
 
-  wclient.display = uvr_wc_display_connect(NULL);
-  if (!wclient.display) goto exit_error;
+  int width = 3840, height = 2160, bytes_per_pixel = 4;
+  struct uvr_wc_buffer_create_info uvrwcbuff_info = {
+    .uvrwccore = &wcinterfaces, .buffer_count = 2,
+    .width = width, .height = height, .bytes_per_pixel = bytes_per_pixel,
+    .wl_pix_format = WL_SHM_FORMAT_XRGB8888
+  };
 
-  if (uvr_wc_alloc_interfaces(&wclient) == -1)
+  struct uvr_wc_buffer uvrwc_buffs = uvr_wc_buffer_create(&uvrwcbuff_info);
+  if (!uvrwc_buffs.buffers)
     goto exit_error;
 
-  int buffer_count = 2, width = 3840, height = 2160, bytes_per_pixel = 4;
-  if (uvr_wc_alloc_shm_buffers(&wclient, buffer_count, width, height,
-                               bytes_per_pixel, WL_SHM_FORMAT_XRGB8888) == -1)
-    goto exit_error;
 
-  if (uvr_wc_window_create(&wclient, "Example Window", true))
-    goto exit_error;
+  struct uvr_wc_surface_create_info uvrwcsurf_info = {
+    .uvrwccore = &wcinterfaces,
+    .uvrwcbuff = &uvrwc_buffs,
+    .appname = "Example Window",
+    .fullscreen = true
+  };
 
+  struct uvr_wc_surface uvrwc_surf = uvr_wc_surface_create(&uvrwcsurf_info);
+  if (!uvrwc_surf.surface) goto exit_error;
 
   /*
    * Create Vulkan Surface
    */
   struct uvr_vk_surface_create_info vksurf = {
     .vkinst = app.instance, .sType = WAYLAND_CLIENT_SURFACE,
-    .display = wclient.display, .surface = wclient.surface
+    .display = wcinterfaces.display, .surface = uvrwc_surf.surface
   };
 
   app.surface = uvr_vk_surface_create(&vksurf);
@@ -104,9 +123,9 @@ int main(void) {
 
   for (int x = 0; x < width; x++)
     for (int y = 0; y < height; y++)
-      *(uint32_t *) &wclient.shm_pool_data[stride * x + y * bytes_per_pixel] = (r << 16) | (g << 8) | b;
+      *(uint32_t *) &uvrwc_buffs.shm_pool_data[stride * x + y * bytes_per_pixel] = (r << 16) | (g << 8) | b;
 
-  while (uvr_wc_process_events(&wclient)) {
+  while (uvr_wc_process_events(&wcinterfaces)) {
     // Leave blank
   }
 
@@ -117,6 +136,10 @@ exit_error:
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
   uvr_vk_destory(&appd);
-  uvr_wc_destory(&wclient);
+
+  wcd.wccinterface = &wcinterfaces;
+  wcd.wcbuff = &uvrwc_buffs;
+  wcd.wcsurface = &uvrwc_surf;
+  uvr_wc_destory(&wcd);
   return 0;
 }
