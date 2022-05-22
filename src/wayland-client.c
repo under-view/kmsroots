@@ -112,6 +112,11 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
   memset(&uvrwc_buffs, 0, sizeof(uvrwc_buffs));
   uvrwc_buffs.shm_fd = -1;
 
+  if (!uvrwc->uvrwccore->shm) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_wc_buffer_create(!uvrwc->uvrwccore->shm): Must bind the wl_shm interface");
+    goto error_create_buffer_exit;
+  }
+
   int stride = uvrwc->width * uvrwc->bytes_per_pixel;
   uvrwc_buffs.buffer_count = uvrwc->buffer_count;
   uvrwc_buffs.shm_pool_size = stride * uvrwc->height * uvrwc->buffer_count;

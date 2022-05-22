@@ -98,7 +98,10 @@ int main(void) {
     .fullscreen = true
   };
 
-  struct uvr_wc_surface uvrwc_surf = uvr_wc_surface_create(&uvrwcsurf_info);
+  struct uvr_wc_surface uvrwc_surf;
+  memset(&uvrwc_surf, 0, sizeof(uvrwc_surf));
+
+  uvrwc_surf = uvr_wc_surface_create(&uvrwcsurf_info);
   if (!uvrwc_surf.surface) goto exit_error;
 
   /*
