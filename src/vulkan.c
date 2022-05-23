@@ -286,6 +286,75 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
 }
 
 
+VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev) {
+  VkPhysicalDeviceFeatures features;
+  vkGetPhysicalDeviceFeatures(phdev, &features);
+  return features;
+}
+
+
+VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
+  VkDevice device = VK_NULL_HANDLE;
+  VkResult res = VK_RESULT_MAX_ENUM;
+  uint32_t queue_count = 0, queueFamilyIndex = UINT32_MAX;
+  VkQueueFamilyProperties *queue_families = NULL;
+  bool graphics_bit = false;
+
+  /*
+   * Almost every operation in Vulkan, requires commands to be submitted to a queue
+   * check if the Graphics queue is available for a given physical device as we need
+   */
+  vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->phdev, &queue_count, NULL);
+  queue_families = (VkQueueFamilyProperties *) alloca(queue_count * sizeof(VkQueueFamilyProperties));
+  vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->phdev, &queue_count, queue_families);
+
+  for (uint32_t i = 0; i < queue_count; i++) {
+    if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      graphics_bit = true;
+      queueFamilyIndex = i;
+    }
+
+    if (!graphics_bit) {
+      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_lgdev_create(graphics_bit): Graphics bit not found for passed VkPhysicalDevice");
+      return VK_NULL_HANDLE;
+    }
+  }
+
+  VkPhysicalDeviceFeatures phdevfeats;
+  vkGetPhysicalDeviceFeatures(uvrvk->phdev, &phdevfeats);
+
+  const float pQueuePriorities = 1.f;
+  VkDeviceQueueCreateInfo pQueueCreateInfo = {};
+  pQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  pQueueCreateInfo.queueFamilyIndex = queueFamilyIndex;
+  pQueueCreateInfo.queueCount = 1;
+  pQueueCreateInfo.pQueuePriorities = &pQueuePriorities;
+
+  VkDeviceCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.queueCreateInfoCount = 1;
+  create_info.pQueueCreateInfos = &pQueueCreateInfo;
+  create_info.enabledLayerCount = 0; // Deprecated and ignored
+  create_info.ppEnabledLayerNames = NULL; // Deprecated and ignored
+  create_info.enabledExtensionCount = uvrvk->enabledExtensionCount;
+  create_info.ppEnabledExtensionNames = uvrvk->ppEnabledExtensionNames;
+  create_info.pEnabledFeatures = uvrvk->pEnabledFeatures;
+
+  /* Create logic device */
+  res = vkCreateDevice(uvrvk->phdev, &create_info, NULL, &device);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_lgdev_create(vkCreateDevice): %s", vkres_msg(res));
+    return VK_NULL_HANDLE;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: VkDevice created retval(%p)", device);
+
+  return device;
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   if (uvrvk->vklgdev) {
     vkDeviceWaitIdle(uvrvk->vklgdev);

@@ -74,8 +74,8 @@ struct uvr_vk_instance_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_instance_create_info
  * return:
- *    VkInstance handle on success
- *    VK_NULL_HANDLE on failure
+ *    on success VkInstance handle
+ *    on failure VK_NULL_HANDLE
  */
 VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk);
 
@@ -119,8 +119,8 @@ struct uvr_vk_surface_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_surface_create_info
  * return:
- *    VkSurfaceKHR handle on success
- *    VK_NULL_HANDLE on failure
+ *    on success VkSurfaceKHR handle
+ *    on failure VK_NULL_HANDLE
  */
 VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk);
 
@@ -150,10 +150,60 @@ struct uvr_vk_phdev_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_phdev_create_info
  * return:
- *    VkPhysicalDevice handle on success
- *    VK_NULL_HANDLE on failure
+ *    on success VkPhysicalDevice handle
+ *    on failure VK_NULL_HANDLE
  */
 VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk);
+
+
+/*
+ * uvr_vk_get_phdev_features: Populates the VkPhysicalDeviceFeatures struct with features
+ *                            supported by a given VkPhysicalDevice
+ *
+ * args:
+ * @phdev - Must pass a valid VkPhysicalDevice handle
+ * return:
+ *    populated VkPhysicalDeviceFeatures
+ */
+VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
+
+
+/*
+ * struct uvr_vk_lgdev_create_info (Underview Renderer Vulkan Logical Device Create Information)
+ *
+ * members:
+ * @vkinst                  - Must pass a valid VkInstance handle to create/associate surfaces for an application
+ * @phdev                   - Must pass a valid VkPhysicalDevice handle
+ * @pEnabledFeatures        - Must pass a valid pointer to a VkPhysicalDeviceFeatures with X features enabled
+ * @enabledExtensionCount   - Must pass the amount of Vulkan Device extensions to enable
+ * @ppEnabledExtensionNames - Must pass an array of Vulkan Device extension to enable
+ */
+struct uvr_vk_lgdev_create_info {
+  VkInstance vkinst;
+  VkPhysicalDevice phdev;
+  VkDeviceCreateFlags lgdevflags;
+  VkPhysicalDeviceFeatures *pEnabledFeatures;
+  uint32_t enabledExtensionCount;
+  const char *const *ppEnabledExtensionNames;
+};
+
+
+/*
+ * uvr_vk_lgdev_create: creates a VkDevice object and allows a connection to a given physical device.
+ *                      The VkDevice object is more of a local object its state and operations are local
+ *                      to it and are not seen by other logical devices. Function also acts as an easy wrapper
+ *                      that allows one to define device extensions. Device extensions basically allow developers
+ *                      to define what operations a given logical device is capable of doing. So, if one wants the
+ *                      device to be capable of utilizing a swap chain, etc…​ One should enable those extensions
+ *                      inorder to gain access to those particular capabilities.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_lgdev_create_info
+ * return:
+ *    on success VkPhysicalDevice handle
+ *    on failure VK_NULL_HANDLE
+ */
+VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
 
 
 /*

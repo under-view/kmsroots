@@ -6,13 +6,18 @@
  * All of the useful standard validation is
  * bundled into a layer included in the SDK
  */
-const char *validation_layers[] = { };
+const char *validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
 
 const char *instance_extensions[] = {
   "VK_KHR_wayland_surface",
-  "VK_KHR_surface"
+  "VK_KHR_surface",
+  "VK_KHR_display",
+  "VK_EXT_debug_utils"
 };
 
+const char *device_extensions[] = {
+  "VK_KHR_swapchain"
+};
 
 static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
   uint8_t next;
@@ -78,6 +83,17 @@ int main(void) {
   if (!app.phdev)
     goto exit_error;
 
+  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app.phdev);
+  struct uvr_vk_lgdev_create_info vklgdev_info = {
+    .vkinst = app.instance, .phdev = app.phdev,
+    .pEnabledFeatures = &phdevfeats,
+    .enabledExtensionCount = ARRAY_LEN(device_extensions),
+    .ppEnabledExtensionNames = device_extensions,
+  };
+
+  app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
+  if (!app.lgdev)
+    goto exit_error;
 
   int width = 3840, height = 2160, bytes_per_pixel = 4;
   struct uvr_wc_buffer_create_info uvrwcbuff_info = {
@@ -138,6 +154,7 @@ exit_error:
    */
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
+  appd.vklgdev = app.lgdev;
   uvr_vk_destory(&appd);
 
   wcd.wccinterface = &wcinterfaces;
