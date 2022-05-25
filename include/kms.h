@@ -171,10 +171,11 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  * struct uvr_kms_node_destroy (Underview Renderer KMS Node Destroy)
  *
  * members:
- * @kmsnode - The file descriptor associated with open KMS device node to be closed.
- *            Stores information about logind session bus, id, and path needed to
- *            release control of a given device.
- * @dochain - Pointer to a struct uvr_kms_node_display_output_chain. Stores information
+ * @kmsnode - Must pass a valid struct uvr_kms_node. Which contains information about the
+ *            file descriptor associated with open KMS device node to be closed. Stores
+ *            information about logind session bus, id, and path needed to release control
+ *            of a given device. That given device is a DRI device file.
+ * @dochain - Must pass a valid struct uvr_kms_node_display_output_chain. Stores information
  *            about KMS device node connector->encoder->crtc->plane pair
  */
 struct uvr_kms_node_destroy {

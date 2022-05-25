@@ -302,44 +302,38 @@ int uvr_wc_flush_request(struct uvr_wc_core_interface *uvrwc) {
 void uvr_wc_destory(struct uvr_wc_destory *uvrwc) {
 
   /* Destroy all wayland client surface interfaces/objects */
-  if (uvrwc->wcsurface) {
-    if (uvrwc->wcsurface->xdg_toplevel)
-      xdg_toplevel_destroy(uvrwc->wcsurface->xdg_toplevel);
-    if (uvrwc->wcsurface->xdg_surface)
-      xdg_surface_destroy(uvrwc->wcsurface->xdg_surface);
-    if (uvrwc->wcsurface->surface)
-      wl_surface_destroy(uvrwc->wcsurface->surface);
-  }
+  if (uvrwc->wcsurface.xdg_toplevel)
+    xdg_toplevel_destroy(uvrwc->wcsurface.xdg_toplevel);
+  if (uvrwc->wcsurface.xdg_surface)
+    xdg_surface_destroy(uvrwc->wcsurface.xdg_surface);
+  if (uvrwc->wcsurface.surface)
+    wl_surface_destroy(uvrwc->wcsurface.surface);
 
   /* Destroy all wayland client buffer interfaces/objects */
-  if (uvrwc->wcbuff) {
-    if (uvrwc->wcbuff->shm_fd != -1)
-      close(uvrwc->wcbuff->shm_fd);
-    if (uvrwc->wcbuff->shm_pool_data)
-      munmap(uvrwc->wcbuff->shm_pool_data, uvrwc->wcbuff->shm_pool_size);
-    if (uvrwc->wcbuff->buffers) {
-      for (int b=0; b < uvrwc->wcbuff->buffer_count; b++)
-        if (uvrwc->wcbuff->buffers[b])
-          wl_buffer_destroy(uvrwc->wcbuff->buffers[b]);
-      free(uvrwc->wcbuff->buffers);
-    }
-    if (uvrwc->wcbuff->shm_pool)
-      wl_shm_pool_destroy(uvrwc->wcbuff->shm_pool);
+  if (uvrwc->wcbuff.shm_fd != -1)
+    close(uvrwc->wcbuff.shm_fd);
+  if (uvrwc->wcbuff.shm_pool_data)
+    munmap(uvrwc->wcbuff.shm_pool_data, uvrwc->wcbuff.shm_pool_size);
+  if (uvrwc->wcbuff.buffers) {
+    for (int b=0; b < uvrwc->wcbuff.buffer_count; b++)
+      if (uvrwc->wcbuff.buffers[b])
+        wl_buffer_destroy(uvrwc->wcbuff.buffers[b]);
+    free(uvrwc->wcbuff.buffers);
   }
+  if (uvrwc->wcbuff.shm_pool)
+    wl_shm_pool_destroy(uvrwc->wcbuff.shm_pool);
 
   /* Destroy core wayland interfaces if allocated */
-  if (uvrwc->wccinterface) {
-    if (uvrwc->wccinterface->seat)
-      wl_seat_destroy(uvrwc->wccinterface->seat);
-    if (uvrwc->wccinterface->shm)
-      wl_shm_destroy(uvrwc->wccinterface->shm);
-    if (uvrwc->wccinterface->wm_base)
-      xdg_wm_base_destroy(uvrwc->wccinterface->wm_base);
-    if (uvrwc->wccinterface->compositor)
-      wl_compositor_destroy(uvrwc->wccinterface->compositor);
-    if (uvrwc->wccinterface->registry)
-      wl_registry_destroy(uvrwc->wccinterface->registry);
-    if (uvrwc->wccinterface->display)
-      wl_display_disconnect(uvrwc->wccinterface->display);
-  }
+  if (uvrwc->wccinterface.seat)
+    wl_seat_destroy(uvrwc->wccinterface.seat);
+  if (uvrwc->wccinterface.shm)
+    wl_shm_destroy(uvrwc->wccinterface.shm);
+  if (uvrwc->wccinterface.wm_base)
+    xdg_wm_base_destroy(uvrwc->wccinterface.wm_base);
+  if (uvrwc->wccinterface.compositor)
+    wl_compositor_destroy(uvrwc->wccinterface.compositor);
+  if (uvrwc->wccinterface.registry)
+    wl_registry_destroy(uvrwc->wccinterface.registry);
+  if (uvrwc->wccinterface.display)
+    wl_display_disconnect(uvrwc->wccinterface.display);
 }

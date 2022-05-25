@@ -157,9 +157,9 @@ exit_error:
   appd.vklgdev = app.lgdev;
   uvr_vk_destory(&appd);
 
-  wcd.wccinterface = &wcinterfaces;
-  wcd.wcbuff = &uvrwc_buffs;
-  wcd.wcsurface = &uvrwc_surf;
+  wcd.wccinterface = wcinterfaces;
+  wcd.wcbuff = uvrwc_buffs;
+  wcd.wcsurface = uvrwc_surf;
   uvr_wc_destory(&wcd);
   return 0;
 }
