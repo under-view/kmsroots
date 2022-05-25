@@ -235,6 +235,9 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
 
   VkPhysicalDeviceProperties2 devprops2;
   VkPhysicalDeviceDrmPropertiesEXT drm_props;
+  memset(&devprops2, 0, sizeof(devprops2));
+  memset(&drm_props, 0, sizeof(drm_props));
+
   drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
   devprops2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 #endif

@@ -1,8 +1,130 @@
 #include "kms.h"
 
+#include <sys/vt.h>
+#include <sys/kd.h>
+#include <linux/major.h>
 
-int uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms) {
+
+/*
+ * Verbatim TAKEN FROM Daniel Stone (gitlab/kms-quads)
+ * Set up the VT/TTY so it runs in graphics mode and lets us handle our own
+ * input. This uses the VT specified in $TTYNO if specified, or the current VT
+ * if we're running directly from a VT, or failing that tries to find a free
+ * one to switch to.
+ */
+static int vt_setup(int *kbmode) {
+  const char *tty_num_env = getenv("TTYNO");
+  int tty_num = 0, vtfd = -1;
+  char tty_dev[32];
+
+  /* If $TTYNO is set in the environment, then use that first. */
+  if (tty_num_env) {
+    char *endptr = NULL;
+
+    tty_num = strtoul(tty_num_env, &endptr, 10);
+    if (tty_num == 0 || *endptr != '\0') {
+      uvr_utils_log(UVR_DANGER, "[x] vt_setup(strtoul): invalid $TTYNO environment variable");
+      return -1;
+    }
+
+    snprintf(tty_dev, sizeof(tty_dev), "/dev/tty%d", tty_num);
+
+  } else if (ttyname(STDIN_FILENO)) {
+    /* Otherwise, if we're running from a VT ourselves, just reuse
+    * that. */
+    ttyname_r(STDIN_FILENO, tty_dev, sizeof(tty_dev));
+  } else {
+    int tty0;
+
+    /* Other-other-wise, look for a free VT we can use by querying
+    * /dev/tty0. */
+    tty0 = open("/dev/tty0", O_WRONLY | O_CLOEXEC);
+    if (tty0 < 0) {
+      uvr_utils_log(UVR_DANGER, "[x] vt_setup(open('%s')): %s", "/dev/tty0", strerror(errno));
+      return -1;
+    }
+
+    if (ioctl(tty0, VT_OPENQRY, &tty_num) < 0 || tty_num < 0) {
+      uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl('VT_OPENQRY')): %s", strerror(errno));
+      uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl('VT_OPENQRY')): couldn't get free TTY");
+      close(tty0);
+      return -1;
+    }
+
+    close(tty0);
+    snprintf(tty_dev, sizeof(tty_dev), "/dev/tty%d", tty_num);
+  }
+
+  vtfd = open(tty_dev, O_RDWR | O_NOCTTY);
+  if (vtfd < 0) {
+    uvr_utils_log(UVR_DANGER, "[x] vt_setup(open('%s')): %s", tty_dev, strerror(errno));
+    return -1;
+  }
+
+  /* If we get our VT from stdin, work painfully backwards to find its
+   * VT number. */
+  if (tty_num == 0) {
+    struct stat buf;
+
+    if (fstat(vtfd, &buf) == -1 || major(buf.st_rdev) != TTY_MAJOR) {
+      uvr_utils_log(UVR_DANGER, "[x] vt_setup(fstat() || major()): VT file %s is bad", tty_dev);
+      goto error_vt_setup_exit;
+    }
+
+    tty_num = minor(buf.st_rdev);
+  }
+
+  if (!tty_num)
+    goto error_vt_setup_exit;
+
+  uvr_utils_log(UVR_INFO, "Using VT %d", tty_num);
+
+  /* Switch to the target VT. */
+  if (ioctl(vtfd, VT_ACTIVATE, tty_num) != 0 || ioctl(vtfd, VT_WAITACTIVE, tty_num) != 0) {
+    uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl(VT_ACTIVATE) || ioctl(VT_WAITACTIVE)): couldn't switch to VT %d", tty_num);
+    goto error_vt_setup_exit;
+  }
+
+  uvr_utils_log(UVR_INFO, "Switched to VT %d", tty_num);
+
+  /* Completely disable kernel keyboard processing: this prevents us
+   * from being killed on Ctrl-C. */
+  if (ioctl(vtfd, KDGKBMODE, kbmode) != 0 || ioctl(vtfd, KDSKBMODE, K_OFF) != 0) {
+    uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl(KDGKBMODE) || ioctl(KDSKBMODE)): failed to disable TTY keyboard processing");
+    goto error_vt_setup_exit;
+  }
+
+  /* Change the VT into graphics mode, so the kernel no longer prints
+   * text out on top of us. */
+  if (ioctl(vtfd, KDSETMODE, KD_GRAPHICS) != 0) {
+    uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl(KDSETMODE)): failed to switch TTY to graphics mode");
+    goto error_vt_setup_exit;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "VT setup complete");
+
+  /* Normally we would also call VT_SETMODE to change the mode to
+   * VT_PROCESS here, which would allow us to intercept VT-switching
+   * requests and tear down KMS. But we don't, since that requires
+   * signal handling. */
+  return vtfd;
+
+error_vt_setup_exit:
+  if (vtfd > 0)
+    close(vtfd);
+  return -1;
+}
+
+
+static void vt_reset(int vtfd, int saved_kb_mode) {
+  ioctl(vtfd, KDSKBMODE, saved_kb_mode);
+  ioctl(vtfd, KDSETMODE, KD_TEXT);
+}
+
+
+struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms) {
   int num_devices = 0, err = 0, kmsfd = -1;
+  int kbmode = -1, vtfd = -1;
   char *knode = NULL;
   drmDevice *candidate = NULL;
   drmDevice **devices = NULL;
@@ -20,8 +142,16 @@ int uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms) {
       goto error_free_kms_dev;
     }
 
+    vtfd = vt_setup(&kbmode);
+    if (vtfd == -1)
+      goto error_free_kms_dev;
+
     uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsnode, kmsfd);
-    return kmsfd;
+    return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
+#ifdef INCLUDE_SDBUS
+      , .uvr_sd_session = uvrkms->uvr_sd_session, .use_logind = uvrkms->use_logind
+#endif
+    };
   }
 
   /* Query list of available kms nodes (GPU) to get the amount available */
@@ -99,7 +229,15 @@ int uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms) {
       goto error_free_kms_dev;
     }
 
-    return kmsfd;
+    vtfd = vt_setup(&kbmode);
+    if (vtfd == -1)
+      goto error_free_kms_dev;
+
+    return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
+#ifdef INCLUDE_SDBUS
+      , .uvr_sd_session = uvrkms->uvr_sd_session, .use_logind = uvrkms->use_logind
+#endif
+    };
   }
 
 error_free_kms_dev:
@@ -113,7 +251,12 @@ error_free_kms_dev:
   }
   if (devices)
     drmFreeDevices(devices, num_devices);
-  return -1;
+
+  return (struct uvr_kms_node) { .kmsfd = -1, .vtfd = -1, .kbmode = -1
+#ifdef INCLUDE_SDBUS
+      , .uvr_sd_session = NULL, .use_logind = false
+#endif
+  };
 }
 
 
@@ -250,7 +393,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
     uvr_utils_log(UVR_SUCCESS, "Successfully created a display output chain");
 
-    /* Free all planes not in use */
+    /* Free all plane resources not in use */
     for (unsigned int p = 0; p < drmplaneres->count_planes; p++)
       if (planes[p]->fb_id != plane->fb_id)
         drmModeFreePlane(planes[p]);
@@ -276,8 +419,6 @@ free_disp_connector:
       connector = NULL;
     }
   }
-
-
 err_free_disp_encoder:
   if (encoder)
     drmModeFreeEncoder(encoder);
@@ -300,22 +441,22 @@ err_ret_null_chain_output:
 
 
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms) {
-  if (uvrkms->dochain) {
-    if (uvrkms->dochain->plane)
-      drmModeFreePlane(uvrkms->dochain->plane);
-    if (uvrkms->dochain->crtc)
-      drmModeFreeCrtc(uvrkms->dochain->crtc);
-    if (uvrkms->dochain->encoder)
-      drmModeFreeEncoder(uvrkms->dochain->encoder);
-    if (uvrkms->dochain->connector)
-      drmModeFreeConnector(uvrkms->dochain->connector);
-  }
-  if (uvrkms->kmsfd != -1) {
+  if (uvrkms->dochain.plane)
+    drmModeFreePlane(uvrkms->dochain.plane);
+  if (uvrkms->dochain.crtc)
+    drmModeFreeCrtc(uvrkms->dochain.crtc);
+  if (uvrkms->dochain.encoder)
+    drmModeFreeEncoder(uvrkms->dochain.encoder);
+  if (uvrkms->dochain.connector)
+    drmModeFreeConnector(uvrkms->dochain.connector);
+  if (uvrkms->kmsnode.kmsfd != -1) {
+    if (uvrkms->kmsnode.vtfd != -1 && uvrkms->kmsnode.kbmode != -1)
+      vt_reset(uvrkms->kmsnode.vtfd, uvrkms->kmsnode.kbmode);
 #ifdef INCLUDE_SDBUS
-    if (uvrkms->info.use_logind)
-      uvr_sd_session_release_device(uvrkms->info.uvr_sd_session, uvrkms->kmsfd);
+    if (uvrkms->kmsnode.use_logind)
+      uvr_sd_session_release_device(uvrkms->kmsnode.uvr_sd_session, uvrkms->kmsnode.kmsfd);
     else
 #endif
-      close(uvrkms->kmsfd);
+      close(uvrkms->kmsnode.kmsfd);
   }
 }

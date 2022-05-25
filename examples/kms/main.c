@@ -35,10 +35,10 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
+  struct uvr_kms_node kmsdev;
   struct uvr_kms_node_destroy kmsdevd;
-  struct uvr_kms_node_create_info kmsnodeinfo;
+  memset(&kmsdev, 0, sizeof(kmsdev));
   memset(&kmsdevd, 0, sizeof(kmsdevd));
-  memset(&kmsnodeinfo, 0, sizeof(kmsnodeinfo));
 
   struct uvr_buffer UNUSED kmsbuffs;
   struct uvr_buffer_destroy kmsbuffsd;
@@ -61,6 +61,8 @@ int main(void) {
   if (!app.instance)
     goto exit_error;
 
+  struct uvr_kms_node_create_info kmsnodeinfo;
+
 #ifdef INCLUDE_SDBUS
   struct uvr_sd_session uvrsd;
   memset(&uvrsd, 0, sizeof(uvrsd));
@@ -72,8 +74,8 @@ int main(void) {
 #endif
 
   kmsnodeinfo.kmsnode = NULL;
-  int kmsfd = uvr_kms_node_create(&kmsnodeinfo);
-  if (kmsfd == -1)
+  kmsdev = uvr_kms_node_create(&kmsnodeinfo);
+  if (kmsdev.kmsfd == -1)
     goto exit_error;
 
   /*
@@ -82,7 +84,7 @@ int main(void) {
   struct uvr_vk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
     .vkpdtype = VK_PHYSICAL_DEVICE_TYPE,
-    .kmsfd = kmsfd
+    .kmsfd = kmsdev.kmsfd
   };
 
   app.phdev = uvr_vk_phdev_create(&vkphdev);
@@ -102,16 +104,16 @@ int main(void) {
     goto exit_error;
 
   struct uvr_kms_node_display_output_chain dochain;
-  struct uvr_kms_node_display_output_chain_create_info dochain_info = { .kmsfd = kmsfd };
+  struct uvr_kms_node_display_output_chain_create_info dochain_info = { .kmsfd = kmsdev.kmsfd };
   dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
   if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
     goto exit_error;
 
   struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
-  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsfd);
+  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsdev.kmsfd);
 
   struct uvr_buffer_create_info UNUSED kmsbuffs_info = {
-    .bType = UINT32_MAX, .kmsfd = kmsfd, .buff_cnt = 2,
+    .bType = UINT32_MAX, .kmsfd = kmsdev.kmsfd, .buff_cnt = 2,
     .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
     .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
     .pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
@@ -126,19 +128,21 @@ exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
    */
-  appd.vkinst = app.instance;
-  appd.vklgdev = app.lgdev;
-  kmsdevd.dochain = &dochain;
-  kmsdevd.kmsfd = kmsfd;
+
   //kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
   //kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
   //kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
 
   uvr_buffer_destory(&kmsbuffsd);
+
+  kmsdevd.kmsnode = kmsdev;
+  kmsdevd.dochain = dochain;
   uvr_kms_node_destroy(&kmsdevd);
+
+  appd.vkinst = app.instance;
+  appd.vklgdev = app.lgdev;
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
-  kmsdevd.info.uvr_sd_session  = &uvrsd;
   uvr_sd_session_destroy(&uvrsd);
 #endif
   return 0;

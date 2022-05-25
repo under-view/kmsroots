@@ -31,17 +31,17 @@
  * struct uvr_kms_node_create_info (Underview Renderer KMS Node Create Information)
  *
  * members:
- * @uvrsd_session - Address of struct uvrsd_session. Which members are used to communicate
- *                  with systemd-logind via D-Bus systemd-logind interface. Needed by
- *                  kms_node_create to acquire and taken control of a device without the
- *                  need of being root.
- * @use_logind    - Not redundant. If one include -Dsd-bus=yes meson option, but doesn't
- *                  want to utilize systemd-logind D-bus interface to open a GPU device set
- *                  memeber to false. Other set to true which will use systemd-logind D-bus
- *                  interface.
- * @kmsnode       - Path to character device associated with GPU. If set to NULL. List of
- *                  available kmsnode's will be queried and one will be automatically
- *                  choosen for you.
+ * @uvr_sd_session - Address of struct uvrsd_session. Which members are used to communicate
+ *                   with systemd-logind via D-Bus systemd-logind interface. Needed by
+ *                   kms_node_create to acquire and taken control of a device without the
+ *                   need of being root.
+ * @use_logind     - Not redundant. If one include -Dsd-bus=yes meson option, but doesn't
+ *                   want to utilize systemd-logind D-bus interface to open/take control of a
+ *                   GPU device set member to false. If variable is set to true this will use
+ *                   systemd-logind D-bus interface.
+ * @kmsnode        - Path to character device associated with GPU. If set to NULL. List of
+ *                   available kmsnode's will be queried and one will be automatically
+ *                   choosen for you.
  */
 struct uvr_kms_node_create_info {
 #ifdef INCLUDE_SDBUS
@@ -49,6 +49,27 @@ struct uvr_kms_node_create_info {
   bool use_logind;
 #endif
   const char *kmsnode;
+};
+
+
+/*
+ * struct uvr_kms_node (Underview Renderer KMS Node)
+ *
+ * members:
+ * @kmsfd         - A valid file descriptor to an open DRI device node
+ * @vtfd          - File descriptor to open tty character device (i.e '/dev/tty0')
+ * @kbmode        - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
+ * @uvrsd_session - Stores address of struct uvr_sd_session. Used when releasing a device
+ * @use_logind    - Stores whether systemd-logind is utilized or not
+ */
+struct uvr_kms_node {
+  int kmsfd;
+  int vtfd;
+  int kbmode;
+#ifdef INCLUDE_SDBUS
+  struct uvr_sd_session *uvr_sd_session;
+  bool use_logind;
+#endif
 };
 
 
@@ -61,13 +82,13 @@ struct uvr_kms_node_create_info {
  *                      So, if a graphical session is already active on the current VT function fails.
  *
  * args:
- * @uvrkms - pointer to a struct uvr_kms_node_create_info used to determine what operation
- *           will happen in the function
+ * @uvrkms - pointer to a struct uvr_kms_node_create_info used to determine pass DRI device file that we may want to use
+ *           and information about the current sytemd-logind session
  * return:
- *    open fd on success
- *   -1 on failure
+ *    on success struct uvr_kms_node
+ *    on failure struct uvr_kms_node { with members nulled, int's set to -1 }
  */
-int uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms);
+struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms);
 
 
 /*
@@ -150,16 +171,15 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  * struct uvr_kms_node_destroy (Underview Renderer KMS Node Destroy)
  *
  * members:
- * @kmsfd   - The file descriptor associated with open KMS device node to be closed.
- * @info    - Stores information about logind session bus, id, and path needed to
+ * @kmsnode - The file descriptor associated with open KMS device node to be closed.
+ *            Stores information about logind session bus, id, and path needed to
  *            release control of a given device.
  * @dochain - Pointer to a struct uvr_kms_node_display_output_chain. Stores information
  *            about KMS device node connector->encoder->crtc->plane pair
  */
 struct uvr_kms_node_destroy {
-  int kmsfd;
-  struct uvr_kms_node_create_info info;
-  struct uvr_kms_node_display_output_chain *dochain;
+  struct uvr_kms_node kmsnode;
+  struct uvr_kms_node_display_output_chain dochain;
 };
 
 
