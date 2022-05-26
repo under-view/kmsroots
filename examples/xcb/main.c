@@ -29,7 +29,7 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-  struct uvr_xcb xclient;
+  struct uvr_xcb_window xclient;
   struct uvr_xcb_destroy xclientd;
   memset(&xclient, 0, sizeof(xclient));
   memset(&xclientd, 0, sizeof(xclientd));
@@ -82,11 +82,9 @@ int main(void) {
     .appname = "Example App", .fullscreen = true
   };
 
-  xclient.conn = uvr_xcb_client_create(&xcbwin);
+  xclient = uvr_xcb_window_create(&xcbwin);
   if (!xclient.conn)
     goto exit_error;
-
-  xclient.window = xcbwin.window;
 
   /*
    * Create Vulkan Surface
@@ -114,8 +112,8 @@ exit_error:
   appd.vklgdev = app.lgdev;
   uvr_vk_destory(&appd);
 
-  xclientd.conn = xclient.conn;
-  xclientd.window = xclient.window;
+
+  xclientd.xcbwindow = xclient;
   uvr_xcb_destory(&xclientd);
   return 0;
 }

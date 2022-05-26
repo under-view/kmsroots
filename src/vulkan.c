@@ -277,7 +277,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
     enter |= (devprops.deviceType == uvrvk->vkpdtype);
     if (enter) {
       memmove(&device, &devices[i], sizeof(devices[i]));
-      uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s", devprops.deviceName);
+      uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s, api version: %u", devprops.deviceName, devprops.apiVersion);
       break;
     }
   }
