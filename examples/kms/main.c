@@ -78,8 +78,30 @@ int main(void) {
   if (kmsdev.kmsfd == -1)
     goto exit_error;
 
+  struct uvr_kms_node_display_output_chain dochain;
+  struct uvr_kms_node_display_output_chain_create_info dochain_info = { .kmsfd = kmsdev.kmsfd };
+  dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
+  if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
+    goto exit_error;
+
+  struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
+  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsdev.kmsfd);
+
+  struct uvr_buffer_create_info UNUSED kmsbuffs_info = {
+    .bType = UINT32_MAX, .kmsfd = kmsdev.kmsfd, .buff_cnt = 2,
+    .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
+    .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
+    .pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
+    .modifiers_cnt = 0
+  };
+
+  kmsbuffs_info.bType = GBM_BUFFER;
+  kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
+  if (!kmsbuffs.gbmdev) goto exit_error;
+
   /*
-   * Create Vulkan Physical Device Handle
+   * Create Vulkan Physical Device Handle, After buffer creation
+   * as it can actually effect VkPhysicalDevice creation
    */
   struct uvr_vk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
@@ -103,36 +125,13 @@ int main(void) {
   if (!app.lgdev)
     goto exit_error;
 
-  struct uvr_kms_node_display_output_chain dochain;
-  struct uvr_kms_node_display_output_chain_create_info dochain_info = { .kmsfd = kmsdev.kmsfd };
-  dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
-  if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
-    goto exit_error;
-
-  struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
-  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsdev.kmsfd);
-
-  struct uvr_buffer_create_info UNUSED kmsbuffs_info = {
-    .bType = UINT32_MAX, .kmsfd = kmsdev.kmsfd, .buff_cnt = 2,
-    .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
-    .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
-    .pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
-    .modifiers_cnt = 0
-  };
-
-  //kmsbuffs_info.bType = GBM_BUFFER;
-  //kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
-  //if (!kmsbuffs.gbmdev) goto exit_error;
-
 exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
    */
-
-  //kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
-  //kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
-  //kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
-
+  kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
+  kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
+  kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
   uvr_buffer_destory(&kmsbuffsd);
 
   kmsdevd.kmsnode = kmsdev;

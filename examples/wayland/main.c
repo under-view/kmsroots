@@ -47,14 +47,6 @@ int main(void) {
   struct uvr_wc_core_interface wcinterfaces;
   memset(&wcinterfaces, 0, sizeof(struct uvr_wc_core_interface));
 
-  struct uvr_wc_core_interface_create_info wcinterfaces_info = {
-    .wl_display_name = NULL,
-    .iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE | UVR_WC_WL_SHM_INTERFACE | UVR_WC_WL_SEAT_INTERFACE
-  };
-
-  wcinterfaces = uvr_wc_core_interface_create(&wcinterfaces_info);
-  if (!wcinterfaces.display || !wcinterfaces.registry || !wcinterfaces.compositor) goto exit_error;
-
   /*
    * Create Vulkan Instance
    */
@@ -71,29 +63,13 @@ int main(void) {
   if (!app.instance)
     goto exit_error;
 
-  /*
-   * Create Vulkan Physical Device Handle
-   */
-  struct uvr_vk_phdev_create_info vkphdev = {
-    .vkinst = app.instance,
-    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
+  struct uvr_wc_core_interface_create_info wcinterfaces_info = {
+    .wl_display_name = NULL,
+    .iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE | UVR_WC_WL_SHM_INTERFACE | UVR_WC_WL_SEAT_INTERFACE
   };
 
-  app.phdev = uvr_vk_phdev_create(&vkphdev);
-  if (!app.phdev)
-    goto exit_error;
-
-  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app.phdev);
-  struct uvr_vk_lgdev_create_info vklgdev_info = {
-    .vkinst = app.instance, .phdev = app.phdev,
-    .pEnabledFeatures = &phdevfeats,
-    .enabledExtensionCount = ARRAY_LEN(device_extensions),
-    .ppEnabledExtensionNames = device_extensions,
-  };
-
-  app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
-  if (!app.lgdev)
-    goto exit_error;
+  wcinterfaces = uvr_wc_core_interface_create(&wcinterfaces_info);
+  if (!wcinterfaces.display || !wcinterfaces.registry || !wcinterfaces.compositor) goto exit_error;
 
   int width = 3840, height = 2160, bytes_per_pixel = 4;
   struct uvr_wc_buffer_create_info uvrwcbuff_info = {
@@ -105,7 +81,6 @@ int main(void) {
   struct uvr_wc_buffer uvrwc_buffs = uvr_wc_buffer_create(&uvrwcbuff_info);
   if (!uvrwc_buffs.buffers)
     goto exit_error;
-
 
   struct uvr_wc_surface_create_info uvrwcsurf_info = {
     .uvrwccore = &wcinterfaces,
@@ -130,6 +105,31 @@ int main(void) {
 
   app.surface = uvr_vk_surface_create(&vksurf);
   if (!app.surface)
+    goto exit_error;
+
+  /*
+   * Create Vulkan Physical Device Handle, After Window Surface
+   * so that it doesn't effect VkPhysicalDevice selection
+   */
+  struct uvr_vk_phdev_create_info vkphdev = {
+    .vkinst = app.instance,
+    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
+  };
+
+  app.phdev = uvr_vk_phdev_create(&vkphdev);
+  if (!app.phdev)
+    goto exit_error;
+
+  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app.phdev);
+  struct uvr_vk_lgdev_create_info vklgdev_info = {
+    .vkinst = app.instance, .phdev = app.phdev,
+    .pEnabledFeatures = &phdevfeats,
+    .enabledExtensionCount = ARRAY_LEN(device_extensions),
+    .ppEnabledExtensionNames = device_extensions,
+  };
+
+  app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
+  if (!app.lgdev)
     goto exit_error;
 
   int stride = width * bytes_per_pixel, calls = 2;

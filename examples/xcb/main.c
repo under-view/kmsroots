@@ -51,30 +51,6 @@ int main(void) {
     goto exit_error;
 
   /*
-   * Create Vulkan Physical Device Handle
-   */
-  struct uvr_vk_phdev_create_info vkphdev = {
-    .vkinst = app.instance,
-    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
-  };
-
-  app.phdev = uvr_vk_phdev_create(&vkphdev);
-  if (!app.phdev)
-    goto exit_error;
-
-  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app.phdev);
-  struct uvr_vk_lgdev_create_info vklgdev_info = {
-    .vkinst = app.instance, .phdev = app.phdev,
-    .pEnabledFeatures = &phdevfeats,
-    .enabledExtensionCount = ARRAY_LEN(device_extensions),
-    .ppEnabledExtensionNames = device_extensions,
-  };
-
-  app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
-  if (!app.lgdev)
-    goto exit_error;
-
-  /*
    * Create xcb client
    */
   struct uvr_xcb_window_create_info xcbwin = {
@@ -96,6 +72,30 @@ int main(void) {
 
   app.surface = uvr_vk_surface_create(&vksurf);
   if (!app.surface)
+    goto exit_error;
+
+  /*
+   * Create Vulkan Physical Device Handle
+   */
+  struct uvr_vk_phdev_create_info vkphdev = {
+    .vkinst = app.instance,
+    .vkpdtype = VK_PHYSICAL_DEVICE_TYPE
+  };
+
+  app.phdev = uvr_vk_phdev_create(&vkphdev);
+  if (!app.phdev)
+    goto exit_error;
+
+  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app.phdev);
+  struct uvr_vk_lgdev_create_info vklgdev_info = {
+    .vkinst = app.instance, .phdev = app.phdev,
+    .pEnabledFeatures = &phdevfeats,
+    .enabledExtensionCount = ARRAY_LEN(device_extensions),
+    .ppEnabledExtensionNames = device_extensions,
+  };
+
+  app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
+  if (!app.lgdev)
     goto exit_error;
 
   uvr_xcb_display_window(&xclient);
