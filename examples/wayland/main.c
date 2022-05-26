@@ -132,7 +132,7 @@ int main(void) {
   if (!app.surface)
     goto exit_error;
 
-  int stride = width * bytes_per_pixel;
+  int stride = width * bytes_per_pixel, calls = 2;
   bool r_up = true, g_up = true, b_up = true;
 
   srand(time(NULL));
@@ -144,9 +144,10 @@ int main(void) {
     for (int y = 0; y < height; y++)
       *(uint32_t *) &uvrwc_buffs.shm_pool_data[stride * x + y * bytes_per_pixel] = (r << 16) | (g << 8) | b;
 
-  while (uvr_wc_process_events(&wcinterfaces)) {
-    // Leave blank
-  }
+  for (int call = 0; call < calls; call++)
+    uvr_wc_process_events(&wcinterfaces);
+
+  sleep(5);
 
 exit_error:
   /*
