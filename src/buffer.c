@@ -155,7 +155,7 @@ exit_uvr_buffer_gbm_bo_detroy:
       gbm_bo_destroy(bois[b].bo);
     for (unsigned p = 0; p < bois[b].num_planes; p++) {
       if (bois[b].dma_buf_fds[p] != -1) {
-        close(bois[b].dma_buf_fds[p]);
+        drmCloseBufferHandle(bois[b].kmsfd, bois[b].dma_buf_fds[p]);
         bois[b].dma_buf_fds[p] = -1;
       }
     }
@@ -177,7 +177,7 @@ void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff) {
       gbm_bo_destroy(uvrbuff->info_buffers[b].bo);
     for (unsigned p = 0; p < uvrbuff->info_buffers[b].num_planes; p++)  {
       if (uvrbuff->info_buffers[b].dma_buf_fds[p] != -1)
-        close(uvrbuff->info_buffers[b].dma_buf_fds[p]);
+        drmCloseBufferHandle(uvrbuff->info_buffers[b].kmsfd, uvrbuff->info_buffers[b].dma_buf_fds[p]);
     }
   }
   free(uvrbuff->info_buffers);
