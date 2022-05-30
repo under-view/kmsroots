@@ -20,7 +20,7 @@ if build_kms
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
       include_directories: [inc, example_inc],
-      c_args: gputype,
+      c_args: [gputype, pargs],
       install: true
     )
   endif
@@ -34,7 +34,7 @@ if build_xcb
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
       include_directories: [inc, example_inc],
-      c_args: gputype,
+      c_args: [gputype, pargs],
       install: true
     )
   endif
@@ -48,7 +48,7 @@ if build_wayland
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
       include_directories: [inc, example_inc],
-      c_args: gputype,
+      c_args: [gputype, pargs],
       install: true
     )
   endif
