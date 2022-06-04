@@ -46,8 +46,8 @@ struct uvr_xcb_window_create_info {
  * @client - pointer to a struct uvrxcb contains all objects necessary
  *           for an xcb client to run.
  * return:
- *    xcb_connection_t on success
- *    NULL on failure
+ *    on success struct uvr_xcb_window
+ *    on failure struct uvr_xcb_window { with members nulled }
  */
 struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb);
 
