@@ -54,8 +54,6 @@ endif
 # Wayland libs and files
 ##################################
 if build_wayland
-  pargs += ['-DWLR_USE_UNSTABLE']
-
   wayland_client = dependency('wayland-client', required: true)
   wayland_server = dependency('wayland-server', required: true)
   wlroots = dependency('wlroots', required: true)
@@ -90,7 +88,7 @@ if build_wayland
       ]
     endforeach
 
-    fs += ['wayland-client.c']
+    fs += ['wayland-client.c', 'wayland-server.c']
     lib_uvr_deps += [wayland_client, wayland_server, wlroots]
   endif
 endif

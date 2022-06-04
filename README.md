@@ -16,6 +16,7 @@ $ ninja -C build
 ```sh
 $ ./build/examples/underview-renderer-xcb
 $ ./build/examples/underview-renderer-wayland
+$ WLR_BACKENDS="drm" ./build/examples/underview-renderer-wayland-comp
 
 # https://github.com/swaywm/wlroots/wiki/DRM-Debugging
 # Enable verbose DRM logging
