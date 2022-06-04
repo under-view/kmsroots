@@ -44,7 +44,7 @@ endif
 if build_wayland
   if wayland_client.found()
     executable('underview-renderer-wayland',
-      'wayland/main.c',
+      'wayland/wayland-client-main.c',
       link_with: lib_underview_renderer,
       dependencies: lib_uvr_deps,
       include_directories: [inc, example_inc],
