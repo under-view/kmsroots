@@ -1,7 +1,6 @@
 # libunderview-renderer
 
-If i'm correct can eventually turn this into a render for a [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based
-compositor, however there may still be work to allow for out of tree renderers.
+[wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) wrapper library with an out-of-tree vulkan based renderer.
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
