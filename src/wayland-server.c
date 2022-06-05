@@ -15,7 +15,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws) {
   }
 
   core.backend = wlr_backend_autocreate(core.display);
-  if (core.backend) {
+  if (!core.backend) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_ws_core_create(wlr_backend_autocreate): Failed to create backend {DRM/KMS, Wayland, X, Headless}");
     goto exit_ws_core_wl_display_destory;
   }
