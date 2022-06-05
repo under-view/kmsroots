@@ -166,7 +166,6 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
   }
 #endif
 
-
 #ifdef INCLUDE_XCB
   if (uvrvk->sType == XCB_CLIENT_SURFACE) {
     VkXcbSurfaceCreateInfoKHR create_info = {};
@@ -296,49 +295,94 @@ VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev) {
 }
 
 
-VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
-  VkDevice device = VK_NULL_HANDLE;
-  VkResult res = VK_RESULT_MAX_ENUM;
-  uint32_t queue_count = 0, queueFamilyIndex = UINT32_MAX;
+struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk) {
+  uint32_t queue_count = 0, flagcnt = 0;
   VkQueueFamilyProperties *queue_families = NULL;
-  bool graphics_bit = false;
+  struct uvr_vk_queue queue;
+
+  flagcnt += (uvrvk->queueFlag & VK_QUEUE_GRAPHICS_BIT) ? 1 : 0;
+  flagcnt += (uvrvk->queueFlag & VK_QUEUE_COMPUTE_BIT) ? 1 : 0;
+  flagcnt += (uvrvk->queueFlag & VK_QUEUE_TRANSFER_BIT) ? 1 : 0;
+  flagcnt += (uvrvk->queueFlag & VK_QUEUE_SPARSE_BINDING_BIT) ? 1 : 0;
+  flagcnt += (uvrvk->queueFlag & VK_QUEUE_PROTECTED_BIT) ? 1 : 0;
+
+  if (flagcnt != 1) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_queue_create: Multiple VkQueueFlags specified, only one allowed per queue");
+    goto err_vk_queue_create;
+  }
 
   /*
    * Almost every operation in Vulkan, requires commands to be submitted to a queue
-   * check if the Graphics queue is available for a given physical device as we need
+   * Find queue family index for a given queue
    */
   vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->phdev, &queue_count, NULL);
   queue_families = (VkQueueFamilyProperties *) alloca(queue_count * sizeof(VkQueueFamilyProperties));
   vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->phdev, &queue_count, queue_families);
 
   for (uint32_t i = 0; i < queue_count; i++) {
-    if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      graphics_bit = true;
-      queueFamilyIndex = i;
+    queue.queueCount = queue_families[i].queueCount;
+    if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_GRAPHICS_BIT) {
+      strncpy(queue.name, "graphics", sizeof(queue.name));
+      queue.famindex = i; break;
     }
 
-    if (!graphics_bit) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_lgdev_create(graphics_bit): Graphics bit not found for passed VkPhysicalDevice");
-      return VK_NULL_HANDLE;
+    if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_COMPUTE_BIT) {
+      strncpy(queue.name, "compute", sizeof(queue.name));
+      queue.famindex = i; break;
+    }
+
+    if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_TRANSFER_BIT) {
+      strncpy(queue.name, "transfer", sizeof(queue.name));
+      queue.famindex = i; break;
+    }
+
+    if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_SPARSE_BINDING_BIT) {
+      strncpy(queue.name, "sparse_binding", sizeof(queue.name));
+      queue.famindex = i; break;
+    }
+
+    if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_PROTECTED_BIT) {
+      strncpy(queue.name, "protected", sizeof(queue.name));
+      queue.famindex = i; break;
     }
   }
 
-  VkPhysicalDeviceFeatures phdevfeats;
-  vkGetPhysicalDeviceFeatures(uvrvk->phdev, &phdevfeats);
+  return queue;
 
+err_vk_queue_create:
+  return (struct uvr_vk_queue) { .name[0] = '\0', .queue = VK_NULL_HANDLE, .famindex = -1, .queueCount = -1 };
+}
+
+
+VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
+  VkDevice device = VK_NULL_HANDLE;
+  VkResult res = VK_RESULT_MAX_ENUM;
+
+  VkDeviceQueueCreateInfo *pQueueCreateInfo = (VkDeviceQueueCreateInfo *) calloc(uvrvk->numqueues, sizeof(VkDeviceQueueCreateInfo));
+  if (!pQueueCreateInfo) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_lgdev_create(calloc): %s", strerror(errno));
+    goto err_vk_lgdev_create;
+  }
+
+  /*
+   * https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html#devsandqueues-priority
+   * set the default priority of all queues to be the highest
+   */
   const float pQueuePriorities = 1.f;
-  VkDeviceQueueCreateInfo pQueueCreateInfo = {};
-  pQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  pQueueCreateInfo.queueFamilyIndex = queueFamilyIndex;
-  pQueueCreateInfo.queueCount = 1;
-  pQueueCreateInfo.pQueuePriorities = &pQueuePriorities;
+  for (uint32_t qc = 0; qc < uvrvk->numqueues; qc++) {
+    pQueueCreateInfo[qc].flags = 0;
+    pQueueCreateInfo[qc].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    pQueueCreateInfo[qc].queueFamilyIndex = uvrvk->queues[qc].famindex;
+    pQueueCreateInfo[qc].queueCount = uvrvk->queues[qc].queueCount;
+    pQueueCreateInfo[qc].pQueuePriorities = &pQueuePriorities;
+  }
 
   VkDeviceCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
   create_info.pNext = NULL;
   create_info.flags = 0;
-  create_info.queueCreateInfoCount = 1;
-  create_info.pQueueCreateInfos = &pQueueCreateInfo;
+  create_info.queueCreateInfoCount = uvrvk->numqueues;
+  create_info.pQueueCreateInfos = pQueueCreateInfo;
   create_info.enabledLayerCount = 0; // Deprecated and ignored
   create_info.ppEnabledLayerNames = NULL; // Deprecated and ignored
   create_info.enabledExtensionCount = uvrvk->enabledExtensionCount;
@@ -349,12 +393,31 @@ VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
   res = vkCreateDevice(uvrvk->phdev, &create_info, NULL, &device);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_lgdev_create(vkCreateDevice): %s", vkres_msg(res));
-    return VK_NULL_HANDLE;
+    goto err_vk_lgdev_free_pQueueCreateInfo;
+  }
+
+  for (uint32_t qc = 0; qc < uvrvk->numqueues; qc++) {
+    vkGetDeviceQueue(device, uvrvk->queues[qc].famindex, 0, &uvrvk->queues[qc].queue);
+    if (!uvrvk->queues[qc].queue)  {
+      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_lgdev_create(vkGetDeviceQueue): Failed to get %s queue handle", uvrvk->queues[qc].name);
+      goto err_vk_lgdev_destroy;
+    }
+
+    uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: '%s' VkQueue successfully created retval(%p)", uvrvk->queues[qc].name, uvrvk->queues[qc].queue);
   }
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: VkDevice created retval(%p)", device);
 
+  free(pQueueCreateInfo);
   return device;
+
+err_vk_lgdev_destroy:
+  if (device)
+    vkDestroyDevice(device, NULL);
+err_vk_lgdev_free_pQueueCreateInfo:
+  free(pQueueCreateInfo);
+err_vk_lgdev_create:
+  return VK_NULL_HANDLE;
 }
 
 

@@ -169,6 +169,50 @@ VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
 
 
 /*
+ * struct uvr_vk_queue (Underview Renderer Vulkan Queue)
+ *
+ * members:
+ * @name       - Name of the given queue
+ * @queue      - VkQueue handle used when submitting command buffers to physical device. Handle assigned
+ *               in uvr_vk_lgdev_create after VkDevice handle creation.
+ * @famindex   - Queue family index
+ * @queueCount - Count of queues in a given queue family
+ */
+struct uvr_vk_queue {
+  char name[20];
+  VkQueue queue;
+  int famindex;
+  int queueCount;
+};
+
+
+/*
+ * struct uvr_vk_queue_create_info (Underview Renderer Vulkan Queue Create Information)
+ *
+ * members:
+ * @phdev      - Must pass a valid VkPhysicalDevice handle
+ * @queueFlags - Must pass a valid VkQueueFlagBits. https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html
+ */
+struct uvr_vk_queue_create_info {
+  VkPhysicalDevice phdev;
+  VkQueueFlags queueFlag;
+};
+
+
+/*
+ * uvr_vk_queue_create: Retrieves queue family index and queue count at said index given a single VkQueueFlags.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_queue_create_info. Contains information on which queue family
+ *          we are trying to find and the physical device that supports said queue family.
+ * return:
+ *    on success struct uvr_vk_queue
+ *    on failure struct uvr_vk_queue { with members nulled, int's set to -1 }
+ */
+struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_lgdev_create_info (Underview Renderer Vulkan Logical Device Create Information)
  *
  * members:
@@ -177,6 +221,10 @@ VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
  * @pEnabledFeatures        - Must pass a valid pointer to a VkPhysicalDeviceFeatures with X features enabled
  * @enabledExtensionCount   - Must pass the amount of Vulkan Device extensions to enable
  * @ppEnabledExtensionNames - Must pass an array of Vulkan Device extension to enable
+ * @numqueues               - Must pass the amount of struct uvr_vk_queue (VkQueue,VkQueueFamily indicies) to
+ *                            create along with a given logical device
+ * @queues                  - Must pass an array of struct uvr_vk_queue (VkQueue,VkQueueFamily indicies) to
+ *                            create along with a given logical device
  */
 struct uvr_vk_lgdev_create_info {
   VkInstance vkinst;
@@ -185,17 +233,23 @@ struct uvr_vk_lgdev_create_info {
   VkPhysicalDeviceFeatures *pEnabledFeatures;
   uint32_t enabledExtensionCount;
   const char *const *ppEnabledExtensionNames;
+  uint32_t numqueues;
+  struct uvr_vk_queue *queues;
 };
 
 
 /*
- * uvr_vk_lgdev_create: creates a VkDevice object and allows a connection to a given physical device.
+ * uvr_vk_lgdev_create: Creates a VkDevice object and allows a connection to a given physical device.
  *                      The VkDevice object is more of a local object its state and operations are local
  *                      to it and are not seen by other logical devices. Function also acts as an easy wrapper
  *                      that allows one to define device extensions. Device extensions basically allow developers
  *                      to define what operations a given logical device is capable of doing. So, if one wants the
  *                      device to be capable of utilizing a swap chain, etc…​ One should enable those extensions
- *                      inorder to gain access to those particular capabilities.
+ *                      inorder to gain access to those particular capabilities. Allows for creation of multiple
+ *                      VkQueue's although the only one needed is the Graphics queue.
+ *
+ *                      struct uvr_vk_queue: member 'VkQueue queue' handle is assigned in this function as vkGetDeviceQueue
+ *                      requires a logical device.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_lgdev_create_info
@@ -210,9 +264,9 @@ VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst     - Must pass a valid VkInstance handle
- * @vklgdev    - Must pass a valid VkDevice handle
- * @vksurf     - Must pass a valid VkSurfaceKHR handle
+ * @vkinst  - Must pass a valid VkInstance handle
+ * @vklgdev - Must pass a valid VkDevice handle
+ * @vksurf  - Must pass a valid VkSurfaceKHR handle
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
