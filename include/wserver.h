@@ -4,7 +4,6 @@
 #include "common.h"
 #include "utils.h"
 
-#define WLR_USE_UNSTABLE 1
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/util/log.h>

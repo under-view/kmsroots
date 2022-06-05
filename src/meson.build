@@ -54,6 +54,8 @@ endif
 # Wayland libs and files
 ##################################
 if build_wayland
+  pargs += ['-DWLR_USE_UNSTABLE=1']
+
   wayland_client = dependency('wayland-client', required: true)
   wayland_server = dependency('wayland-server', required: true)
   wlroots = dependency('wlroots', required: true)
@@ -96,5 +98,6 @@ endif
 lib_underview_renderer_static = static_library(
   'uvr', cglue_code, files(fs),
   dependencies: lib_uvr_deps,
-  include_directories: inc
+  include_directories: inc,
+  c_args: pargs
 )
