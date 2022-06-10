@@ -129,7 +129,7 @@ int main(void) {
   };
 
   app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
-  if (!app.lgdev)
+  if (!app.lgdev.device)
     goto exit_error;
 
 exit_error:
@@ -146,7 +146,8 @@ exit_error:
   uvr_kms_node_destroy(&kmsdevd);
 
   appd.vkinst = app.instance;
-  appd.vklgdev = app.lgdev;
+  appd.vklgdevs_cnt = 1;
+  appd.vklgdevs = &app.lgdev;
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
   uvr_sd_session_destroy(&uvrsd);

@@ -213,6 +213,25 @@ struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
 
 
 /*
+ * struct uvr_vk_lgdev (Underview Renderer Vulkan Logical Device)
+ *
+ * members:
+ * @device    - Returned VkDevice handle which represents vulkams access to physical device
+ * @queue_cnt - Array size of struct uvr_vk_queue. This information gets populated with the
+ *              data pass through struct uvr_vk_lgdev_create_info { member: numqueues }
+ * @queues    - Array of struct uvr_vk_queue. This information gets populated with the
+ *              data pass through struct uvr_vk_lgdev_create_info { member: queues }
+ */
+struct uvr_vk_lgdev {
+  VkDevice device;
+
+  // Strictly for extra information storage
+  int queue_cnt;
+  struct uvr_vk_queue *queues;
+};
+
+
+/*
  * struct uvr_vk_lgdev_create_info (Underview Renderer Vulkan Logical Device Create Information)
  *
  * members:
@@ -254,24 +273,27 @@ struct uvr_vk_lgdev_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_lgdev_create_info
  * return:
- *    on success VkPhysicalDevice handle
- *    on failure VK_NULL_HANDLE
+ *    on success struct uvr_vk_lgdev
+ *    on failure struct uvr_vk_lgdev { with members nulled, int's set to -1 }
  */
-VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
+struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
 
 
 /*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst  - Must pass a valid VkInstance handle
- * @vklgdev - Must pass a valid VkDevice handle
- * @vksurf  - Must pass a valid VkSurfaceKHR handle
+ * @vkinst       - Must pass a valid VkInstance handle
+ * @vksurf       - Must pass a valid VkSurfaceKHR handle
+ * @vklgdevs_cnt - Must pass the amount of VkDevice handles allocated in app
+ * @vklgdevs     - Must pass an array of valid VkDevice handle
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
-  VkDevice vklgdev;
   VkSurfaceKHR vksurf;
+
+  uint32_t vklgdevs_cnt;
+  struct uvr_vk_lgdev *vklgdevs;
 };
 
 

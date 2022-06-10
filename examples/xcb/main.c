@@ -102,7 +102,7 @@ int main(void) {
   };
 
   app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
-  if (!app.lgdev)
+  if (!app.lgdev.device)
     goto exit_error;
 
   uvr_xcb_display_window(&xclient);
@@ -116,7 +116,8 @@ exit_error:
    */
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
-  appd.vklgdev = app.lgdev;
+  appd.vklgdevs_cnt = 1;
+  appd.vklgdevs = &app.lgdev;
   uvr_vk_destory(&appd);
 
 

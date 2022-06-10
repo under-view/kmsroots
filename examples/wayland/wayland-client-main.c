@@ -137,7 +137,7 @@ int main(void) {
   };
 
   app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);
-  if (!app.lgdev)
+  if (!app.lgdev.device)
     goto exit_error;
 
   int stride = width * bytes_per_pixel, calls = 2;
@@ -163,7 +163,8 @@ exit_error:
    */
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
-  appd.vklgdev = app.lgdev;
+  appd.vklgdevs_cnt = 1;
+  appd.vklgdevs = &app.lgdev;
   uvr_vk_destory(&appd);
 
   wcd.wccinterface = wcinterfaces;

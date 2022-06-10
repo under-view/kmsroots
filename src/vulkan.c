@@ -354,7 +354,7 @@ err_vk_queue_create:
 }
 
 
-VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
+struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
   VkDevice device = VK_NULL_HANDLE;
   VkResult res = VK_RESULT_MAX_ENUM;
 
@@ -409,7 +409,7 @@ VkDevice uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) {
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: VkDevice created retval(%p)", device);
 
   free(pQueueCreateInfo);
-  return device;
+  return (struct uvr_vk_lgdev) { .device = device, .queue_cnt = uvrvk->numqueues, .queues = uvrvk->queues };
 
 err_vk_lgdev_destroy:
   if (device)
@@ -417,14 +417,16 @@ err_vk_lgdev_destroy:
 err_vk_lgdev_free_pQueueCreateInfo:
   free(pQueueCreateInfo);
 err_vk_lgdev_create:
-  return VK_NULL_HANDLE;
+  return (struct uvr_vk_lgdev) { .device = VK_NULL_HANDLE, .queue_cnt = -1, .queues = NULL };
 }
 
 
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
-  if (uvrvk->vklgdev) {
-    vkDeviceWaitIdle(uvrvk->vklgdev);
-    vkDestroyDevice(uvrvk->vklgdev, NULL);
+  for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
+    if (uvrvk->vklgdevs[i].device) {
+      vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);
+      vkDestroyDevice(uvrvk->vklgdevs[i].device, NULL);
+    }
   }
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
