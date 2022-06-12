@@ -281,7 +281,8 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
 
 /*
  * uvr_vk_get_surface_capabilities: Populates the VkSurfaceCapabilitiesKHR struct with surface
- *                                  information supported by a given VkPhysicalDevice
+ *                                  information supported by a given VkPhysicalDevice. Needed in order
+ *                                  to create a swapchain.
  *
  * args:
  * @phdev   - Must pass a valid VkPhysicalDevice handle
@@ -293,13 +294,28 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev,
 
 
 /*
+ * uvr_vk_get_surface_formats: Returns an array of supported color formats a given
+ *                             physical device and surface supports.
+ *
+ * args:
+ * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @surface - Must pass a valid VkSurfaceKHR handle
+ * return:
+ *    on success pointer to a VkSurfaceFormatKHR
+ *    on failure NULL
+ */
+VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst       - Must pass a valid VkInstance handle
- * @vksurf       - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt - Must pass the amount of VkDevice handles allocated in app
- * @vklgdevs     - Must pass an array of valid VkDevice handle
+ * @vkinst        - Must pass a valid VkInstance handle
+ * @vksurf        - Must pass a valid VkSurfaceKHR handle
+ * @vklgdevs_cnt  - Must pass the amount of VkDevice handles allocated in app
+ * @vklgdevs      - Must pass an array of valid VkDevice handle
+ * @vksurfformats - Must pass an array of valied VkSurfaceFormatKHR handles
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -307,6 +323,8 @@ struct uvr_vk_destroy {
 
   uint32_t vklgdevs_cnt;
   struct uvr_vk_lgdev *vklgdevs;
+
+  VkSurfaceFormatKHR *vksurfformats;
 };
 
 

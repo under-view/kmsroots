@@ -106,6 +106,7 @@ int main(void) {
     goto exit_error;
 
   VkSurfaceCapabilitiesKHR UNUSED surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
+  app.formats = uvr_vk_get_surface_formats(app.phdev, app.surface);
 
   uvr_xcb_display_window(&xclient);
 
@@ -118,6 +119,7 @@ exit_error:
    */
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
+  appd.vksurfformats = app.formats;
   appd.vklgdevs_cnt = 1;
   appd.vklgdevs = &app.lgdev;
   uvr_vk_destory(&appd);

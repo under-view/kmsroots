@@ -428,7 +428,40 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev,
 }
 
 
+VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkSurfaceFormatKHR *formats = NULL;
+  uint32_t fcount = 0;
+
+  res = vkGetPhysicalDeviceSurfaceFormatsKHR(phdev, surface, &fcount, NULL);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_get_surface_formats(vkGetPhysicalDeviceSurfaceFormatsKHR): %s", vkres_msg(res));
+    goto exit_vk_surface_formats;
+  }
+
+  formats = (VkSurfaceFormatKHR *) calloc(fcount, sizeof(formats));
+  if (!formats) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_get_surface_formats(calloc): %s", strerror(errno));
+    goto exit_vk_surface_formats;
+  }
+
+  res = vkGetPhysicalDeviceSurfaceFormatsKHR(phdev, surface, &fcount, formats);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_get_surface_formats(vkGetPhysicalDeviceSurfaceFormatsKHR): %s", vkres_msg(res));
+    goto exit_vk_surface_formats_free;
+  }
+
+  return formats;
+
+exit_vk_surface_formats_free:
+  free(formats);
+exit_vk_surface_formats:
+  return NULL;
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
+  free(uvrvk->vksurfformats);
   for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {
       vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);
