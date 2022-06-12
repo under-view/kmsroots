@@ -143,6 +143,9 @@ int main(void) {
   if (!app.lgdev.device)
     goto exit_error;
 
+
+  VkSurfaceCapabilitiesKHR UNUSED surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
+
   int stride = width * bytes_per_pixel, calls = 2;
   bool r_up = true, g_up = true, b_up = true;
 

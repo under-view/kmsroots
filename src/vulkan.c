@@ -421,6 +421,13 @@ err_vk_lgdev_create:
 }
 
 
+VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+  VkSurfaceCapabilitiesKHR cap;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phdev, surface, &cap);
+  return cap;
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {

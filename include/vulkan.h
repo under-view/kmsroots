@@ -280,6 +280,19 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
 
 
 /*
+ * uvr_vk_get_surface_capabilities: Populates the VkSurfaceCapabilitiesKHR struct with surface
+ *                                  information supported by a given VkPhysicalDevice
+ *
+ * args:
+ * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @surface - Must pass a valid VkSurfaceKHR handle
+ * return:
+ *    populated VkSurfaceCapabilitiesKHR
+ */
+VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:

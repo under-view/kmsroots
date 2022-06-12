@@ -105,6 +105,8 @@ int main(void) {
   if (!app.lgdev.device)
     goto exit_error;
 
+  VkSurfaceCapabilitiesKHR UNUSED surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
+
   uvr_xcb_display_window(&xclient);
 
   /* Wait for 5 seconds to display */
