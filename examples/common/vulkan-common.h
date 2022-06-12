@@ -14,6 +14,7 @@ struct uvr_vk {
   VkInstance instance;
   VkPhysicalDevice phdev;
   struct uvr_vk_lgdev lgdev;
+  struct uvr_vk_queue graphics_queue;
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
   VkSurfaceKHR surface;

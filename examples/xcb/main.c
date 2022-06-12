@@ -87,8 +87,8 @@ int main(void) {
     goto exit_error;
 
   struct uvr_vk_queue_create_info vkqueueinfo = { .phdev = app.phdev, .queueFlag = VK_QUEUE_GRAPHICS_BIT };
-  struct uvr_vk_queue queue = uvr_vk_queue_create(&vkqueueinfo);
-  if (queue.famindex == -1)
+  app.graphics_queue = uvr_vk_queue_create(&vkqueueinfo);
+  if (app.graphics_queue.famindex == -1)
     goto exit_error;
 
   VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app.phdev);
@@ -98,7 +98,7 @@ int main(void) {
     .enabledExtensionCount = ARRAY_LEN(device_extensions),
     .ppEnabledExtensionNames = device_extensions,
     .numqueues = 1,
-    .queues = &queue
+    .queues = &app.graphics_queue
   };
 
   app.lgdev = uvr_vk_lgdev_create(&vklgdev_info);

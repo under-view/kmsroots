@@ -217,7 +217,7 @@ struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
  *
  * members:
  * @device    - Returned VkDevice handle which represents vulkams access to physical device
- * @queue_cnt - Array size of struct uvr_vk_queue. This information gets populated with the
+ * @queue_cnt - Elements in array of struct uvr_vk_queue. This information gets populated with the
  *              data pass through struct uvr_vk_lgdev_create_info { member: numqueues }
  * @queues    - Array of struct uvr_vk_queue. This information gets populated with the
  *              data pass through struct uvr_vk_lgdev_create_info { member: queues }
