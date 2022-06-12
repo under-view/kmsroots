@@ -114,7 +114,7 @@ int main(void) {
     goto exit_error;
 
 
-  VkSurfaceCapabilitiesKHR UNUSED surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
+  app.surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
   app.formats = uvr_vk_get_surface_formats(app.phdev, app.surface);
 
   sleep(5);

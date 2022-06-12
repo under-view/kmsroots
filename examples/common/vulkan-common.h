@@ -18,6 +18,7 @@ struct uvr_vk {
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
   VkSurfaceKHR surface;
+  VkSurfaceCapabilitiesKHR surfcap;
   VkSurfaceFormatKHR *formats;
 #endif
 };
