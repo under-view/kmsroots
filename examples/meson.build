@@ -51,6 +51,15 @@ if build_wayland
       c_args: [gputype, pargs],
       install: true
     )
+
+    executable('underview-renderer-wayland-vk',
+      'wayland/wayland-client-vk.c',
+      link_with: lib_underview_renderer,
+      dependencies: lib_uvr_deps,
+      include_directories: [inc, example_inc],
+      c_args: [gputype, pargs],
+      install: true
+    )
   endif
 
   if wlroots.found() and wayland_server.found()
