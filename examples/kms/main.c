@@ -26,6 +26,16 @@ const char *device_extensions[] = {
 };
 
 
+struct uvr_kms {
+  struct uvr_kms_node kmsdev;
+  struct uvr_kms_node_display_output_chain dochain;
+  struct uvr_buffer kmsbuffs;
+#ifdef INCLUDE_SDBUS
+  struct uvr_sd_session uvrsd;
+#endif
+};
+
+
 /*
  * Example code demonstrating how to use Vulkan with KMS
  */
@@ -35,14 +45,11 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-  struct uvr_kms_node kmsdev;
+  struct uvr_kms kms;
   struct uvr_kms_node_destroy kmsdevd;
-  memset(&kmsdev, 0, sizeof(kmsdev));
-  memset(&kmsdevd, 0, sizeof(kmsdevd));
-
-  struct uvr_buffer UNUSED kmsbuffs;
   struct uvr_buffer_destroy kmsbuffsd;
-  memset(&kmsbuffs, 0, sizeof(kmsbuffs));
+  memset(&kms, 0, sizeof(kms));
+  memset(&kmsdevd, 0, sizeof(kmsdevd));
   memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
   /*
@@ -64,31 +71,27 @@ int main(void) {
   struct uvr_kms_node_create_info kmsnodeinfo;
 
 #ifdef INCLUDE_SDBUS
-  struct uvr_sd_session uvrsd;
-  memset(&uvrsd, 0, sizeof(uvrsd));
-
-  if (uvr_sd_session_create(&uvrsd) == -1)
+  if (uvr_sd_session_create(&kms.uvrsd) == -1)
     goto exit_error;
-  kmsnodeinfo.uvr_sd_session = &uvrsd;
+  kmsnodeinfo.uvr_sd_session = &kms.uvrsd;
   kmsnodeinfo.use_logind = true;
 #endif
 
   kmsnodeinfo.kmsnode = NULL;
-  kmsdev = uvr_kms_node_create(&kmsnodeinfo);
-  if (kmsdev.kmsfd == -1)
+  kms.kmsdev = uvr_kms_node_create(&kmsnodeinfo);
+  if (kms.kmsdev.kmsfd == -1)
     goto exit_error;
 
-  struct uvr_kms_node_display_output_chain dochain;
-  struct uvr_kms_node_display_output_chain_create_info dochain_info = { .kmsfd = kmsdev.kmsfd };
-  dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
-  if (!dochain.connector || !dochain.encoder || !dochain.crtc || !dochain.plane)
+  struct uvr_kms_node_display_output_chain_create_info dochain_info = { .kmsfd = kms.kmsdev.kmsfd };
+  kms.dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
+  if (!kms.dochain.connector || !kms.dochain.encoder || !kms.dochain.crtc || !kms.dochain.plane)
     goto exit_error;
 
   struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
-  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kmsdev.kmsfd);
+  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kms.kmsdev.kmsfd);
 
   struct uvr_buffer_create_info UNUSED kmsbuffs_info = {
-    .bType = UINT32_MAX, .kmsfd = kmsdev.kmsfd, .buff_cnt = 2,
+    .bType = UINT32_MAX, .kmsfd = kms.kmsdev.kmsfd, .buff_cnt = 2,
     .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
     .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
     .pixformat = GBM_BO_FORMAT_XRGB8888, .modifiers = NULL,
@@ -96,8 +99,8 @@ int main(void) {
   };
 
   kmsbuffs_info.bType = GBM_BUFFER;
-  kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
-  if (!kmsbuffs.gbmdev) goto exit_error;
+  kms.kmsbuffs = uvr_buffer_create(&kmsbuffs_info);
+  if (!kms.kmsbuffs.gbmdev) goto exit_error;
 
   /*
    * Create Vulkan Physical Device Handle, After buffer creation
@@ -106,7 +109,7 @@ int main(void) {
   struct uvr_vk_phdev_create_info vkphdev = {
     .vkinst = app.instance,
     .vkpdtype = VK_PHYSICAL_DEVICE_TYPE,
-    .kmsfd = kmsdev.kmsfd
+    .kmsfd = kms.kmsdev.kmsfd
   };
 
   app.phdev = uvr_vk_phdev_create(&vkphdev);
@@ -136,13 +139,13 @@ exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
    */
-  kmsbuffsd.gbmdev = kmsbuffs.gbmdev;
+  kmsbuffsd.gbmdev = kms.kmsbuffs.gbmdev;
   kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
-  kmsbuffsd.info_buffers = kmsbuffs.info_buffers;
+  kmsbuffsd.info_buffers = kms.kmsbuffs.info_buffers;
   uvr_buffer_destory(&kmsbuffsd);
 
-  kmsdevd.kmsnode = kmsdev;
-  kmsdevd.dochain = dochain;
+  kmsdevd.kmsnode = kms.kmsdev;
+  kmsdevd.dochain = kms.dochain;
   uvr_kms_node_destroy(&kmsdevd);
 
   appd.vkinst = app.instance;
@@ -150,7 +153,7 @@ exit_error:
   appd.vklgdevs = &app.lgdev;
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
-  uvr_sd_session_destroy(&uvrsd);
+  uvr_sd_session_destroy(&kms.uvrsd);
 #endif
   return 0;
 }
