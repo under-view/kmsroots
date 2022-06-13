@@ -428,7 +428,7 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev,
 }
 
 
-VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkSurfaceFormatKHR *formats = NULL;
   uint32_t fcount = 0;
@@ -451,16 +451,16 @@ VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurface
     goto exit_vk_surface_formats_free;
   }
 
-  return formats;
+  return (struct uvr_vk_surface_format) { .fcount = fcount, .formats = formats };
 
 exit_vk_surface_formats_free:
   free(formats);
 exit_vk_surface_formats:
-  return NULL;
+  return (struct uvr_vk_surface_format) { .fcount = 0, .formats = NULL };
 }
 
 
-VkPresentModeKHR *uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkPresentModeKHR *modes = NULL;
   uint32_t mcount = 0;
@@ -483,18 +483,18 @@ VkPresentModeKHR *uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSur
     goto exit_vk_surface_present_modes_free;
   }
 
-  return modes;
+  return (struct uvr_vk_surface_present_mode) { .mcount = mcount, .modes = modes };
 
 exit_vk_surface_present_modes_free:
   free(modes);
 exit_vk_surface_present_modes:
-  return NULL;
+  return (struct uvr_vk_surface_present_mode) { .mcount = 0, .modes = NULL };
 }
 
 
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
-  free(uvrvk->vkpresentmodes);
-  free(uvrvk->vksurfformats);
+  free(uvrvk->vkpresmodes.modes);
+  free(uvrvk->vksurformats.formats);
   for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {
       vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);

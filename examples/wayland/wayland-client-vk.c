@@ -113,10 +113,9 @@ int main(void) {
   if (!app.lgdev.device)
     goto exit_error;
 
-
   app.surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
-  app.formats = uvr_vk_get_surface_formats(app.phdev, app.surface);
-  app.presentmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
+  app.sformats = uvr_vk_get_surface_formats(app.phdev, app.surface);
+  app.spmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
 
 exit_error:
   /*
@@ -126,8 +125,8 @@ exit_error:
   appd.vksurf = app.surface;
   appd.vklgdevs_cnt = 1;
   appd.vklgdevs = &app.lgdev;
-  appd.vksurfformats = app.formats;
-  appd.vkpresentmodes = app.presentmodes;
+  appd.vksurformats = app.sformats;
+  appd.vkpresmodes = app.spmodes;
   uvr_vk_destory(&appd);
 
   wcd.wccinterface = wc.wcinterfaces;

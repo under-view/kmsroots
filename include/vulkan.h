@@ -294,17 +294,42 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev,
 
 
 /*
- * uvr_vk_get_surface_formats: Creates block of memory with all supported color formats a given
- *                             physical device and surface supports.
+ * struct uvr_vk_surface_format (Underview Renderer Vulkan Surface Format)
+ *
+ * members:
+ * @fcount  - Amount of color formats a given surface supports
+ * @formats - Pointer to a VkSurfaceFormatKHR which stores color space and pixel format
+ */
+struct uvr_vk_surface_format {
+  uint32_t fcount;
+  VkSurfaceFormatKHR *formats;
+};
+
+
+/*
+ * uvr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given surface supports
  *
  * args:
  * @phdev   - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
- *    on success block of memory containing array of VkSurfaceFormatKHR
- *    on failure NULL
+ *    on success struct uvr_vk_surface_format
+ *    on failure struct uvr_vk_surface_format { with member nulled }
  */
-VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
+ * struct uvr_vk_surface_present_mode (Underview Renderer Vulkan Surface Present Mode)
+ *
+ * members:
+ * @mcount - Amount of present modes a given surface supports
+ * @modes  - Pointer to a VkPresentModeKHR which stores values of potential surface present modes
+ */
+struct uvr_vk_surface_present_mode {
+  uint32_t mcount;
+  VkPresentModeKHR *modes;
+};
 
 
 /*
@@ -316,10 +341,10 @@ VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurface
  * @phdev   - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
- *    on success block of memory containing array of VkPresentModeKHR
- *    on failure NULL
+ *    on success struct uvr_vk_surface_present_mode
+ *    on failure struct uvr_vk_surface_present_mode { with member nulled }
  */
-VkPresentModeKHR *uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
 
 
 /*
@@ -330,8 +355,10 @@ VkPresentModeKHR *uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSur
  * @vksurf         - Must pass a valid VkSurfaceKHR handle
  * @vklgdevs_cnt   - Must pass the amount of VkDevice handles allocated in app
  * @vklgdevs       - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
- * @vksurfformats  - Must pass pointer to block of member allocated for of valid VkSurfaceFormatKHR
- * @vkpresentmodes - Must pass an array of valid VkPresentModeKHR
+ * @vksurformats   - Must pass valid struct uvr_vk_surface_format data. Main data is a pointer to block of member
+ *                   allocated for VkSurfaceFormatKHR
+ * @vkpresmodes    - Must pass valid struct uvr_vk_surface_present_mode data. Main data is a pointer to block of member
+ *                   allocated for VkPresentModeKHR
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -340,8 +367,8 @@ struct uvr_vk_destroy {
   uint32_t vklgdevs_cnt;
   struct uvr_vk_lgdev *vklgdevs;
 
-  VkSurfaceFormatKHR *vksurfformats;
-  VkPresentModeKHR *vkpresentmodes;
+  struct uvr_vk_surface_format vksurformats;
+  struct uvr_vk_surface_present_mode vkpresmodes;
 };
 
 
