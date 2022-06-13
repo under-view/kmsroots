@@ -20,6 +20,7 @@ struct uvr_vk {
   VkSurfaceKHR surface;
   VkSurfaceCapabilitiesKHR surfcap;
   VkSurfaceFormatKHR *formats;
+  VkPresentModeKHR *presentmodes;
 #endif
 };
 

@@ -460,7 +460,40 @@ exit_vk_surface_formats:
 }
 
 
+VkPresentModeKHR *uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkPresentModeKHR *modes = NULL;
+  uint32_t mcount = 0;
+
+  res = vkGetPhysicalDeviceSurfacePresentModesKHR(phdev, surface, &mcount, NULL);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_get_surface_present_modes(vkGetPhysicalDeviceSurfacePresentModesKHR): %s", vkres_msg(res));
+    goto exit_vk_surface_present_modes;
+  }
+
+  modes = (VkPresentModeKHR *) calloc(mcount, sizeof(modes));
+  if (!modes) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_get_surface_formats(calloc): %s", strerror(errno));
+    goto exit_vk_surface_present_modes;
+  }
+
+  res = vkGetPhysicalDeviceSurfacePresentModesKHR(phdev, surface, &mcount, modes);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_get_surface_present_modes(vkGetPhysicalDeviceSurfacePresentModesKHR): %s", vkres_msg(res));
+    goto exit_vk_surface_present_modes_free;
+  }
+
+  return modes;
+
+exit_vk_surface_present_modes_free:
+  free(modes);
+exit_vk_surface_present_modes:
+  return NULL;
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
+  free(uvrvk->vkpresentmodes);
   free(uvrvk->vksurfformats);
   for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {

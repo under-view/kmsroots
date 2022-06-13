@@ -107,6 +107,7 @@ int main(void) {
 
   app.surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
   app.formats = uvr_vk_get_surface_formats(app.phdev, app.surface);
+  app.presentmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
 
   uvr_xcb_display_window(&xclient);
 
@@ -119,9 +120,10 @@ exit_error:
    */
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
-  appd.vksurfformats = app.formats;
   appd.vklgdevs_cnt = 1;
   appd.vklgdevs = &app.lgdev;
+  appd.vksurfformats = app.formats;
+  appd.vkpresentmodes = app.presentmodes;
   uvr_vk_destory(&appd);
 
 

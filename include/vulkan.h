@@ -294,28 +294,44 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev,
 
 
 /*
- * uvr_vk_get_surface_formats: Returns an array of supported color formats a given
+ * uvr_vk_get_surface_formats: Creates block of memory with all supported color formats a given
  *                             physical device and surface supports.
  *
  * args:
  * @phdev   - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
- *    on success pointer to a VkSurfaceFormatKHR
+ *    on success block of memory containing array of VkSurfaceFormatKHR
  *    on failure NULL
  */
 VkSurfaceFormatKHR *uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
 
 
 /*
+ * uvr_vk_get_surface_present_modes: Creates block of memory with all supported presentation modes for a surface
+ *                                   More information on presentation modes can be found here:
+ *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
+ *
+ * args:
+ * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @surface - Must pass a valid VkSurfaceKHR handle
+ * return:
+ *    on success block of memory containing array of VkPresentModeKHR
+ *    on failure NULL
+ */
+VkPresentModeKHR *uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst        - Must pass a valid VkInstance handle
- * @vksurf        - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt  - Must pass the amount of VkDevice handles allocated in app
- * @vklgdevs      - Must pass an array of valid VkDevice handle
- * @vksurfformats - Must pass an array of valied VkSurfaceFormatKHR handles
+ * @vkinst         - Must pass a valid VkInstance handle
+ * @vksurf         - Must pass a valid VkSurfaceKHR handle
+ * @vklgdevs_cnt   - Must pass the amount of VkDevice handles allocated in app
+ * @vklgdevs       - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
+ * @vksurfformats  - Must pass pointer to block of member allocated for of valid VkSurfaceFormatKHR
+ * @vkpresentmodes - Must pass an array of valid VkPresentModeKHR
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -325,6 +341,7 @@ struct uvr_vk_destroy {
   struct uvr_vk_lgdev *vklgdevs;
 
   VkSurfaceFormatKHR *vksurfformats;
+  VkPresentModeKHR *vkpresentmodes;
 };
 
 
