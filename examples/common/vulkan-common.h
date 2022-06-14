@@ -21,6 +21,7 @@ struct uvr_vk {
   VkSurfaceCapabilitiesKHR surfcap;
   struct uvr_vk_surface_format sformats;
   struct uvr_vk_surface_present_mode spmodes;
+  struct uvr_vk_swapchain schain;
 #endif
 };
 

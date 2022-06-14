@@ -492,8 +492,52 @@ exit_vk_surface_present_modes:
 }
 
 
+struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+
+  VkSwapchainCreateInfoKHR create_info;
+  create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.surface = uvrvk->surfaceKHR;
+  if (uvrvk->surfcap.maxImageCount > 0 && (uvrvk->surfcap.minImageCount + 1) < uvrvk->surfcap.maxImageCount)
+    create_info.minImageCount = uvrvk->surfcap.maxImageCount;
+  else
+    create_info.minImageCount = uvrvk->surfcap.minImageCount + 1;
+  create_info.imageFormat = uvrvk->surfaceFormat.format;
+  create_info.imageColorSpace = uvrvk->surfaceFormat.colorSpace;
+  create_info.imageExtent = uvrvk->extent2D;
+  create_info.imageArrayLayers = uvrvk->imageArrayLayers;
+  create_info.imageUsage = uvrvk->imageUsage;
+  create_info.imageSharingMode = uvrvk->imageSharingMode;
+  create_info.queueFamilyIndexCount = uvrvk->queueFamilyIndexCount;
+  create_info.pQueueFamilyIndices = uvrvk->pQueueFamilyIndices;
+  create_info.preTransform = uvrvk->surfcap.currentTransform;
+  create_info.compositeAlpha = uvrvk->compositeAlpha;
+  create_info.presentMode = uvrvk->presentMode;
+  create_info.clipped = uvrvk->clipped;
+  create_info.oldSwapchain = uvrvk->oldSwapchain;
+
+  res = vkCreateSwapchainKHR(uvrvk->lgdev, &create_info, NULL, &swapchain);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_swapchain_create(vkCreateSwapchainKHR): %s", vkres_msg(res));
+    goto exit_vk_swapchain;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_swapchain_create: VkSwapchainKHR successfully created retval(%p)", swapchain);
+
+  return (struct uvr_vk_swapchain) { .swapchain = swapchain, .lgdev = uvrvk->lgdev };
+
+exit_vk_swapchain:
+  return (struct uvr_vk_swapchain) { .swapchain = VK_NULL_HANDLE , .lgdev = VK_NULL_HANDLE };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
-  for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
+  uint32_t i;
+
+  for (i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {
       vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);
       vkDestroyDevice(uvrvk->vklgdevs[i].device, NULL);
@@ -501,6 +545,10 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   }
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
+  if (uvrvk->vkswapchains) {
+    for (i = 0; i < uvrvk->vkswapchain_cnt; i++)
+      vkDestroySwapchainKHR(uvrvk->vkswapchains[i].lgdev, uvrvk->vkswapchains[i].swapchain, NULL);
+  }
   if (uvrvk->vksurf)
     vkDestroySurfaceKHR(uvrvk->vkinst, uvrvk->vksurf, NULL);
 #endif

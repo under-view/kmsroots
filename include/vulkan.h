@@ -350,6 +350,58 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
 
 
 /*
+ * struct uvr_vk_swapchain_create_info (Underview Renderer Vulkan Swapchain Create Information)
+ *
+ * members:
+ * @lgdev         - Must pass a valid VkDevice handle (Logical Device)
+ * @surfaceKHR    -
+ * @surfaceFormat -
+ * @presentMode   -
+ * @extent2D      -
+ */
+struct uvr_vk_swapchain_create_info {
+  VkDevice                         lgdev;
+  VkSurfaceKHR                     surfaceKHR;
+  VkSurfaceCapabilitiesKHR         surfcap;
+  VkSurfaceFormatKHR               surfaceFormat;
+  VkExtent2D                       extent2D;
+  uint32_t                         imageArrayLayers;
+  VkImageUsageFlags                imageUsage;
+  VkSharingMode                    imageSharingMode;
+  uint32_t                         queueFamilyIndexCount;
+  const uint32_t*                  pQueueFamilyIndices;
+  VkCompositeAlphaFlagBitsKHR      compositeAlpha;
+  VkPresentModeKHR                 presentMode;
+  VkBool32                         clipped;
+  VkSwapchainKHR                   oldSwapchain;
+};
+
+
+/*
+ * struct uvr_vk_swapchain (Underview Renderer Vulkan Swapchain)
+ *
+ * members:
+ *
+ */
+struct uvr_vk_swapchain {
+  VkDevice lgdev;
+  VkSwapchainKHR swapchain;
+};
+
+
+/*
+ * uvr_vk_swapchain_create: Creates block of memory with all supported presentation modes for a surface
+ *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1;
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_lgdev_create_info
+ * return:
+ *    on success struct uvr_vk_swapchain
+ *    on failure struct uvr_vk_swapchain { with member nulled }
+ */
+struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
@@ -357,6 +409,8 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
  * @vksurf         - Must pass a valid VkSurfaceKHR handle
  * @vklgdevs_cnt   - Must pass the amount of VkDevice handles allocated in app
  * @vklgdevs       - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
+ * @vkswapchain_cnt -
+ * @vkswapchains    -
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -364,6 +418,9 @@ struct uvr_vk_destroy {
 
   uint32_t vklgdevs_cnt;
   struct uvr_vk_lgdev *vklgdevs;
+
+  uint32_t vkswapchain_cnt;
+  struct uvr_vk_swapchain *vkswapchains;
 };
 
 
