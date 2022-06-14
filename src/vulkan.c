@@ -493,8 +493,6 @@ exit_vk_surface_present_modes:
 
 
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
-  free(uvrvk->vkpresmodes.modes);
-  free(uvrvk->vksurformats.formats);
   for (uint32_t i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {
       vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);

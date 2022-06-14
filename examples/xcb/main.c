@@ -109,6 +109,9 @@ int main(void) {
   app.sformats = uvr_vk_get_surface_formats(app.phdev, app.surface);
   app.spmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
 
+  free(app.sformats.formats);
+  free(app.spmodes.modes);
+
   uvr_xcb_display_window(&xclient);
 
   /* Wait for 5 seconds to display */
@@ -122,8 +125,6 @@ exit_error:
   appd.vksurf = app.surface;
   appd.vklgdevs_cnt = 1;
   appd.vklgdevs = &app.lgdev;
-  appd.vksurformats = app.sformats;
-  appd.vkpresmodes = app.spmodes;
   uvr_vk_destory(&appd);
 
   xclientd.xcbwindow = xclient;

@@ -117,6 +117,9 @@ int main(void) {
   app.sformats = uvr_vk_get_surface_formats(app.phdev, app.surface);
   app.spmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
 
+  free(app.sformats.formats);
+  free(app.spmodes.modes);
+
 exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
@@ -125,8 +128,6 @@ exit_error:
   appd.vksurf = app.surface;
   appd.vklgdevs_cnt = 1;
   appd.vklgdevs = &app.lgdev;
-  appd.vksurformats = app.sformats;
-  appd.vkpresmodes = app.spmodes;
   uvr_vk_destory(&appd);
 
   wcd.wccinterface = wc.wcinterfaces;

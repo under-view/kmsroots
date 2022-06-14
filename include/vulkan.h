@@ -308,6 +308,7 @@ struct uvr_vk_surface_format {
 
 /*
  * uvr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given surface supports
+ *                             Application must free struct uvr_vk_surface_format { member: formats }
  *
  * args:
  * @phdev   - Must pass a valid VkPhysicalDevice handle
@@ -334,6 +335,7 @@ struct uvr_vk_surface_present_mode {
 
 /*
  * uvr_vk_get_surface_present_modes: Creates block of memory with all supported presentation modes for a surface
+ *                                   Application must free struct uvr_vk_surface_present_mode { member: modes }
  *                                   More information on presentation modes can be found here:
  *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
  *
@@ -355,10 +357,6 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
  * @vksurf         - Must pass a valid VkSurfaceKHR handle
  * @vklgdevs_cnt   - Must pass the amount of VkDevice handles allocated in app
  * @vklgdevs       - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
- * @vksurformats   - Must pass valid struct uvr_vk_surface_format data. Main data is a pointer to block of member
- *                   allocated for VkSurfaceFormatKHR
- * @vkpresmodes    - Must pass valid struct uvr_vk_surface_present_mode data. Main data is a pointer to block of member
- *                   allocated for VkPresentModeKHR
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -366,9 +364,6 @@ struct uvr_vk_destroy {
 
   uint32_t vklgdevs_cnt;
   struct uvr_vk_lgdev *vklgdevs;
-
-  struct uvr_vk_surface_format vksurformats;
-  struct uvr_vk_surface_present_mode vkpresmodes;
 };
 
 
