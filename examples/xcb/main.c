@@ -105,39 +105,32 @@ int main(void) {
   if (!app.lgdev.device)
     goto exit_error;
 
-  app.surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
-  app.sformats = uvr_vk_get_surface_formats(app.phdev, app.surface);
-  app.spmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
-
   /* choose swap chain surface format & present mode */
   VkSurfaceFormatKHR sformat;
   VkPresentModeKHR presmode;
   VkExtent2D extent2D = {3840, 2160};
 
-  for (uint32_t s = 0; s < app.sformats.fcount; s++) {
-    if (app.sformats.formats[s].format == VK_FORMAT_B8G8R8A8_SRGB && app.sformats.formats[s].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-      sformat = app.sformats.formats[s];
+  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app.phdev, app.surface);
+  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app.phdev, app.surface);
+  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app.phdev, app.surface);
+
+  for (uint32_t s = 0; s < sformats.fcount; s++) {
+    if (sformats.formats[s].format == VK_FORMAT_B8G8R8A8_SRGB && sformats.formats[s].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      sformat = sformats.formats[s];
     }
   }
 
-  for (uint32_t p = 0; p < app.spmodes.mcount; p++) {
-    if (app.spmodes.modes[p] == VK_PRESENT_MODE_MAILBOX_KHR) {
-      presmode = app.spmodes.modes[p];
+  for (uint32_t p = 0; p < spmodes.mcount; p++) {
+    if (spmodes.modes[p] == VK_PRESENT_MODE_MAILBOX_KHR) {
+      presmode = spmodes.modes[p];
     }
   }
 
-  free(app.sformats.formats);
-  free(app.spmodes.modes);
-
-  if (app.surfcap.currentExtent.width != UINT32_MAX) {
-    extent2D = app.surfcap.currentExtent;
-  } else {
-    extent2D.width = fmax(app.surfcap.minImageExtent.width, fmin(app.surfcap.maxImageExtent.width, extent2D.width));
-    extent2D.height = fmax(app.surfcap.minImageExtent.height, fmin(app.surfcap.maxImageExtent.height, extent2D.height));
-  }
+  free(sformats.formats); sformats.formats = NULL;
+  free(spmodes.modes); spmodes.modes = NULL;
 
   struct uvr_vk_swapchain_create_info sc_create_info = {
-    .lgdev = app.lgdev.device, .surfaceKHR = app.surface, .surfcap = app.surfcap, .surfaceFormat = sformat,
+    .lgdev = app.lgdev.device, .surfaceKHR = app.surface, .surfcap = surfcap, .surfaceFormat = sformat,
     .extent2D = extent2D, .imageArrayLayers = 1, .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE, .queueFamilyIndexCount = 0, .pQueueFamilyIndices = NULL,
     .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, .presentMode = presmode, .clipped = VK_TRUE,

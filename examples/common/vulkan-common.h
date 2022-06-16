@@ -18,9 +18,6 @@ struct uvr_vk {
 
 #if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
   VkSurfaceKHR surface;
-  VkSurfaceCapabilitiesKHR surfcap;
-  struct uvr_vk_surface_format sformats;
-  struct uvr_vk_surface_present_mode spmodes;
   struct uvr_vk_swapchain schain;
 #endif
 };

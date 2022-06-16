@@ -1,5 +1,6 @@
 #include "wclient-common.h"
 
+
 static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
   uint8_t next;
 
