@@ -281,7 +281,7 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
 
 /*
  * uvr_vk_get_surface_capabilities: Populates the VkSurfaceCapabilitiesKHR struct with surface
- *                                  information supported by a given VkPhysicalDevice. Needed in order
+ *                                  information supported by a given VkSurfaceKHR. Needed in order
  *                                  to create a swapchain.
  *
  * args:
@@ -353,11 +353,22 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
  * struct uvr_vk_swapchain_create_info (Underview Renderer Vulkan Swapchain Create Information)
  *
  * members:
- * @lgdev         - Must pass a valid VkDevice handle (Logical Device)
- * @surfaceKHR    -
- * @surfaceFormat -
- * @presentMode   -
- * @extent2D      -
+ * @lgdev                 - Must pass a valid VkDevice handle (Logical Device)
+ * @surfaceKHR            - Must pass a valid VkSurfaceKHR handle. From uvr_vk_surface_create(3)
+ * @surfcap               - Passed the queried surface capabilities. From uvr_vk_get_surface_capabilities(3)
+ * @surfaceFormat         - Pass colorSpace & pixel format of choice. Recommend querrying first via uvr_vk_get_surface_formats(3)
+ *                          then check if pixel format and colorSpace you want is supported by a given surface.
+ * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkSwapchainCreateInfoKHR.html for bellow members
+ * @extent2D
+ * @imageArrayLayers
+ * @imageUsage
+ * @imageSharingMode
+ * @queueFamilyIndexCount
+ * @pQueueFamilyIndices
+ * @compositeAlpha
+ * @presentMode
+ * @clipped
+ * @oldSwapchain
  */
 struct uvr_vk_swapchain_create_info {
   VkDevice                         lgdev;
@@ -381,7 +392,8 @@ struct uvr_vk_swapchain_create_info {
  * struct uvr_vk_swapchain (Underview Renderer Vulkan Swapchain)
  *
  * members:
- *
+ * @lgdev     - Logical device used when swapchain was created
+ * @swapchain - Vulkan handle/object representing the swapchain itself
  */
 struct uvr_vk_swapchain {
   VkDevice lgdev;
@@ -393,7 +405,7 @@ struct uvr_vk_swapchain {
  * uvr_vk_swapchain_create: Creates block of memory with all supported presentation modes for a surface
  *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1;
  * args:
- * @uvrvk - pointer to a struct uvr_vk_lgdev_create_info
+ * @uvrvk - pointer to a struct uvr_vk_swapchain_create_info
  * return:
  *    on success struct uvr_vk_swapchain
  *    on failure struct uvr_vk_swapchain { with member nulled }
@@ -405,12 +417,12 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst         - Must pass a valid VkInstance handle
- * @vksurf         - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt   - Must pass the amount of VkDevice handles allocated in app
- * @vklgdevs       - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
- * @vkswapchain_cnt -
- * @vkswapchains    -
+ * @vkinst          - Must pass a valid VkInstance handle
+ * @vksurf          - Must pass a valid VkSurfaceKHR handle
+ * @vklgdevs_cnt    - Must pass the array sizeof struct uvr_vk_lgdev
+ * @vklgdevs        - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
+ * @vkswapchain_cnt - Must pass the array sizeof struct uvr_vk_swapchain
+ * @vkswapchains    - Must pass an array of valid struct uvr_vk_swapchain { member: VkDevice handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;

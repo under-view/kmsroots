@@ -496,6 +496,13 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
   VkResult res = VK_RESULT_MAX_ENUM;
   VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 
+  if (uvrvk->surfcap.currentExtent.width != UINT32_MAX) {
+    uvrvk->extent2D = uvrvk->surfcap.currentExtent;
+  } else {
+    uvrvk->extent2D.width = fmax(uvrvk->surfcap.minImageExtent.width, fmin(uvrvk->surfcap.maxImageExtent.width, uvrvk->extent2D.width));
+    uvrvk->extent2D.height = fmax(uvrvk->surfcap.minImageExtent.height, fmin(uvrvk->surfcap.maxImageExtent.height, uvrvk->extent2D.height));
+  }
+
   VkSwapchainCreateInfoKHR create_info;
   create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
   create_info.pNext = NULL;
@@ -537,6 +544,13 @@ exit_vk_swapchain:
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i;
 
+  if (uvrvk->vkswapchains) {
+    for (i = 0; i < uvrvk->vkswapchain_cnt; i++) {
+      if (uvrvk->vkswapchains[i].lgdev || uvrvk->vkswapchains[i].swapchain)
+        vkDestroySwapchainKHR(uvrvk->vkswapchains[i].lgdev, uvrvk->vkswapchains[i].swapchain, NULL);
+    }
+  }
+
   for (i = 0; i < uvrvk->vklgdevs_cnt; i++) {
     if (uvrvk->vklgdevs[i].device) {
       vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);
@@ -544,14 +558,8 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
     }
   }
 
-#if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
-  if (uvrvk->vkswapchains) {
-    for (i = 0; i < uvrvk->vkswapchain_cnt; i++)
-      vkDestroySwapchainKHR(uvrvk->vkswapchains[i].lgdev, uvrvk->vkswapchains[i].swapchain, NULL);
-  }
   if (uvrvk->vksurf)
     vkDestroySurfaceKHR(uvrvk->vkinst, uvrvk->vksurf, NULL);
-#endif
   if (uvrvk->vkinst)
     vkDestroyInstance(uvrvk->vkinst, NULL);
 }
