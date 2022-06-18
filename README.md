@@ -1,6 +1,7 @@
 # libunderview-renderer
 
-[wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) wrapper library with an out-of-tree vulkan based renderer.
+[wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositing library with an out-of-tree vulkan based renderer. Can also we used to build
+xcb and wayland clients.
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get

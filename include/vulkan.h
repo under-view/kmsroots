@@ -403,7 +403,8 @@ struct uvr_vk_swapchain {
 
 /*
  * uvr_vk_swapchain_create: Creates block of memory with all supported presentation modes for a surface
- *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1;
+ *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1
+ *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_swapchain_create_info
  * return:
@@ -414,15 +415,89 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
 
 
 /*
+ * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
+ *
+ * members:
+ * @lgdev     - Must pass a valid VkDevice handle (Logical Device)
+ * @swapchain - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
+ * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for bellow members
+ * @flags
+ * @viewType
+ * @format
+ * @components
+ * @subresourceRange
+ */
+struct uvr_vk_image_create_info {
+  VkDevice                lgdev;
+  VkSwapchainKHR          swapchain;
+  VkImageViewCreateFlags  flags;
+  VkImageViewType         viewType;
+  VkFormat                format;
+  VkComponentMapping      components;
+  VkImageSubresourceRange subresourceRange;
+};
+
+
+/*
+ * struct uvr_vk_image (Underview Renderer Vulkan Image)
+ *
+ * members:
+ * @lgdev     - Logical device used to associate a VkImageView with a VkImage
+ * @icount    - Amount of VkImage's to create. If VkSwapchainKHR reference is passed value would
+ *              be the amount of images in the given swapchain.
+ * @images    - Array of VkImage's
+ *            + @image - Represents actual image itself. May be a texture, etc...
+ * @vcount    - Amount of VkImageView's to associate with VkImage's. If VkSwapchainKHR reference is passed
+ *              value would be the amount of images in the given swapchain
+ * @views     - Array of VkImageView's
+ *            + @view - Represents a way to access the actual image itself
+ * @swapchain - Member not required, but used for storage purposes. A valid VkSwapchainKHR
+ *              reference to the VkSwapchainKHR passed to uvr_vk_image_create. Represents
+ *              the swapchain that created VkImage's.
+ */
+struct uvr_vk_image {
+  VkDevice lgdev;
+
+  uint32_t icount;
+  struct uvrvkimage {
+    VkImage image;
+  } *images;
+
+  uint32_t vcount;
+  struct uvrvkview {
+    VkImageView view;
+  } *views;
+
+  VkSwapchainKHR swapchain;
+};
+
+
+/*
+ * uvr_vk_image_create: Function creates/retrieve VkImage's and associates VkImageView's with said images.
+ *                      Allows image to be accessed by a shader. If VkSwapchainKHR reference is passed function
+ *                      retrieves all images in the swapchain.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_image_create_info
+ * return:
+ *    on success struct uvr_vk_image
+ *    on failure struct uvr_vk_image { with member nulled }
+ */
+struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
  * @vkinst          - Must pass a valid VkInstance handle
  * @vksurf          - Must pass a valid VkSurfaceKHR handle
  * @vklgdevs_cnt    - Must pass the array sizeof struct uvr_vk_lgdev
- * @vklgdevs        - Must pass an array of valid struct uvr_vk_lgdev { member: VkDevice handle }
- * @vkswapchain_cnt - Must pass the array sizeof struct uvr_vk_swapchain
- * @vkswapchains    - Must pass an array of valid struct uvr_vk_swapchain { member: VkDevice handle }
+ * @vklgdevs        - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
+ * @vkswapchain_cnt - Must pass the amount of element in struct uvr_vk_swapchain array
+ * @vkswapchains    - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
+ * @vkimage_cnt     - Must pass the amount of element in struct uvr_vk_image array
+ * @vkimages        - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -433,6 +508,9 @@ struct uvr_vk_destroy {
 
   uint32_t vkswapchain_cnt;
   struct uvr_vk_swapchain *vkswapchains;
+
+  uint32_t vkimage_cnt;
+  struct uvr_vk_image *vkimages;
 };
 
 

@@ -21,6 +21,4 @@
 #define UNUSED __attribute__((unused))
 #define ARRAY_LEN(_arr) (sizeof(_arr) / sizeof(_arr[0]))
 
-#define WINDOW_CNT 10
-
 #endif

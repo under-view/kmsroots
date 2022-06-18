@@ -149,6 +149,20 @@ int main(void) {
   if (!app.schain.swapchain)
     goto exit_error;
 
+
+  struct uvr_vk_image_create_info vkimage_create_info = {
+    .lgdev = app.lgdev.device, .swapchain = app.schain.swapchain, .flags = 0,
+    .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = sformat.format,
+    .components.r = VK_COMPONENT_SWIZZLE_IDENTITY, .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+    .components.b = VK_COMPONENT_SWIZZLE_IDENTITY, .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+    .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    .subresourceRange.baseMipLevel = 0, .subresourceRange.levelCount = 1,
+    .subresourceRange.baseArrayLayer = 0, .subresourceRange.layerCount = 1
+  };
+
+  app.vkimages = uvr_vk_image_create(&vkimage_create_info);
+  if (!app.vkimages.views[0].view) goto exit_error;
+
 exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
@@ -159,6 +173,8 @@ exit_error:
   appd.vklgdevs = &app.lgdev;
   appd.vkswapchain_cnt = 1;
   appd.vkswapchains = &app.schain;
+  appd.vkimage_cnt = 1;
+  appd.vkimages = &app.vkimages;
   uvr_vk_destory(&appd);
 
   wcd.wccinterface = wc.wcinterfaces;

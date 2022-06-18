@@ -20,6 +20,8 @@ struct uvr_vk {
   VkSurfaceKHR surface;
   struct uvr_vk_swapchain schain;
 #endif
+
+  struct uvr_vk_image vkimages;
 };
 
 #endif

@@ -264,7 +264,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
 
       /*
        * Enter will be one if condition succeeds
-       * Enter will b zero if condition fails
+       * Enter will be zero if condition fails
        * Need to make sure even if we have a valid DRI device node fd.
        * That the user choosen device type is the same as the DRI device node.
        */
@@ -534,19 +534,107 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_swapchain_create: VkSwapchainKHR successfully created retval(%p)", swapchain);
 
-  return (struct uvr_vk_swapchain) { .swapchain = swapchain, .lgdev = uvrvk->lgdev };
+  return (struct uvr_vk_swapchain) { .lgdev = uvrvk->lgdev, .swapchain = swapchain };
 
 exit_vk_swapchain:
-  return (struct uvr_vk_swapchain) { .swapchain = VK_NULL_HANDLE , .lgdev = VK_NULL_HANDLE };
+  return (struct uvr_vk_swapchain) { .lgdev = VK_NULL_HANDLE, .swapchain = VK_NULL_HANDLE };
+}
+
+
+struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  struct uvrvkimage *images = NULL;
+  struct uvrvkview *views = NULL;
+
+  uint32_t icount = 0, i;
+  VkImage *vkimages = NULL;
+
+  res = vkGetSwapchainImagesKHR(uvrvk->lgdev, uvrvk->swapchain, &icount, NULL);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_image_create(vkGetSwapchainImagesKHR): %s", vkres_msg(res));
+    goto exit_vk_image;
+  }
+
+  vkimages = alloca(icount * sizeof(VkImage));
+
+  res = vkGetSwapchainImagesKHR(uvrvk->lgdev, uvrvk->swapchain, &icount, vkimages);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_image_create(vkGetSwapchainImagesKHR): %s", vkres_msg(res));
+    goto exit_vk_image;
+  }
+
+  uvr_utils_log(UVR_INFO, "uvr_vk_image_create: Total images in swapchain %u", icount);
+
+  images = calloc(icount, sizeof(struct uvrvkimage));
+  if (!images) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_image_create(calloc): %s", strerror(errno));
+    goto exit_vk_image;
+  }
+
+  views = calloc(icount, sizeof(struct uvrvkview));
+  if (!views) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_image_create(calloc): %s", strerror(errno));
+    goto exit_vk_image_free_images;
+  }
+
+  VkImageViewCreateInfo create_info;
+  create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = uvrvk->flags;
+  create_info.viewType = uvrvk->viewType;
+  create_info.format = uvrvk->format;
+  create_info.components = uvrvk->components;
+  create_info.subresourceRange = uvrvk->subresourceRange;
+
+  for (i = 0; i < icount; i++) {
+    create_info.image = images[i].image = vkimages[i];
+
+    res = vkCreateImageView(uvrvk->lgdev, &create_info, NULL, &views[i].view);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_image_create(vkCreateImageView): %s", vkres_msg(res));
+      goto exit_vk_image_free_image_view;
+    }
+
+    uvr_utils_log(UVR_WARNING, "uvr_vk_image_create: VkImage (%p) associate with VkImageView", images[i].image);
+    uvr_utils_log(UVR_SUCCESS, "uvr_vk_image_create: VkImageView successfully created retval(%p)", views[i].view);
+  }
+
+  return (struct uvr_vk_image) { .lgdev = uvrvk->lgdev, .icount = icount, .images = images, .vcount = icount, .views = views, .swapchain = uvrvk->swapchain };
+
+
+exit_vk_image_free_image_view:
+  if (views) {
+    for (i = 0; i < icount; i++) {
+      if (views[i].view)
+        vkDestroyImageView(uvrvk->lgdev, views[i].view, NULL);
+    }
+  }
+//exit_vk_image_free_image_views:
+  free(views);
+exit_vk_image_free_images:
+  free(images);
+exit_vk_image:
+  return (struct uvr_vk_image) { .lgdev = VK_NULL_HANDLE, .icount = 0, .images = NULL, .vcount = 0, .views = NULL, .swapchain = VK_NULL_HANDLE };
 }
 
 
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
-  uint32_t i;
+  uint32_t i, j;
+
+  if (uvrvk->vkimages) {
+    for (i = 0; i < uvrvk->vkimage_cnt; i++) {
+      for (j = 0; j < uvrvk->vkimages[i].vcount; j++) {
+        if (uvrvk->vkimages[i].lgdev && uvrvk->vkimages[i].views[j].view)
+          vkDestroyImageView(uvrvk->vkimages[i].lgdev, uvrvk->vkimages[i].views[j].view, NULL);
+      }
+      free(uvrvk->vkimages[i].images);
+      free(uvrvk->vkimages[i].views);
+    }
+  }
 
   if (uvrvk->vkswapchains) {
     for (i = 0; i < uvrvk->vkswapchain_cnt; i++) {
-      if (uvrvk->vkswapchains[i].lgdev || uvrvk->vkswapchains[i].swapchain)
+      if (uvrvk->vkswapchains[i].lgdev && uvrvk->vkswapchains[i].swapchain)
         vkDestroySwapchainKHR(uvrvk->vkswapchains[i].lgdev, uvrvk->vkswapchains[i].swapchain, NULL);
     }
   }
