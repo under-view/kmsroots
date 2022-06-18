@@ -3,7 +3,7 @@ libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
 librt = cc.find_library('rt', required: true)
 
-fs = [ 'vulkan.c', 'utils.c' ]
+fs = [ 'vulkan.c', 'shader.c', 'utils.c' ]
 cglue_code = []
 lib_uvr_deps = [vulkan, libmath, librt]
 

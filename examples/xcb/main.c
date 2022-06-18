@@ -1,5 +1,6 @@
 #include "vulkan-common.h"
 #include "xclient.h"
+#include "shader.h"
 
 /*
  * "VK_LAYER_KHRONOS_validation"
@@ -153,6 +154,9 @@ int main(void) {
 
   app.vkimages = uvr_vk_image_create(&vkimage_create_info);
   if (!app.vkimages.views[0].view) goto exit_error;
+
+  struct uvr_shader_file vertex_shader = uvr_shader_file_load(VERTEX_SHADER_SRC);
+  if (!vertex_shader.bytes) goto exit_error;
 
   uvr_xcb_display_window(&xclient);
 

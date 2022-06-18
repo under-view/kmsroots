@@ -13,6 +13,11 @@ endif
 
 example_inc = include_directories('common')
 
+pargs += [
+  '-DVERTEX_SHADER_SRC=' + '"@0@"'.format(meson.current_source_dir() + '/shaders/shader.vert'),
+  '-DFRAGMENT_SHADER_SRC=' + '"@0@"'.format(meson.current_source_dir() + '/shaders/shader.frag')
+]
+
 if build_kms
   if libdrm.found()
     executable('underview-renderer-kms',
