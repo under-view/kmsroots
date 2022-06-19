@@ -492,7 +492,7 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk);
  * members:
  * @vkinst          - Must pass a valid VkInstance handle
  * @vksurf          - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt    - Must pass the array sizeof struct uvr_vk_lgdev
+ * @vklgdevs_cnt    - Must pass the amount of element in struct uvr_vk_lgdev array
  * @vklgdevs        - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
  * @vkswapchain_cnt - Must pass the amount of element in struct uvr_vk_swapchain array
  * @vkswapchains    - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }

@@ -3,9 +3,11 @@ libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
 librt = cc.find_library('rt', required: true)
 
+libshaderc = dependency('shaderc', required: get_option('shaderc'))
+
 fs = [ 'vulkan.c', 'shader.c', 'utils.c' ]
 cglue_code = []
-lib_uvr_deps = [vulkan, libmath, librt]
+lib_uvr_deps = [vulkan, libmath, librt, libshaderc]
 
 
 ##################################
@@ -93,6 +95,10 @@ if build_wayland
     fs += ['wayland-client.c', 'wayland-server.c']
     lib_uvr_deps += [wayland_client, wayland_server, wlroots]
   endif
+endif
+
+if libshaderc.found()
+  pargs += ['-DINCLUDE_SHADERC=1']
 endif
 
 lib_underview_renderer_static = static_library(

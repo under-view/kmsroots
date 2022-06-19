@@ -2,6 +2,7 @@
 #define VULKAN_COMMON_H
 
 #include "vulkan.h"
+#include "shader.h"
 
 /*
  * struct uvr_vk (Underview Renderer Vulkan)
@@ -22,6 +23,7 @@ struct uvr_vk {
 #endif
 
   struct uvr_vk_image vkimages;
+  struct uvr_shader_file vertex_shader;
 };
 
 #endif

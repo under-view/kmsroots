@@ -1,6 +1,5 @@
 #include "vulkan-common.h"
 #include "wclient-common.h"
-#include "shader.h"
 
 /*
  * "VK_LAYER_KHRONOS_validation"
@@ -35,6 +34,8 @@ int main(void) {
   memset(&wcd, 0, sizeof(wcd));
   memset(&wc, 0, sizeof(wc));
 
+  struct uvr_shader_destroy shadercd;
+  memset(&shadercd, 0, sizeof(shadercd));
 
   /*
    * Create Vulkan Instance
@@ -164,10 +165,13 @@ int main(void) {
   app.vkimages = uvr_vk_image_create(&vkimage_create_info);
   if (!app.vkimages.views[0].view) goto exit_error;
 
-  struct uvr_shader_file vertex_shader = uvr_shader_file_load(VERTEX_SHADER_SRC);
-  if (!vertex_shader.bytes) goto exit_error;
+  app.vertex_shader = uvr_shader_file_load(VERTEX_SHADER_SRC);
+  if (!app.vertex_shader.bytes) goto exit_error;
 
 exit_error:
+  shadercd.uvr_shader_file = app.vertex_shader;
+  uvr_shader_destroy(&shadercd);
+
   /*
    * Let the api know of what addresses to free and fd's to close
    */

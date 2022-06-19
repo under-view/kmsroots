@@ -29,6 +29,14 @@ option(
 
 
 option(
+  'shaderc',
+  type : 'feature',
+  value : 'disabled',
+  description : 'Enable/disable google shaderc'
+)
+
+
+option(
   'gpu',
   type : 'combo',
   value : 'discrete',
