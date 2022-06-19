@@ -1,45 +1,28 @@
-option(
-  'kms',
-  type : 'boolean',
-  value : true,
-  description : 'Build drm/kms backend',
-)
+option('kms',
+       type: 'feature', value: 'enabled',
+       description: 'Build DRM/KMS/GBM backend')
 
-option(
-  'sd-bus',
-  type : 'boolean',
-  value : true,
-  description : 'Build with systemd dbus API if option kms true',
-)
+option('sd-bus',
+       type: 'feature', value: 'enabled',
+       description: 'Build with systemd dbus API if option enabled')
 
-option(
-  'xcb',
-  type : 'boolean',
-  value : false,
-  description : 'Build xcb wrapper api',
-)
+option('xcb',
+       type: 'feature', value: 'disabled',
+       description : 'Build xcb wrapper api')
 
+option('wayland',
+       type: 'feature', value: 'disabled',
+       description: 'Build wayland client API')
 
-option(
-  'wayland',
-  type : 'boolean',
-  value : false,
-  description : 'Build wayland wrapper api',
-)
+option('wayland-compositor',
+       type: 'feature', value: 'disabled',
+       description: 'Build wlroots based compositing api with custom out-of-tree renderer')
 
+option('shaderc',
+       type: 'feature', value: 'disabled',
+       description: 'Enable/disable google shaderc')
 
-option(
-  'shaderc',
-  type : 'feature',
-  value : 'disabled',
-  description : 'Enable/disable google shaderc'
-)
-
-
-option(
-  'gpu',
-  type : 'combo',
-  value : 'discrete',
-  choices : ['other', 'integrated', 'discrete', 'virtual', 'cpu'],
-  description : 'Select VkPhysicalDeviceType to use in examples'
-)
+option('gpu',
+       type: 'combo', value: 'discrete',
+       choices: ['other', 'integrated', 'discrete', 'virtual', 'cpu'],
+       description: 'Select VkPhysicalDeviceType to use in examples')

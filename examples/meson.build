@@ -1,14 +1,14 @@
 gpu = get_option('gpu')
 if gpu == 'other'
-  gputype='-DVK_PHYSICAL_DEVICE_TYPE=0'
+  pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=0']
 elif gpu == 'integrated'
-  gputype='-DVK_PHYSICAL_DEVICE_TYPE=1'
+  pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=1']
 elif gpu == 'discrete'
-  gputype='-DVK_PHYSICAL_DEVICE_TYPE=2'
+  pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=2']
 elif gpu == 'virtual'
-  gputype='-DVK_PHYSICAL_DEVICE_TYPE=3'
+  pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=3']
 elif gpu == 'cpu'
-  gputype='-DVK_PHYSICAL_DEVICE_TYPE=4'
+  pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=4']
 endif
 
 example_inc = include_directories('common')
@@ -18,63 +18,55 @@ pargs += [
   '-DFRAGMENT_SHADER_SRC=' + '"@0@"'.format(meson.current_source_dir() + '/shaders/shader.frag')
 ]
 
-if build_kms
-  if libdrm.found()
-    executable('underview-renderer-kms',
-      'kms/main.c',
-      link_with: lib_underview_renderer,
-      dependencies: lib_uvr_deps,
-      include_directories: [inc, example_inc],
-      c_args: [gputype, pargs],
-      install: true
-    )
-  endif
+
+if libdrm.found() and libgbm.found()
+  executable('underview-renderer-kms',
+             'kms/main.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc, example_inc],
+             c_args: pargs,
+             install: false)
 endif
 
 
-if build_xcb
-  if libxcb.found() and libxcbewmh.found()
-    executable('underview-renderer-xcb',
-      'xcb/main.c',
-      link_with: lib_underview_renderer,
-      dependencies: lib_uvr_deps,
-      include_directories: [inc, example_inc],
-      c_args: [gputype, pargs],
-      install: true
-    )
-  endif
+
+if libxcb.found() and libxcbewmh.found()
+  executable('underview-renderer-xcb',
+             'xcb/main.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc, example_inc],
+             c_args: pargs,
+             install: false)
 endif
 
 
-if build_wayland
-  if wayland_client.found()
-    executable('underview-renderer-wayland',
-      'wayland/wayland-client-main.c',
-      link_with: lib_underview_renderer,
-      dependencies: lib_uvr_deps,
-      include_directories: [inc, example_inc],
-      c_args: [gputype, pargs],
-      install: true
-    )
+if wayland_client.found()
+  executable('underview-renderer-wayland',
+             'wayland/wayland-client-main.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc, example_inc],
+             c_args: pargs,
+             install: false)
 
-    executable('underview-renderer-wayland-vk',
-      'wayland/wayland-client-vk.c',
-      link_with: lib_underview_renderer,
-      dependencies: lib_uvr_deps,
-      include_directories: [inc, example_inc],
-      c_args: [gputype, pargs],
-      install: true
-    )
-  endif
+  executable('underview-renderer-wayland-vk',
+             'wayland/wayland-client-vk.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc, example_inc],
+             c_args: pargs,
+             install: false)
+endif
 
-  if wlroots.found() and wayland_server.found()
-    executable('underview-renderer-wayland-comp',
-      'wayland/wayland-compositor-main.c',
-      link_with: lib_underview_renderer,
-      dependencies: lib_uvr_deps,
-      include_directories: [inc, example_inc],
-      c_args: [gputype, pargs],
-      install: true
-    )
-  endif
+
+if wlroots.found() and wayland_server.found()
+  executable('underview-renderer-wayland-comp',
+             'wayland/wayland-compositor-main.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc, example_inc],
+             c_args: pargs,
+             install: false)
 endif

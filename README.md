@@ -9,7 +9,7 @@ going.
 
 **Building**
 ```sh
-$ meson -Dkms=true -Dxcb=true -Dwayland=false -Dgpu="integrated" build
+$ meson -Dkms="enabled" -Dxcb="enabled" -Dwayland="enabled" build
 $ ninja -C build
 ```
 
