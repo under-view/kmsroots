@@ -8,9 +8,17 @@ For better dependency version control underview builds all packages required fro
 going.
 
 **Building**
+
+All features are disabled by default
+
 ```sh
-$ meson -Dkms="enabled" -Dxcb="enabled" -Dwayland="enabled" build
-$ ninja -C build
+$ meson setup -Dgpu="discrete" \
+              -Dshaderc="enabled" \
+              -Dxcb="enabled" \
+              -Dwayland="enabled" \
+              -Dwayland-compositor="enabled" \
+              build
+$ meson compile -C build
 ```
 
 **Running Examples**
