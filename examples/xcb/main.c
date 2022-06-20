@@ -181,24 +181,22 @@ int main(void) {
   if (!app.fragment_shader.bytes) goto exit_error;
 #endif
 
-  struct uvr_vk_shader_module_create_info vert_shader_module_create_info = {
+  app.shader_modules[0] = uvr_vk_shader_module_create(&(struct uvr_vk_shader_module_create_info) {
     .lgdev = app.lgdev.device,
     .codeSize = app.vertex_shader.bsize,
     .pCode = app.vertex_shader.bytes,
     .name = "vertex"
-  };
+  });
 
-  struct uvr_vk_shader_module_create_info frag_shader_module_create_info = {
+  if (!app.shader_modules[0].shader) goto exit_error;
+
+  app.shader_modules[1] = uvr_vk_shader_module_create(&(struct uvr_vk_shader_module_create_info) {
     .lgdev = app.lgdev.device,
     .codeSize = app.fragment_shader.bsize,
     .pCode = app.fragment_shader.bytes,
     .name = "fragment"
-  };
+  });
 
-  app.shader_modules[0] = uvr_vk_shader_module_create(&vert_shader_module_create_info);
-  if (!app.shader_modules[0].shader) goto exit_error;
-
-  app.shader_modules[1] = uvr_vk_shader_module_create(&frag_shader_module_create_info);
   if (!app.shader_modules[1].shader) goto exit_error;
 
   uvr_xcb_display_window(&xclient);
