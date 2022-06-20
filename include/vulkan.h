@@ -350,6 +350,19 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
 
 
 /*
+ * struct uvr_vk_swapchain (Underview Renderer Vulkan Swapchain)
+ *
+ * members:
+ * @lgdev     - Logical device used when swapchain was created
+ * @swapchain - Vulkan handle/object representing the swapchain itself
+ */
+struct uvr_vk_swapchain {
+  VkDevice lgdev;
+  VkSwapchainKHR swapchain;
+};
+
+
+/*
  * struct uvr_vk_swapchain_create_info (Underview Renderer Vulkan Swapchain Create Information)
  *
  * members:
@@ -389,19 +402,6 @@ struct uvr_vk_swapchain_create_info {
 
 
 /*
- * struct uvr_vk_swapchain (Underview Renderer Vulkan Swapchain)
- *
- * members:
- * @lgdev     - Logical device used when swapchain was created
- * @swapchain - Vulkan handle/object representing the swapchain itself
- */
-struct uvr_vk_swapchain {
-  VkDevice lgdev;
-  VkSwapchainKHR swapchain;
-};
-
-
-/*
  * uvr_vk_swapchain_create: Creates block of memory with all supported presentation modes for a surface
  *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1
  *
@@ -412,30 +412,6 @@ struct uvr_vk_swapchain {
  *    on failure struct uvr_vk_swapchain { with member nulled }
  */
 struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_info *uvrvk);
-
-
-/*
- * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
- *
- * members:
- * @lgdev     - Must pass a valid VkDevice handle (Logical Device)
- * @swapchain - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
- * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for bellow members
- * @flags
- * @viewType
- * @format
- * @components
- * @subresourceRange
- */
-struct uvr_vk_image_create_info {
-  VkDevice                lgdev;
-  VkSwapchainKHR          swapchain;
-  VkImageViewCreateFlags  flags;
-  VkImageViewType         viewType;
-  VkFormat                format;
-  VkComponentMapping      components;
-  VkImageSubresourceRange subresourceRange;
-};
 
 
 /*
@@ -469,6 +445,30 @@ struct uvr_vk_image {
   } *views;
 
   VkSwapchainKHR swapchain;
+};
+
+
+/*
+ * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
+ *
+ * members:
+ * @lgdev     - Must pass a valid VkDevice handle (Logical Device)
+ * @swapchain - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
+ * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for bellow members
+ * @flags
+ * @viewType
+ * @format
+ * @components
+ * @subresourceRange
+ */
+struct uvr_vk_image_create_info {
+  VkDevice                lgdev;
+  VkSwapchainKHR          swapchain;
+  VkImageViewCreateFlags  flags;
+  VkImageViewType         viewType;
+  VkFormat                format;
+  VkComponentMapping      components;
+  VkImageSubresourceRange subresourceRange;
 };
 
 
