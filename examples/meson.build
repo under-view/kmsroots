@@ -11,20 +11,9 @@ elif gpu == 'cpu'
   pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=4']
 endif
 
+subdir('shaders')
+
 example_inc = include_directories('common')
-
-run_command('mkdir', '-p', '@0@'.format(meson.current_build_dir()) + '/shaders', check: true)
-
-run_command('glslangValidator', '-H', '@0@'.format(meson.current_source_dir()) + '/shaders/triangle-shader.vert',
-                                '-o', '@0@'.format(meson.current_build_dir()) + '/shaders/triangle-vert.spv', check: true)
-
-run_command('glslangValidator', '-H', '@0@'.format(meson.current_source_dir()) + '/shaders/triangle-shader.frag',
-                                '-o', '@0@'.format(meson.current_build_dir()) + '/shaders/triangle-frag.spv', check: true)
-
-pargs += [
-  '-DTRIANGLE_VERTEX_SHADER_SPIRV=' + '"@0@'.format(meson.current_build_dir()) + '/shaders/triangle-vert.spv"',
-  '-DTRIANGLE_FRAGMENT_SHADER_SPIRV=' + '"@0@'.format(meson.current_build_dir()) + '/shaders/triangle-frag.spv"'
-]
 
 if libdrm.found() and libgbm.found()
   executable('underview-renderer-kms',
