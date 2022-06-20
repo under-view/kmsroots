@@ -157,8 +157,49 @@ int main(void) {
   app.vkimages = uvr_vk_image_create(&vkimage_create_info);
   if (!app.vkimages.views[0].view) goto exit_error;
 
-  app.vertex_shader = uvr_shader_file_load(VERTEX_SHADER_SRC);
+#ifdef INCLUDE_SHADERC
+  struct uvr_shader_spirv_create_info vert_shader_create_info = {
+    .kind = VK_SHADER_STAGE_VERTEX_BIT, .source = triangle_vertex_shader,
+    .filename = "vert.spv", .entry_point = "main"
+  };
+
+  struct uvr_shader_spirv_create_info frag_shader_create_info = {
+    .kind = VK_SHADER_STAGE_FRAGMENT_BIT, .source = triangle_fragment_shader,
+    .filename = "frag.spv", .entry_point = "main"
+  };
+
+  app.vertex_shader = uvr_shader_compile_buffer_to_spirv(&vert_shader_create_info);
   if (!app.vertex_shader.bytes) goto exit_error;
+
+  app.fragment_shader = uvr_shader_compile_buffer_to_spirv(&frag_shader_create_info);
+  if (!app.fragment_shader.bytes) goto exit_error;
+#else
+  app.vertex_shader = uvr_shader_file_load(TRIANGLE_VERTEX_SHADER_SPIRV);
+  if (!app.vertex_shader.bytes) goto exit_error;
+
+  app.fragment_shader = uvr_shader_file_load(TRIANGLE_FRAGMENT_SHADER_SPIRV);
+  if (!app.fragment_shader.bytes) goto exit_error;
+#endif
+
+  struct uvr_vk_shader_module_create_info vert_shader_module_create_info = {
+    .lgdev = app.lgdev.device,
+    .codeSize = app.vertex_shader.bsize,
+    .pCode = app.vertex_shader.bytes,
+    .name = "vertex"
+  };
+
+  struct uvr_vk_shader_module_create_info frag_shader_module_create_info = {
+    .lgdev = app.lgdev.device,
+    .codeSize = app.fragment_shader.bsize,
+    .pCode = app.fragment_shader.bytes,
+    .name = "fragment"
+  };
+
+  app.shader_modules[0] = uvr_vk_shader_module_create(&vert_shader_module_create_info);
+  if (!app.shader_modules[0].shader) goto exit_error;
+
+  app.shader_modules[1] = uvr_vk_shader_module_create(&frag_shader_module_create_info);
+  if (!app.shader_modules[1].shader) goto exit_error;
 
   uvr_xcb_display_window(&xclient);
 
@@ -166,7 +207,13 @@ int main(void) {
   sleep(5);
 
 exit_error:
+#ifdef INCLUDE_SHADERC
+  shadercd.uvr_shader_spirv = app.vertex_shader;
+  shadercd.uvr_shader_spirv = app.fragment_shader;
+#else
   shadercd.uvr_shader_file = app.vertex_shader;
+  shadercd.uvr_shader_file = app.fragment_shader;
+#endif
   uvr_shader_destroy(&shadercd);
 
   /*
@@ -180,6 +227,8 @@ exit_error:
   appd.vkswapchains = &app.schain;
   appd.vkimage_cnt = 1;
   appd.vkimages = &app.vkimages;
+  appd.vkshader_cnt = ARRAY_LEN(app.shader_modules);
+  appd.vkshaders = app.shader_modules;
   uvr_vk_destory(&appd);
 
   xclientd.xcbwindow = xclient;

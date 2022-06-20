@@ -618,8 +618,41 @@ exit_vk_image:
 }
 
 
+struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_module_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkShaderModule shader = VK_NULL_HANDLE;
+
+  VkShaderModuleCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.codeSize = uvrvk->codeSize;
+  create_info.pCode = (const uint32_t *) uvrvk->pCode;
+
+  res = vkCreateShaderModule(uvrvk->lgdev, &create_info, NULL, &shader);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_shader_module_create(vkCreateShaderModule): %s", vkres_msg(res));
+    goto exit_vk_shader_module;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_shader_module_create: '%s' shader VkShaderModule successfully created retval(%p)", uvrvk->name, shader);
+
+  return (struct uvr_vk_shader_module) { .lgdev = uvrvk->lgdev, .shader = shader, .name = uvrvk->name };
+
+exit_vk_shader_module:
+  return (struct uvr_vk_shader_module) { .lgdev = VK_NULL_HANDLE, .shader = VK_NULL_HANDLE, .name = NULL };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
+
+  if (uvrvk->vkshaders) {
+    for (i = 0; i < uvrvk->vkshader_cnt; i++) {
+      if (uvrvk->vkshaders[i].lgdev && uvrvk->vkshaders[i].shader)
+        vkDestroyShaderModule(uvrvk->vkshaders[i].lgdev, uvrvk->vkshaders[i].shader, NULL);
+    }
+  }
 
   if (uvrvk->vkimages) {
     for (i = 0; i < uvrvk->vkimage_cnt; i++) {

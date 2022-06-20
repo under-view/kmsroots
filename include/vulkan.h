@@ -487,17 +487,61 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk);
 
 
 /*
+ * struct uvr_vk_shader_module (Underview Renderer Vulkan Shader Module)
+ *
+ * members:
+ * @lgdev  - Logical device used when shader module was created
+ * @shader - Contains shader code and one or more entry points.
+ */
+struct uvr_vk_shader_module {
+  VkDevice lgdev;
+  VkShaderModule shader;
+  const char *name;
+};
+
+
+/*
+ * struct uvr_vk_shader_module_create_info (Underview Renderer Vulkan Shader Module Create Information)
+ *
+ * members:
+ * @lgdev    - Must pass a valid active logical device
+ * @codeSize - Sizeof SPIR-V byte code
+ * @pCode    - SPIR-V byte code itself
+ */
+struct uvr_vk_shader_module_create_info {
+  VkDevice lgdev;
+  size_t codeSize;
+  const char *pCode;
+  const char *name;
+};
+
+
+/*
+ * uvr_vk_shader_module_create: Function creates VkShaderModule from passed SPIR-V byte code.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_shader_module_create_info
+ * return:
+ *    on success struct uvr_vk_shader_module
+ *    on failure struct uvr_vk_shader_module { with member nulled }
+ */
+struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_module_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
  * @vkinst          - Must pass a valid VkInstance handle
  * @vksurf          - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt    - Must pass the amount of element in struct uvr_vk_lgdev array
+ * @vklgdevs_cnt    - Must pass the amount of elements in struct uvr_vk_lgdev array
  * @vklgdevs        - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
- * @vkswapchain_cnt - Must pass the amount of element in struct uvr_vk_swapchain array
+ * @vkswapchain_cnt - Must pass the amount of elements in struct uvr_vk_swapchain array
  * @vkswapchains    - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
- * @vkimage_cnt     - Must pass the amount of element in struct uvr_vk_image array
+ * @vkimage_cnt     - Must pass the amount of elements in struct uvr_vk_image array
  * @vkimages        - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
+ * @vkshader_cnt    - Must pass the amount of elements in struct uvr_vk_shader_module array
+ * @vkshaders       - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -511,6 +555,9 @@ struct uvr_vk_destroy {
 
   uint32_t vkimage_cnt;
   struct uvr_vk_image *vkimages;
+
+  uint32_t vkshader_cnt;
+  struct uvr_vk_shader_module *vkshaders;
 };
 
 

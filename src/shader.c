@@ -85,6 +85,11 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
   shaderc_compile_options_t options = NULL;
   shaderc_compilation_result_t result = NULL;
 
+  if (!uvrshader->source) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_shader_compile_bytes_to_spirv(uvrshader->source): Must pass character buffer with shader code");
+    goto exit_shader_compile_bytes_to_spirv;
+  }
+
   compiler = shaderc_compiler_initialize();
   if (!compiler) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_shader_compile_bytes_to_spirv(shaderc_compiler_initialize): Failed initialize shaderc_compiler_t");
