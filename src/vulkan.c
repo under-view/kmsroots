@@ -266,7 +266,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
        * Enter will be one if condition succeeds
        * Enter will be zero if condition fails
        * Need to make sure even if we have a valid DRI device node fd.
-       * That the user choosen device type is the same as the DRI device node.
+       * That the customer choosen device type is the same as the DRI device node.
        */
       enter |= ((primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev) && devprops.deviceType == uvrvk->vkpdtype);
     }

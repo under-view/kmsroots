@@ -230,7 +230,7 @@ int uvr_wc_flush_request(struct uvr_wc_core_interface *uvrwc);
  *
  * members:
  * @wccinterface - Must pass a valid struct uvr_wc_core_interface which contains all
- *                 objects/interfaces a given user decided to bind.
+ *                 objects/interfaces a given customer decided to bind.
  * @wcbuff       - Must pass a valid struct uvr_wc_buffer, to free all allocated memory
  * @wcsurface    - Must pass a valid pointer to a struct uvr_wc_surface, to free all allocated memory
  */
