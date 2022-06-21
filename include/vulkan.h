@@ -532,7 +532,7 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
  * struct uvr_vk_pipeline_layout (Underview Renderer Vulkan Pipeline Layout)
  *
  * members:
- * @lgdev   - Must pass a valid active logical device
+ * @lgdev   - Logical device used when creating VkPipelineLayout handle
  * @playout - Represents what resources are needed to produce final image and a what shader stage
  */
 struct uvr_vk_pipeline_layout {
@@ -553,11 +553,11 @@ struct uvr_vk_pipeline_layout {
  * @pPushConstantRanges
  */
 struct uvr_vk_pipeline_layout_create_info {
-  VkDevice                    lgdev;
-  uint32_t                    setLayoutCount;
-  const VkDescriptorSetLayout *pSetLayouts;
-  uint32_t                    pushConstantRangeCount;
-  const VkPushConstantRange   *pPushConstantRanges;
+  VkDevice                     lgdev;
+  uint32_t                     setLayoutCount;
+  const VkDescriptorSetLayout* pSetLayouts;
+  uint32_t                     pushConstantRangeCount;
+  const VkPushConstantRange*   pPushConstantRanges;
 };
 
 
@@ -576,21 +576,77 @@ struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeli
 
 
 /*
+ * struct uvr_vk_render_pass (Underview Renderer Vulkan Render Pass)
+ *
+ * members:
+ * @lgdev      - Logical device used when creating VkRenderPass handle
+ * @renderpass -
+ */
+struct uvr_vk_render_pass {
+  VkDevice     lgdev;
+  VkRenderPass renderpass;
+};
+
+
+/*
+ * struct uvr_vk_render_pass_create_info (Underview Renderer Vulkan Render Pass Create Information)
+ *
+ * members:
+ * @lgdev - Must pass a valid active logical device
+ * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html for bellow members
+ * @attachmentCount
+ * @pAttachments
+ * @subpassCount
+ * @pSubpasses
+ * @dependencyCount
+ * @pDependencies
+ */
+struct uvr_vk_render_pass_create_info {
+  VkDevice                       lgdev;
+  uint32_t                       attachmentCount;
+  const VkAttachmentDescription* pAttachments;
+  uint32_t                       subpassCount;
+  const VkSubpassDescription*    pSubpasses;
+  uint32_t                       dependencyCount;
+  const VkSubpassDependency*     pDependencies;
+};
+
+
+/*
+ * uvr_vk_render_pass_create: Function creates a VkRenderPass handle that is then later used by the graphics pipeline
+ *                            itself so that is knows how many color and depth buffers there will be, how many samples
+ *                            to use for each of them, and how their contents should be handled throughout rendering
+ *                            operations.
+ *
+ *                            Taken from: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_render_pass_create_info
+ * return:
+ *    on success struct uvr_vk_render_pass
+ *    on failure struct uvr_vk_render_pass { with member nulled }
+ */
+struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst          - Must pass a valid VkInstance handle
- * @vksurf          - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt    - Must pass the amount of elements in struct uvr_vk_lgdev array
- * @vklgdevs        - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
- * @vkswapchain_cnt - Must pass the amount of elements in struct uvr_vk_swapchain array
- * @vkswapchains    - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
- * @vkimage_cnt     - Must pass the amount of elements in struct uvr_vk_image array
- * @vkimages        - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
- * @vkshader_cnt    - Must pass the amount of elements in struct uvr_vk_shader_module array
- * @vkshaders       - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
- * @vkplayout_cnt   - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
- * @vkplayouts      - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
+ * @vkinst           - Must pass a valid VkInstance handle
+ * @vksurf           - Must pass a valid VkSurfaceKHR handle
+ * @vklgdevs_cnt     - Must pass the amount of elements in struct uvr_vk_lgdev array
+ * @vklgdevs         - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
+ * @vkswapchain_cnt  - Must pass the amount of elements in struct uvr_vk_swapchain array
+ * @vkswapchains     - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
+ * @vkimage_cnt      - Must pass the amount of elements in struct uvr_vk_image array
+ * @vkimages         - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
+ * @vkshader_cnt     - Must pass the amount of elements in struct uvr_vk_shader_module array
+ * @vkshaders        - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
+ * @vkplayout_cnt    - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
+ * @vkplayouts       - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
+ * @vkrenderpass_cnt - Must pass the amount of elements in struct uvr_vk_render_pass array
+ * @vkrenderpasses   - Must pass an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -610,6 +666,9 @@ struct uvr_vk_destroy {
 
   uint32_t vkplayout_cnt;
   struct uvr_vk_pipeline_layout *vkplayouts;
+
+  uint32_t vkrenderpass_cnt;
+  struct uvr_vk_render_pass *vkrenderpasses;
 };
 
 

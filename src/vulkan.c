@@ -670,6 +670,34 @@ exit_vk_pipeline_layout:
 }
 
 
+struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkRenderPass renderpass = VK_NULL_HANDLE;
+
+  VkRenderPassCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.attachmentCount = uvrvk->attachmentCount;
+  create_info.pAttachments = uvrvk->pAttachments;
+  create_info.subpassCount = uvrvk->subpassCount;
+  create_info.pSubpasses = uvrvk->pSubpasses;
+  create_info.dependencyCount = uvrvk->dependencyCount;
+  create_info.pDependencies = uvrvk->pDependencies;
+
+  res = vkCreateRenderPass(uvrvk->lgdev, &create_info, NULL, &renderpass);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_render_pass_create(vkCreateRenderPass): %s", vkres_msg(res));
+    goto exit_vk_render_pass;
+  }
+
+  return (struct uvr_vk_render_pass) { .lgdev = uvrvk->lgdev, .renderpass = renderpass };
+
+exit_vk_render_pass:
+  return (struct uvr_vk_render_pass) { .lgdev = VK_NULL_HANDLE, .renderpass = VK_NULL_HANDLE };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
@@ -677,6 +705,13 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
     for (i = 0; i < uvrvk->vkplayout_cnt; i++) {
       if (uvrvk->vkplayouts[i].lgdev && uvrvk->vkplayouts[i].playout)
         vkDestroyPipelineLayout(uvrvk->vkplayouts[i].lgdev, uvrvk->vkplayouts[i].playout, NULL);
+    }
+  }
+
+  if (uvrvk->vkrenderpasses) {
+    for (i = 0; i < uvrvk->vkrenderpass_cnt; i++) {
+      if (uvrvk->vkrenderpasses[i].lgdev && uvrvk->vkrenderpasses[i].renderpass)
+        vkDestroyRenderPass(uvrvk->vkrenderpasses[i].lgdev, uvrvk->vkrenderpasses[i].renderpass, NULL);
     }
   }
 
