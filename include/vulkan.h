@@ -529,6 +529,53 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
 
 
 /*
+ * struct uvr_vk_pipeline_layout (Underview Renderer Vulkan Pipeline Layout)
+ *
+ * members:
+ * @lgdev   - Must pass a valid active logical device
+ * @playout - Represents what resources are needed to produce final image and a what shader stage
+ */
+struct uvr_vk_pipeline_layout {
+  VkDevice         lgdev;
+  VkPipelineLayout playout;
+};
+
+
+/*
+ * struct uvr_vk_pipeline_layout_create_info (Underview Renderer Vulkan Pipeline Layout Create Information)
+ *
+ * members:
+ * @lgdev                  - Must pass a valid active logical device
+ * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineLayoutCreateInfo.html for bellow members
+ * @setLayoutCount
+ * @pSetLayouts
+ * @pushConstantRangeCount
+ * @pPushConstantRanges
+ */
+struct uvr_vk_pipeline_layout_create_info {
+  VkDevice                    lgdev;
+  uint32_t                    setLayoutCount;
+  const VkDescriptorSetLayout *pSetLayouts;
+  uint32_t                    pushConstantRangeCount;
+  const VkPushConstantRange   *pPushConstantRanges;
+};
+
+
+/*
+ * uvr_vk_pipeline_layout_create: Function creates a VkPipelineLayout handle that is then later used by the graphics pipeline
+ *                                itself so that is knows what resources are need to produce the final image and at what shader
+ *                                stages.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_pipeline_layout_create_info
+ * return:
+ *    on success struct uvr_vk_pipeline_layout
+ *    on failure struct uvr_vk_pipeline_layout { with member nulled }
+ */
+struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeline_layout_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
@@ -542,6 +589,8 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
  * @vkimages        - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
  * @vkshader_cnt    - Must pass the amount of elements in struct uvr_vk_shader_module array
  * @vkshaders       - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
+ * @vkplayout_cnt   - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
+ * @vkplayouts      - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -558,6 +607,9 @@ struct uvr_vk_destroy {
 
   uint32_t vkshader_cnt;
   struct uvr_vk_shader_module *vkshaders;
+
+  uint32_t vkplayout_cnt;
+  struct uvr_vk_pipeline_layout *vkplayouts;
 };
 
 

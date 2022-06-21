@@ -644,8 +644,41 @@ exit_vk_shader_module:
 }
 
 
+struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeline_layout_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkPipelineLayout playout = VK_NULL_HANDLE;
+
+  VkPipelineLayoutCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.setLayoutCount = uvrvk->setLayoutCount;
+  create_info.pSetLayouts = uvrvk->pSetLayouts;
+  create_info.pushConstantRangeCount = uvrvk->pushConstantRangeCount;
+  create_info.pPushConstantRanges = uvrvk->pPushConstantRanges;
+
+  res = vkCreatePipelineLayout(uvrvk->lgdev, &create_info, NULL, &playout);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_pipeline_layout_create(vkCreatePipelineLayout): %s", vkres_msg(res));
+    goto exit_vk_pipeline_layout;
+  }
+
+  return (struct uvr_vk_pipeline_layout) { .lgdev = uvrvk->lgdev, .playout = playout };
+
+exit_vk_pipeline_layout:
+  return (struct uvr_vk_pipeline_layout) { .lgdev = VK_NULL_HANDLE, .playout = VK_NULL_HANDLE };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
+
+  if (uvrvk->vkplayouts) {
+    for (i = 0; i < uvrvk->vkplayout_cnt; i++) {
+      if (uvrvk->vkplayouts[i].lgdev && uvrvk->vkplayouts[i].playout)
+        vkDestroyPipelineLayout(uvrvk->vkplayouts[i].lgdev, uvrvk->vkplayouts[i].playout, NULL);
+    }
+  }
 
   if (uvrvk->vkshaders) {
     for (i = 0; i < uvrvk->vkshader_cnt; i++) {
