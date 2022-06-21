@@ -31,6 +31,10 @@ struct uvr_vk {
   struct uvr_shader_file fragment_shader;
 #endif
   struct uvr_vk_shader_module shader_modules[2];
+
+  struct uvr_vk_pipeline_layout gplayout;
+  struct uvr_vk_render_pass rpass;
+  struct uvr_vk_graphics_pipeline gpipeline;
 };
 
 #endif
