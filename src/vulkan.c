@@ -663,6 +663,8 @@ struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeli
     goto exit_vk_pipeline_layout;
   }
 
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_pipeline_layout_create: VkPipelineLayout successfully created retval(%p)", playout);
+
   return (struct uvr_vk_pipeline_layout) { .lgdev = uvrvk->lgdev, .playout = playout };
 
 exit_vk_pipeline_layout:
@@ -691,6 +693,8 @@ struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_cr
     goto exit_vk_render_pass;
   }
 
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_render_pass_create: VkRenderPass successfully created retval(%p)", renderpass);
+
   return (struct uvr_vk_render_pass) { .lgdev = uvrvk->lgdev, .renderpass = renderpass };
 
 exit_vk_render_pass:
@@ -698,8 +702,56 @@ exit_vk_render_pass:
 }
 
 
+struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_graphics_pipeline_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkPipeline pipeline = VK_NULL_HANDLE;
+
+  VkGraphicsPipelineCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.stageCount = uvrvk->stageCount;
+  create_info.pStages = uvrvk->pStages;
+  create_info.pVertexInputState = uvrvk->pVertexInputState;
+  create_info.pInputAssemblyState = uvrvk->pInputAssemblyState;
+  create_info.pTessellationState = uvrvk->pTessellationState;
+  create_info.pViewportState = uvrvk->pViewportState;
+  create_info.pRasterizationState = uvrvk->pRasterizationState;
+  create_info.pMultisampleState = uvrvk->pMultisampleState;
+  create_info.pDepthStencilState = uvrvk->pDepthStencilState;
+  create_info.pColorBlendState = uvrvk->pColorBlendState;
+  create_info.pDynamicState = uvrvk->pDynamicState;
+  create_info.layout = uvrvk->layout;
+  create_info.renderPass = uvrvk->renderPass;
+  create_info.subpass = uvrvk->subpass;
+  // Won't be supporting
+  create_info.basePipelineHandle = VK_NULL_HANDLE;
+  create_info.basePipelineIndex = -1;
+
+  res = vkCreateGraphicsPipelines(uvrvk->lgdev, NULL, 1, &create_info, NULL, &pipeline);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_vk_graphics_pipeline_create(vkCreateGraphicsPipelines): %s", vkres_msg(res));
+    goto exit_vk_graphics_pipeline;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_graphics_pipeline_create: VkPipeline successfully created retval(%p)", pipeline);
+
+  return (struct uvr_vk_graphics_pipeline) { .lgdev = uvrvk->lgdev, .graphics_pipeline = pipeline };
+
+exit_vk_graphics_pipeline:
+  return (struct uvr_vk_graphics_pipeline) { .lgdev = VK_NULL_HANDLE, .graphics_pipeline = VK_NULL_HANDLE };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
+
+  if (uvrvk->vkgraphics_pipelines) {
+    for (i = 0; i < uvrvk->vkplayout_cnt; i++) {
+      if (uvrvk->vkgraphics_pipelines[i].lgdev && uvrvk->vkgraphics_pipelines[i].graphics_pipeline)
+        vkDestroyPipeline(uvrvk->vkgraphics_pipelines[i].lgdev, uvrvk->vkgraphics_pipelines[i].graphics_pipeline, NULL);
+    }
+  }
 
   if (uvrvk->vkplayouts) {
     for (i = 0; i < uvrvk->vkplayout_cnt; i++) {
