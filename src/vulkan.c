@@ -1,3 +1,11 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <math.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include "vulkan.h"
 
 

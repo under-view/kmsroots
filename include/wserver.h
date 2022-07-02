@@ -1,7 +1,6 @@
 #ifndef UVR_WSERVER
 #define UVR_WSERVER
 
-#include "common.h"
 #include "utils.h"
 
 #include <wayland-server-core.h>

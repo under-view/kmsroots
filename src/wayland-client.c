@@ -1,3 +1,9 @@
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <errno.h>
+
 #include "xdg-shell-client-protocol.h"
 #include "wclient.h"
 

@@ -1,4 +1,9 @@
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
 #include "shader.h"
+
 
 struct uvr_shader_file uvr_shader_file_load(const char *filename) {
   FILE *stream = NULL;

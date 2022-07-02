@@ -1,3 +1,11 @@
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
+#include <stdarg.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 #include "utils.h"
 
 

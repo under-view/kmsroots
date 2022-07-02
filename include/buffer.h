@@ -1,7 +1,6 @@
 #ifndef UVR_BUFFER_H
 #define UVR_BUFFER_H
 
-#include "common.h"
 #include "utils.h"
 #include "kms.h"
 

@@ -1,7 +1,11 @@
 #ifndef UVR_UTILS_H
 #define UVR_UTILS_H
 
-#include "common.h"
+#include <stdio.h>
+#include <inttypes.h>
+
+#define UNUSED __attribute__((unused))
+#define ARRAY_LEN(_arr) (sizeof(_arr) / sizeof(_arr[0]))
 
 /* Used to help determine which ANSI Escape Codes to use */
 enum uvr_utils_log_type {

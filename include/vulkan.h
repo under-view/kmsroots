@@ -1,7 +1,6 @@
 #ifndef UVR_VULKAN_H
 #define UVR_VULKAN_H
 
-#include "common.h"
 #include "utils.h"
 
 #ifdef INCLUDE_WAYLAND

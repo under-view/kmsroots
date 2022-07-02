@@ -1,8 +1,9 @@
 #ifndef UVR_WAYLAND_CLIENT_H
 #define UVR_WAYLAND_CLIENT_H
 
-#include "common.h"
 #include "utils.h"
+
+#include <stdbool.h>
 #include <wayland-client.h>
 
 

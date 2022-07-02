@@ -4,6 +4,15 @@
  * and in Daniel Stone kms-quads:
  * https://gitlab.freedesktop.org/daniels/kms-quads/-/blob/master/logind.c
  */
+
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
+
 #include "sd-dbus.h"
 
 

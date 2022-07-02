@@ -1,7 +1,6 @@
 #ifndef UVR_KMS_H
 #define UVR_KMS_H
 
-#include "common.h"
 #include "utils.h"
 
 #ifdef INCLUDE_SDBUS

@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "vulkan-common.h"
 #include "wclient-common.h"
 

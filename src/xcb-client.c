@@ -1,5 +1,9 @@
-#include "xclient.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include <xcb/xcb_ewmh.h>
+
+#include "xclient.h"
 
 
 struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb) {

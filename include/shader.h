@@ -1,7 +1,6 @@
 #ifndef UVR_SHADER_H
 #define UVR_SHADER_H
 
-#include "common.h"
 #include "utils.h"
 
 /*

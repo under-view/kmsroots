@@ -1,9 +1,16 @@
-#include "kms.h"
-
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <sys/sysmacros.h>
 #include <sys/vt.h>
 #include <sys/kd.h>
 #include <linux/major.h>
 
+#include "kms.h"
 
 /*
  * Verbatim TAKEN FROM Daniel Stone (gitlab/kms-quads)

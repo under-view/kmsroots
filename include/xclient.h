@@ -1,8 +1,9 @@
 #ifndef UVR_XCB_CLIENT_H
 #define UVR_XCB_CLIENT_H
 
-#include "common.h"
 #include "utils.h"
+
+#include <stdbool.h>
 #include <xcb/xcb.h>
 
 
