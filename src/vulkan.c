@@ -751,8 +751,65 @@ exit_vk_graphics_pipeline:
 }
 
 
+struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  struct uvrvkframebuffer *vkfbs = NULL;
+  uint32_t fbc;
+
+  vkfbs = (struct uvrvkframebuffer *) calloc(uvrvk->fbcount, sizeof(struct uvrvkframebuffer));
+  if (!vkfbs) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_framebuffer;
+  }
+
+  VkFramebufferCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = 0;
+  create_info.renderPass = uvrvk->renderPass;
+  create_info.width = uvrvk->width;
+  create_info.height = uvrvk->height;
+  create_info.layers = uvrvk->layers;
+
+  for (fbc = 0; fbc < uvrvk->fbcount; fbc++) {
+    create_info.attachmentCount = 1;
+    create_info.pAttachments = &uvrvk->vkimageviews[fbc].view;
+
+    res = vkCreateFramebuffer(uvrvk->lgdev, &create_info, NULL, &vkfbs[fbc].vkfb);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkCreateFramebuffer: %s", vkres_msg(res));
+      goto exit_vk_framebuffer_vk_framebuffer_destroy;
+    }
+
+    uvr_utils_log(UVR_SUCCESS, "uvr_vk_framebuffer_create: VkFramebuffer successfully created retval(%p)", vkfbs[fbc].vkfb);
+  }
+
+  return (struct uvr_vk_framebuffer) { .lgdev = uvrvk->lgdev, .fbcount = uvrvk->fbcount, .vkfbs = vkfbs };
+
+exit_vk_framebuffer_vk_framebuffer_destroy:
+  for (fbc = 0; fbc < uvrvk->fbcount; fbc++) {
+    if (vkfbs[fbc].vkfb)
+      vkDestroyFramebuffer(uvrvk->lgdev, vkfbs[fbc].vkfb, NULL);
+  }
+//exit_vk_framebuffer_free_vkfbs:
+  free(vkfbs);
+exit_vk_framebuffer:
+  return (struct uvr_vk_framebuffer) { .lgdev = VK_NULL_HANDLE, .fbcount = 0, .vkfbs = NULL };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
+
+  if (uvrvk->uvr_vk_framebuffer) {
+    for (i = 0; i < uvrvk->uvr_vk_framebuffer_cnt; i++) {
+      for (j = 0; j < uvrvk->uvr_vk_framebuffer[i].fbcount; j++) {
+        if (uvrvk->uvr_vk_framebuffer[i].lgdev && uvrvk->uvr_vk_framebuffer[i].vkfbs[j].vkfb)
+          vkDestroyFramebuffer(uvrvk->uvr_vk_framebuffer[i].lgdev, uvrvk->uvr_vk_framebuffer[i].vkfbs[j].vkfb, NULL);
+      }
+      free(uvrvk->uvr_vk_framebuffer[i].vkfbs);
+    }
+  }
 
   if (uvrvk->uvr_vk_graphics_pipeline) {
     for (i = 0; i < uvrvk->uvr_vk_graphics_pipeline_cnt; i++) {

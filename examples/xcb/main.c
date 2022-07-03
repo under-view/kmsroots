@@ -353,6 +353,15 @@ int main(void) {
   app.gpipeline = uvr_vk_graphics_pipeline_create(&gpipeline_info);
   if (!app.gpipeline.graphics_pipeline) goto exit_error;
 
+  struct uvr_vk_framebuffer_create_info vkframebuffer_info = {
+    .lgdev = app.lgdev.device, .fbcount = app.vkimages.vcount, .vkimageviews = app.vkimages.views,
+    .renderPass = app.rpass.renderpass, .width = extent2D.width, .height = extent2D.height,
+    .layers = 1
+  };
+
+  app.vkfbs = uvr_vk_framebuffer_create(&vkframebuffer_info);
+
+
   uvr_xcb_display_window(&xclient);
 
   /* Wait for 5 seconds to display */
@@ -387,6 +396,8 @@ exit_error:
   appd.uvr_vk_render_pass = &app.rpass;
   appd.uvr_vk_graphics_pipeline_cnt = 1;
   appd.uvr_vk_graphics_pipeline = &app.gpipeline;
+  appd.uvr_vk_framebuffer_cnt = 1;
+  appd.uvr_vk_framebuffer = &app.vkfbs;
   uvr_vk_destory(&appd);
 
   xclientd.uvr_xcb_window = xclient;

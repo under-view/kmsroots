@@ -418,7 +418,7 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
  *
  * members:
  * @lgdev     - Logical device used to associate a VkImageView with a VkImage
- * @icount    - Amount of VkImage's to create. If VkSwapchainKHR reference is passed value would
+ * @icount    - Amount of VkImage's created. If VkSwapchainKHR reference is passed value would
  *              be the amount of images in the given swapchain.
  * @images    - Array of VkImage's
  *            + @image - Represents actual image itself. May be a texture, etc...
@@ -698,6 +698,62 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
 
 
 /*
+ * struct uvr_vk_framebuffer (Underview Renderer Vulkan Framebuffer)
+ *
+ * members:
+ * @lgdev     - Logical device used to associate
+ * @fbcount   - Amount of VkFramebuffer's created
+ * @vkfbs     - Array of VkFramebuffer's
+ *            + @vkfb - Framebuffers represent a collection of specific memory attachments that a render pass instance uses.
+ */
+struct uvr_vk_framebuffer {
+  VkDevice lgdev;
+
+  uint32_t fbcount;
+  struct uvrvkframebuffer {
+    VkFramebuffer vkfb;
+  } *vkfbs;
+};
+
+
+/*
+ * struct uvr_vk_framebuffer_create_info (Underview Renderer Vulkan Framebuffer Create Information)
+ *
+ * members:
+ * @lgdev        - Must pass a valid active logical device
+ * @fbcount      - Amount of VkFramebuffer handles to create
+ * @vkimageviews - An array of VkImageView handles which will be used in a render pass instance.
+ * @renderPass   - Defines the render pass a given framebuffer is compatible with
+ * @width        - Framebuffer width in pixels
+ * @height       - Framebuffer height in pixels
+ * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for bellow members
+ * @layers
+ */
+struct uvr_vk_framebuffer_create_info {
+  VkDevice         lgdev;
+  uint32_t         fbcount;
+  struct uvrvkview *vkimageviews;
+  VkRenderPass     renderPass;
+  uint32_t         width;
+  uint32_t         height;
+  uint32_t         layers;
+};
+
+
+/*
+ * uvr_vk_framebuffer_create: Creates @fbcount amount of VkFramebuffer handles. For simplicity each VkFramebuffer handle
+ *                            created only has one VkImageView attached.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_framebuffer_create_info
+ * return:
+ *    on success struct uvr_vk_framebuffer
+ *    on failure struct uvr_vk_framebuffer { with member nulled }
+ */
+struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
@@ -717,6 +773,8 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
  * @uvr_vk_pipeline_layout       - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
  * @uvr_vk_graphics_pipeline_cnt - Must pass the amount of elements in struct uvr_vk_graphics_pipeline array
  * @uvr_vk_graphics_pipeline     - Must pass an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
+ * @uvr_vk_framebuffer_cnt       - Must pass the amount of elements in struct uvr_vk_framebuffer array
+ * @uvr_vk_framebuffer           - Must pass an array of valid struct uvr_vk_framebuffer { free'd members: VkFramebuffer handle, *vkfbs }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -742,6 +800,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_graphics_pipeline_cnt;
   struct uvr_vk_graphics_pipeline *uvr_vk_graphics_pipeline;
+
+  uint32_t uvr_vk_framebuffer_cnt;
+  struct uvr_vk_framebuffer *uvr_vk_framebuffer;
 };
 
 
