@@ -701,47 +701,47 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst                   - Must pass a valid VkInstance handle
- * @vksurf                   - Must pass a valid VkSurfaceKHR handle
- * @vklgdevs_cnt             - Must pass the amount of elements in struct uvr_vk_lgdev array
- * @vklgdevs                 - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
- * @vkswapchain_cnt          - Must pass the amount of elements in struct uvr_vk_swapchain array
- * @vkswapchains             - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
- * @vkimage_cnt              - Must pass the amount of elements in struct uvr_vk_image array
- * @vkimages                 - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
- * @vkshader_cnt             - Must pass the amount of elements in struct uvr_vk_shader_module array
- * @vkshaders                - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
- * @vkplayout_cnt            - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
- * @vkplayouts               - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
- * @vkrenderpass_cnt         - Must pass the amount of elements in struct uvr_vk_render_pass array
- * @vkrenderpasses           - Must pass an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
- * @vkgraphics_pipelines_cnt - Must pass the amount of elements in struct uvr_vk_graphics_pipeline array
- * @vkgraphics_pipelines     - Must pass an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
+ * @vkinst                       - Must pass a valid VkInstance handle
+ * @vksurf                       - Must pass a valid VkSurfaceKHR handle
+ * @uvr_vk_lgdev_cnt             - Must pass the amount of elements in struct uvr_vk_lgdev array
+ * @uvr_vk_lgdev                 - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
+ * @uvr_vk_swapchain_cnt         - Must pass the amount of elements in struct uvr_vk_swapchain array
+ * @uvr_vk_swapchain             - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
+ * @uvr_vk_image_cnt             - Must pass the amount of elements in struct uvr_vk_image array
+ * @uvr_vk_image                 - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
+ * @uvr_vk_shader_module_cnt     - Must pass the amount of elements in struct uvr_vk_shader_module array
+ * @uvr_vk_shader_module         - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
+ * @uvr_vk_render_pass_cnt       - Must pass the amount of elements in struct uvr_vk_render_pass array
+ * @uvr_vk_render_pass           - Must pass an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
+ * @uvr_vk_pipeline_layout_cnt   - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
+ * @uvr_vk_pipeline_layout       - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
+ * @uvr_vk_graphics_pipeline_cnt - Must pass the amount of elements in struct uvr_vk_graphics_pipeline array
+ * @uvr_vk_graphics_pipeline     - Must pass an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
   VkSurfaceKHR vksurf;
 
-  uint32_t vklgdevs_cnt;
-  struct uvr_vk_lgdev *vklgdevs;
+  uint32_t uvr_vk_lgdev_cnt;
+  struct uvr_vk_lgdev *uvr_vk_lgdev;
 
-  uint32_t vkswapchain_cnt;
-  struct uvr_vk_swapchain *vkswapchains;
+  uint32_t uvr_vk_swapchain_cnt;
+  struct uvr_vk_swapchain *uvr_vk_swapchain;
 
-  uint32_t vkimage_cnt;
-  struct uvr_vk_image *vkimages;
+  uint32_t uvr_vk_image_cnt;
+  struct uvr_vk_image *uvr_vk_image;
 
-  uint32_t vkshader_cnt;
-  struct uvr_vk_shader_module *vkshaders;
+  uint32_t uvr_vk_shader_module_cnt;
+  struct uvr_vk_shader_module *uvr_vk_shader_module;
 
-  uint32_t vkplayout_cnt;
-  struct uvr_vk_pipeline_layout *vkplayouts;
+  uint32_t uvr_vk_render_pass_cnt;
+  struct uvr_vk_render_pass *uvr_vk_render_pass;
 
-  uint32_t vkrenderpass_cnt;
-  struct uvr_vk_render_pass *vkrenderpasses;
+  uint32_t uvr_vk_pipeline_layout_cnt;
+  struct uvr_vk_pipeline_layout *uvr_vk_pipeline_layout;
 
-  uint32_t vkgraphics_pipelines_cnt;
-  struct uvr_vk_graphics_pipeline *vkgraphics_pipelines;
+  uint32_t uvr_vk_graphics_pipeline_cnt;
+  struct uvr_vk_graphics_pipeline *uvr_vk_graphics_pipeline;
 };
 
 

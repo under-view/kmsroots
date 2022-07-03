@@ -25,7 +25,7 @@ enum uvr_buffer_type {
 
 
 /*
- * struct uvr_buffer_object_info (Underview Renderer Buffer Object Information)
+ * struct uvr_buffer_object (Underview Renderer Buffer Object)
  *
  * members:
  * @bo          - Handle to some GBM backend allocated buffer. Used to get GEM handles, DMA buf fds,
@@ -46,7 +46,7 @@ enum uvr_buffer_type {
  * @dma_buf_fds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware
  * @kmsfd       - File descriptor to open DRI device
  */
-struct uvr_buffer_object_info {
+struct uvr_buffer_object {
   struct gbm_bo *bo;
   unsigned fbid;
   unsigned format;
@@ -64,13 +64,15 @@ struct uvr_buffer_object_info {
  * struct uvr_buffer (Underview Renderer Buffer)
  *
  * members:
- * @gbmdev       - A handle used to allocate gbm buffers & surfaces
- * @info_buffers - Stores an array of gbm_bo's and corresponding information
- *                 about the individual buffer.
+ * @gbmdev      - A handle used to allocate gbm buffers & surfaces
+ * @buffers_cnt - Amount of gbm_bo's
+ * @buffers     - Stores an array of gbm_bo's and corresponding information
+ *                about the individual buffer.
  */
 struct uvr_buffer {
   struct gbm_device *gbmdev;
-  struct uvr_buffer_object_info *info_buffers;
+  unsigned int buffers_cnt;
+  struct uvr_buffer_object *buffers;
 };
 
 
@@ -128,16 +130,20 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff);
  * struct uvr_buffer_destroy (Underview Renderer Buffer Destroy)
  *
  * members:
- * @gbmdev       - A handle used to allocate gbm buffers & surfaces
- * @buff_cnt     - Amount of allocated buffers
- * @info_buffers - Stores an array of gbm_bo's and corresponding information
- *                 about the individual buffer.
+ * @uvr_buffer_cnt - Must pass the amount of elements in struct uvr_buffer array
+ * @uvr_buffer     - Must pass an array of valid struct uvr_buffer
+ *                   {
+ *                      free'd members:
+ *                               struct gbm_device reference
+ *                               struct uvr_buffer_object reference
+ *                               int dma_buf_fds[4] - GEM handles closed
+ *                               struct gbm_bo reference
+ *                               unsigned fbid - KMS fd removed
+ *                   }
  */
 struct uvr_buffer_destroy {
-  struct gbm_device *gbmdev;
-
-  unsigned int buff_cnt;
-  struct uvr_buffer_object_info *info_buffers;
+  unsigned uvr_buffer_cnt;
+  struct uvr_buffer *uvr_buffer;
 };
 
 

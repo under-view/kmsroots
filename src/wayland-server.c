@@ -35,8 +35,8 @@ exit_ws_core:
 
 
 void uvr_ws_destroy(struct uvr_ws_destroy *uvrws) {
-  if (uvrws->wscore.backend)
-    wlr_backend_destroy(uvrws->wscore.backend);
-  if (uvrws->wscore.display)
-    wl_display_destroy(uvrws->wscore.display);
+  if (uvrws->uvr_ws_core.backend)
+    wlr_backend_destroy(uvrws->uvr_ws_core.backend);
+  if (uvrws->uvr_ws_core.display)
+    wl_display_destroy(uvrws->uvr_ws_core.display);
 }

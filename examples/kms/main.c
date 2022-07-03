@@ -90,7 +90,7 @@ int main(void) {
   struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
   kmsnode_devcap = uvr_kms_node_get_device_capabilities(kms.kmsdev.kmsfd);
 
-  struct uvr_buffer_create_info UNUSED kmsbuffs_info = {
+  struct uvr_buffer_create_info kmsbuffs_info = {
     .bType = UINT32_MAX, .kmsfd = kms.kmsdev.kmsfd, .buff_cnt = 2,
     .width = 3840, .height = 2160, .bitdepth = 24, .bpp = 32,
     .gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT,
@@ -139,18 +139,17 @@ exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
    */
-  kmsbuffsd.gbmdev = kms.kmsbuffs.gbmdev;
-  kmsbuffsd.buff_cnt = kmsbuffs_info.buff_cnt;
-  kmsbuffsd.info_buffers = kms.kmsbuffs.info_buffers;
+  kmsbuffsd.uvr_buffer_cnt = 1;
+  kmsbuffsd.uvr_buffer = &kms.kmsbuffs;
   uvr_buffer_destory(&kmsbuffsd);
 
-  kmsdevd.kmsnode = kms.kmsdev;
-  kmsdevd.dochain = kms.dochain;
+  kmsdevd.uvr_kms_node = kms.kmsdev;
+  kmsdevd.uvr_kms_node_display_output_chain = kms.dochain;
   uvr_kms_node_destroy(&kmsdevd);
 
   appd.vkinst = app.instance;
-  appd.vklgdevs_cnt = 1;
-  appd.vklgdevs = &app.lgdev;
+  appd.uvr_vk_lgdev_cnt = 1;
+  appd.uvr_vk_lgdev = &app.lgdev;
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
   uvr_sd_session_destroy(&kms.uvrsd);

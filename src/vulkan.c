@@ -754,56 +754,56 @@ exit_vk_graphics_pipeline:
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
-  if (uvrvk->vkgraphics_pipelines) {
-    for (i = 0; i < uvrvk->vkplayout_cnt; i++) {
-      if (uvrvk->vkgraphics_pipelines[i].lgdev && uvrvk->vkgraphics_pipelines[i].graphics_pipeline)
-        vkDestroyPipeline(uvrvk->vkgraphics_pipelines[i].lgdev, uvrvk->vkgraphics_pipelines[i].graphics_pipeline, NULL);
+  if (uvrvk->uvr_vk_graphics_pipeline) {
+    for (i = 0; i < uvrvk->uvr_vk_graphics_pipeline_cnt; i++) {
+      if (uvrvk->uvr_vk_graphics_pipeline[i].lgdev && uvrvk->uvr_vk_graphics_pipeline[i].graphics_pipeline)
+        vkDestroyPipeline(uvrvk->uvr_vk_graphics_pipeline[i].lgdev, uvrvk->uvr_vk_graphics_pipeline[i].graphics_pipeline, NULL);
     }
   }
 
-  if (uvrvk->vkplayouts) {
-    for (i = 0; i < uvrvk->vkplayout_cnt; i++) {
-      if (uvrvk->vkplayouts[i].lgdev && uvrvk->vkplayouts[i].playout)
-        vkDestroyPipelineLayout(uvrvk->vkplayouts[i].lgdev, uvrvk->vkplayouts[i].playout, NULL);
+  if (uvrvk->uvr_vk_pipeline_layout) {
+    for (i = 0; i < uvrvk->uvr_vk_pipeline_layout_cnt; i++) {
+      if (uvrvk->uvr_vk_pipeline_layout[i].lgdev && uvrvk->uvr_vk_pipeline_layout[i].playout)
+        vkDestroyPipelineLayout(uvrvk->uvr_vk_pipeline_layout[i].lgdev, uvrvk->uvr_vk_pipeline_layout[i].playout, NULL);
     }
   }
 
-  if (uvrvk->vkrenderpasses) {
-    for (i = 0; i < uvrvk->vkrenderpass_cnt; i++) {
-      if (uvrvk->vkrenderpasses[i].lgdev && uvrvk->vkrenderpasses[i].renderpass)
-        vkDestroyRenderPass(uvrvk->vkrenderpasses[i].lgdev, uvrvk->vkrenderpasses[i].renderpass, NULL);
+  if (uvrvk->uvr_vk_render_pass) {
+    for (i = 0; i < uvrvk->uvr_vk_render_pass_cnt; i++) {
+      if (uvrvk->uvr_vk_render_pass[i].lgdev && uvrvk->uvr_vk_render_pass[i].renderpass)
+        vkDestroyRenderPass(uvrvk->uvr_vk_render_pass[i].lgdev, uvrvk->uvr_vk_render_pass[i].renderpass, NULL);
     }
   }
 
-  if (uvrvk->vkshaders) {
-    for (i = 0; i < uvrvk->vkshader_cnt; i++) {
-      if (uvrvk->vkshaders[i].lgdev && uvrvk->vkshaders[i].shader)
-        vkDestroyShaderModule(uvrvk->vkshaders[i].lgdev, uvrvk->vkshaders[i].shader, NULL);
+  if (uvrvk->uvr_vk_shader_module) {
+    for (i = 0; i < uvrvk->uvr_vk_shader_module_cnt; i++) {
+      if (uvrvk->uvr_vk_shader_module[i].lgdev && uvrvk->uvr_vk_shader_module[i].shader)
+        vkDestroyShaderModule(uvrvk->uvr_vk_shader_module[i].lgdev, uvrvk->uvr_vk_shader_module[i].shader, NULL);
     }
   }
 
-  if (uvrvk->vkimages) {
-    for (i = 0; i < uvrvk->vkimage_cnt; i++) {
-      for (j = 0; j < uvrvk->vkimages[i].vcount; j++) {
-        if (uvrvk->vkimages[i].lgdev && uvrvk->vkimages[i].views[j].view)
-          vkDestroyImageView(uvrvk->vkimages[i].lgdev, uvrvk->vkimages[i].views[j].view, NULL);
+  if (uvrvk->uvr_vk_image) {
+    for (i = 0; i < uvrvk->uvr_vk_image_cnt; i++) {
+      for (j = 0; j < uvrvk->uvr_vk_image[i].vcount; j++) {
+        if (uvrvk->uvr_vk_image[i].lgdev && uvrvk->uvr_vk_image[i].views[j].view)
+          vkDestroyImageView(uvrvk->uvr_vk_image[i].lgdev, uvrvk->uvr_vk_image[i].views[j].view, NULL);
       }
-      free(uvrvk->vkimages[i].images);
-      free(uvrvk->vkimages[i].views);
+      free(uvrvk->uvr_vk_image[i].images);
+      free(uvrvk->uvr_vk_image[i].views);
     }
   }
 
-  if (uvrvk->vkswapchains) {
-    for (i = 0; i < uvrvk->vkswapchain_cnt; i++) {
-      if (uvrvk->vkswapchains[i].lgdev && uvrvk->vkswapchains[i].swapchain)
-        vkDestroySwapchainKHR(uvrvk->vkswapchains[i].lgdev, uvrvk->vkswapchains[i].swapchain, NULL);
+  if (uvrvk->uvr_vk_swapchain) {
+    for (i = 0; i < uvrvk->uvr_vk_swapchain_cnt; i++) {
+      if (uvrvk->uvr_vk_swapchain[i].lgdev && uvrvk->uvr_vk_swapchain[i].swapchain)
+        vkDestroySwapchainKHR(uvrvk->uvr_vk_swapchain[i].lgdev, uvrvk->uvr_vk_swapchain[i].swapchain, NULL);
     }
   }
 
-  for (i = 0; i < uvrvk->vklgdevs_cnt; i++) {
-    if (uvrvk->vklgdevs[i].device) {
-      vkDeviceWaitIdle(uvrvk->vklgdevs[i].device);
-      vkDestroyDevice(uvrvk->vklgdevs[i].device, NULL);
+  for (i = 0; i < uvrvk->uvr_vk_lgdev_cnt; i++) {
+    if (uvrvk->uvr_vk_lgdev[i].device) {
+      vkDeviceWaitIdle(uvrvk->uvr_vk_lgdev[i].device);
+      vkDestroyDevice(uvrvk->uvr_vk_lgdev[i].device, NULL);
     }
   }
 

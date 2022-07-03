@@ -52,10 +52,10 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws);
  * struct uvr_ws_destroy (Underview Renderer Wayland Server Destroy)
  *
  * members:
- * @wscore - stores Underview Renderer Wayland Server Core references to be free'd
+ * @uvr_ws_core - Must pass an array of valid struct uvr_ws_core { free'd members: struct wl_display ref, struct wlr_backend ref }
  */
 struct uvr_ws_destroy {
-  struct uvr_ws_core wscore;
+  struct uvr_ws_core uvr_ws_core;
 };
 
 

@@ -67,11 +67,10 @@ void uvr_xcb_display_window(struct uvr_xcb_window *uvrxcb);
  * struct uvrxcb (Underview Renderer XCB Destroy)
  *
  * members:
- * @conn   - A structure that contain all data that XCB needs to communicate with an X server.
- * @window - Stores the XID of the current window. XID is neeed to create windows and manage its properties.
+ * @uvr_xcb_window - Must pass a valid struct uvr_xcb_window { free'd members: xcb_connection_t *conn, xcb_window_t window }
  */
 struct uvr_xcb_destroy {
-  struct uvr_xcb_window xcbwindow;
+  struct uvr_xcb_window uvr_xcb_window;
 };
 
 

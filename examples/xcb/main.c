@@ -373,23 +373,23 @@ exit_error:
    */
   appd.vkinst = app.instance;
   appd.vksurf = app.surface;
-  appd.vklgdevs_cnt = 1;
-  appd.vklgdevs = &app.lgdev;
-  appd.vkswapchain_cnt = 1;
-  appd.vkswapchains = &app.schain;
-  appd.vkimage_cnt = 1;
-  appd.vkimages = &app.vkimages;
-  appd.vkshader_cnt = ARRAY_LEN(app.shader_modules);
-  appd.vkshaders = app.shader_modules;
-  appd.vkplayout_cnt = 1;
-  appd.vkplayouts = &app.gplayout;
-  appd.vkrenderpass_cnt = 1;
-  appd.vkrenderpasses = &app.rpass;
-  appd.vkgraphics_pipelines_cnt = 1;
-  appd.vkgraphics_pipelines = &app.gpipeline;
+  appd.uvr_vk_lgdev_cnt = 1;
+  appd.uvr_vk_lgdev = &app.lgdev;
+  appd.uvr_vk_swapchain_cnt = 1;
+  appd.uvr_vk_swapchain = &app.schain;
+  appd.uvr_vk_image_cnt = 1;
+  appd.uvr_vk_image = &app.vkimages;
+  appd.uvr_vk_shader_module_cnt = ARRAY_LEN(app.shader_modules);
+  appd.uvr_vk_shader_module = app.shader_modules;
+  appd.uvr_vk_pipeline_layout_cnt = 1;
+  appd.uvr_vk_pipeline_layout = &app.gplayout;
+  appd.uvr_vk_render_pass_cnt = 1;
+  appd.uvr_vk_render_pass = &app.rpass;
+  appd.uvr_vk_graphics_pipeline_cnt = 1;
+  appd.uvr_vk_graphics_pipeline = &app.gpipeline;
   uvr_vk_destory(&appd);
 
-  xclientd.xcbwindow = xclient;
+  xclientd.uvr_xcb_window = xclient;
   uvr_xcb_destory(&xclientd);
   return 0;
 }

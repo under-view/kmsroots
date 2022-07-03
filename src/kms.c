@@ -448,22 +448,22 @@ err_ret_null_chain_output:
 
 
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms) {
-  if (uvrkms->dochain.plane)
-    drmModeFreePlane(uvrkms->dochain.plane);
-  if (uvrkms->dochain.crtc)
-    drmModeFreeCrtc(uvrkms->dochain.crtc);
-  if (uvrkms->dochain.encoder)
-    drmModeFreeEncoder(uvrkms->dochain.encoder);
-  if (uvrkms->dochain.connector)
-    drmModeFreeConnector(uvrkms->dochain.connector);
-  if (uvrkms->kmsnode.kmsfd != -1) {
-    if (uvrkms->kmsnode.vtfd != -1 && uvrkms->kmsnode.kbmode != -1)
-      vt_reset(uvrkms->kmsnode.vtfd, uvrkms->kmsnode.kbmode);
+  if (uvrkms->uvr_kms_node_display_output_chain.plane)
+    drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
+  if (uvrkms->uvr_kms_node_display_output_chain.crtc)
+    drmModeFreeCrtc(uvrkms->uvr_kms_node_display_output_chain.crtc);
+  if (uvrkms->uvr_kms_node_display_output_chain.encoder)
+    drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
+  if (uvrkms->uvr_kms_node_display_output_chain.connector)
+    drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
+  if (uvrkms->uvr_kms_node.kmsfd != -1) {
+    if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.kbmode != -1)
+      vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.kbmode);
 #ifdef INCLUDE_SDBUS
-    if (uvrkms->kmsnode.use_logind)
-      uvr_sd_session_release_device(uvrkms->kmsnode.uvr_sd_session, uvrkms->kmsnode.kmsfd);
+    if (uvrkms->uvr_kms_node.use_logind)
+      uvr_sd_session_release_device(uvrkms->uvr_kms_node.uvr_sd_session, uvrkms->uvr_kms_node.kmsfd);
     else
 #endif
-      close(uvrkms->kmsnode.kmsfd);
+      close(uvrkms->uvr_kms_node.kmsfd);
   }
 }

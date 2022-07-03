@@ -75,9 +75,9 @@ int main(void) {
   sleep(5);
 
 exit_error:
-  wcd.wccinterface = wc.wcinterfaces;
-  wcd.wcbuff = wc.wcbuffs;
-  wcd.wcsurface = wc.wcsurf;
+  wcd.uvr_wc_core_interface = wc.wcinterfaces;
+  wcd.uvr_wc_buffer = wc.wcbuffs;
+  wcd.uvr_wc_surface = wc.wcsurf;
   uvr_wc_destory(&wcd);
   return 0;
 }

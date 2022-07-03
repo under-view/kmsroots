@@ -55,11 +55,11 @@ struct uvr_kms_node_create_info {
  * struct uvr_kms_node (Underview Renderer KMS Node)
  *
  * members:
- * @kmsfd         - A valid file descriptor to an open DRI device node
- * @vtfd          - File descriptor to open tty character device (i.e '/dev/tty0')
- * @kbmode        - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
- * @uvrsd_session - Stores address of struct uvr_sd_session. Used when releasing a device
- * @use_logind    - Stores whether systemd-logind is utilized or not
+ * @kmsfd          - A valid file descriptor to an open DRI device node
+ * @vtfd           - File descriptor to open tty character device (i.e '/dev/tty0')
+ * @kbmode         - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
+ * @uvr_sd_session - Stores address of struct uvr_sd_session. Used when releasing a device
+ * @use_logind     - Stores whether systemd-logind is utilized or not
  */
 struct uvr_kms_node {
   int kmsfd;
@@ -170,16 +170,16 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  * struct uvr_kms_node_destroy (Underview Renderer KMS Node Destroy)
  *
  * members:
- * @kmsnode - Must pass a valid struct uvr_kms_node. Which contains information about the
- *            file descriptor associated with open KMS device node to be closed. Stores
- *            information about logind session bus, id, and path needed to release control
- *            of a given device. That given device is a DRI device file.
- * @dochain - Must pass a valid struct uvr_kms_node_display_output_chain. Stores information
- *            about KMS device node connector->encoder->crtc->plane pair
+ * @uvr_kms_node                      - Must pass a valid struct uvr_kms_node. Which contains information about the
+ *                                      file descriptor associated with open KMS device node to be closed. Stores
+ *                                      information about logind session bus, id, and path needed to release control
+ *                                      of a given device. That given device is a DRI device file.
+ * @uvr_kms_node_display_output_chain - Must pass a valid struct uvr_kms_node_display_output_chain. Stores information
+ *                                      about KMS device node connector->encoder->crtc->plane pair
  */
 struct uvr_kms_node_destroy {
-  struct uvr_kms_node kmsnode;
-  struct uvr_kms_node_display_output_chain dochain;
+  struct uvr_kms_node uvr_kms_node;
+  struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
 };
 
 

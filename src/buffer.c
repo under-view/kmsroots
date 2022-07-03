@@ -9,13 +9,13 @@
 
 struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
   struct gbm_device *gbmdev = NULL;
-  struct uvr_buffer_object_info *bois = NULL;
+  struct uvr_buffer_object *bois = NULL;
 
   if (uvrbuff->bType == GBM_BUFFER || uvrbuff->bType == GBM_BUFFER_WITH_MODIFIERS) {
     gbmdev = gbm_create_device(uvrbuff->kmsfd);
     if (!gbmdev) goto exit_uvr_buffer_null_struct;
 
-    bois = calloc(uvrbuff->buff_cnt, sizeof(struct uvr_buffer_object_info));
+    bois = calloc(uvrbuff->buff_cnt, sizeof(struct uvr_buffer_object));
     if (!bois) {
       uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(calloc): failed to allocate space for struct uvrbuff_object_info *");
       goto exit_uvr_buffer_gbmdev_destroy;
@@ -151,7 +151,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
 
   uvr_utils_log(UVR_SUCCESS, "Successfully create GBM buffers");
 
-  return (struct uvr_buffer) { .gbmdev = gbmdev, .info_buffers = bois };
+  return (struct uvr_buffer) { .gbmdev = gbmdev, .buffers_cnt = uvrbuff->buff_cnt, .buffers = bois };
 
 exit_uvr_buffer_gbm_bo_detroy:
   for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
@@ -171,22 +171,24 @@ exit_uvr_buffer_gbmdev_destroy:
   if (gbmdev)
     gbm_device_destroy(gbmdev);
 exit_uvr_buffer_null_struct:
-  return (struct uvr_buffer) { .gbmdev = NULL, .info_buffers = NULL };
+  return (struct uvr_buffer) { .gbmdev = NULL, .buffers_cnt = 0, .buffers = NULL };
 }
 
 
 void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff) {
-  for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
-    if (uvrbuff->info_buffers[b].fbid)
-      ioctl(uvrbuff->info_buffers[b].kmsfd, DRM_IOCTL_MODE_RMFB, &uvrbuff->info_buffers[b].fbid);
-    if (uvrbuff->info_buffers[b].bo)
-      gbm_bo_destroy(uvrbuff->info_buffers[b].bo);
-    for (unsigned p = 0; p < uvrbuff->info_buffers[b].num_planes; p++)  {
-      if (uvrbuff->info_buffers[b].dma_buf_fds[p] != -1)
-        drmCloseBufferHandle(uvrbuff->info_buffers[b].kmsfd, uvrbuff->info_buffers[b].dma_buf_fds[p]);
+  for (unsigned uvrb = 0; uvrb < uvrbuff->uvr_buffer_cnt; uvrb++) {
+    for (unsigned b = 0; b < uvrbuff->uvr_buffer[uvrb].buffers_cnt; b++) {
+      if (uvrbuff->uvr_buffer[uvrb].buffers[b].fbid)
+        ioctl(uvrbuff->uvr_buffer[uvrb].buffers[b].kmsfd, DRM_IOCTL_MODE_RMFB, &uvrbuff->uvr_buffer[uvrb].buffers[b].fbid);
+      if (uvrbuff->uvr_buffer[uvrb].buffers[b].bo)
+        gbm_bo_destroy(uvrbuff->uvr_buffer[uvrb].buffers[b].bo);
+      for (unsigned p = 0; p < uvrbuff->uvr_buffer[uvrb].buffers[b].num_planes; p++)  {
+        if (uvrbuff->uvr_buffer[uvrb].buffers[b].dma_buf_fds[p] != -1)
+          drmCloseBufferHandle(uvrbuff->uvr_buffer[uvrb].buffers[b].kmsfd, uvrbuff->uvr_buffer[uvrb].buffers[b].dma_buf_fds[p]);
+      }
     }
+    free(uvrbuff->uvr_buffer[uvrb].buffers);
+    if (uvrbuff->uvr_buffer[uvrb].gbmdev)
+      gbm_device_destroy(uvrbuff->uvr_buffer[uvrb].gbmdev);
   }
-  free(uvrbuff->info_buffers);
-  if (uvrbuff->gbmdev)
-    gbm_device_destroy(uvrbuff->gbmdev);
 }

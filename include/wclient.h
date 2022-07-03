@@ -230,15 +230,14 @@ int uvr_wc_flush_request(struct uvr_wc_core_interface *uvrwc);
  * struct uvr_wc_destory (Underview Renderer Wayland Client Destroy)
  *
  * members:
- * @wccinterface - Must pass a valid struct uvr_wc_core_interface which contains all
- *                 objects/interfaces a given customer decided to bind.
- * @wcbuff       - Must pass a valid struct uvr_wc_buffer, to free all allocated memory
- * @wcsurface    - Must pass a valid pointer to a struct uvr_wc_surface, to free all allocated memory
+ * @uvr_wc_core_interface - Must pass a valid struct uvr_wc_core_interface, to release all binded members
+ * @uvr_wc_buffer         - Must pass a valid struct uvr_wc_buffer, to free all allocated memory
+ * @uvr_wc_surface        - Must pass a valid struct uvr_wc_surface, to free all allocated memory
  */
 struct uvr_wc_destory {
-  struct uvr_wc_core_interface wccinterface;
-  struct uvr_wc_buffer wcbuff;
-  struct uvr_wc_surface wcsurface;
+  struct uvr_wc_core_interface uvr_wc_core_interface;
+  struct uvr_wc_buffer uvr_wc_buffer;
+  struct uvr_wc_surface uvr_wc_surface;
 };
 
 

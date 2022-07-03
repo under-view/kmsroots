@@ -15,7 +15,7 @@ int main(void) {
   if (!wscore.display || !wscore.backend) goto exit_ws;
 
 exit_ws:
-  ws.wscore = wscore;
+  ws.uvr_ws_core = wscore;
   uvr_ws_destroy(&ws);
 
   return 0;

@@ -94,8 +94,8 @@ void uvr_xcb_display_window(struct uvr_xcb_window *uvrxcb) {
 
 
 void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb) {
-  if (uvrxcb->xcbwindow.window)
-    xcb_destroy_window(uvrxcb->xcbwindow.conn, uvrxcb->xcbwindow.window);
-  if (uvrxcb->xcbwindow.conn)
-    xcb_disconnect(uvrxcb->xcbwindow.conn);
+  if (uvrxcb->uvr_xcb_window.window)
+    xcb_destroy_window(uvrxcb->uvr_xcb_window.conn, uvrxcb->uvr_xcb_window.window);
+  if (uvrxcb->uvr_xcb_window.conn)
+    xcb_disconnect(uvrxcb->uvr_xcb_window.conn);
 }
