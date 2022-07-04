@@ -754,27 +754,81 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
 
 
 /*
+ * struct uvr_vk_command_buffer (Underview Renderer Vulkan Command Buffer)
+ *
+ * members:
+ * @lgdev       - Logical device used to create command pool/buffers
+ * @cmdpool     - The command pool which the buffers where allocated from.
+ * @cmdbuff_cnt - Amount of VkCommandBuffer's alloocated
+ * @cmdbuffs    - Pointer to an array of VkCommandBuffer handles
+ *              + @cmdbuff - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
+ */
+struct uvr_vk_command_buffer {
+  VkDevice lgdev;
+
+  VkCommandPool cmdpool;
+
+  uint32_t cmdbuff_cnt;
+  struct uvrvkcmdbuffer {
+    VkCommandBuffer cmdbuff;
+  } *cmdbuffs;
+};
+
+
+/*
+ * struct uvr_vk_command_buffer_create_info (Underview Renderer Vulkan Command Buffer Create Information)
+ *
+ * members:
+ * @lgdev              - Must pass a valid active logical device
+ * @queueFamilyIndex   - Amount of VkFramebuffer handles to create
+ * @commandBufferCount - An array of VkImageView handles which will be used in a render pass instance.
+ */
+struct uvr_vk_command_buffer_create_info {
+  VkDevice lgdev;
+  uint32_t queueFamilyIndex;
+  uint32_t commandBufferCount;
+};
+
+
+/*
+ * uvr_vk_command_buffer_create: Function creates a VkCommandPool handle then allocates VkCommandBuffer handles from
+ *                               that pool. The amount of VkCommandBuffer's allocated is based upon @commandBufferCount.
+ *                               Function only allocates primary command buffers. VkCommandPool flags set
+ *                               VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_command_buffer_create_info
+ * return:
+ *    on success struct uvr_vk_command_buffer
+ *    on failure struct uvr_vk_command_buffer { with member nulled }
+ */
+struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_buffer_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
  * @vkinst                       - Must pass a valid VkInstance handle
  * @vksurf                       - Must pass a valid VkSurfaceKHR handle
  * @uvr_vk_lgdev_cnt             - Must pass the amount of elements in struct uvr_vk_lgdev array
- * @uvr_vk_lgdev                 - Must pass an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
+ * @uvr_vk_lgdev                 - Must pass a pointer to an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
  * @uvr_vk_swapchain_cnt         - Must pass the amount of elements in struct uvr_vk_swapchain array
- * @uvr_vk_swapchain             - Must pass an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
+ * @uvr_vk_swapchain             - Must pass a pointer to an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
  * @uvr_vk_image_cnt             - Must pass the amount of elements in struct uvr_vk_image array
- * @uvr_vk_image                 - Must pass an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
+ * @uvr_vk_image                 - Must pass a pointer to an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
  * @uvr_vk_shader_module_cnt     - Must pass the amount of elements in struct uvr_vk_shader_module array
- * @uvr_vk_shader_module         - Must pass an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
+ * @uvr_vk_shader_module         - Must pass a pointer to an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
  * @uvr_vk_render_pass_cnt       - Must pass the amount of elements in struct uvr_vk_render_pass array
- * @uvr_vk_render_pass           - Must pass an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
+ * @uvr_vk_render_pass           - Must pass a pointer to an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
  * @uvr_vk_pipeline_layout_cnt   - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
- * @uvr_vk_pipeline_layout       - Must pass an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
+ * @uvr_vk_pipeline_layout       - Must pass a pointer to an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
  * @uvr_vk_graphics_pipeline_cnt - Must pass the amount of elements in struct uvr_vk_graphics_pipeline array
- * @uvr_vk_graphics_pipeline     - Must pass an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
+ * @uvr_vk_graphics_pipeline     - Must pass a pointer to an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
  * @uvr_vk_framebuffer_cnt       - Must pass the amount of elements in struct uvr_vk_framebuffer array
- * @uvr_vk_framebuffer           - Must pass an array of valid struct uvr_vk_framebuffer { free'd members: VkFramebuffer handle, *vkfbs }
+ * @uvr_vk_framebuffer           - Must pass a pointer to an array of valid struct uvr_vk_framebuffer { free'd members: VkFramebuffer handle, *vkfbs }
+ * @uvr_vk_command_buffer_cnt    - Must pass the amount of elements in struct uvr_vk_command_buffer array
+ * @uvr_vk_command_buffer        - Must pass a pointer to an array of valid struct uvr_vk_command_buffer { free'd members: VkCommandPool handle, *cmdbuffs }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -803,6 +857,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_framebuffer_cnt;
   struct uvr_vk_framebuffer *uvr_vk_framebuffer;
+
+  uint32_t uvr_vk_command_buffer_cnt;
+  struct uvr_vk_command_buffer *uvr_vk_command_buffer;
 };
 
 

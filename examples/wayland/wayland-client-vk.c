@@ -360,6 +360,23 @@ int main(void) {
   app.gpipeline = uvr_vk_graphics_pipeline_create(&gpipeline_info);
   if (!app.gpipeline.graphics_pipeline) goto exit_error;
 
+  struct uvr_vk_framebuffer_create_info vkframebuffer_info = {
+    .lgdev = app.lgdev.device, .fbcount = app.vkimages.vcount, .vkimageviews = app.vkimages.views,
+    .renderPass = app.rpass.renderpass, .width = extent2D.width, .height = extent2D.height,
+    .layers = 1
+  };
+
+  app.vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_info);
+  if (!app.vkframebuffs.vkfbs[0].vkfb) goto exit_error;
+
+  struct uvr_vk_command_buffer_create_info cmdbuff_info;
+  cmdbuff_info.lgdev = app.lgdev.device;
+  cmdbuff_info.queueFamilyIndex = app.graphics_queue.famindex;
+  cmdbuff_info.commandBufferCount = 1;
+
+  app.vkcbuffs = uvr_vk_command_buffer_create(&cmdbuff_info);
+  if (!app.vkcbuffs.cmdpool) goto exit_error;
+
 exit_error:
 #ifdef INCLUDE_SHADERC
   shadercd.uvr_shader_spirv = app.vertex_shader;
@@ -389,6 +406,10 @@ exit_error:
   appd.uvr_vk_render_pass = &app.rpass;
   appd.uvr_vk_graphics_pipeline_cnt = 1;
   appd.uvr_vk_graphics_pipeline = &app.gpipeline;
+  appd.uvr_vk_framebuffer_cnt = 1;
+  appd.uvr_vk_framebuffer = &app.vkframebuffs;
+  appd.uvr_vk_command_buffer_cnt = 1;
+  appd.uvr_vk_command_buffer = &app.vkcbuffs;
   uvr_vk_destory(&appd);
 
   wcd.uvr_wc_core_interface = wc.wcinterfaces;

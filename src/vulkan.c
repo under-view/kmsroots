@@ -798,8 +798,69 @@ exit_vk_framebuffer:
 }
 
 
+struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_buffer_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkCommandPool cmdpool = VK_NULL_HANDLE;
+  VkCommandBuffer *cmdbuffs = VK_NULL_HANDLE;
+  struct uvrvkcmdbuffer *cbuffs = NULL;
+
+  VkCommandPoolCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  create_info.pNext = NULL;
+  create_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  create_info.queueFamilyIndex = uvrvk->queueFamilyIndex;
+
+  res = vkCreateCommandPool(uvrvk->lgdev, &create_info, NULL, &cmdpool);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkCreateCommandPool: %s", vkres_msg(res));
+    goto exit_vk_command_buffer;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_command_buffer_create: VkCommandPool successfully created retval(%p)", cmdpool);
+
+  cmdbuffs = alloca(uvrvk->commandBufferCount * sizeof(VkCommandBuffer));
+
+  VkCommandBufferAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  alloc_info.commandPool = cmdpool;
+  alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  alloc_info.commandBufferCount = uvrvk->commandBufferCount;
+
+  res = vkAllocateCommandBuffers(uvrvk->lgdev, &alloc_info, cmdbuffs);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkAllocateCommandBuffers: %s", vkres_msg(res));
+    goto exit_vk_command_buffer_destroy_cmd_pool;
+  }
+
+  cbuffs = calloc(uvrvk->commandBufferCount, sizeof(struct uvrvkcmdbuffer));
+  if (!cbuffs) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_command_buffer_destroy_cmd_pool;
+  }
+
+  for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
+    cbuffs[i].cmdbuff = cmdbuffs[i];
+    uvr_utils_log(UVR_WARNING, "uvr_vk_command_buffer_create: VkCommandBuffer successfully created retval(%p)", cbuffs[i].cmdbuff);
+  }
+
+  return (struct uvr_vk_command_buffer) { .lgdev = uvrvk->lgdev, .cmdpool = cmdpool, .cmdbuff_cnt = uvrvk->commandBufferCount, .cmdbuffs = cbuffs };
+
+exit_vk_command_buffer_destroy_cmd_pool:
+  vkDestroyCommandPool(uvrvk->lgdev, cmdpool, NULL);
+exit_vk_command_buffer:
+  return (struct uvr_vk_command_buffer) { .lgdev = VK_NULL_HANDLE, .cmdpool = VK_NULL_HANDLE, .cmdbuff_cnt = 0, .cmdbuffs = NULL };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
+
+  if (uvrvk->uvr_vk_command_buffer) {
+    for (i = 0; i < uvrvk->uvr_vk_command_buffer_cnt; i++) {
+      vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].lgdev, uvrvk->uvr_vk_command_buffer[i].cmdpool, NULL);
+      free(uvrvk->uvr_vk_command_buffer[i].cmdbuffs);
+    }
+  }
 
   if (uvrvk->uvr_vk_framebuffer) {
     for (i = 0; i < uvrvk->uvr_vk_framebuffer_cnt; i++) {

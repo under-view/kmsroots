@@ -35,7 +35,8 @@ struct uvr_vk {
   struct uvr_vk_pipeline_layout gplayout;
   struct uvr_vk_render_pass rpass;
   struct uvr_vk_graphics_pipeline gpipeline;
-  struct uvr_vk_framebuffer vkfbs;
+  struct uvr_vk_framebuffer vkframebuffs;
+  struct uvr_vk_command_buffer vkcbuffs;
 };
 
 #endif

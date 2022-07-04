@@ -359,8 +359,16 @@ int main(void) {
     .layers = 1
   };
 
-  app.vkfbs = uvr_vk_framebuffer_create(&vkframebuffer_info);
+  app.vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_info);
+  if (!app.vkframebuffs.vkfbs[0].vkfb) goto exit_error;
 
+  struct uvr_vk_command_buffer_create_info cmdbuff_info;
+  cmdbuff_info.lgdev = app.lgdev.device;
+  cmdbuff_info.queueFamilyIndex = app.graphics_queue.famindex;
+  cmdbuff_info.commandBufferCount = 1;
+
+  app.vkcbuffs = uvr_vk_command_buffer_create(&cmdbuff_info);
+  if (!app.vkcbuffs.cmdpool) goto exit_error;
 
   uvr_xcb_display_window(&xclient);
 
@@ -397,7 +405,9 @@ exit_error:
   appd.uvr_vk_graphics_pipeline_cnt = 1;
   appd.uvr_vk_graphics_pipeline = &app.gpipeline;
   appd.uvr_vk_framebuffer_cnt = 1;
-  appd.uvr_vk_framebuffer = &app.vkfbs;
+  appd.uvr_vk_framebuffer = &app.vkframebuffs;
+  appd.uvr_vk_command_buffer_cnt = 1;
+  appd.uvr_vk_command_buffer = &app.vkcbuffs;
   uvr_vk_destory(&appd);
 
   xclientd.uvr_xcb_window = xclient;
