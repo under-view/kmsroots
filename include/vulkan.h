@@ -420,11 +420,11 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
  * @lgdev     - Logical device used to associate a VkImageView with a VkImage
  * @icount    - Amount of VkImage's created. If VkSwapchainKHR reference is passed value would
  *              be the amount of images in the given swapchain.
- * @images    - Array of VkImage's
+ * @images    - Pointer to an array of VkImage handles
  *            + @image - Represents actual image itself. May be a texture, etc...
  * @vcount    - Amount of VkImageView's to associate with VkImage's. If VkSwapchainKHR reference is passed
  *              value would be the amount of images in the given swapchain
- * @views     - Array of VkImageView's
+ * @views     - Pointer to an array of VkImageView handles
  *            + @view - Represents a way to access the actual image itself
  * @swapchain - Member not required, but used for storage purposes. A valid VkSwapchainKHR
  *              reference to the VkSwapchainKHR passed to uvr_vk_image_create. Represents
@@ -702,8 +702,8 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
  *
  * members:
  * @lgdev     - Logical device used to associate
- * @fbcount   - Amount of VkFramebuffer's created
- * @vkfbs     - Array of VkFramebuffer's
+ * @fbcount   - Amount of VkFramebuffer handles created
+ * @vkfbs     - Pointer to an array of VkFramebuffer handles
  *            + @vkfb - Framebuffers represent a collection of specific memory attachments that a render pass instance uses.
  */
 struct uvr_vk_framebuffer {

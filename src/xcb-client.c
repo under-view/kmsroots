@@ -16,7 +16,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
   /* Connect to Xserver */
   conn = xcb_connect(uvrxcb->display, uvrxcb->screen);
   if (xcb_connection_has_error(conn)) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_connect Failed");
+    uvr_utils_log(UVR_DANGER, "[x] xcb_connect: xcb_connect Failed");
     if (!uvrxcb->display)
       uvr_utils_log(UVR_INFO, "Try setting the DISPLAY environment variable");
     goto error_exit_xcb_window_create;
@@ -25,7 +25,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
   /* access properties of the X server and its display environment */
   xcbsetup = xcb_get_setup(conn);
   if (!xcbsetup) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_get_setup Failed");
+    uvr_utils_log(UVR_DANGER, "[x] xcb_get_setup: Failed to access properties of the X server and its display environment");
     goto error_exit_xcb_window_disconnect;
   }
 
@@ -40,7 +40,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
    */
   screen = xcb_setup_roots_iterator(xcbsetup).data;
   if (!screen) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_setup_roots_iterator data member NULL");
+    uvr_utils_log(UVR_DANGER, "[x] xcb_setup_roots_iterator: Failed to retrieve connected screen");
     goto error_exit_xcb_window_destroy;
   }
 
@@ -65,7 +65,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
     xcb_ewmh_connection_t xcbewmh = {};
     xcb_intern_atom_cookie_t *cookie = xcb_ewmh_init_atoms(conn, &xcbewmh);
     if (!xcb_ewmh_init_atoms_replies(&xcbewmh, cookie, NULL)) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_create_client: xcb_ewmh_init_atoms_replies Couldn't initialise ewmh atom");
+      uvr_utils_log(UVR_DANGER, "[x] xcb_ewmh_init_atoms_replies: Failed");
       goto error_exit_xcb_window_destroy;
     }
 

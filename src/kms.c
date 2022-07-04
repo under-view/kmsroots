@@ -30,7 +30,7 @@ static int vt_setup(int *kbmode) {
 
     tty_num = strtoul(tty_num_env, &endptr, 10);
     if (tty_num == 0 || *endptr != '\0') {
-      uvr_utils_log(UVR_DANGER, "[x] vt_setup(strtoul): invalid $TTYNO environment variable");
+      uvr_utils_log(UVR_DANGER, "[x] strtoul: invalid $TTYNO environment variable");
       return -1;
     }
 
@@ -47,13 +47,13 @@ static int vt_setup(int *kbmode) {
     * /dev/tty0. */
     tty0 = open("/dev/tty0", O_WRONLY | O_CLOEXEC);
     if (tty0 < 0) {
-      uvr_utils_log(UVR_DANGER, "[x] vt_setup(open('%s')): %s", "/dev/tty0", strerror(errno));
+      uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", "/dev/tty0", strerror(errno));
       return -1;
     }
 
     if (ioctl(tty0, VT_OPENQRY, &tty_num) < 0 || tty_num < 0) {
-      uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl('VT_OPENQRY')): %s", strerror(errno));
-      uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl('VT_OPENQRY')): couldn't get free TTY");
+      uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_OPENQRY): %s", strerror(errno));
+      uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_OPENQRY): couldn't get free TTY");
       close(tty0);
       return -1;
     }
@@ -64,7 +64,7 @@ static int vt_setup(int *kbmode) {
 
   vtfd = open(tty_dev, O_RDWR | O_NOCTTY);
   if (vtfd < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] vt_setup(open('%s')): %s", tty_dev, strerror(errno));
+    uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", tty_dev, strerror(errno));
     return -1;
   }
 
@@ -74,7 +74,7 @@ static int vt_setup(int *kbmode) {
     struct stat buf;
 
     if (fstat(vtfd, &buf) == -1 || major(buf.st_rdev) != TTY_MAJOR) {
-      uvr_utils_log(UVR_DANGER, "[x] vt_setup(fstat() || major()): VT file %s is bad", tty_dev);
+      uvr_utils_log(UVR_DANGER, "[x] fstat() || major(): VT file %s is bad", tty_dev);
       goto error_vt_setup_exit;
     }
 
@@ -88,7 +88,7 @@ static int vt_setup(int *kbmode) {
 
   /* Switch to the target VT. */
   if (ioctl(vtfd, VT_ACTIVATE, tty_num) != 0 || ioctl(vtfd, VT_WAITACTIVE, tty_num) != 0) {
-    uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl(VT_ACTIVATE) || ioctl(VT_WAITACTIVE)): couldn't switch to VT %d", tty_num);
+    uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_ACTIVATE) || ioctl(VT_WAITACTIVE): couldn't switch to VT %d", tty_num);
     goto error_vt_setup_exit;
   }
 
@@ -97,14 +97,14 @@ static int vt_setup(int *kbmode) {
   /* Completely disable kernel keyboard processing: this prevents us
    * from being killed on Ctrl-C. */
   if (ioctl(vtfd, KDGKBMODE, kbmode) != 0 || ioctl(vtfd, KDSKBMODE, K_OFF) != 0) {
-    uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl(KDGKBMODE) || ioctl(KDSKBMODE)): failed to disable TTY keyboard processing");
+    uvr_utils_log(UVR_DANGER, "[x] ioctl(KDGKBMODE) || ioctl(KDSKBMODE): failed to disable TTY keyboard processing");
     goto error_vt_setup_exit;
   }
 
   /* Change the VT into graphics mode, so the kernel no longer prints
    * text out on top of us. */
   if (ioctl(vtfd, KDSETMODE, KD_GRAPHICS) != 0) {
-    uvr_utils_log(UVR_DANGER, "[x] vt_setup(ioctl(KDSETMODE)): failed to switch TTY to graphics mode");
+    uvr_utils_log(UVR_DANGER, "[x] ioctl(KDSETMODE): failed to switch TTY to graphics mode");
     goto error_vt_setup_exit;
   }
 
@@ -145,7 +145,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 #endif
       kmsfd = open(uvrkms->kmsnode, O_RDONLY | O_CLOEXEC, 0);
     if (kmsfd < 0) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_create(open): %s", strerror(errno));
+      uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsnode, strerror(errno));
       goto error_free_kms_dev;
     }
 
@@ -164,7 +164,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
   /* Query list of available kms nodes (GPU) to get the amount available */
   num_devices = drmGetDevices2(0, NULL, num_devices);
   if (num_devices <= 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_create(drmGetDevices2): no KMS devices available");
+    uvr_utils_log(UVR_DANGER, "[x] drmGetDevices2: no KMS devices available");
     goto error_free_kms_dev;
   }
 
@@ -201,7 +201,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 #endif
       kmsfd = open(knode, O_RDONLY | O_CLOEXEC, 0);
     if (kmsfd < 0) {
-      uvr_utils_log(UVR_WARNING, "uvr_kms_node_create(open): %s", strerror(errno));
+      uvr_utils_log(UVR_WARNING, "open('%s'): %s", knode, strerror(errno));
       continue;
     }
 
@@ -322,7 +322,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
   for (unsigned int i = 0; i < drmplaneres->count_planes; i++) {
     planes[i] = drmModeGetPlane(uvrkms->kmsfd, drmplaneres->planes[i]);
     if (!planes[i]) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetPlane): Failed to get plane");
+      uvr_utils_log(UVR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
       goto err_free_disp_planes;
     }
   }
@@ -339,7 +339,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
   for (int i = 0; i < drmres->count_connectors; i++) {
     connector = drmModeGetConnector(uvrkms->kmsfd, drmres->connectors[i]);
     if (!connector) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetConnector): Failed to get connector");
+      uvr_utils_log(UVR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
       goto err_free_disp_planes;
     }
 
@@ -353,7 +353,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
       if (drmres->encoders[e] == connector->encoder_id) {
         encoder = drmModeGetEncoder(uvrkms->kmsfd, drmres->encoders[e]);
         if (!encoder) {
-          uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetEncoder): Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
+          uvr_utils_log(UVR_DANGER, "[x] drmModeGetEncoder: Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
           goto err_free_disp_connector;
         }
         break;
@@ -369,7 +369,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
       if (drmres->crtcs[c] == encoder->crtc_id) {
         crtc = drmModeGetCrtc(uvrkms->kmsfd, drmres->crtcs[c]);
         if (!crtc) {
-          uvr_utils_log(UVR_DANGER, "[x] uvr_kms_node_get_display_output_chain(drmModeGetCrtc): Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
+          uvr_utils_log(UVR_DANGER, "[x] drmModeGetCrtc: Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
           goto err_free_disp_encoder;
         }
         break;

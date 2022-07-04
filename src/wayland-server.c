@@ -11,13 +11,13 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws) {
 
   core.display = wl_display_create();
   if (!core.display) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_ws_core_create(wl_display_create): Failed to create unix socket.");
+    uvr_utils_log(UVR_DANGER, "[x] wl_display_create: Failed to create unix socket.");
     goto exit_ws_core;
   }
 
   core.backend = wlr_backend_autocreate(core.display);
   if (!core.backend) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_ws_core_create(wlr_backend_autocreate): Failed to create backend {DRM/KMS, Wayland, X, Headless}");
+    uvr_utils_log(UVR_DANGER, "[x] wlr_backend_autocreate: Failed to create backend {DRM/KMS, Wayland, X, Headless}");
     goto exit_ws_core_wl_display_destory;
   }
 

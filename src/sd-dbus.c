@@ -31,14 +31,14 @@ static char *find_session_path(sd_bus *bus, char *id) {
                           "org.freedesktop.login1.Manager",
                           "GetSession", &error, &msg, "s", id);
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] find_session_path(sd_bus_call_method): %s", error.message);
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_call_method: %s", error.message);
     goto exit_session_path;
   }
 
   const char *path = NULL;
   ret = sd_bus_message_read(msg, "o", &path);
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] find_session_path(sd_bus_message_read): %s", strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_message_read: %s", strerror(-ret));
     goto exit_session_path;
   }
 
@@ -69,7 +69,7 @@ static int session_activate(sd_bus *bus, char *path) {
                           "org.freedesktop.login1.Session",
                           "Activate", &error, &msg, "");
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] session_activate(sd_bus_call_method): %s", error.message);
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_call_method: %s", error.message);
   }
 
   sd_bus_error_free(&error);
@@ -92,7 +92,7 @@ static int take_control(sd_bus *bus, char *path) {
                           "org.freedesktop.login1.Session",
                           "TakeControl", &error, &msg, "b", false);
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] take_control(sd_bus_call_method): %s", error.message);
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_call_method: %s", error.message);
   }
 
   sd_bus_error_free(&error);
@@ -112,7 +112,7 @@ static void release_session_control(sd_bus *bus, char *path) {
 
   if (sd_bus_call_method(bus, "org.freedesktop.login1", path,
       "org.freedesktop.login1.Session", "ReleaseControl", &error, &msg, "") < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] release_session_control(sd_bus_call_method): %s", error.message);
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_call_method: %s", error.message);
   }
 
   sd_bus_error_free(&error);
@@ -134,14 +134,14 @@ int uvr_sd_session_create(struct uvr_sd_session *uvrsd) {
    */
   ret = sd_uid_get_display(getuid(), &(uvrsd->id));
   if (ret < 0 && ret != -ENODATA) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_uid_get_display): %s", strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] sd_uid_get_display: %s", strerror(-ret));
     return -1;
   }
 
   char *type = NULL; /* Check that the available session type is a tty */
   ret = sd_session_get_type(uvrsd->id, &type);
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_session_get_type): %s", strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] sd_session_get_type: %s", strerror(-ret));
     uvr_utils_log(UVR_DANGER, "[x] Couldn't get a session type for session '%s'", uvrsd->id);
     return -1;
   }
@@ -157,7 +157,7 @@ int uvr_sd_session_create(struct uvr_sd_session *uvrsd) {
   char *seat = NULL;
   ret = sd_session_get_seat(uvrsd->id, &seat);
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_session_get_seat): %s", strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] sd_session_get_seat: %s", strerror(-ret));
     return -1;
   }
 
@@ -166,7 +166,7 @@ int uvr_sd_session_create(struct uvr_sd_session *uvrsd) {
     unsigned vtn;
     /* Check if virtual terminal number exists for this session */
     if (sd_session_get_vt(uvrsd->id, &vtn) < 0) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_session_get_vt): %s", strerror(errno));
+      uvr_utils_log(UVR_DANGER, "[x] sd_session_get_vt: %s", strerror(errno));
       uvr_utils_log(UVR_DANGER, "[x] Session not running in virtual terminal");
       free(seat); return -1;
     }
@@ -178,7 +178,7 @@ start_session:
   /* Connect user to system bus */
   ret = sd_bus_default_system(&(uvrsd->bus));
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_create(sd_bus_default_system): %s", strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_default_system: %s", strerror(-ret));
     uvr_utils_log(UVR_DANGER, "[x] Failed to open D-Bus connection");
     return -1;
   }
@@ -215,7 +215,7 @@ int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const ch
 
   struct stat st;
   if (stat(devpath, &st) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_take_control_of_device(stat): '%s'", devpath);
+    uvr_utils_log(UVR_DANGER, "[x] stat('%s'): %s", devpath, strerror(errno));
     return fd;
   }
 
@@ -225,14 +225,14 @@ int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const ch
                           "TakeDevice", &error, &msg, "uu",
                           major(st.st_rdev), minor(st.st_rdev));
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_take_control_of_device(sd_bus_call_method): '%s': %s", devpath, error.message);
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_call_method('%s'): %s", devpath, error.message);
     goto exit_logind_take_dev;
   }
 
   int paused = 0;
   ret = sd_bus_message_read(msg, "hb", &fd, &paused);
   if (ret < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_take_control_of_device(sd_bus_message_read) '%s': %s", devpath, strerror(-ret));
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_message_read('%s'): %s", devpath, strerror(-ret));
     goto exit_logind_take_dev;
   }
 
@@ -260,13 +260,13 @@ void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd) {
 
   struct stat st;
   if (fstat(fd, &st) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_release_device(fstat): %s", strerror(errno));
+    uvr_utils_log(UVR_DANGER, "[x] fstat: %s", strerror(errno));
     return;
   }
 
   if (sd_bus_call_method(uvrsd->bus, "org.freedesktop.login1", uvrsd->path, "org.freedesktop.login1.Session",
       "ReleaseDevice", &error, &msg, "uu", major(st.st_rdev), minor(st.st_rdev)) < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_sd_session_release_device(sd_bus_call_method): '%d' - %s", fd, error.message);
+    uvr_utils_log(UVR_DANGER, "[x] sd_bus_call_method('%d'): %s", fd, error.message);
   }
 
   sd_bus_error_free(&error);

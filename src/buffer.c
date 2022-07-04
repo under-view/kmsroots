@@ -17,7 +17,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
 
     bois = calloc(uvrbuff->buff_cnt, sizeof(struct uvr_buffer_object));
     if (!bois) {
-      uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(calloc): failed to allocate space for struct uvrbuff_object_info *");
+      uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
       goto exit_uvr_buffer_gbmdev_destroy;
     }
   }
@@ -27,7 +27,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
       bois[b].kmsfd = uvrbuff->kmsfd;
       bois[b].bo = gbm_bo_create(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->gbm_bo_flags);
       if (!bois[b].bo) {
-        uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(gbm_bo_create): failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
+        uvr_utils_log(UVR_DANGER, "[x] gbm_bo_create: failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
         goto exit_uvr_buffer_gbm_bo_detroy;
       }
     }
@@ -38,7 +38,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
       bois[b].kmsfd = uvrbuff->kmsfd;
       bois[b].bo = gbm_bo_create_with_modifiers2(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->modifiers, uvrbuff->modifiers_cnt, uvrbuff->gbm_bo_flags);
       if (!bois[b].bo) {
-        uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(gbm_bo_create_with_modifiers): failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
+        uvr_utils_log(UVR_DANGER, "[x] gbm_bo_create_with_modifiers: failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
         goto exit_uvr_buffer_gbm_bo_detroy;
       }
     }
@@ -77,7 +77,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
 
       /* Retrieve a DMA-BUF fd (PRIME fd) from the GEM handle/name to pass along to other processes */
       if (ioctl(bois[b].kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime_request) == -1)  {
-        uvr_utils_log(UVR_DANGER, "[x] uvr_buffer_create(ioctl): %s", strerror(errno));
+        uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_PRIME_HANDLE_TO_FD): %s", strerror(errno));
         goto exit_uvr_buffer_gbm_bo_detroy;
       }
 
