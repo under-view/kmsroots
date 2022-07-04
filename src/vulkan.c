@@ -852,6 +852,43 @@ exit_vk_command_buffer:
 }
 
 
+int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+
+  VkCommandBufferBeginInfo begin_info = {};
+  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  begin_info.pNext = NULL;
+  begin_info.flags = uvrvk->flags;
+  // We don't use secondary command buffers in API so set to null
+  begin_info.pInheritanceInfo = NULL;
+
+  for (uint32_t i = 0; i < uvrvk->cmdbuff_cnt; i++) {
+    res = vkBeginCommandBuffer(uvrvk->cmdbuffs[i].cmdbuff, &begin_info);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkBeginCommandBuffer: %s", vkres_msg(res));
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+
+int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+
+  for (uint32_t i = 0; i < uvrvk->cmdbuff_cnt; i++) {
+    res = vkEndCommandBuffer(uvrvk->cmdbuffs[i].cmdbuff);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkEndCommandBuffer: %s", vkres_msg(res));
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 

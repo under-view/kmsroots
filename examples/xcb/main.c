@@ -370,6 +370,17 @@ int main(void) {
   app.vkcbuffs = uvr_vk_command_buffer_create(&cmdbuff_info);
   if (!app.vkcbuffs.cmdpool) goto exit_error;
 
+  struct uvr_vk_command_buffer_record_info cbuffrec;
+  cbuffrec.cmdbuff_cnt = app.vkcbuffs.cmdbuff_cnt;
+  cbuffrec.cmdbuffs = app.vkcbuffs.cmdbuffs;
+  cbuffrec.flags = 0;
+
+  if (uvr_vk_command_buffer_record_begin(&cbuffrec) == -1)
+    goto exit_error;
+
+  if (uvr_vk_command_buffer_record_end(&cbuffrec) == -1)
+    goto exit_error;
+
   uvr_xcb_display_window(&xclient);
 
   /* Wait for 5 seconds to display */

@@ -806,6 +806,47 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
 
 
 /*
+ * struct uvr_vk_command_buffer_record_info (Underview Renderer Vulkan Command Buffer Record Information)
+ *
+ * members:
+ * @cmdbuff_cnt - Amount of VkCommandBuffer handles allocated
+ * @cmdbuffs    - Pointer to an array of struct uvrvkcmdbuffer which contains your actual VkCommandBuffer handles to start writing commands to.
+ * @flags       - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
+ */
+struct uvr_vk_command_buffer_record_info {
+  uint32_t cmdbuff_cnt;
+  struct uvrvkcmdbuffer *cmdbuffs;
+  VkCommandBufferUsageFlagBits flags;
+};
+
+
+/*
+ * uvr_vk_command_buffer_record_begin: Function starts command buffer recording. Thus, allowing each command buffer to become writeable.
+ *                                     Allowing for the application to write commands into it. Theses commands are later put into a queue
+ *                                     to be sent off to the GPU.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_command_buffer_record_info
+ * return:
+ *    on success 0
+ *    on failure -1
+ */
+int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info *uvrvk);
+
+
+/*
+ * uvr_vk_command_buffer_record_end: Function stops command buffer to recording. Thus, ending each command buffers ability to accept commands.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_command_buffer_record_info
+ * return:
+ *    on success 0
+ *    on failure -1
+ */
+int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
