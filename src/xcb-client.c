@@ -74,7 +74,16 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
                         &(xcbewmh._NET_WM_STATE_FULLSCREEN));
   }
 
-  return (struct uvr_xcb_window) { .conn = conn, .window = window };
+  /* Instructs the XServer to watch when the window manager attempts to destroy the window. */
+  xcb_intern_atom_cookie_t windelete = xcb_intern_atom(conn, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
+  xcb_intern_atom_cookie_t winprotoscookie = xcb_intern_atom(conn, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
+  xcb_intern_atom_reply_t *windeletereply = xcb_intern_atom_reply(conn, windelete, NULL);
+  xcb_intern_atom_reply_t *winprotosreply = xcb_intern_atom_reply(conn, winprotoscookie, NULL);
+  xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, winprotosreply->atom, 4, 32, 1, &windeletereply->atom);
+
+  free(winprotosreply);
+
+  return (struct uvr_xcb_window) { .conn = conn, .window = window, .delwindow = windeletereply };
 
 error_exit_xcb_window_destroy:
   if (window)
@@ -83,7 +92,7 @@ error_exit_xcb_window_disconnect:
   if (conn)
     xcb_disconnect(conn);
 error_exit_xcb_window_create:
-  return (struct uvr_xcb_window) { .conn = NULL, .window = 0 };
+  return (struct uvr_xcb_window) { .conn = NULL, .window = 0, .delwindow = 0 };
 }
 
 
@@ -95,9 +104,13 @@ void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb) {
 
 int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
   xcb_generic_event_t *event = NULL;
-  xcb_client_message_event_t UNUSED *cm = NULL;
 
   event = xcb_wait_for_event(uvrxcb->conn);
+  if (!event) {
+    uvr_utils_log(UVR_DANGER, "[x] xcb_wait_for_event: Error receiving event");
+    goto error_exit_xcb_window_event_loop;
+  }
+
   switch (event->response_type & ~0x80) {
     case XCB_KEY_PRESS: {
       xcb_key_press_event_t *press = (xcb_key_press_event_t *) event;
@@ -106,6 +119,14 @@ int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
         goto error_exit_xcb_window_event_loop;
       break;
     }
+
+    case XCB_CLIENT_MESSAGE: {
+      xcb_client_message_event_t *message = (xcb_client_message_event_t *) event;
+      if (message->data.data32[0] == uvrxcb->delwindow->atom)
+        goto error_exit_xcb_window_event_loop;
+      break;
+    }
+
     default: /* Unknown event type, ignore it */
       break;
   }
@@ -120,6 +141,7 @@ error_exit_xcb_window_event_loop:
 
 
 void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb) {
+  free(uvrxcb->uvr_xcb_window.delwindow);
   if (uvrxcb->uvr_xcb_window.window)
     xcb_destroy_window(uvrxcb->uvr_xcb_window.conn, uvrxcb->uvr_xcb_window.window);
   if (uvrxcb->uvr_xcb_window.conn)

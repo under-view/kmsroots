@@ -14,10 +14,13 @@
  * @conn       - A structure that contain all data that XCB needs to communicate with an X server.
  * @window     - Stores the XID of the current window. XID is neeed to create
  *               windows and manage its properties
+ * @delwindow  - Used to by uvr_xcb_window_wait_for_event() to verify when the window manager
+ *               attempts to destroy the window.
  */
 struct uvr_xcb_window {
   xcb_connection_t *conn;
   xcb_window_t window;
+  xcb_intern_atom_reply_t *delwindow;
 };
 
 
