@@ -87,7 +87,7 @@ error_exit_xcb_window_create:
 }
 
 
-void uvr_xcb_display_window(struct uvr_xcb_window *uvrxcb) {
+void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb) {
   xcb_map_window(uvrxcb->conn, uvrxcb->window);
   xcb_flush(uvrxcb->conn);
 }

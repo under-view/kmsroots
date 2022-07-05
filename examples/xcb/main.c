@@ -381,7 +381,7 @@ int main(void) {
   if (uvr_vk_command_buffer_record_end(&cbuffrec) == -1)
     goto exit_error;
 
-  uvr_xcb_display_window(&xclient);
+  uvr_xcb_window_display(&xclient);
 
   /* Wait for 5 seconds to display */
   sleep(5);

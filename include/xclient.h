@@ -54,13 +54,13 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 
 
 /*
- * uvr_xcb_display_window: Displays the window
+ * uvr_xcb_window_display: Displays the window
  *
  * args:
  * @client - pointer to a struct uvrwc contains all objects necessary
  *           for an xcb client to run.
  */
-void uvr_xcb_display_window(struct uvr_xcb_window *uvrxcb);
+void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb);
 
 
 /*
