@@ -93,6 +93,32 @@ void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb) {
 }
 
 
+int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
+  xcb_generic_event_t *event = NULL;
+  xcb_client_message_event_t UNUSED *cm = NULL;
+
+  event = xcb_wait_for_event(uvrxcb->conn);
+  switch (event->response_type & ~0x80) {
+    case XCB_KEY_PRESS: {
+      xcb_key_press_event_t *press = (xcb_key_press_event_t *) event;
+      //uvr_utils_log(UVR_INFO, "uvr_xcb_window_wait_for_event: Key pressed %d", press->detail);
+      if (press->detail == 9 || press->detail == 24) /* ESCAPE key, Q key */
+        goto error_exit_xcb_window_event_loop;
+      break;
+    }
+    default: /* Unknown event type, ignore it */
+      break;
+  }
+
+  free(event);
+  return 1;
+
+error_exit_xcb_window_event_loop:
+  free(event);
+  return 0;
+}
+
+
 void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb) {
   if (uvrxcb->uvr_xcb_window.window)
     xcb_destroy_window(uvrxcb->uvr_xcb_window.conn, uvrxcb->uvr_xcb_window.window);

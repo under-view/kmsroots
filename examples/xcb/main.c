@@ -383,8 +383,7 @@ int main(void) {
 
   uvr_xcb_window_display(&xclient);
 
-  /* Wait for 5 seconds to display */
-  sleep(5);
+  while (uvr_xcb_window_wait_for_event(&xclient));
 
 exit_error:
 #ifdef INCLUDE_SHADERC

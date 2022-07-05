@@ -64,6 +64,24 @@ void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb);
 
 
 /*
+ * uvr_xcb_window_wait_for_event: In an X program, everything is driven by events. This functions calls
+ *                                xcb_wait_for_event which blocks until an event is queued in the X server.
+ *                                The main event watched by function is KEY_PRESSING, when either the 'Q'
+ *                                or 'ESC' keys are pressed the function will return failure status. Function
+ *                                is meant to be utilized as a while loop conditional/expression.
+ *
+ *                                https://xcb.freedesktop.org/tutorial/events
+ * args:
+ * @client - pointer to a struct uvrxcb contains all objects necessary for an
+ *           xcb client to run. struct Member used xcb_connection_t *conn.
+ * return:
+ *    on success 1
+ *    on failure 0
+ */
+int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb);
+
+
+/*
  * struct uvrxcb (Underview Renderer XCB Destroy)
  *
  * members:
