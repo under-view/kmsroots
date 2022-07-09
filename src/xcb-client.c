@@ -74,13 +74,21 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
                         &(xcbewmh._NET_WM_STATE_FULLSCREEN));
   }
 
+  /* Change window property to make window fully transparent */
+  if (uvrxcb->transparent) {
+    uint32_t opacity = -1 * 0xffffffff;
+    xcb_intern_atom_cookie_t winopacity = xcb_intern_atom(conn, 0, strlen("_NET_WM_WINDOW_OPACITY"), "_NET_WM_WINDOW_OPACITY");
+    xcb_intern_atom_reply_t *winopacityreply = xcb_intern_atom_reply(conn, winopacity, NULL);
+    xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, winopacityreply->atom, XCB_ATOM_CARDINAL, 32, 1L, &opacity);
+    free(winopacityreply);
+  }
+
   /* Instructs the XServer to watch when the window manager attempts to destroy the window. */
   xcb_intern_atom_cookie_t windelete = xcb_intern_atom(conn, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
   xcb_intern_atom_cookie_t winprotoscookie = xcb_intern_atom(conn, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
   xcb_intern_atom_reply_t *windeletereply = xcb_intern_atom_reply(conn, windelete, NULL);
   xcb_intern_atom_reply_t *winprotosreply = xcb_intern_atom_reply(conn, winprotoscookie, NULL);
   xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, winprotosreply->atom, 4, 32, 1, &windeletereply->atom);
-
   free(winprotosreply);
 
   return (struct uvr_xcb_window) { .conn = conn, .window = window, .delwindow = windeletereply };

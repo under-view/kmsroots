@@ -28,18 +28,20 @@ struct uvr_xcb_window {
  * struct uvr_xcb_window (Underview Renderer XCB Window Create Information)
  *
  * members:
- * @display    - The X server's display name. When set to NULL, the DISPLAY
- *               environment variable is used.
- * @screen     - Number for the screen that should be connected. When set to NULL,
- *               the screen number is set to 0.
- * @appname    - Sets the window name. Can not be more than 60 characters.
- * @fullscreen - Set to true to go fullscreen, false to display normal window.
+ * @display     - The X server's display name. When set to NULL, the DISPLAY
+ *                environment variable is used.
+ * @screen      - Number for the screen that should be connected. When set to NULL,
+ *                the screen number is set to 0.
+ * @appname     - Sets the window name. Can not be more than 60 characters.
+ * @fullscreen  - Set to true to go fullscreen, false to display normal window.
+ * @transparent - Set to true to have fully transparent window. False will display black background.
  */
 struct uvr_xcb_window_create_info {
   const char *display;
   int *screen;
   const char *appname;
   bool fullscreen;
+  bool transparent;
 };
 
 

@@ -62,7 +62,8 @@ int main(void) {
    */
   struct uvr_xcb_window_create_info xcbwin = {
     .display = NULL, .screen = NULL,
-    .appname = "Example App", .fullscreen = true
+    .appname = "Example App", .fullscreen = true,
+    .transparent = false
   };
 
   xclient = uvr_xcb_window_create(&xcbwin);
