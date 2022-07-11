@@ -13,11 +13,11 @@
  * Used to select what core wayland interfaces to bind with a given client
  */
 typedef enum _uvr_wc_interface_type {
-  UVR_WC_NULL_INTERFACE = 0x00000000,
-  UVR_WC_WL_COMPOSITOR_INTERFACE = 0x00000001,
-  UVR_WC_XDG_WM_BASE_INTERFACE = 0x00000002,
-  UVR_WC_WL_SHM_INTERFACE = 0x00000010,
-  UVR_WC_WL_SEAT_INTERFACE = 0x00000020,
+  UVR_WC_NULL_INTERFACE = 0,
+  UVR_WC_WL_COMPOSITOR_INTERFACE = (1 << 1),
+  UVR_WC_XDG_WM_BASE_INTERFACE = (1 << 2),
+  UVR_WC_WL_SHM_INTERFACE = (1 << 4),
+  UVR_WC_WL_SEAT_INTERFACE = (1 << 8),
   UVR_WC_ALL_INTERFACES = 0XFFFFFFFF,
 } uvr_wc_interface_type;
 
@@ -27,27 +27,28 @@ typedef enum _uvr_wc_interface_type {
  *
  * members:
  * @iType      - Wayland interface to include or exclude
- * @display    - A global singleton representing the whole connection to wayland server.
- * @registry   - A global singleton used to query information about server
- * @compositor - A global singleton representing the compositor itself
- *               largely utilized to allocate surfaces & regions to put
- *               pixels into
- * @shell      - An interface/global object that enables clients to turn
- * @wm_base    - An interface/global object that enables clients to turn
- *               their wl_surfaces into windows in a desktop environment.
- * @shm        - Wayland Shared memory interface. Used to create a simple way of getting
- *               pixels from client to compositor. Pixels are stored in an unsigned 8 bit
- *               integer the buffer is created with mmap(2)
- * @seat       - A interface used to represent a group of hot-pluggable input devices
+ * @display    - A global object representing the whole connection to wayland server. This is object ID 1
+ *               which is pre-allocated and can be utilzed to bootstrap all other objects.
+ * @registry   - A global object used to recieve events from the server. Events may include
+ *               monitor hotplugging for instance.
+ * @compositor - A singleton global object representing the compositor itself largely utilized to
+ *               allocate surfaces & regions to put pixels into. The compositor itself will combine
+ *               the contents of multiple surfaces and put them into one displayable output.
+ * @wm_base    - A singleton global object that enables clients to turn their surfaces (rectangle box of pixels)
+ *               into windows in a desktop environment.
+ * @shm        - A singleton global object that provides support for shared memory. Used to create
+ *               a simple way of getting pixels from client to compositor. Pixels are stored in an
+ *               unsigned 8 bit integer the buffer is created with mmap(2).
+ * @seat       - A singleton global objectused to represent a group of hot-pluggable input devices
  */
 struct uvr_wc_core_interface {
   uvr_wc_interface_type iType;
-  struct wl_display *display;
-  struct wl_registry *registry;
-  struct wl_compositor *compositor;
-  struct xdg_wm_base *wm_base;
-  struct wl_shm *shm;
-  struct wl_seat *seat;
+  struct wl_display     *display;
+  struct wl_registry    *registry;
+  struct wl_compositor  *compositor;
+  struct xdg_wm_base    *wm_base;
+  struct wl_shm         *shm;
+  struct wl_seat        *seat;
 };
 
 
@@ -55,7 +56,7 @@ struct uvr_wc_core_interface {
  * struct uvr_wc_core_interface_create_info (Underview Renderer Wayland Client Core Interface Create Information)
  *
  * args:
- * @iType           - Wayland interface to include or exclude
+ * @iType           - Wayland global objects to include or exclude when the registry emits events
  * @wl_display_name - Specify the wayland server unix domain socket a client should communicate with. This
  *                    will set the $WAYLAND_DISPLAY variable to the desired display. Passing NULL will
  *                    result in opening unix domain socket /run/user/1000/wayland-0
@@ -67,11 +68,13 @@ struct uvr_wc_core_interface_create_info {
 
 
 /*
- * uvr_wc_core_interface_create: Establishes connection to the wayland display server and sets up global objects/interfaces.
+ * uvr_wc_core_interface_create: Establishes connection to the wayland display server and sets up client specified
+ *                               global objects that define what requests and events are possible.
  *
  * args:
  * @uvrwc - Pointer to a struct uvr_wc_core_interface_create_info which contains the name of the server
- *          to connected to and the core interfaces to bind/expose to a given client
+ *          to connected to and the core client specified globals to bind to a given client. Only if the
+ *          server supports these globals.
  *
  * return:
  *    on success struct uvr_wc_core_interface
@@ -84,24 +87,24 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
  * struct uvr_wc_buffer (Underview Renderer Wayland Client Buffer)
  *
  * members:
- * @shm_fd        - A file descriptor to an open shm object
- * @shm_pool_size - Size of the amount of bytes in a given buffer pixels
- *                  Value = width * height * bytes_per_pixel * @buffer_count
- * @shm_pool_data - Actual pixel data to be displayed. Buffer created via mmap
- * @shm_pool      - Object used to encapsulate a piece of memory shared between the
- *                  compositor and client. @buffers (wl_buffer) can be created from
- *                  shm_pool.
- * @buffer_count  - The amount of buffers contained in a given memory pool
+ * @buffer_count  - The amount of wayland buffers allocated from a given wl_shm_pool
+ * @shm_fd        - A file descriptor to an open wayland shared memory object
+ * @shm_pool_size - The size of the amount of bytes in a given buffer pixels. [Value = width * height * bytes_per_pixel]
+ * @shm_pool_data - Actual linear buffer to put pixel data into inorder to display. The buffer itself created via mmap
  * @buffers       - An array of type struct wl_buffer. Pixel storage place understood by the compositor.
  */
 struct uvr_wc_buffer {
-  int shm_fd;
-  size_t shm_pool_size;
-  uint8_t *shm_pool_data;
-  struct wl_shm_pool *shm_pool;
-
   int buffer_count;
-  struct wl_buffer **buffers;
+
+  struct uvrwcshmbuf {
+    int shm_fd;
+    size_t shm_pool_size;
+    uint8_t *shm_pool_data;
+  } *uvrwcshmbufs;
+
+  struct uvrwcwlbuf {
+    struct wl_buffer *buffer;
+  } *uvrwcwlbufs;
 };
 
 
@@ -129,7 +132,7 @@ struct uvr_wc_buffer_create_info {
 
 
 /*
- * uvr_wc_buffer_create: Adds way to get pixels from client to compositor by creating writable shared buffers.
+ * uvr_wc_buffer_create: Adds way to get pixels from client to compositor by creating writable shared memory buffers.
  *
  * args:
  * @uvrwc - Must pass a valid pointer to a struct uvr_wc_buffer_create_info which gives
@@ -140,6 +143,16 @@ struct uvr_wc_buffer_create_info {
  *    on failure struct uvr_wc_buffer { with members nulled, integers set to -1 }
  */
 struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrwc);
+
+
+/*
+ * Underview Renderer Implementation
+ * Function pointer used by struct uvr_wc_surface_create_info*
+ * Allows to pass the address of an external function you want to run
+ * Given that the arguments of the function are a pointer to an integer and
+ * a pointer to void data type
+ */
+typedef void (*uvr_renderer_impl)(int*, void*);
 
 
 /*
@@ -154,15 +167,19 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
  *                  a wl_buffer (@buffers) to display pixels on screen. Depending on
  *                  rendering backend wl_buffer may not need to be allocated.
  * @buffer_count  - The amount of buffers contained in a given memory pool
- * @buffers       - An array of type struct wl_buffer *. Pixel storage place understood by compositor.
+ * @uvrwcwlbufs   - An array of type struct wl_buffer *. Pixel storage place understood by compositor.
+ * @running       - Determines if a given window/surface is actively running
  */
 struct uvr_wc_surface {
   struct xdg_toplevel *xdg_toplevel;
   struct xdg_surface *xdg_surface;
   struct wl_surface *surface;
+  struct wl_callback *callback;
 
   int buffer_count;
-  struct wl_buffer **buffers;
+  struct uvrwcwlbuf *uvrwcwlbufs;
+
+  bool running;
 };
 
 
@@ -170,19 +187,27 @@ struct uvr_wc_surface {
  * struct uvr_wc_surface_create_info (Underview Renderer Wayland Client Surface Create Information)
  *
  * members:
- * @uvrwccore  - pointer to a struct uvr_wc_core_interface contains all objects/interfaces
- *               necessary for a client to run.
- * @uvrwcbuff  - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
- *               to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
- *               will be displayed
- * @appname    - Sets the window name.
- * @fullscreen - Determines if window should be fullscreen or not
+ * @uvrwccore    - pointer to a struct uvr_wc_core_interface contains all objects/interfaces
+ *                 necessary for a client to run.
+ * @uvrwcbuff    - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
+ *                 to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
+ *                 will be displayed
+ * @appname      - Sets the window name.
+ * @fullscreen   - Determines if window should be fullscreen or not
+ * @rendererdata - Pointer to an optional address. This address may be the address of a struct. Reference
+ *                 passed depends on external render function.
+ * @renderer     - Function pointer that allows custom external renderers to be executed by the api
+ *                 when before registering a frame wl_callback. Renderer before presenting
  */
 struct uvr_wc_surface_create_info {
   struct uvr_wc_core_interface *uvrwccore;
   struct uvr_wc_buffer *uvrwcbuff;
   const char *appname;
   bool fullscreen;
+
+  int *renderercbuf;
+  void *rendererdata;
+  uvr_renderer_impl renderer;
 };
 
 
@@ -199,31 +224,6 @@ struct uvr_wc_surface_create_info {
  *    on failure struct uvr_wc_surface { with members nulled }
  */
 struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *uvrwc);
-
-
-/*
- * uvr_wc_process_events: Processes incoming Wayland server events.
- *                        Best utilized with epoll(POLLIN)
- *
- * args:
- * @uvrwc - pointer to a struct uvr_wc_core_interface contains all objects/interfaces
- *          necessary for a client to run.
- * return:
- *    -1 on failure
- */
-int uvr_wc_process_events(struct uvr_wc_core_interface *uvrwc);
-
-
-/*
- * uvr_wc_flush_request: Flush all outgoing request to a Wayland server.
- *
- * args:
- * @uvrwc - pointer to a struct uvr_wc_core_interface contains all objects/interfaces
- *          necessary for a client to run.
- * return:
- *    -1 on failure
- */
-int uvr_wc_flush_request(struct uvr_wc_core_interface *uvrwc);
 
 
 /*
