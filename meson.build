@@ -12,7 +12,7 @@ project(
 )
 
 pargs = []
-so_version = ['0']
+so_version = meson.project_version()
 cc = meson.get_compiler('c')
 inc = include_directories('include')
 
