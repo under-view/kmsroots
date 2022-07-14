@@ -79,7 +79,10 @@ if wayland_client.found()
   wayland_protos = dependency('wayland-protocols', required: true)
 
   wayland_protos_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
-  wayland_protos = [ [wayland_protos_dir, 'stable/xdg-shell/xdg-shell.xml'], ]
+  wayland_protos = [
+    [wayland_protos_dir, 'stable/xdg-shell/xdg-shell.xml'],
+    [wayland_protos_dir, 'unstable/fullscreen-shell/fullscreen-shell-unstable-v1.xml' ],
+  ]
 
   # wayland-scanner process these wayland protocols defined
   # in XML files and generate code from them

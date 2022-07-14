@@ -47,7 +47,8 @@ int main(void) {
 
   struct uvr_wc_core_interface_create_info wcinterfaces_info = {
     .wl_display_name = NULL,
-    .iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE | UVR_WC_WL_SHM_INTERFACE | UVR_WC_WL_SEAT_INTERFACE
+    .iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE |
+             UVR_WC_WL_SHM_INTERFACE | UVR_WC_WL_SEAT_INTERFACE | UVR_WC_ZWP_FULLSCREEN_SHELL_V1
   };
 
   wc.wcinterfaces = uvr_wc_core_interface_create(&wcinterfaces_info);

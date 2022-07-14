@@ -9,6 +9,7 @@
 #include <dev/evdev/input-event-codes.h>
 #endif
 
+#include "fullscreen-shell-unstable-v1-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
 #include "wclient.h"
 
@@ -30,7 +31,7 @@ static void registry_handle_global(void *data,
                                    uint32_t version)
 {
 
-//  uvr_utils_log(UVR_INFO, "interface: '%s', version: %d, name: %d", interface, version, name);
+  uvr_utils_log(UVR_INFO, "interface: '%s', version: %d, name: %d", interface, version, name);
 
   struct uvr_wc_core_interface *core = (struct uvr_wc_core_interface *) data;
 
@@ -55,6 +56,12 @@ static void registry_handle_global(void *data,
   if (core->iType & UVR_WC_WL_SEAT_INTERFACE) {
     if (!strcmp(interface, wl_seat_interface.name)) {
       core->seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
+    }
+  }
+
+  if (core->iType & UVR_WC_ZWP_FULLSCREEN_SHELL_V1) {
+    if (!strcmp(interface, "zwp_fullscreen_shell_v1")) {
+      core->fscreen = wl_registry_bind(registry, name, &zwp_fullscreen_shell_v1_interface, version);
     }
   }
 }
@@ -92,7 +99,11 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
     goto core_interface_disconnect_display;
   }
 
-  /* Emit a global event for each global object currently in the registry */
+  /*
+   * Emit a global event for each global object currently in the registry
+   * Bind the wl_registry_listener to a given registry. So that we can implement
+   * how we handle events comming from the wayland server.
+   */
   wl_registry_add_listener(interfaces.registry, &registry_listener, &interfaces);
 
   /* synchronously wait for the server respondes */
@@ -287,6 +298,7 @@ static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED 
   wl_surface_commit(wcsurf->surface);
 }
 
+
 static const struct wl_callback_listener frame_listener = {
   .done = drawframe,
 };
@@ -325,11 +337,19 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
     goto error_create_surf_xdg_surface_destroy;
   }
 
+  /*
+   * Bind the xdg_surface_listener to a given xdg_surface objects. So that we can implement
+   * how we handle events associate with object comming from the wayland server.
+   */
   if (xdg_surface_add_listener(uvrwc_surf.xdg_surface, &xdg_surface_listener, &uvrwc_surf)) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_surface_add_listener: Failed");
     goto error_create_surf_xdg_toplevel_destroy;
   }
 
+  /*
+   * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
+   * how we handle events associate with objects comming from the wayland server.
+   */
   if (xdg_toplevel_add_listener(uvrwc_surf.xdg_toplevel, &xdg_toplevel_listener, &uvrwc_surf)) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_toplevel_add_listener: Failed");
     goto error_create_surf_xdg_toplevel_destroy;
@@ -337,11 +357,9 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
 
   xdg_toplevel_set_title(uvrwc_surf.xdg_toplevel, uvrwc->appname);
 
-  /*
-  TODO
-  if (fullscreen)
-    xdg_toplevel_set_fullscreen(client->xdg_toplevel, client->output);
-  */
+  if (uvrwc->fullscreen && uvrwc->uvrwccore->fscreen) {
+    zwp_fullscreen_shell_v1_present_surface(uvrwc->uvrwccore->fscreen, uvrwc_surf.surface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
+  }
 
   wl_surface_commit(uvrwc_surf.surface);
   rinfo.wait_for_configure = true;
@@ -406,6 +424,8 @@ void uvr_wc_destory(struct uvr_wc_destory *uvrwc) {
     wl_shm_destroy(uvrwc->uvr_wc_core_interface.shm);
   if (uvrwc->uvr_wc_core_interface.wm_base)
     xdg_wm_base_destroy(uvrwc->uvr_wc_core_interface.wm_base);
+  if (uvrwc->uvr_wc_core_interface.fscreen)
+    zwp_fullscreen_shell_v1_release(uvrwc->uvr_wc_core_interface.fscreen);
   if (uvrwc->uvr_wc_core_interface.compositor)
     wl_compositor_destroy(uvrwc->uvr_wc_core_interface.compositor);
   if (uvrwc->uvr_wc_core_interface.registry)

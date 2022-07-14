@@ -13,12 +13,13 @@
  * Used to select what core wayland interfaces to bind with a given client
  */
 typedef enum _uvr_wc_interface_type {
-  UVR_WC_NULL_INTERFACE = 0,
+  UVR_WC_NULL_INTERFACE          = 0x00000000,
   UVR_WC_WL_COMPOSITOR_INTERFACE = (1 << 1),
-  UVR_WC_XDG_WM_BASE_INTERFACE = (1 << 2),
-  UVR_WC_WL_SHM_INTERFACE = (1 << 4),
-  UVR_WC_WL_SEAT_INTERFACE = (1 << 8),
-  UVR_WC_ALL_INTERFACES = 0XFFFFFFFF,
+  UVR_WC_XDG_WM_BASE_INTERFACE   = (1 << 2),
+  UVR_WC_WL_SHM_INTERFACE        = (1 << 4),
+  UVR_WC_WL_SEAT_INTERFACE       = (1 << 8),
+  UVR_WC_ZWP_FULLSCREEN_SHELL_V1 = (1 << 16),
+  UVR_WC_ALL_INTERFACES          = 0XFFFFFFFF,
 } uvr_wc_interface_type;
 
 
@@ -39,16 +40,18 @@ typedef enum _uvr_wc_interface_type {
  * @shm        - A singleton global object that provides support for shared memory. Used to create
  *               a simple way of getting pixels from client to compositor. Pixels are stored in an
  *               unsigned 8 bit integer the buffer is created with mmap(2).
- * @seat       - A singleton global objectused to represent a group of hot-pluggable input devices
+ * @seat       - A singleton global object used to represent a group of hot-pluggable input devices
+ * @fscreen    - A singleton global object that allow for displaying of fullscreen surfaces.
  */
 struct uvr_wc_core_interface {
-  uvr_wc_interface_type iType;
-  struct wl_display     *display;
-  struct wl_registry    *registry;
-  struct wl_compositor  *compositor;
-  struct xdg_wm_base    *wm_base;
-  struct wl_shm         *shm;
-  struct wl_seat        *seat;
+  uvr_wc_interface_type          iType;
+  struct wl_display              *display;
+  struct wl_registry             *registry;
+  struct wl_compositor           *compositor;
+  struct xdg_wm_base             *wm_base;
+  struct wl_shm                  *shm;
+  struct wl_seat                 *seat;
+  struct zwp_fullscreen_shell_v1 *fscreen;
 };
 
 
@@ -164,10 +167,10 @@ typedef void (*uvr_renderer_impl)(int*, void*);
  *                  a tree of surfaces. Provides additional requests for assigning
  *                  roles.
  * @surface       - The image displayed on screen. If wl_shm is binded one must attach
- *                  a wl_buffer (@buffers) to display pixels on screen. Depending on
+ *                  a wl_buffer (struct uvrwcwlbuf) to display pixels on screen. Depending on
  *                  rendering backend wl_buffer may not need to be allocated.
- * @buffer_count  - The amount of buffers contained in a given memory pool
- * @uvrwcwlbufs   - An array of type struct wl_buffer *. Pixel storage place understood by compositor.
+ * @buffer_count  - The amount of pixel (uint8_t) buffers allocated. The array length of struct uvrwcwlbuf.
+ * @uvrwcwlbufs   - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
  * @running       - Determines if a given window/surface is actively running
  */
 struct uvr_wc_surface {
