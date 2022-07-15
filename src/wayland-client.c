@@ -19,6 +19,17 @@ static void noop() {
 }
 
 
+/* Hint to compositor that client hasn't become deadlocked */
+static void xdg_wm_base_ping(void UNUSED *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
+  xdg_wm_base_pong(xdg_wm_base, serial);
+}
+
+
+static const struct xdg_wm_base_listener xdg_wm_base_listener = {
+  .ping = xdg_wm_base_ping,
+};
+
+
 /*
  * Get information about extensions and versions of the Wayland API that the server supports.
  * Binds other wayland server global objects to a client. These objects have interfaces that define
@@ -44,6 +55,7 @@ static void registry_handle_global(void *data,
   if (core->iType & UVR_WC_XDG_WM_BASE_INTERFACE) {
     if (!strcmp(interface, xdg_wm_base_interface.name)) {
       core->wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
+      xdg_wm_base_add_listener(core->wm_base, &xdg_wm_base_listener, NULL);
     }
   }
 
