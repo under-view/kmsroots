@@ -93,14 +93,16 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
 
   uvr_utils_log(UVR_SUCCESS, "Connection to Wayland display established.");
 
+  /*
+   * Emit a global event to retrieve each global object currently supported/in action by the server.
+   */
   interfaces.registry = wl_display_get_registry(interfaces.display);
   if (!interfaces.registry) {
     uvr_utils_log(UVR_DANGER, "[x] wl_display_get_registry: Failed to set global objects/interfaces");
     goto core_interface_disconnect_display;
   }
 
-  /*
-   * Emit a global event for each global object currently in the registry
+   /*
    * Bind the wl_registry_listener to a given registry. So that we can implement
    * how we handle events comming from the wayland server.
    */
@@ -228,35 +230,31 @@ error_uvr_wc_create_buffer_exit:
  * struct uvr_wc_renderer_info (Underview Renderer Wayland Client Render Information)
  *
  * members:
- * @wccore             - Pointer to a struct uvr_wc_core_interface contains all client choosen global objects.
- * @wcsurf             - Pointer to a struct uvr_wc_surface used to get wl_surface object and buffers associate with surface.
- * @rendererdata       - Pointer to an address that can be optional this address is passed to the external render function.
- *                       This address may be the address of a struct. Reference passed depends on external render function.
- * @renderer           - Function pointer that allows custom external renderers to be executed by the api before registering
- *                       a frame wl_callback.
- * @cbuf               - Pointer to an integer used by the api to update the current displayable buffer
+ * @wccore       - Pointer to a struct uvr_wc_core_interface contains all client choosen global objects.
+ * @wcsurf       - Pointer to a struct uvr_wc_surface used to get wl_surface object and buffers associate with surface.
+ * @renderer     - Function pointer that allows custom external renderers to be executed by the api before registering
+ *                 a frame wl_callback.
+ * @rendererdata - Pointer to an address that can be optional this address is passed to the external render function.
+ *                 This address may be the address of a struct. Reference passed depends on external render function.
+ * @cbuf         - Pointer to an integer used by the api to update the current displayable buffer
+ * @running      - Boolean indicating that surface/window is active
  */
 struct uvr_wc_renderer_info {
   struct uvr_wc_core_interface *wccore;
   struct uvr_wc_surface *wcsurf;
-  void *rendererdata;
   uvr_renderer_impl renderer;
-  bool wait_for_configure;
+  void *rendererdata;
   int *cbuf;
+  bool *running;
 };
 
 
 static void drawframe(void *data, struct wl_callback *callback, uint32_t time);
 
 
-static void xdg_surface_handle_configure(void UNUSED *data, struct xdg_surface *xdg_surface, uint32_t serial) {
+static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
+  struct uvr_wc_renderer_info UNUSED *rinfo = (struct uvr_wc_renderer_info *) data;
   xdg_surface_ack_configure(xdg_surface, serial);
-}
-
-
-static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel UNUSED *xdg_toplevel) {
-  struct uvr_wc_surface *uvrwc_surf = (struct uvr_wc_surface *) data;
-  uvrwc_surf->running = false;
 }
 
 
@@ -264,6 +262,12 @@ static const struct xdg_surface_listener xdg_surface_listener = {
   .configure = xdg_surface_handle_configure,
 };
 
+
+/* Handles what happens when a window is closed */
+static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel UNUSED *xdg_toplevel) {
+  struct uvr_wc_renderer_info *rinfo = (struct uvr_wc_renderer_info *) data;
+  *rinfo->running = false;
+}
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
   .configure = noop,
@@ -278,19 +282,19 @@ static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED 
   struct uvr_wc_renderer_info *rinfo = (struct uvr_wc_renderer_info *) data;
   struct uvr_wc_surface *wcsurf = rinfo->wcsurf;
 
-  rinfo->renderer(rinfo->cbuf, rinfo->rendererdata);
+  if (wcsurf->buffer_count)
+    *rinfo->cbuf = (*rinfo->cbuf + 1) % wcsurf->buffer_count;
+
+  rinfo->renderer(rinfo->running, rinfo->cbuf, rinfo->rendererdata);
 
   if (wcsurf->uvrwcwlbufs)
     wl_surface_attach(wcsurf->surface, wcsurf->uvrwcwlbufs[*rinfo->cbuf].buffer, 0, 0);
 
   /* Indicate that the entire surface as changed and needs to be redrawn */
-  // wl_surface_damage_buffer(wcsurf->surface, 0, 0, INT32_MAX, INT32_MAX);
+  wl_surface_damage_buffer(wcsurf->surface, 0, 0, INT32_MAX, INT32_MAX);
 
   if (callback)
     wl_callback_destroy(callback);
-
-  if (wcsurf->buffer_count)
-    *rinfo->cbuf = (*rinfo->cbuf + 1) % wcsurf->buffer_count;
 
   // Register a frame callback to know when we need to draw the next frame
   wcsurf->callback = wl_surface_frame(wcsurf->surface);
@@ -316,6 +320,16 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
     uvrwc_surf.uvrwcwlbufs = uvrwc->uvrwcbuff->uvrwcwlbufs;
   }
 
+  /* Assign pointer and data that a given client suface needs to watch */
+  if (uvrwc->renderer) {
+    rinfo.wccore = uvrwc->uvrwccore;
+    rinfo.wcsurf = &uvrwc_surf;
+    rinfo.renderer = uvrwc->renderer;
+    rinfo.rendererdata = uvrwc->rendererdata;
+    rinfo.cbuf = uvrwc->renderercbuf;
+    rinfo.running = uvrwc->rendererruning;
+  }
+
   /* Use wl_compositor interface to create a wl_surface */
   uvrwc_surf.surface = wl_compositor_create_surface(uvrwc->uvrwccore->compositor);
   if (!uvrwc_surf.surface) {
@@ -323,14 +337,14 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
     goto error_create_surf_exit;
   }
 
-  /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface */
+  /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
   uvrwc_surf.xdg_surface = xdg_wm_base_get_xdg_surface(uvrwc->uvrwccore->wm_base, uvrwc_surf.surface);
   if (!uvrwc_surf.xdg_surface) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_wm_base_get_xdg_surface: Can't create xdg_surface interface");
     goto error_create_surf_wl_surface_destroy;
   }
 
-  /* Create XDG xdg_toplevel interface from which we manage application window from */
+  /* Create xdg_toplevel interface from which we manage application window from */
   uvrwc_surf.xdg_toplevel = xdg_surface_get_toplevel(uvrwc_surf.xdg_surface);
   if (!uvrwc_surf.xdg_toplevel) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_surface_get_toplevel: Can't create xdg_toplevel interface");
@@ -341,7 +355,7 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
    * Bind the xdg_surface_listener to a given xdg_surface objects. So that we can implement
    * how we handle events associate with object comming from the wayland server.
    */
-  if (xdg_surface_add_listener(uvrwc_surf.xdg_surface, &xdg_surface_listener, &uvrwc_surf)) {
+  if (xdg_surface_add_listener(uvrwc_surf.xdg_surface, &xdg_surface_listener, &rinfo)) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_surface_add_listener: Failed");
     goto error_create_surf_xdg_toplevel_destroy;
   }
@@ -350,7 +364,7 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
    * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
    * how we handle events associate with objects comming from the wayland server.
    */
-  if (xdg_toplevel_add_listener(uvrwc_surf.xdg_toplevel, &xdg_toplevel_listener, &uvrwc_surf)) {
+  if (xdg_toplevel_add_listener(uvrwc_surf.xdg_toplevel, &xdg_toplevel_listener, &rinfo)) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_toplevel_add_listener: Failed");
     goto error_create_surf_xdg_toplevel_destroy;
   }
@@ -362,18 +376,9 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
   }
 
   wl_surface_commit(uvrwc_surf.surface);
-  rinfo.wait_for_configure = true;
 
-  if (uvrwc->renderer) {
-    rinfo.wccore = uvrwc->uvrwccore;
-    rinfo.wcsurf = &uvrwc_surf;
-    rinfo.renderer = uvrwc->renderer;
-    rinfo.rendererdata = uvrwc->rendererdata;
-    rinfo.cbuf = uvrwc->renderercbuf;
-
-    // Draw the first frame
-    drawframe(&rinfo, NULL, 0);
-  }
+  // Draw the first frame
+  drawframe(&rinfo, NULL, 0);
 
   return (struct uvr_wc_surface) { .xdg_toplevel = uvrwc_surf.xdg_toplevel, .xdg_surface = uvrwc_surf.xdg_surface, .surface = uvrwc_surf.surface,
                                    .buffer_count = uvrwc_surf.buffer_count, .uvrwcwlbufs = uvrwc_surf.uvrwcwlbufs, .running = true };

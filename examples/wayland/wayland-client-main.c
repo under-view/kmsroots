@@ -18,7 +18,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
 }
 
 
-void render(int *cbuf, void *data) {
+void render(bool UNUSED *running, int *cbuf, void *data) {
   struct uvr_wc *wc = data;
 
   unsigned int width = 3840, height = 2160, bytes_per_pixel = 4;
@@ -65,20 +65,22 @@ int main(void) {
     goto exit_error;
 
   static int cbuf = 0;
+  static bool running = true;
   struct uvr_wc_surface_create_info uvrwcsurf_info = {
     .uvrwccore = &wc.wcinterfaces,
     .uvrwcbuff = &wc.wcbuffs,
-    .appname = "Example Window",
+    .appname = "WL SHM Example Window",
     .fullscreen = true,
     .renderer = &render,
     .rendererdata = &wc,
-    .renderercbuf = &cbuf
+    .renderercbuf = &cbuf,
+    .rendererruning = &running
   };
 
   wc.wcsurf = uvr_wc_surface_create(&uvrwcsurf_info);
   if (!wc.wcsurf.surface) goto exit_error;
 
-  while (wl_display_dispatch(wc.wcinterfaces.display) != -1 && wc.wcsurf.running) {
+  while (wl_display_dispatch(wc.wcinterfaces.display) != -1 && running) {
     // Leave blank
   }
 

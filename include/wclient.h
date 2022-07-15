@@ -155,7 +155,7 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
  * Given that the arguments of the function are a pointer to an integer and
  * a pointer to void data type
  */
-typedef void (*uvr_renderer_impl)(int*, void*);
+typedef void (*uvr_renderer_impl)(bool*, int*, void*);
 
 
 /*
@@ -171,7 +171,6 @@ typedef void (*uvr_renderer_impl)(int*, void*);
  *                  rendering backend wl_buffer may not need to be allocated.
  * @buffer_count  - The amount of pixel (uint8_t) buffers allocated. The array length of struct uvrwcwlbuf.
  * @uvrwcwlbufs   - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
- * @running       - Determines if a given window/surface is actively running
  */
 struct uvr_wc_surface {
   struct xdg_toplevel *xdg_toplevel;
@@ -190,17 +189,19 @@ struct uvr_wc_surface {
  * struct uvr_wc_surface_create_info (Underview Renderer Wayland Client Surface Create Information)
  *
  * members:
- * @uvrwccore    - pointer to a struct uvr_wc_core_interface contains all objects/interfaces
- *                 necessary for a client to run.
- * @uvrwcbuff    - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
- *                 to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
- *                 will be displayed
- * @appname      - Sets the window name.
- * @fullscreen   - Determines if window should be fullscreen or not
- * @rendererdata - Pointer to an optional address. This address may be the address of a struct. Reference
- *                 passed depends on external render function.
- * @renderer     - Function pointer that allows custom external renderers to be executed by the api
- *                 when before registering a frame wl_callback. Renderer before presenting
+ * @uvrwccore      - Pointer to a struct uvr_wc_core_interface contains all objects/interfaces
+ *                   necessary for a client to run.
+ * @uvrwcbuff      - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
+ *                   to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
+ *                   will be displayed
+ * @appname        - Sets the window name.
+ * @fullscreen     - Determines if window should be fullscreen or not
+ * @renderer       - Function pointer that allows custom external renderers to be executed by the api
+ *                   when before registering a frame wl_callback. Renderer before presenting
+ * @rendererdata   - Pointer to an optional address. This address may be the address of a struct. Reference
+ *                   passed depends on external render function.
+ * @renderercbuf   - Pointer to an integer used by the api to update the current displayable buffer
+ * @rendererruning - Pointer to a boolean that determines if a given window/surface is actively running
  */
 struct uvr_wc_surface_create_info {
   struct uvr_wc_core_interface *uvrwccore;
@@ -208,9 +209,10 @@ struct uvr_wc_surface_create_info {
   const char *appname;
   bool fullscreen;
 
-  int *renderercbuf;
-  void *rendererdata;
   uvr_renderer_impl renderer;
+  void *rendererdata;
+  int *renderercbuf;
+  bool *rendererruning;
 };
 
 
