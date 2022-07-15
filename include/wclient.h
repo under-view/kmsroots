@@ -152,8 +152,8 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
  * Underview Renderer Implementation
  * Function pointer used by struct uvr_wc_surface_create_info*
  * Allows to pass the address of an external function you want to run
- * Given that the arguments of the function are a pointer to an integer and
- * a pointer to void data type
+ * Given that the arguments of the function are a pointer to a boolean,
+ * pointer to an integer, and a pointer to void data type
  */
 typedef void (*uvr_renderer_impl)(bool*, int*, void*);
 
@@ -180,8 +180,6 @@ struct uvr_wc_surface {
 
   int buffer_count;
   struct uvrwcwlbuf *uvrwcwlbufs;
-
-  bool running;
 };
 
 

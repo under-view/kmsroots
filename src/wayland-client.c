@@ -381,7 +381,7 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
   drawframe(&rinfo, NULL, 0);
 
   return (struct uvr_wc_surface) { .xdg_toplevel = uvrwc_surf.xdg_toplevel, .xdg_surface = uvrwc_surf.xdg_surface, .surface = uvrwc_surf.surface,
-                                   .buffer_count = uvrwc_surf.buffer_count, .uvrwcwlbufs = uvrwc_surf.uvrwcwlbufs, .running = true };
+                                   .buffer_count = uvrwc_surf.buffer_count, .uvrwcwlbufs = uvrwc_surf.uvrwcwlbufs };
 
 error_create_surf_xdg_toplevel_destroy:
   if (uvrwc_surf.xdg_toplevel)
@@ -394,7 +394,7 @@ error_create_surf_wl_surface_destroy:
     wl_surface_destroy(uvrwc_surf.surface);
 error_create_surf_exit:
   return (struct uvr_wc_surface) { .xdg_toplevel = NULL, .xdg_surface = NULL, .surface = NULL,
-                                   .buffer_count = -1, .uvrwcwlbufs = NULL, .running = true };
+                                   .buffer_count = -1, .uvrwcwlbufs = NULL };
 }
 
 
