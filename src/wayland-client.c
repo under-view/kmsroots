@@ -242,7 +242,7 @@ error_uvr_wc_create_buffer_exit:
  * struct uvr_wc_renderer_info (Underview Renderer Wayland Client Render Information)
  *
  * members:
- * @wccore       - Pointer to a struct uvr_wc_core_interface contains all client choosen global objects.
+ * @wccore       - Pointer to a struct uvr_wc_core_interface contains all client choosen global objects defined in wayland.xml.
  * @wcsurf       - Pointer to a struct uvr_wc_surface used to get wl_surface object and buffers associate with surface.
  * @renderer     - Function pointer that allows custom external renderers to be executed by the api before registering
  *                 a frame wl_callback.
@@ -254,7 +254,7 @@ error_uvr_wc_create_buffer_exit:
 struct uvr_wc_renderer_info {
   struct uvr_wc_core_interface *wccore;
   struct uvr_wc_surface *wcsurf;
-  uvr_renderer_impl renderer;
+  uvr_wc_renderer_impl renderer;
   void *rendererdata;
   int *cbuf;
   bool *running;
@@ -390,7 +390,9 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
   wl_surface_commit(uvrwc_surf.surface);
 
   // Draw the first frame
-  drawframe(&rinfo, NULL, 0);
+  if (uvrwc->renderer) {
+    drawframe(&rinfo, NULL, 0);
+  }
 
   return (struct uvr_wc_surface) { .xdg_toplevel = uvrwc_surf.xdg_toplevel, .xdg_surface = uvrwc_surf.xdg_surface, .surface = uvrwc_surf.surface,
                                    .buffer_count = uvrwc_surf.buffer_count, .uvrwcwlbufs = uvrwc_surf.uvrwcwlbufs };

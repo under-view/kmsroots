@@ -90,11 +90,16 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
  * struct uvr_wc_buffer (Underview Renderer Wayland Client Buffer)
  *
  * members:
- * @buffer_count  - The amount of wayland buffers allocated from a given wl_shm_pool
- * @shm_fd        - A file descriptor to an open wayland shared memory object
- * @shm_pool_size - The size of the amount of bytes in a given buffer pixels. [Value = width * height * bytes_per_pixel]
- * @shm_pool_data - Actual linear buffer to put pixel data into inorder to display. The buffer itself created via mmap
- * @buffers       - An array of type struct wl_buffer. Pixel storage place understood by the compositor.
+ * @buffer_count - The amount of wayland buffers allocated from a given wl_shm_pool
+ * @uvrwcshmbufs - Pointer to an array of struct uvrwcshmbuf containing all information required to
+ *                 populate/release wayland shared memory pixel buffer.
+ *               + @shm_fd        - A file descriptor to an open wayland shared memory object
+ *               + @shm_pool_size - The size of the amount of bytes in a given buffer pixels.
+ *                                  [Value = width * height * bytes_per_pixel]
+ *               + @shm_pool_data - Actual linear buffer to put pixel data into inorder to display.
+ *                                  The buffer itself created via mmap
+ * @uvrwcwlbufs  - Pointer to an array of struct uvrwcwlbuf containing compositor assigned buffer object
+ *               + @buffers       - An array of type struct wl_buffer. Pixel storage place understood by the compositor.
  */
 struct uvr_wc_buffer {
   int buffer_count;
@@ -155,7 +160,7 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
  * Given that the arguments of the function are a pointer to a boolean,
  * pointer to an integer, and a pointer to void data type
  */
-typedef void (*uvr_renderer_impl)(bool*, int*, void*);
+typedef void (*uvr_wc_renderer_impl)(bool*, int*, void*);
 
 
 /*
@@ -207,7 +212,7 @@ struct uvr_wc_surface_create_info {
   const char *appname;
   bool fullscreen;
 
-  uvr_renderer_impl renderer;
+  uvr_wc_renderer_impl renderer;
   void *rendererdata;
   int *renderercbuf;
   bool *rendererruning;
