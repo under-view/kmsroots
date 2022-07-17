@@ -28,7 +28,7 @@ enum uvr_buffer_type {
  * struct uvr_buffer_object (Underview Renderer Buffer Object)
  *
  * members:
- * @bo          - Handle to some GBM backend allocated buffer. Used to get GEM handles, DMA buf fds,
+ * @bo          - Handle to some GBM backend allocated buffer. Used to get GEM handles, DMA buf fds (fd associate with GEM buffer),
  *                pitches, and offsets for the buffer used by DRI device (GPU)
  * @fbid        - Frame buffer ID
  * @format      - The format of an image details how each pixel color channels is laid out in
@@ -48,15 +48,15 @@ enum uvr_buffer_type {
  */
 struct uvr_buffer_object {
   struct gbm_bo *bo;
-  unsigned fbid;
-  unsigned format;
-  uint64_t modifier;
-  unsigned num_planes;
-  unsigned pitches[4];
-  unsigned offsets[4];
-  unsigned gem_handles[4];
-  int dma_buf_fds[4];
-  int kmsfd;
+  unsigned      fbid;
+  unsigned      format;
+  uint64_t      modifier;
+  unsigned      num_planes;
+  unsigned      pitches[4];
+  unsigned      offsets[4];
+  unsigned      gem_handles[4];
+  int           dma_buf_fds[4];
+  int           kmsfd;
 };
 
 
@@ -70,8 +70,8 @@ struct uvr_buffer_object {
  *                about the individual buffer.
  */
 struct uvr_buffer {
-  struct gbm_device *gbmdev;
-  unsigned int buffers_cnt;
+  struct gbm_device        *gbmdev;
+  unsigned int             buffers_cnt;
   struct uvr_buffer_object *buffers;
 };
 
@@ -100,17 +100,16 @@ struct uvr_buffer {
  */
 struct uvr_buffer_create_info {
   enum uvr_buffer_type bType;
-  unsigned int kmsfd;
-
-  unsigned int buff_cnt;
-  unsigned int width;
-  unsigned int height;
-  unsigned int bitdepth;
-  unsigned int bpp;
-  unsigned int gbm_bo_flags;
-  unsigned int pixformat;
-  uint64_t *modifiers;
-  unsigned int modifiers_cnt;
+  unsigned int         kmsfd;
+  unsigned int         buff_cnt;
+  unsigned int         width;
+  unsigned int         height;
+  unsigned int         bitdepth;
+  unsigned int         bpp;
+  unsigned int         gbm_bo_flags;
+  unsigned int         pixformat;
+  uint64_t             *modifiers;
+  unsigned int         modifiers_cnt;
 };
 
 
@@ -142,7 +141,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff);
  *                   }
  */
 struct uvr_buffer_destroy {
-  unsigned uvr_buffer_cnt;
+  unsigned          uvr_buffer_cnt;
   struct uvr_buffer *uvr_buffer;
 };
 

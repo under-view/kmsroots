@@ -27,7 +27,8 @@ typedef enum _uvr_wc_interface_type {
  * struct uvr_wc_core_interface (Underview Renderer Wayland Client Core Interface)
  *
  * members:
- * @iType      - Wayland interface to include or exclude
+ * @iType      - Wayland object to bind to or not. These objects give access to interfaces which defines what requests
+ *               are possible by a given wayland client.
  * @display    - A global object representing the whole connection to wayland server. This is object ID 1
  *               which is pre-allocated and can be utilzed to bootstrap all other objects.
  * @registry   - A global object used to recieve events from the server. Events may include
@@ -66,7 +67,7 @@ struct uvr_wc_core_interface {
  */
 struct uvr_wc_core_interface_create_info {
   uvr_wc_interface_type iType;
-  const char *wl_display_name;
+  const char            *wl_display_name;
 };
 
 
@@ -105,8 +106,8 @@ struct uvr_wc_buffer {
   int buffer_count;
 
   struct uvrwcshmbuf {
-    int shm_fd;
-    size_t shm_pool_size;
+    int     shm_fd;
+    size_t  shm_pool_size;
     uint8_t *shm_pool_data;
   } *uvrwcshmbufs;
 
@@ -131,11 +132,11 @@ struct uvr_wc_buffer {
  */
 struct uvr_wc_buffer_create_info {
   struct uvr_wc_core_interface *uvrwccore;
-  const int buffer_count;
-  const int width;
-  const int height;
-  const int bytes_per_pixel;
-  uint64_t wl_pix_format;
+  int                          buffer_count;
+  int                          width;
+  int                          height;
+  int                          bytes_per_pixel;
+  uint64_t                     wl_pix_format;
 };
 
 
@@ -179,12 +180,11 @@ typedef void (*uvr_wc_renderer_impl)(bool*, int*, void*);
  */
 struct uvr_wc_surface {
   struct xdg_toplevel *xdg_toplevel;
-  struct xdg_surface *xdg_surface;
-  struct wl_surface *surface;
-  struct wl_callback *callback;
-
-  int buffer_count;
-  struct uvrwcwlbuf *uvrwcwlbufs;
+  struct xdg_surface  *xdg_surface;
+  struct wl_surface   *surface;
+  struct wl_callback  *callback;
+  int                 buffer_count;
+  struct uvrwcwlbuf   *uvrwcwlbufs;
 };
 
 
@@ -208,14 +208,13 @@ struct uvr_wc_surface {
  */
 struct uvr_wc_surface_create_info {
   struct uvr_wc_core_interface *uvrwccore;
-  struct uvr_wc_buffer *uvrwcbuff;
-  const char *appname;
-  bool fullscreen;
-
-  uvr_wc_renderer_impl renderer;
-  void *rendererdata;
-  int *renderercbuf;
-  bool *rendererruning;
+  struct uvr_wc_buffer         *uvrwcbuff;
+  const char                   *appname;
+  bool                         fullscreen;
+  uvr_wc_renderer_impl         renderer;
+  void                         *rendererdata;
+  int                          *renderercbuf;
+  bool                         *rendererruning;
 };
 
 
@@ -242,10 +241,10 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
  * @uvr_wc_buffer         - Must pass a valid struct uvr_wc_buffer, to free all allocated memory
  * @uvr_wc_surface        - Must pass a valid struct uvr_wc_surface, to free all allocated memory
  */
-struct uvr_wc_destory {
+struct uvr_wc_destroy {
   struct uvr_wc_core_interface uvr_wc_core_interface;
-  struct uvr_wc_buffer uvr_wc_buffer;
-  struct uvr_wc_surface uvr_wc_surface;
+  struct uvr_wc_buffer         uvr_wc_buffer;
+  struct uvr_wc_surface        uvr_wc_surface;
 };
 
 
@@ -256,6 +255,6 @@ struct uvr_wc_destory {
  * @uvrwc - pointer to a struct uvr_wc contains all objects/interfaces
  *          necessary for an xcb client to run.
  */
-void uvr_wc_destory(struct uvr_wc_destory *uvrwc);
+void uvr_wc_destroy(struct uvr_wc_destroy *uvrwc);
 
 #endif

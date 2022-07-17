@@ -75,7 +75,10 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
         .fd     = -1
       };
 
-      /* Retrieve a DMA-BUF fd (PRIME fd) from the GEM handle/name to pass along to other processes */
+      /*
+       * Retrieve a DMA-BUF fd (PRIME fd) for a given GEM buffer via the GEM handle.
+       * This fd can be passed along to other processes
+       */
       if (ioctl(bois[b].kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime_request) == -1)  {
         uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_PRIME_HANDLE_TO_FD): %s", strerror(errno));
         goto exit_uvr_buffer_gbm_bo_detroy;

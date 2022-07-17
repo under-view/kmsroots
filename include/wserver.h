@@ -17,7 +17,7 @@
  *            Utilized by wlroots when initializing compositor outputs.
  */
 struct uvr_ws_core {
-  struct wl_display *display;
+  struct wl_display  *display;
   struct wlr_backend *backend;
 };
 

@@ -45,9 +45,9 @@
 struct uvr_kms_node_create_info {
 #ifdef INCLUDE_SDBUS
   struct uvr_sd_session *uvr_sd_session;
-  bool use_logind;
+  bool                  use_logind;
 #endif
-  const char *kmsnode;
+  const char            *kmsnode;
 };
 
 
@@ -62,12 +62,12 @@ struct uvr_kms_node_create_info {
  * @use_logind     - Stores whether systemd-logind is utilized or not
  */
 struct uvr_kms_node {
-  int kmsfd;
-  int vtfd;
-  int kbmode;
+  int                   kmsfd;
+  int                   vtfd;
+  int                   kbmode;
 #ifdef INCLUDE_SDBUS
   struct uvr_sd_session *uvr_sd_session;
-  bool use_logind;
+  bool                  use_logind;
 #endif
 };
 
@@ -134,9 +134,9 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  */
 struct uvr_kms_node_display_output_chain {
   drmModeConnector *connector;
-  drmModeEncoder *encoder;
-  drmModeCrtc *crtc;
-  drmModePlane *plane;
+  drmModeEncoder   *encoder;
+  drmModeCrtc      *crtc;
+  drmModePlane     *plane;
 };
 
 
@@ -178,7 +178,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  *                                      about KMS device node connector->encoder->crtc->plane pair
  */
 struct uvr_kms_node_destroy {
-  struct uvr_kms_node uvr_kms_node;
+  struct uvr_kms_node                      uvr_kms_node;
   struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
 };
 

@@ -22,7 +22,7 @@ struct uvr_shader_file {
  *                       free'd with a call to uvr_shader_destroy(3).
  *
  * args:
- * @filename - Must pass file to load
+ * @filename - Must pass path to file to load
  * return:
  *    on success struct uvr_shader_file
  *    on failure struct uvr_shader_file { with member nulled }
@@ -43,15 +43,15 @@ struct uvr_shader_file uvr_shader_file_load(const char *filename);
  * See: https://github.com/google/shaderc/blob/main/libshaderc/include/shaderc/shaderc.h#L478 for more information
  * @kind        - Used to specify what type of shader to create SPIR-V bytes from
  *                key: VkShaderStageFlagBits, value: shaderc_shader_kind
- * @source      - char buffer containing actual shader code
+ * @source      - Pointer to a buffer containing actual shader code
  * @filename    - Used as a tag to identify the source string
  * @entry_point - Used to define the function name in the GLSL source that acts as an entry point for the shader
  */
 struct uvr_shader_spirv_create_info {
   unsigned int kind;
-  const char *source;
-  const char *filename;
-  const char *entry_point;
+  const char   *source;
+  const char   *filename;
+  const char   *entry_point;
 };
 
 
@@ -66,8 +66,8 @@ struct uvr_shader_spirv_create_info {
  */
 struct uvr_shader_spirv {
   shaderc_compilation_result_t result;
-  char *bytes;
-  long bsize;
+  char                         *bytes;
+  long                         bsize;
 };
 
 
@@ -100,7 +100,7 @@ struct uvr_shader_destroy {
 #ifdef INCLUDE_SHADERC
   struct uvr_shader_spirv uvr_shader_spirv;
 #endif
-  struct uvr_shader_file uvr_shader_file;
+  struct uvr_shader_file  uvr_shader_file;
 };
 
 

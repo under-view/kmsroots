@@ -1,6 +1,6 @@
 # libunderview-renderer
 
-[wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositing library with an out-of-tree vulkan based renderer. Can also we used to build
+[wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositing library with an out-of-tree vulkan based renderer. Can also be used to build
 xcb and wayland clients.
 
 For better dependency version control underview builds all packages required from source. Follow
@@ -23,8 +23,11 @@ $ meson compile -C build
 
 **Running Examples**
 ```sh
-$ ./build/examples/underview-renderer-xcb
-$ ./build/examples/underview-renderer-wayland
+# Client examples
+$ ./build/examples/underview-renderer-xcb-client-*
+$ ./build/examples/underview-renderer-wayland-client-*
+
+# KMS examples
 $ WLR_BACKENDS="drm" ./build/examples/underview-renderer-wayland-comp
 
 # https://github.com/swaywm/wlroots/wiki/DRM-Debugging

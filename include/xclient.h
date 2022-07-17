@@ -18,8 +18,8 @@
  *               attempts to destroy the window.
  */
 struct uvr_xcb_window {
-  xcb_connection_t *conn;
-  xcb_window_t window;
+  xcb_connection_t        *conn;
+  xcb_window_t            window;
   xcb_intern_atom_reply_t *delwindow;
 };
 
@@ -38,10 +38,10 @@ struct uvr_xcb_window {
  */
 struct uvr_xcb_window_create_info {
   const char *display;
-  int *screen;
+  int        *screen;
   const char *appname;
-  bool fullscreen;
-  bool transparent;
+  bool       fullscreen;
+  bool       transparent;
 };
 
 

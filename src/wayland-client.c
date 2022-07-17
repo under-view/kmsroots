@@ -412,7 +412,7 @@ error_create_surf_exit:
 }
 
 
-void uvr_wc_destory(struct uvr_wc_destory *uvrwc) {
+void uvr_wc_destroy(struct uvr_wc_destroy *uvrwc) {
 
   /* Destroy all wayland client surface interfaces/objects */
   if (uvrwc->uvr_wc_surface.xdg_toplevel)

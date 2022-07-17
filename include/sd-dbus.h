@@ -26,8 +26,8 @@
  */
 struct uvr_sd_session {
   sd_bus *bus;
-  char *id;
-  char *path;
+  char   *id;
+  char   *path;
 };
 
 
