@@ -137,15 +137,15 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
   drmDevice **devices = NULL;
 
   /* If the const char *kmsnode member is defined attempt to open it */
-  if (uvrkms->kmsnode) {
+  if (uvrkms->kmsNode) {
 #ifdef INCLUDE_SDBUS
-    if (uvrkms->use_logind)
-      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, uvrkms->kmsnode);
+    if (uvrkms->useLogind)
+      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, uvrkms->kmsNode);
     else
 #endif
-      kmsfd = open(uvrkms->kmsnode, O_RDONLY | O_CLOEXEC, 0);
+      kmsfd = open(uvrkms->kmsNode, O_RDONLY | O_CLOEXEC, 0);
     if (kmsfd < 0) {
-      uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsnode, strerror(errno));
+      uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsNode, strerror(errno));
       goto error_free_kms_dev;
     }
 
@@ -153,10 +153,10 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
     if (vtfd == -1)
       goto error_free_kms_dev;
 
-    uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsnode, kmsfd);
-    return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
+    uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsNode, kmsfd);
+    return (struct uvr_kms_node) { .kmsFd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
 #ifdef INCLUDE_SDBUS
-      , .uvr_sd_session = uvrkms->uvr_sd_session, .use_logind = uvrkms->use_logind
+      , .uvr_sd_session = uvrkms->uvr_sd_session, .useLogind = uvrkms->useLogind
 #endif
     };
   }
@@ -182,7 +182,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
   for (int i = 0; i < num_devices; i++) {
     candidate = devices[i];
-    knode = (uvrkms->kmsnode) ? (char*) uvrkms->kmsnode : candidate->nodes[DRM_NODE_PRIMARY];
+    knode = (uvrkms->kmsNode) ? (char*) uvrkms->kmsNode : candidate->nodes[DRM_NODE_PRIMARY];
 
     /*
      * TAKEN FROM Daniel Stone (gitlab/kms-quads)
@@ -195,7 +195,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
       continue;
 
 #ifdef INCLUDE_SDBUS
-    if (uvrkms->use_logind)
+    if (uvrkms->useLogind)
       kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, knode);
     else
 #endif
@@ -240,9 +240,9 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
     if (vtfd == -1)
       goto error_free_kms_dev;
 
-    return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
+    return (struct uvr_kms_node) { .kmsFd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
 #ifdef INCLUDE_SDBUS
-      , .uvr_sd_session = uvrkms->uvr_sd_session, .use_logind = uvrkms->use_logind
+      , .uvr_sd_session = uvrkms->uvr_sd_session, .useLogind = uvrkms->useLogind
 #endif
     };
   }
@@ -250,7 +250,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 error_free_kms_dev:
   if (kmsfd != -1) {
 #ifdef INCLUDE_SDBUS
-    if (uvrkms->use_logind)
+    if (uvrkms->useLogind)
       uvr_sd_session_release_device(uvrkms->uvr_sd_session, kmsfd);
     else
 #endif
@@ -259,9 +259,9 @@ error_free_kms_dev:
   if (devices)
     drmFreeDevices(devices, num_devices);
 
-  return (struct uvr_kms_node) { .kmsfd = -1, .vtfd = -1, .kbmode = -1
+  return (struct uvr_kms_node) { .kmsFd = -1, .vtfd = -1, .kbmode = -1
 #ifdef INCLUDE_SDBUS
-      , .uvr_sd_session = NULL, .use_logind = false
+      , .uvr_sd_session = NULL, .useLogind = false
 #endif
   };
 }
@@ -294,15 +294,15 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
   drmModePlaneRes *drmplaneres = NULL;
 
   /* Query connector->encoder->crtc->plane properties */
-  drmres = drmModeGetResources(uvrkms->kmsfd);
+  drmres = drmModeGetResources(uvrkms->kmsFd);
   if (!drmres) {
-    uvr_utils_log(UVR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", uvrkms->kmsfd);
+    uvr_utils_log(UVR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", uvrkms->kmsFd);
     goto err_ret_null_chain_output;
   }
 
-  drmplaneres = drmModeGetPlaneResources(uvrkms->kmsfd);
+  drmplaneres = drmModeGetPlaneResources(uvrkms->kmsFd);
   if (!drmplaneres) {
-    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no planes", uvrkms->kmsfd);
+    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no planes", uvrkms->kmsFd);
     goto err_res;
   }
 
@@ -311,7 +311,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
       drmres->count_connectors  <= 0 ||
       drmres->count_encoders    <= 0 ||
       drmplaneres->count_planes <= 0) {
-    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no display output chain", uvrkms->kmsfd);
+    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no display output chain", uvrkms->kmsFd);
     goto err_plane_res;
   }
 
@@ -320,7 +320,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
   memset(planes, 0, drmplaneres->count_planes * sizeof(drmModePlane));
 
   for (unsigned int i = 0; i < drmplaneres->count_planes; i++) {
-    planes[i] = drmModeGetPlane(uvrkms->kmsfd, drmplaneres->planes[i]);
+    planes[i] = drmModeGetPlane(uvrkms->kmsFd, drmplaneres->planes[i]);
     if (!planes[i]) {
       uvr_utils_log(UVR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
       goto err_free_disp_planes;
@@ -337,7 +337,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
   drmModePlane *plane = NULL;
 
   for (int i = 0; i < drmres->count_connectors; i++) {
-    connector = drmModeGetConnector(uvrkms->kmsfd, drmres->connectors[i]);
+    connector = drmModeGetConnector(uvrkms->kmsFd, drmres->connectors[i]);
     if (!connector) {
       uvr_utils_log(UVR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
       goto err_free_disp_planes;
@@ -351,7 +351,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
     /* Find the encoder (a deprecated KMS object) for this connector. */
     for (int e = 0; e < drmres->count_encoders; e++) {
       if (drmres->encoders[e] == connector->encoder_id) {
-        encoder = drmModeGetEncoder(uvrkms->kmsfd, drmres->encoders[e]);
+        encoder = drmModeGetEncoder(uvrkms->kmsFd, drmres->encoders[e]);
         if (!encoder) {
           uvr_utils_log(UVR_DANGER, "[x] drmModeGetEncoder: Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
           goto err_free_disp_connector;
@@ -367,7 +367,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
     for (int c = 0; c < drmres->count_crtcs; c++) {
       if (drmres->crtcs[c] == encoder->crtc_id) {
-        crtc = drmModeGetCrtc(uvrkms->kmsfd, drmres->crtcs[c]);
+        crtc = drmModeGetCrtc(uvrkms->kmsFd, drmres->crtcs[c]);
         if (!crtc) {
           uvr_utils_log(UVR_DANGER, "[x] drmModeGetCrtc: Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
           goto err_free_disp_encoder;
@@ -456,14 +456,14 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms) {
     drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
   if (uvrkms->uvr_kms_node_display_output_chain.connector)
     drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
-  if (uvrkms->uvr_kms_node.kmsfd != -1) {
+  if (uvrkms->uvr_kms_node.kmsFd != -1) {
     if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.kbmode != -1)
       vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.kbmode);
 #ifdef INCLUDE_SDBUS
-    if (uvrkms->uvr_kms_node.use_logind)
-      uvr_sd_session_release_device(uvrkms->uvr_kms_node.uvr_sd_session, uvrkms->uvr_kms_node.kmsfd);
+    if (uvrkms->uvr_kms_node.useLogind)
+      uvr_sd_session_release_device(uvrkms->uvr_kms_node.uvr_sd_session, uvrkms->uvr_kms_node.kmsFd);
     else
 #endif
-      close(uvrkms->uvr_kms_node.kmsfd);
+      close(uvrkms->uvr_kms_node.kmsFd);
   }
 }

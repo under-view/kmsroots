@@ -26,10 +26,10 @@ struct uvr_ws_core {
  * struct uvr_ws_core_create_info (Underview Renderer Wayland Server Core Create Info)
  *
  * members:
- * @inc_wlr_debug_logs - Determines whether or not wlroots DEBUG logs are enabled/disabled
+ * @incWlrootsDebugLogs - Determines whether or not wlroots DEBUG logs are enabled/disabled
  */
 struct uvr_ws_core_create_info {
-  bool inc_wlr_debug_logs;
+  bool incWlrootsDebugLogs;
 };
 
 

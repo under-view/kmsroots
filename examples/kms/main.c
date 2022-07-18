@@ -97,8 +97,8 @@ int create_vk_instance(struct uvr_vk *app) {
    * Create Vulkan Instance
    */
   struct uvr_vk_instance_create_info vk_instance_info;
-  vk_instance_info.app_name = "Example App";
-  vk_instance_info.engine_name = "No Engine";
+  vk_instance_info.appName = "Example App";
+  vk_instance_info.engineName = "No Engine";
   vk_instance_info.enabledLayerCount = ARRAY_LEN(validation_layers);
   vk_instance_info.ppEnabledLayerNames = validation_layers;
   vk_instance_info.enabledExtensionCount = ARRAY_LEN(instance_extensions);
@@ -120,23 +120,23 @@ int create_kms_node(struct uvr_kms *kms) {
     return -1;
 
   kmsnodeinfo.uvr_sd_session = &(kms->uvrsd);
-  kmsnodeinfo.use_logind = true;
+  kmsnodeinfo.useLogind = true;
 #endif
 
-  kmsnodeinfo.kmsnode = NULL;
+  kmsnodeinfo.kmsNode = NULL;
   kms->kmsdev = uvr_kms_node_create(&kmsnodeinfo);
-  if (kms->kmsdev.kmsfd == -1)
+  if (kms->kmsdev.kmsFd == -1)
     return -1;
 
   struct uvr_kms_node_display_output_chain_create_info dochain_info;
-  dochain_info.kmsfd = kms->kmsdev.kmsfd;
+  dochain_info.kmsFd = kms->kmsdev.kmsFd;
 
   kms->dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
   if (!kms->dochain.connector || !kms->dochain.encoder || !kms->dochain.crtc || !kms->dochain.plane)
     return -1;
 
   struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
-  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kms->kmsdev.kmsfd);
+  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kms->kmsdev.kmsFd);
 
   return 0;
 }
@@ -145,16 +145,16 @@ int create_kms_node(struct uvr_kms *kms) {
 int create_gbm_buffers(struct uvr_kms *kms) {
   struct uvr_buffer_create_info kms_buffs_info;
   kms_buffs_info.bType = UINT32_MAX;
-  kms_buffs_info.kmsfd = kms->kmsdev.kmsfd;
-  kms_buffs_info.buff_cnt = 2;
+  kms_buffs_info.kmsFd = kms->kmsdev.kmsFd;
+  kms_buffs_info.bufferCount = 2;
   kms_buffs_info.width = 3840;
   kms_buffs_info.height = 2160;
   kms_buffs_info.bitdepth = 24;
   kms_buffs_info.bpp = 32;
-  kms_buffs_info.gbm_bo_flags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
+  kms_buffs_info.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
   kms_buffs_info.pixformat = GBM_BO_FORMAT_XRGB8888;
   kms_buffs_info.modifiers = NULL;
-  kms_buffs_info.modifiers_cnt = 0;
+  kms_buffs_info.modifierCount = 0;
   kms_buffs_info.bType = GBM_BUFFER;
 
   kms->kmsbuffs = uvr_buffer_create(&kms_buffs_info);
@@ -182,35 +182,35 @@ int create_vk_device(struct uvr_vk *app, struct uvr_kms *kms) {
    * as it can actually effect VkPhysicalDevice creation
    */
   struct uvr_vk_phdev_create_info vk_phdev_info;
-  vk_phdev_info.vkinst = app->instance;
-  vk_phdev_info.vkpdtype = VK_PHYSICAL_DEVICE_TYPE;
-  vk_phdev_info.kmsfd = kms->kmsdev.kmsfd;
+  vk_phdev_info.vkInst = app->instance;
+  vk_phdev_info.vkPhdevType = VK_PHYSICAL_DEVICE_TYPE;
+  vk_phdev_info.kmsFd = kms->kmsdev.kmsFd;
 
   app->phdev = uvr_vk_phdev_create(&vk_phdev_info);
   if (!app->phdev)
     return -1;
 
   struct uvr_vk_queue_create_info vk_queue_info;
-  vk_queue_info.phdev = app->phdev;
+  vk_queue_info.vkPhdev = app->phdev;
   vk_queue_info.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
   app->graphics_queue = uvr_vk_queue_create(&vk_queue_info);
-  if (app->graphics_queue.famindex == -1)
+  if (app->graphics_queue.familyIndex == -1)
     return -1;
 
   VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app->phdev);
 
   struct uvr_vk_lgdev_create_info vk_lgdev_info;
-  vk_lgdev_info.vkinst = app->instance;
-  vk_lgdev_info.phdev = app->phdev;
+  vk_lgdev_info.vkInst = app->instance;
+  vk_lgdev_info.vkPhdev = app->phdev;
   vk_lgdev_info.pEnabledFeatures = &phdevfeats;
   vk_lgdev_info.enabledExtensionCount = ARRAY_LEN(device_extensions);
   vk_lgdev_info.ppEnabledExtensionNames = device_extensions;
-  vk_lgdev_info.numqueues = 1;
+  vk_lgdev_info.queueCount = 1;
   vk_lgdev_info.queues = &app->graphics_queue;
 
   app->lgdev = uvr_vk_lgdev_create(&vk_lgdev_info);
-  if (!app->lgdev.device)
+  if (!app->lgdev.vkDevice)
     return -1;
 
   return 0;

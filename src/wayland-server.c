@@ -3,7 +3,7 @@
 
 
 struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws) {
-  if (uvrws->inc_wlr_debug_logs)
+  if (uvrws->incWlrootsDebugLogs)
     wlr_log_init(WLR_DEBUG, NULL);
 
   struct uvr_ws_core core;

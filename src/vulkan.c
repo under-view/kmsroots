@@ -102,9 +102,9 @@ VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk) {
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   app_info.pNext = NULL;
-  app_info.pApplicationName = uvrvk->app_name;
+  app_info.pApplicationName = uvrvk->appName;
   app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.pEngineName = uvrvk->engine_name;
+  app_info.pEngineName = uvrvk->engineName;
   app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
   app_info.apiVersion = VK_MAKE_VERSION(1, 3, 0);
 
@@ -146,7 +146,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
   VkResult UNUSED res = VK_RESULT_MAX_ENUM;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-  if (!uvrvk->vkinst) {
+  if (!uvrvk->vkInst) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_surface_create: VkInstance not instantiated");
     uvr_utils_log(UVR_DANGER, "[x] Make a call to uvr_vk_create_instance");
     return VK_NULL_HANDLE;
@@ -166,7 +166,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
     create_info.display = uvrvk->display;
     create_info.surface = uvrvk->surface;
 
-    res = vkCreateWaylandSurfaceKHR(uvrvk->vkinst, &create_info, NULL, &surface);
+    res = vkCreateWaylandSurfaceKHR(uvrvk->vkInst, &create_info, NULL, &surface);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkCreateWaylandSurfaceKHR: %s", vkres_msg(res));
       return VK_NULL_HANDLE;
@@ -183,7 +183,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
     create_info.connection = uvrvk->display;
     create_info.window = uvrvk->window;
 
-    res = vkCreateXcbSurfaceKHR(uvrvk->vkinst, &create_info, NULL, &surface);
+    res = vkCreateXcbSurfaceKHR(uvrvk->vkInst, &create_info, NULL, &surface);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkCreateXcbSurfaceKHR: %s", vkres_msg(res));
       return VK_NULL_HANDLE;
@@ -205,13 +205,13 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
   uint32_t device_count = 0;
   VkPhysicalDevice *devices = NULL;
 
-  if (!uvrvk->vkinst) {
+  if (!uvrvk->vkInst) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev: VkInstance not instantiated");
     uvr_utils_log(UVR_DANGER, "[x] Make a call to uvr_vk_create_instance");
     return VK_NULL_HANDLE;
   }
 
-  res = vkEnumeratePhysicalDevices(uvrvk->vkinst, &device_count, NULL);
+  res = vkEnumeratePhysicalDevices(uvrvk->vkInst, &device_count, NULL);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
     return VK_NULL_HANDLE;
@@ -224,7 +224,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
 
   devices = (VkPhysicalDevice *) alloca((device_count * sizeof(VkPhysicalDevice)) + 1);
 
-  res = vkEnumeratePhysicalDevices(uvrvk->vkinst, &device_count, devices);
+  res = vkEnumeratePhysicalDevices(uvrvk->vkInst, &device_count, devices);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
     return VK_NULL_HANDLE;
@@ -233,9 +233,9 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
 #ifdef INCLUDE_KMS
   /* Get KMS fd stats */
   struct stat drm_stat = {0};
-  if (uvrvk->kmsfd != -1) {
-    if (fstat(uvrvk->kmsfd, &drm_stat) == -1) {
-      uvr_utils_log(UVR_DANGER, "[x] fstat('%d'): %s", uvrvk->kmsfd, strerror(errno));
+  if (uvrvk->kmsFd != -1) {
+    if (fstat(uvrvk->kmsFd, &drm_stat) == -1) {
+      uvr_utils_log(UVR_DANGER, "[x] fstat('%d'): %s", uvrvk->kmsFd, strerror(errno));
       return VK_NULL_HANDLE;
     }
   }
@@ -262,7 +262,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
     vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
 
 #ifdef INCLUDE_KMS
-    if (uvrvk->kmsfd) {
+    if (uvrvk->kmsFd) {
       devprops2.pNext = &drm_props;
       vkGetPhysicalDeviceProperties2(devices[i], &devprops2);
 
@@ -276,12 +276,12 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
        * Need to make sure even if we have a valid DRI device node fd.
        * That the customer choosen device type is the same as the DRI device node.
        */
-      enter |= ((primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev) && devprops.deviceType == uvrvk->vkpdtype);
+      enter |= ((primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev) && devprops.deviceType == uvrvk->vkPhdevType);
     }
 #endif
 
     /* Enter will be one if condition succeeds */
-    enter |= (devprops.deviceType == uvrvk->vkpdtype);
+    enter |= (devprops.deviceType == uvrvk->vkPhdevType);
     if (enter) {
       memmove(&device, &devices[i], sizeof(devices[i]));
       uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s, api version: %u", devprops.deviceName, devprops.apiVersion);
@@ -323,42 +323,42 @@ struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk) 
    * Almost every operation in Vulkan, requires commands to be submitted to a queue
    * Find queue family index for a given queue
    */
-  vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->phdev, &queue_count, NULL);
+  vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->vkPhdev, &queue_count, NULL);
   queue_families = (VkQueueFamilyProperties *) alloca(queue_count * sizeof(VkQueueFamilyProperties));
-  vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->phdev, &queue_count, queue_families);
+  vkGetPhysicalDeviceQueueFamilyProperties(uvrvk->vkPhdev, &queue_count, queue_families);
 
   for (uint32_t i = 0; i < queue_count; i++) {
     queue.queueCount = queue_families[i].queueCount;
     if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_GRAPHICS_BIT) {
       strncpy(queue.name, "graphics", sizeof(queue.name));
-      queue.famindex = i; break;
+      queue.familyIndex = i; break;
     }
 
     if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_COMPUTE_BIT) {
       strncpy(queue.name, "compute", sizeof(queue.name));
-      queue.famindex = i; break;
+      queue.familyIndex = i; break;
     }
 
     if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_TRANSFER_BIT) {
       strncpy(queue.name, "transfer", sizeof(queue.name));
-      queue.famindex = i; break;
+      queue.familyIndex = i; break;
     }
 
     if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_SPARSE_BINDING_BIT) {
       strncpy(queue.name, "sparse_binding", sizeof(queue.name));
-      queue.famindex = i; break;
+      queue.familyIndex = i; break;
     }
 
     if (queue_families[i].queueFlags & uvrvk->queueFlag & VK_QUEUE_PROTECTED_BIT) {
       strncpy(queue.name, "protected", sizeof(queue.name));
-      queue.famindex = i; break;
+      queue.familyIndex = i; break;
     }
   }
 
   return queue;
 
 err_vk_queue_create:
-  return (struct uvr_vk_queue) { .name[0] = '\0', .queue = VK_NULL_HANDLE, .famindex = -1, .queueCount = -1 };
+  return (struct uvr_vk_queue) { .name[0] = '\0', .vkQueue = VK_NULL_HANDLE, .familyIndex = -1, .queueCount = -1 };
 }
 
 
@@ -366,7 +366,7 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) 
   VkDevice device = VK_NULL_HANDLE;
   VkResult res = VK_RESULT_MAX_ENUM;
 
-  VkDeviceQueueCreateInfo *pQueueCreateInfo = (VkDeviceQueueCreateInfo *) calloc(uvrvk->numqueues, sizeof(VkDeviceQueueCreateInfo));
+  VkDeviceQueueCreateInfo *pQueueCreateInfo = (VkDeviceQueueCreateInfo *) calloc(uvrvk->queueCount, sizeof(VkDeviceQueueCreateInfo));
   if (!pQueueCreateInfo) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto err_vk_lgdev_create;
@@ -377,10 +377,10 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) 
    * set the default priority of all queues to be the highest
    */
   const float pQueuePriorities = 1.f;
-  for (uint32_t qc = 0; qc < uvrvk->numqueues; qc++) {
+  for (uint32_t qc = 0; qc < uvrvk->queueCount; qc++) {
     pQueueCreateInfo[qc].flags = 0;
     pQueueCreateInfo[qc].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    pQueueCreateInfo[qc].queueFamilyIndex = uvrvk->queues[qc].famindex;
+    pQueueCreateInfo[qc].queueFamilyIndex = uvrvk->queues[qc].familyIndex;
     pQueueCreateInfo[qc].queueCount = uvrvk->queues[qc].queueCount;
     pQueueCreateInfo[qc].pQueuePriorities = &pQueuePriorities;
   }
@@ -389,7 +389,7 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) 
   create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
   create_info.pNext = NULL;
   create_info.flags = 0;
-  create_info.queueCreateInfoCount = uvrvk->numqueues;
+  create_info.queueCreateInfoCount = uvrvk->queueCount;
   create_info.pQueueCreateInfos = pQueueCreateInfo;
   create_info.enabledLayerCount = 0; // Deprecated and ignored
   create_info.ppEnabledLayerNames = NULL; // Deprecated and ignored
@@ -398,26 +398,26 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk) 
   create_info.pEnabledFeatures = uvrvk->pEnabledFeatures;
 
   /* Create logic device */
-  res = vkCreateDevice(uvrvk->phdev, &create_info, NULL, &device);
+  res = vkCreateDevice(uvrvk->vkPhdev, &create_info, NULL, &device);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateDevice: %s", vkres_msg(res));
     goto err_vk_lgdev_free_pQueueCreateInfo;
   }
 
-  for (uint32_t qc = 0; qc < uvrvk->numqueues; qc++) {
-    vkGetDeviceQueue(device, uvrvk->queues[qc].famindex, 0, &uvrvk->queues[qc].queue);
-    if (!uvrvk->queues[qc].queue)  {
+  for (uint32_t qc = 0; qc < uvrvk->queueCount; qc++) {
+    vkGetDeviceQueue(device, uvrvk->queues[qc].familyIndex, 0, &uvrvk->queues[qc].vkQueue);
+    if (!uvrvk->queues[qc].vkQueue)  {
       uvr_utils_log(UVR_DANGER, "[x] vkGetDeviceQueue: Failed to get %s queue handle", uvrvk->queues[qc].name);
       goto err_vk_lgdev_destroy;
     }
 
-    uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: '%s' VkQueue successfully created retval(%p)", uvrvk->queues[qc].name, uvrvk->queues[qc].queue);
+    uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: '%s' VkQueue successfully created retval(%p)", uvrvk->queues[qc].name, uvrvk->queues[qc].vkQueue);
   }
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_lgdev_create: VkDevice created retval(%p)", device);
 
   free(pQueueCreateInfo);
-  return (struct uvr_vk_lgdev) { .device = device, .queue_cnt = uvrvk->numqueues, .queues = uvrvk->queues };
+  return (struct uvr_vk_lgdev) { .vkDevice = device, .queueCount = uvrvk->queueCount, .queues = uvrvk->queues };
 
 err_vk_lgdev_destroy:
   if (device)
@@ -425,7 +425,7 @@ err_vk_lgdev_destroy:
 err_vk_lgdev_free_pQueueCreateInfo:
   free(pQueueCreateInfo);
 err_vk_lgdev_create:
-  return (struct uvr_vk_lgdev) { .device = VK_NULL_HANDLE, .queue_cnt = -1, .queues = NULL };
+  return (struct uvr_vk_lgdev) { .vkDevice = VK_NULL_HANDLE, .queueCount = -1, .queues = NULL };
 }
 
 
@@ -459,12 +459,12 @@ struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, 
     goto exit_vk_surface_formats_free;
   }
 
-  return (struct uvr_vk_surface_format) { .fcount = fcount, .formats = formats };
+  return (struct uvr_vk_surface_format) { .surfaceFormatCount = fcount, .surfaceFormats = formats };
 
 exit_vk_surface_formats_free:
   free(formats);
 exit_vk_surface_formats:
-  return (struct uvr_vk_surface_format) { .fcount = 0, .formats = NULL };
+  return (struct uvr_vk_surface_format) { .surfaceFormatCount = 0, .surfaceFormats = NULL };
 }
 
 
@@ -491,12 +491,12 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
     goto exit_vk_surface_present_modes_free;
   }
 
-  return (struct uvr_vk_surface_present_mode) { .mcount = mcount, .modes = modes };
+  return (struct uvr_vk_surface_present_mode) { .presentModeCount = mcount, .presentModes = modes };
 
 exit_vk_surface_present_modes_free:
   free(modes);
 exit_vk_surface_present_modes:
-  return (struct uvr_vk_surface_present_mode) { .mcount = 0, .modes = NULL };
+  return (struct uvr_vk_surface_present_mode) { .presentModeCount = 0, .presentModes = NULL };
 }
 
 
@@ -504,22 +504,22 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
   VkResult res = VK_RESULT_MAX_ENUM;
   VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 
-  if (uvrvk->surfcap.currentExtent.width != UINT32_MAX) {
-    uvrvk->extent2D = uvrvk->surfcap.currentExtent;
+  if (uvrvk->surfaceCapabilities.currentExtent.width != UINT32_MAX) {
+    uvrvk->extent2D = uvrvk->surfaceCapabilities.currentExtent;
   } else {
-    uvrvk->extent2D.width = fmax(uvrvk->surfcap.minImageExtent.width, fmin(uvrvk->surfcap.maxImageExtent.width, uvrvk->extent2D.width));
-    uvrvk->extent2D.height = fmax(uvrvk->surfcap.minImageExtent.height, fmin(uvrvk->surfcap.maxImageExtent.height, uvrvk->extent2D.height));
+    uvrvk->extent2D.width = fmax(uvrvk->surfaceCapabilities.minImageExtent.width, fmin(uvrvk->surfaceCapabilities.maxImageExtent.width, uvrvk->extent2D.width));
+    uvrvk->extent2D.height = fmax(uvrvk->surfaceCapabilities.minImageExtent.height, fmin(uvrvk->surfaceCapabilities.maxImageExtent.height, uvrvk->extent2D.height));
   }
 
   VkSwapchainCreateInfoKHR create_info;
   create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
   create_info.pNext = NULL;
   create_info.flags = 0;
-  create_info.surface = uvrvk->surfaceKHR;
-  if (uvrvk->surfcap.maxImageCount > 0 && (uvrvk->surfcap.minImageCount + 1) < uvrvk->surfcap.maxImageCount)
-    create_info.minImageCount = uvrvk->surfcap.maxImageCount;
+  create_info.surface = uvrvk->vkSurface;
+  if (uvrvk->surfaceCapabilities.maxImageCount > 0 && (uvrvk->surfaceCapabilities.minImageCount + 1) < uvrvk->surfaceCapabilities.maxImageCount)
+    create_info.minImageCount = uvrvk->surfaceCapabilities.maxImageCount;
   else
-    create_info.minImageCount = uvrvk->surfcap.minImageCount + 1;
+    create_info.minImageCount = uvrvk->surfaceCapabilities.minImageCount + 1;
   create_info.imageFormat = uvrvk->surfaceFormat.format;
   create_info.imageColorSpace = uvrvk->surfaceFormat.colorSpace;
   create_info.imageExtent = uvrvk->extent2D;
@@ -528,13 +528,13 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
   create_info.imageSharingMode = uvrvk->imageSharingMode;
   create_info.queueFamilyIndexCount = uvrvk->queueFamilyIndexCount;
   create_info.pQueueFamilyIndices = uvrvk->pQueueFamilyIndices;
-  create_info.preTransform = uvrvk->surfcap.currentTransform;
+  create_info.preTransform = uvrvk->surfaceCapabilities.currentTransform;
   create_info.compositeAlpha = uvrvk->compositeAlpha;
   create_info.presentMode = uvrvk->presentMode;
   create_info.clipped = uvrvk->clipped;
   create_info.oldSwapchain = uvrvk->oldSwapchain;
 
-  res = vkCreateSwapchainKHR(uvrvk->lgdev, &create_info, NULL, &swapchain);
+  res = vkCreateSwapchainKHR(uvrvk->vkDevice, &create_info, NULL, &swapchain);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateSwapchainKHR: %s", vkres_msg(res));
     goto exit_vk_swapchain;
@@ -542,22 +542,22 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_swapchain_create: VkSwapchainKHR successfully created retval(%p)", swapchain);
 
-  return (struct uvr_vk_swapchain) { .lgdev = uvrvk->lgdev, .swapchain = swapchain };
+  return (struct uvr_vk_swapchain) { .vkDevice = uvrvk->vkDevice, .vkSwapchain = swapchain };
 
 exit_vk_swapchain:
-  return (struct uvr_vk_swapchain) { .lgdev = VK_NULL_HANDLE, .swapchain = VK_NULL_HANDLE };
+  return (struct uvr_vk_swapchain) { .vkDevice = VK_NULL_HANDLE, .vkSwapchain = VK_NULL_HANDLE };
 }
 
 
 struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
-  struct uvrvkimage *images = NULL;
-  struct uvrvkview *views = NULL;
+  struct uvr_vk_image_handle *images = NULL;
+  struct uvr_vk_image_view_handle *views = NULL;
 
   uint32_t icount = 0, i;
   VkImage *vkimages = NULL;
 
-  res = vkGetSwapchainImagesKHR(uvrvk->lgdev, uvrvk->swapchain, &icount, NULL);
+  res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, NULL);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
     goto exit_vk_image;
@@ -565,7 +565,7 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
 
   vkimages = alloca(icount * sizeof(VkImage));
 
-  res = vkGetSwapchainImagesKHR(uvrvk->lgdev, uvrvk->swapchain, &icount, vkimages);
+  res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, vkimages);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
     goto exit_vk_image;
@@ -573,13 +573,13 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
 
   uvr_utils_log(UVR_INFO, "uvr_vk_image_create: Total images in swapchain %u", icount);
 
-  images = calloc(icount, sizeof(struct uvrvkimage));
+  images = calloc(icount, sizeof(images));
   if (!images) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_image;
   }
 
-  views = calloc(icount, sizeof(struct uvrvkview));
+  views = calloc(icount, sizeof(views));
   if (!views) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_image_free_images;
@@ -597,7 +597,7 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
   for (i = 0; i < icount; i++) {
     create_info.image = images[i].image = vkimages[i];
 
-    res = vkCreateImageView(uvrvk->lgdev, &create_info, NULL, &views[i].view);
+    res = vkCreateImageView(uvrvk->vkDevice, &create_info, NULL, &views[i].view);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkCreateImageView: %s", vkres_msg(res));
       goto exit_vk_image_free_image_view;
@@ -607,14 +607,15 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
     uvr_utils_log(UVR_SUCCESS, "uvr_vk_image_create: VkImageView successfully created retval(%p)", views[i].view);
   }
 
-  return (struct uvr_vk_image) { .lgdev = uvrvk->lgdev, .icount = icount, .images = images, .vcount = icount, .views = views, .swapchain = uvrvk->swapchain };
+  return (struct uvr_vk_image) { .vkDevice = uvrvk->vkDevice, .imageCount = icount, .vkImages = images,
+                                 .vkImageViews = views, .vkSwapchain = uvrvk->vkSwapchain };
 
 
 exit_vk_image_free_image_view:
   if (views) {
     for (i = 0; i < icount; i++) {
       if (views[i].view)
-        vkDestroyImageView(uvrvk->lgdev, views[i].view, NULL);
+        vkDestroyImageView(uvrvk->vkDevice, views[i].view, NULL);
     }
   }
 //exit_vk_image_free_image_views:
@@ -622,7 +623,8 @@ exit_vk_image_free_image_view:
 exit_vk_image_free_images:
   free(images);
 exit_vk_image:
-  return (struct uvr_vk_image) { .lgdev = VK_NULL_HANDLE, .icount = 0, .images = NULL, .vcount = 0, .views = NULL, .swapchain = VK_NULL_HANDLE };
+  return (struct uvr_vk_image) { .vkDevice = VK_NULL_HANDLE, .imageCount = 0, .vkImages = NULL,
+                                 .vkImageViews = NULL, .vkSwapchain = VK_NULL_HANDLE };
 }
 
 
@@ -637,7 +639,7 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
   create_info.codeSize = uvrvk->codeSize;
   create_info.pCode = (const uint32_t *) uvrvk->pCode;
 
-  res = vkCreateShaderModule(uvrvk->lgdev, &create_info, NULL, &shader);
+  res = vkCreateShaderModule(uvrvk->vkDevice, &create_info, NULL, &shader);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateShaderModule: %s", vkres_msg(res));
     goto exit_vk_shader_module;
@@ -645,10 +647,10 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_shader_module_create: '%s' shader VkShaderModule successfully created retval(%p)", uvrvk->name, shader);
 
-  return (struct uvr_vk_shader_module) { .lgdev = uvrvk->lgdev, .shader = shader, .name = uvrvk->name };
+  return (struct uvr_vk_shader_module) { .vkDevice = uvrvk->vkDevice, .shader = shader, .name = uvrvk->name };
 
 exit_vk_shader_module:
-  return (struct uvr_vk_shader_module) { .lgdev = VK_NULL_HANDLE, .shader = VK_NULL_HANDLE, .name = NULL };
+  return (struct uvr_vk_shader_module) { .vkDevice = VK_NULL_HANDLE, .shader = VK_NULL_HANDLE, .name = NULL };
 }
 
 
@@ -665,7 +667,7 @@ struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeli
   create_info.pushConstantRangeCount = uvrvk->pushConstantRangeCount;
   create_info.pPushConstantRanges = uvrvk->pPushConstantRanges;
 
-  res = vkCreatePipelineLayout(uvrvk->lgdev, &create_info, NULL, &playout);
+  res = vkCreatePipelineLayout(uvrvk->vkDevice, &create_info, NULL, &playout);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreatePipelineLayout: %s", vkres_msg(res));
     goto exit_vk_pipeline_layout;
@@ -673,10 +675,10 @@ struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeli
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_pipeline_layout_create: VkPipelineLayout successfully created retval(%p)", playout);
 
-  return (struct uvr_vk_pipeline_layout) { .lgdev = uvrvk->lgdev, .playout = playout };
+  return (struct uvr_vk_pipeline_layout) { .vkDevice = uvrvk->vkDevice, .vkPipelineLayout = playout };
 
 exit_vk_pipeline_layout:
-  return (struct uvr_vk_pipeline_layout) { .lgdev = VK_NULL_HANDLE, .playout = VK_NULL_HANDLE };
+  return (struct uvr_vk_pipeline_layout) { .vkDevice = VK_NULL_HANDLE, .vkPipelineLayout = VK_NULL_HANDLE };
 }
 
 
@@ -695,7 +697,7 @@ struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_cr
   create_info.dependencyCount = uvrvk->dependencyCount;
   create_info.pDependencies = uvrvk->pDependencies;
 
-  res = vkCreateRenderPass(uvrvk->lgdev, &create_info, NULL, &renderpass);
+  res = vkCreateRenderPass(uvrvk->vkDevice, &create_info, NULL, &renderpass);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateRenderPass: %s", vkres_msg(res));
     goto exit_vk_render_pass;
@@ -703,10 +705,10 @@ struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_cr
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_render_pass_create: VkRenderPass successfully created retval(%p)", renderpass);
 
-  return (struct uvr_vk_render_pass) { .lgdev = uvrvk->lgdev, .renderpass = renderpass };
+  return (struct uvr_vk_render_pass) { .vkDevice = uvrvk->vkDevice, .renderPass = renderpass };
 
 exit_vk_render_pass:
-  return (struct uvr_vk_render_pass) { .lgdev = VK_NULL_HANDLE, .renderpass = VK_NULL_HANDLE };
+  return (struct uvr_vk_render_pass) { .vkDevice = VK_NULL_HANDLE, .renderPass = VK_NULL_HANDLE };
 }
 
 
@@ -729,14 +731,14 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
   create_info.pDepthStencilState = uvrvk->pDepthStencilState;
   create_info.pColorBlendState = uvrvk->pColorBlendState;
   create_info.pDynamicState = uvrvk->pDynamicState;
-  create_info.layout = uvrvk->layout;
+  create_info.layout = uvrvk->vkPipelineLayout;
   create_info.renderPass = uvrvk->renderPass;
   create_info.subpass = uvrvk->subpass;
   // Won't be supporting
   create_info.basePipelineHandle = VK_NULL_HANDLE;
   create_info.basePipelineIndex = -1;
 
-  res = vkCreateGraphicsPipelines(uvrvk->lgdev, NULL, 1, &create_info, NULL, &pipeline);
+  res = vkCreateGraphicsPipelines(uvrvk->vkDevice, NULL, 1, &create_info, NULL, &pipeline);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateGraphicsPipelines: %s", vkres_msg(res));
     goto exit_vk_graphics_pipeline;
@@ -744,19 +746,19 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
 
   uvr_utils_log(UVR_SUCCESS, "uvr_vk_graphics_pipeline_create: VkPipeline successfully created retval(%p)", pipeline);
 
-  return (struct uvr_vk_graphics_pipeline) { .lgdev = uvrvk->lgdev, .graphics_pipeline = pipeline };
+  return (struct uvr_vk_graphics_pipeline) { .vkDevice = uvrvk->vkDevice, .graphicsPipeline = pipeline };
 
 exit_vk_graphics_pipeline:
-  return (struct uvr_vk_graphics_pipeline) { .lgdev = VK_NULL_HANDLE, .graphics_pipeline = VK_NULL_HANDLE };
+  return (struct uvr_vk_graphics_pipeline) { .vkDevice = VK_NULL_HANDLE, .graphicsPipeline = VK_NULL_HANDLE };
 }
 
 
 struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
-  struct uvrvkframebuffer *vkfbs = NULL;
+  struct uvr_vk_framebuffer_handle *vkfbs = NULL;
   uint32_t fbc;
 
-  vkfbs = (struct uvrvkframebuffer *) calloc(uvrvk->fbcount, sizeof(struct uvrvkframebuffer));
+  vkfbs = (struct uvr_vk_framebuffer_handle *) calloc(uvrvk->frameBufferCount, sizeof(vkfbs));
   if (!vkfbs) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_framebuffer;
@@ -771,30 +773,30 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
   create_info.height = uvrvk->height;
   create_info.layers = uvrvk->layers;
 
-  for (fbc = 0; fbc < uvrvk->fbcount; fbc++) {
+  for (fbc = 0; fbc < uvrvk->frameBufferCount; fbc++) {
     create_info.attachmentCount = 1;
-    create_info.pAttachments = &uvrvk->vkimageviews[fbc].view;
+    create_info.pAttachments = &uvrvk->vkImageViews[fbc].view;
 
-    res = vkCreateFramebuffer(uvrvk->lgdev, &create_info, NULL, &vkfbs[fbc].vkfb);
+    res = vkCreateFramebuffer(uvrvk->vkDevice, &create_info, NULL, &vkfbs[fbc].fb);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkCreateFramebuffer: %s", vkres_msg(res));
       goto exit_vk_framebuffer_vk_framebuffer_destroy;
     }
 
-    uvr_utils_log(UVR_SUCCESS, "uvr_vk_framebuffer_create: VkFramebuffer successfully created retval(%p)", vkfbs[fbc].vkfb);
+    uvr_utils_log(UVR_SUCCESS, "uvr_vk_framebuffer_create: VkFramebuffer successfully created retval(%p)", vkfbs[fbc].fb);
   }
 
-  return (struct uvr_vk_framebuffer) { .lgdev = uvrvk->lgdev, .fbcount = uvrvk->fbcount, .vkfbs = vkfbs };
+  return (struct uvr_vk_framebuffer) { .vkDevice = uvrvk->vkDevice, .frameBufferCount = uvrvk->frameBufferCount, .vkFrameBuffers = vkfbs };
 
 exit_vk_framebuffer_vk_framebuffer_destroy:
-  for (fbc = 0; fbc < uvrvk->fbcount; fbc++) {
-    if (vkfbs[fbc].vkfb)
-      vkDestroyFramebuffer(uvrvk->lgdev, vkfbs[fbc].vkfb, NULL);
+  for (fbc = 0; fbc < uvrvk->frameBufferCount; fbc++) {
+    if (vkfbs[fbc].fb)
+      vkDestroyFramebuffer(uvrvk->vkDevice, vkfbs[fbc].fb, NULL);
   }
 //exit_vk_framebuffer_free_vkfbs:
   free(vkfbs);
 exit_vk_framebuffer:
-  return (struct uvr_vk_framebuffer) { .lgdev = VK_NULL_HANDLE, .fbcount = 0, .vkfbs = NULL };
+  return (struct uvr_vk_framebuffer) { .vkDevice = VK_NULL_HANDLE, .frameBufferCount = 0, .vkFrameBuffers = NULL };
 }
 
 
@@ -802,7 +804,7 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
   VkResult res = VK_RESULT_MAX_ENUM;
   VkCommandPool cmdpool = VK_NULL_HANDLE;
   VkCommandBuffer *cmdbuffs = VK_NULL_HANDLE;
-  struct uvrvkcmdbuffer *cbuffs = NULL;
+  struct uvr_vk_command_buffer_handle *cbuffs = NULL;
 
   VkCommandPoolCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -810,7 +812,7 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
   create_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   create_info.queueFamilyIndex = uvrvk->queueFamilyIndex;
 
-  res = vkCreateCommandPool(uvrvk->lgdev, &create_info, NULL, &cmdpool);
+  res = vkCreateCommandPool(uvrvk->vkDevice, &create_info, NULL, &cmdpool);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateCommandPool: %s", vkres_msg(res));
     goto exit_vk_command_buffer;
@@ -826,29 +828,31 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
   alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = uvrvk->commandBufferCount;
 
-  res = vkAllocateCommandBuffers(uvrvk->lgdev, &alloc_info, cmdbuffs);
+  res = vkAllocateCommandBuffers(uvrvk->vkDevice, &alloc_info, cmdbuffs);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkAllocateCommandBuffers: %s", vkres_msg(res));
     goto exit_vk_command_buffer_destroy_cmd_pool;
   }
 
-  cbuffs = calloc(uvrvk->commandBufferCount, sizeof(struct uvrvkcmdbuffer));
+  cbuffs = calloc(uvrvk->commandBufferCount, sizeof(struct uvr_vk_command_buffer_handle));
   if (!cbuffs) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_command_buffer_destroy_cmd_pool;
   }
 
   for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
-    cbuffs[i].cmdbuff = cmdbuffs[i];
-    uvr_utils_log(UVR_WARNING, "uvr_vk_command_buffer_create: VkCommandBuffer successfully created retval(%p)", cbuffs[i].cmdbuff);
+    cbuffs[i].buffer = cmdbuffs[i];
+    uvr_utils_log(UVR_WARNING, "uvr_vk_command_buffer_create: VkCommandBuffer successfully created retval(%p)", cbuffs[i].buffer);
   }
 
-  return (struct uvr_vk_command_buffer) { .lgdev = uvrvk->lgdev, .cmdpool = cmdpool, .cmdbuff_cnt = uvrvk->commandBufferCount, .cmdbuffs = cbuffs };
+  return (struct uvr_vk_command_buffer) { .vkDevice = uvrvk->vkDevice, .vkCommandPool = cmdpool,
+                                          .commandBufferCount = uvrvk->commandBufferCount, .vkCommandbuffers = cbuffs };
 
 exit_vk_command_buffer_destroy_cmd_pool:
-  vkDestroyCommandPool(uvrvk->lgdev, cmdpool, NULL);
+  vkDestroyCommandPool(uvrvk->vkDevice, cmdpool, NULL);
 exit_vk_command_buffer:
-  return (struct uvr_vk_command_buffer) { .lgdev = VK_NULL_HANDLE, .cmdpool = VK_NULL_HANDLE, .cmdbuff_cnt = 0, .cmdbuffs = NULL };
+  return (struct uvr_vk_command_buffer) { .vkDevice = VK_NULL_HANDLE, .vkCommandPool = VK_NULL_HANDLE,
+                                          .commandBufferCount = 0, .vkCommandbuffers = NULL };
 }
 
 
@@ -862,8 +866,8 @@ int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info 
   // We don't use secondary command buffers in API so set to null
   begin_info.pInheritanceInfo = NULL;
 
-  for (uint32_t i = 0; i < uvrvk->cmdbuff_cnt; i++) {
-    res = vkBeginCommandBuffer(uvrvk->cmdbuffs[i].cmdbuff, &begin_info);
+  for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
+    res = vkBeginCommandBuffer(uvrvk->vkCommandbuffers[i].buffer, &begin_info);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkBeginCommandBuffer: %s", vkres_msg(res));
       return -1;
@@ -877,8 +881,8 @@ int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info 
 int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
 
-  for (uint32_t i = 0; i < uvrvk->cmdbuff_cnt; i++) {
-    res = vkEndCommandBuffer(uvrvk->cmdbuffs[i].cmdbuff);
+  for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
+    res = vkEndCommandBuffer(uvrvk->vkCommandbuffers[i].buffer);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkEndCommandBuffer: %s", vkres_msg(res));
       return -1;
@@ -894,72 +898,72 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
 
   if (uvrvk->uvr_vk_command_buffer) {
     for (i = 0; i < uvrvk->uvr_vk_command_buffer_cnt; i++) {
-      if (uvrvk->uvr_vk_command_buffer[i].lgdev && uvrvk->uvr_vk_command_buffer[i].cmdpool)
-        vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].lgdev, uvrvk->uvr_vk_command_buffer[i].cmdpool, NULL);
-      free(uvrvk->uvr_vk_command_buffer[i].cmdbuffs);
+      if (uvrvk->uvr_vk_command_buffer[i].vkDevice && uvrvk->uvr_vk_command_buffer[i].vkCommandPool)
+        vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].vkDevice, uvrvk->uvr_vk_command_buffer[i].vkCommandPool, NULL);
+      free(uvrvk->uvr_vk_command_buffer[i].vkCommandbuffers);
     }
   }
 
   if (uvrvk->uvr_vk_framebuffer) {
     for (i = 0; i < uvrvk->uvr_vk_framebuffer_cnt; i++) {
-      for (j = 0; j < uvrvk->uvr_vk_framebuffer[i].fbcount; j++) {
-        if (uvrvk->uvr_vk_framebuffer[i].lgdev && uvrvk->uvr_vk_framebuffer[i].vkfbs[j].vkfb)
-          vkDestroyFramebuffer(uvrvk->uvr_vk_framebuffer[i].lgdev, uvrvk->uvr_vk_framebuffer[i].vkfbs[j].vkfb, NULL);
+      for (j = 0; j < uvrvk->uvr_vk_framebuffer[i].frameBufferCount; j++) {
+        if (uvrvk->uvr_vk_framebuffer[i].vkDevice && uvrvk->uvr_vk_framebuffer[i].vkFrameBuffers[j].fb)
+          vkDestroyFramebuffer(uvrvk->uvr_vk_framebuffer[i].vkDevice, uvrvk->uvr_vk_framebuffer[i].vkFrameBuffers[j].fb, NULL);
       }
-      free(uvrvk->uvr_vk_framebuffer[i].vkfbs);
+      free(uvrvk->uvr_vk_framebuffer[i].vkFrameBuffers);
     }
   }
 
   if (uvrvk->uvr_vk_graphics_pipeline) {
     for (i = 0; i < uvrvk->uvr_vk_graphics_pipeline_cnt; i++) {
-      if (uvrvk->uvr_vk_graphics_pipeline[i].lgdev && uvrvk->uvr_vk_graphics_pipeline[i].graphics_pipeline)
-        vkDestroyPipeline(uvrvk->uvr_vk_graphics_pipeline[i].lgdev, uvrvk->uvr_vk_graphics_pipeline[i].graphics_pipeline, NULL);
+      if (uvrvk->uvr_vk_graphics_pipeline[i].vkDevice && uvrvk->uvr_vk_graphics_pipeline[i].graphicsPipeline)
+        vkDestroyPipeline(uvrvk->uvr_vk_graphics_pipeline[i].vkDevice, uvrvk->uvr_vk_graphics_pipeline[i].graphicsPipeline, NULL);
     }
   }
 
   if (uvrvk->uvr_vk_pipeline_layout) {
     for (i = 0; i < uvrvk->uvr_vk_pipeline_layout_cnt; i++) {
-      if (uvrvk->uvr_vk_pipeline_layout[i].lgdev && uvrvk->uvr_vk_pipeline_layout[i].playout)
-        vkDestroyPipelineLayout(uvrvk->uvr_vk_pipeline_layout[i].lgdev, uvrvk->uvr_vk_pipeline_layout[i].playout, NULL);
+      if (uvrvk->uvr_vk_pipeline_layout[i].vkDevice && uvrvk->uvr_vk_pipeline_layout[i].vkPipelineLayout)
+        vkDestroyPipelineLayout(uvrvk->uvr_vk_pipeline_layout[i].vkDevice, uvrvk->uvr_vk_pipeline_layout[i].vkPipelineLayout, NULL);
     }
   }
 
   if (uvrvk->uvr_vk_render_pass) {
     for (i = 0; i < uvrvk->uvr_vk_render_pass_cnt; i++) {
-      if (uvrvk->uvr_vk_render_pass[i].lgdev && uvrvk->uvr_vk_render_pass[i].renderpass)
-        vkDestroyRenderPass(uvrvk->uvr_vk_render_pass[i].lgdev, uvrvk->uvr_vk_render_pass[i].renderpass, NULL);
+      if (uvrvk->uvr_vk_render_pass[i].vkDevice && uvrvk->uvr_vk_render_pass[i].renderPass)
+        vkDestroyRenderPass(uvrvk->uvr_vk_render_pass[i].vkDevice, uvrvk->uvr_vk_render_pass[i].renderPass, NULL);
     }
   }
 
   if (uvrvk->uvr_vk_shader_module) {
     for (i = 0; i < uvrvk->uvr_vk_shader_module_cnt; i++) {
-      if (uvrvk->uvr_vk_shader_module[i].lgdev && uvrvk->uvr_vk_shader_module[i].shader)
-        vkDestroyShaderModule(uvrvk->uvr_vk_shader_module[i].lgdev, uvrvk->uvr_vk_shader_module[i].shader, NULL);
+      if (uvrvk->uvr_vk_shader_module[i].vkDevice && uvrvk->uvr_vk_shader_module[i].shader)
+        vkDestroyShaderModule(uvrvk->uvr_vk_shader_module[i].vkDevice, uvrvk->uvr_vk_shader_module[i].shader, NULL);
     }
   }
 
   if (uvrvk->uvr_vk_image) {
     for (i = 0; i < uvrvk->uvr_vk_image_cnt; i++) {
-      for (j = 0; j < uvrvk->uvr_vk_image[i].vcount; j++) {
-        if (uvrvk->uvr_vk_image[i].lgdev && uvrvk->uvr_vk_image[i].views[j].view)
-          vkDestroyImageView(uvrvk->uvr_vk_image[i].lgdev, uvrvk->uvr_vk_image[i].views[j].view, NULL);
+      for (j = 0; j < uvrvk->uvr_vk_image[i].imageCount; j++) {
+        if (uvrvk->uvr_vk_image[i].vkDevice && uvrvk->uvr_vk_image[i].vkImageViews[j].view)
+          vkDestroyImageView(uvrvk->uvr_vk_image[i].vkDevice, uvrvk->uvr_vk_image[i].vkImageViews[j].view, NULL);
       }
-      free(uvrvk->uvr_vk_image[i].images);
-      free(uvrvk->uvr_vk_image[i].views);
+      free(uvrvk->uvr_vk_image[i].vkImages);
+      free(uvrvk->uvr_vk_image[i].vkImageViews);
     }
   }
 
   if (uvrvk->uvr_vk_swapchain) {
     for (i = 0; i < uvrvk->uvr_vk_swapchain_cnt; i++) {
-      if (uvrvk->uvr_vk_swapchain[i].lgdev && uvrvk->uvr_vk_swapchain[i].swapchain)
-        vkDestroySwapchainKHR(uvrvk->uvr_vk_swapchain[i].lgdev, uvrvk->uvr_vk_swapchain[i].swapchain, NULL);
+      if (uvrvk->uvr_vk_swapchain[i].vkDevice && uvrvk->uvr_vk_swapchain[i].vkSwapchain)
+        vkDestroySwapchainKHR(uvrvk->uvr_vk_swapchain[i].vkDevice, uvrvk->uvr_vk_swapchain[i].vkSwapchain, NULL);
     }
   }
 
   for (i = 0; i < uvrvk->uvr_vk_lgdev_cnt; i++) {
-    if (uvrvk->uvr_vk_lgdev[i].device) {
-      vkDeviceWaitIdle(uvrvk->uvr_vk_lgdev[i].device);
-      vkDestroyDevice(uvrvk->uvr_vk_lgdev[i].device, NULL);
+    if (uvrvk->uvr_vk_lgdev[i].vkDevice) {
+      vkDeviceWaitIdle(uvrvk->uvr_vk_lgdev[i].vkDevice);
+      vkDestroyDevice(uvrvk->uvr_vk_lgdev[i].vkDevice, NULL);
     }
   }
 

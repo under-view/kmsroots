@@ -24,11 +24,11 @@ $ meson compile -C build
 **Running Examples**
 ```sh
 # Client examples
-$ ./build/examples/underview-renderer-xcb-client-*
-$ ./build/examples/underview-renderer-wayland-client-*
+$ ./build/examples/xcb/underview-renderer-xcb-client-*
+$ ./build/examples/wayland/underview-renderer-wayland-client-*
 
 # KMS examples
-$ WLR_BACKENDS="drm" ./build/examples/underview-renderer-wayland-comp
+$ WLR_BACKENDS="drm" ./build/examples/wayland/underview-renderer-wayland-comp
 
 # https://github.com/swaywm/wlroots/wiki/DRM-Debugging
 # Enable verbose DRM logging
