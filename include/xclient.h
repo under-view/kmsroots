@@ -14,13 +14,13 @@
  * @conn       - A structure that contain all data that XCB needs to communicate with an X server.
  * @window     - Stores the XID of the current window. XID is neeed to create
  *               windows and manage its properties
- * @delwindow  - Used to by uvr_xcb_window_wait_for_event() to verify when the window manager
+ * @delWindow  - Used to by uvr_xcb_window_wait_for_event() to verify when the window manager
  *               attempts to destroy the window.
  */
 struct uvr_xcb_window {
   xcb_connection_t        *conn;
   xcb_window_t            window;
-  xcb_intern_atom_reply_t *delwindow;
+  xcb_intern_atom_reply_t *delWindow;
 };
 
 
@@ -32,14 +32,14 @@ struct uvr_xcb_window {
  *                environment variable is used.
  * @screen      - Number for the screen that should be connected. When set to NULL,
  *                the screen number is set to 0.
- * @appname     - Sets the window name. Can not be more than 60 characters.
+ * @appName     - Sets the window name. Can not be more than 60 characters.
  * @fullscreen  - Set to true to go fullscreen, false to display normal window.
  * @transparent - Set to true to have fully transparent window. False will display black background.
  */
 struct uvr_xcb_window_create_info {
   const char *display;
   int        *screen;
-  const char *appname;
+  const char *appName;
   bool       fullscreen;
   bool       transparent;
 };
@@ -56,16 +56,6 @@ struct uvr_xcb_window_create_info {
  *    on failure struct uvr_xcb_window { with members nulled }
  */
 struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb);
-
-
-/*
- * uvr_xcb_window_display: Displays the window
- *
- * args:
- * @client - pointer to a struct uvrwc contains all objects necessary
- *           for an xcb client to run.
- */
-void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb);
 
 
 /*

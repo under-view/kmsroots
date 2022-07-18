@@ -8,7 +8,7 @@ int main(void) {
   memset(&ws, 0, sizeof(ws));
 
   struct uvr_ws_core_create_info wscoreinfo;
-  wscoreinfo.inc_wlr_debug_logs = true;
+  wscoreinfo.incWlrootsDebugLogs = true;
 
   wscore = uvr_ws_core_create(&wscoreinfo);
   if (!wscore.display || !wscore.backend)

@@ -58,7 +58,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 
   /* Change window property name */
   xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, XCB_ATOM_WM_NAME,
-                      XCB_ATOM_STRING, 8, strnlen(uvrxcb->appname, 60), uvrxcb->appname);
+                      XCB_ATOM_STRING, 8, strnlen(uvrxcb->appName, 60), uvrxcb->appName);
 
   /* Change window property to make fullscreen */
   if (uvrxcb->fullscreen) {
@@ -91,7 +91,10 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
   xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, winprotosreply->atom, 4, 32, 1, &windeletereply->atom);
   free(winprotosreply);
 
-  return (struct uvr_xcb_window) { .conn = conn, .window = window, .delwindow = windeletereply };
+  xcb_map_window(conn, window);
+  xcb_flush(conn);
+
+  return (struct uvr_xcb_window) { .conn = conn, .window = window, .delWindow = windeletereply };
 
 error_exit_xcb_window_destroy:
   if (window)
@@ -100,13 +103,7 @@ error_exit_xcb_window_disconnect:
   if (conn)
     xcb_disconnect(conn);
 error_exit_xcb_window_create:
-  return (struct uvr_xcb_window) { .conn = NULL, .window = 0, .delwindow = 0 };
-}
-
-
-void uvr_xcb_window_display(struct uvr_xcb_window *uvrxcb) {
-  xcb_map_window(uvrxcb->conn, uvrxcb->window);
-  xcb_flush(uvrxcb->conn);
+  return (struct uvr_xcb_window) { .conn = NULL, .window = 0, .delWindow = 0 };
 }
 
 
@@ -130,7 +127,7 @@ int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
 
     case XCB_CLIENT_MESSAGE: {
       xcb_client_message_event_t *message = (xcb_client_message_event_t *) event;
-      if (message->data.data32[0] == uvrxcb->delwindow->atom)
+      if (message->data.data32[0] == uvrxcb->delWindow->atom)
         goto error_exit_xcb_window_event_loop;
       break;
     }
@@ -149,7 +146,7 @@ error_exit_xcb_window_event_loop:
 
 
 void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb) {
-  free(uvrxcb->uvr_xcb_window.delwindow);
+  free(uvrxcb->uvr_xcb_window.delWindow);
   if (uvrxcb->uvr_xcb_window.window)
     xcb_destroy_window(uvrxcb->uvr_xcb_window.conn, uvrxcb->uvr_xcb_window.window);
   if (uvrxcb->uvr_xcb_window.conn)

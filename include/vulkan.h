@@ -40,8 +40,8 @@
  * struct uvr_vk_instance_create_info (Underview Renderer Vulkan Instance Create Information)
  *
  * members:
- * @app_name                - A member of the VkApplicationInfo structure reserved for the name of the application.
- * @engine_name             - A member of the VkApplicationInfo structure reserved for the name of the engine name
+ * @appName                 - A member of the VkApplicationInfo structure reserved for the name of the application.
+ * @engineName              - A member of the VkApplicationInfo structure reserved for the name of the engine name
  *                            (if any) used to create application.
  * @enabledLayerCount       - A member of the VkInstanceCreateInfo structure used to pass the number of Vulkan
  *                            Validation Layers a client wants to enable.
@@ -53,8 +53,8 @@
  *                            of strings containing the name of the Vulkan Instance Extensions one wants to enable.
  */
 struct uvr_vk_instance_create_info {
-  const char *app_name;
-  const char *engine_name;
+  const char *appName;
+  const char *engineName;
   uint32_t   enabledLayerCount;
   const char **ppEnabledLayerNames;
   uint32_t   enabledExtensionCount;
@@ -96,14 +96,14 @@ typedef enum uvr_vk_surface_type {
  * members:
  * @sType    - Must pass a valid enum uvr_vk_surface_type value. Used in determine what vkCreate*SurfaceKHR
  *             function and associated structs to utilize when creating the VkSurfaceKHR object.
- * @vkinst   - Must pass a valid VkInstance handle to create/associate surfaces for an application
+ * @vkInst   - Must pass a valid VkInstance handle to create/associate surfaces for an application
  * @surface  - Must pass a pointer to a struct wl_surface object
  * @display  - Must pass either a pointer to struct wl_display object or a pointer to an xcb_connection_t
  * @window   - Must pass an xcb_window_t window id or an unsigned int representing XID
  */
 struct uvr_vk_surface_create_info {
   uvr_vk_surface_type sType;
-  VkInstance          vkinst;
+  VkInstance          vkInst;
   void                *surface;
   void                *display;
   unsigned int        window;
@@ -126,17 +126,17 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk);
  * struct uvr_vk_phdev_create_info (Underview Renderer Vulkan Physical Device Create Information)
  *
  * members:
- * @vkinst   - Must pass a valid VkInstance handle which to find VkPhysicalDevice with
- * @vkpdtype - Must pass one of the supported VkPhysicalDeviceType's.
- *             https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
- * @kmsfd    - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
- *             if corresponding DRM properties match.
+ * @vkInst      - Must pass a valid VkInstance handle which to find VkPhysicalDevice with
+ * @vkPhdevType - Must pass one of the supported VkPhysicalDeviceType's.
+ *                https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
+ * @kmsFd       - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
+ *                if corresponding DRM properties match.
  */
 struct uvr_vk_phdev_create_info {
-  VkInstance           vkinst;
-  VkPhysicalDeviceType vkpdtype;
+  VkInstance           vkInst;
+  VkPhysicalDeviceType vkPhdevType;
 #ifdef INCLUDE_KMS
-  int                  kmsfd;
+  int                  kmsFd;
 #endif
 };
 
@@ -168,16 +168,16 @@ VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
  * struct uvr_vk_queue (Underview Renderer Vulkan Queue)
  *
  * members:
- * @name       - Name of the given queue. This is strictly to give a name to the queue. Not required by API.
- * @queue      - VkQueue handle used when submitting command buffers to physical device. Handle assigned
- *               in uvr_vk_lgdev_create after VkDevice handle creation.
- * @famindex   - VkQueue family index
- * @queueCount - Count of queues in a given VkQueue family
+ * @name        - Name of the given queue. This is strictly to give a name to the queue. Not required by API.
+ * @queue       - VkQueue handle used when submitting command buffers to physical device. Handle assigned
+ *                in uvr_vk_lgdev_create after VkDevice handle creation.
+ * @familyIndex - VkQueue family index
+ * @queueCount  - Count of queues in a given VkQueue family
  */
 struct uvr_vk_queue {
   char    name[20];
-  VkQueue queue;
-  int     famindex;
+  VkQueue vkQueue;
+  int     familyIndex;
   int     queueCount;
 };
 
@@ -191,7 +191,7 @@ struct uvr_vk_queue {
  *               https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html
  */
 struct uvr_vk_queue_create_info {
-  VkPhysicalDevice phdev;
+  VkPhysicalDevice vkPhdev;
   VkQueueFlags     queueFlag;
 };
 
@@ -208,22 +208,22 @@ struct uvr_vk_queue_create_info {
  */
 struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
 
-
+\
 /*
  * struct uvr_vk_lgdev (Underview Renderer Vulkan Logical Device)
  *
  * members:
- * @device    - Returned VkDevice handle which represents vulkans access to physical device
- * @queue_cnt - Amount of elements in pointer to array of struct uvr_vk_queue. This information
- *              gets populated with the data pass through struct uvr_vk_lgdev_create_info { member: numqueues }
- * @queues    - Pointer to an array of struct uvr_vk_queue. This information gets populated with the
- *              data pass through struct uvr_vk_lgdev_create_info { member: queues }
+ * @vkDevice   - Returned VkDevice handle which represents vulkans access to physical device
+ * @queueCount - Amount of elements in pointer to array of struct uvr_vk_queue. This information
+ *               gets populated with the data pass through struct uvr_vk_lgdev_create_info { member: numqueues }
+ * @queues     - Pointer to an array of struct uvr_vk_queue. This information gets populated with the
+ *               data pass through struct uvr_vk_lgdev_create_info { member: queues }
  *
- *              @queue_cnt & @queues are strictly for struct uvr_vk_lgdev to have extra information amount VkQueue's
+ *               @queueCount & @queues are strictly for struct uvr_vk_lgdev to have extra information amount VkQueue's
  */
 struct uvr_vk_lgdev {
-  VkDevice            device;
-  int                 queue_cnt;
+  VkDevice            vkDevice;
+  uint32_t            queueCount;
   struct uvr_vk_queue *queues;
 };
 
@@ -232,24 +232,23 @@ struct uvr_vk_lgdev {
  * struct uvr_vk_lgdev_create_info (Underview Renderer Vulkan Logical Device Create Information)
  *
  * members:
- * @vkinst                  - Must pass a valid VkInstance handle to create VkDevice handle from.
- * @phdev                   - Must pass a valid VkPhysicalDevice handle to associate VkDevice handle with.
+ * @vkInst                  - Must pass a valid VkInstance handle to create VkDevice handle from.
+ * @vkPhdev                 - Must pass a valid VkPhysicalDevice handle to associate VkDevice handle with.
  * @pEnabledFeatures        - Must pass a valid pointer to a VkPhysicalDeviceFeatures with X features enabled
  * @enabledExtensionCount   - Must pass the amount of Vulkan Device extensions to enable.
  * @ppEnabledExtensionNames - Must pass an array of strings containing Vulkan Device extension to enable.
- * @numqueues               - Must pass the amount of struct uvr_vk_queue (VkQueue,VkQueueFamily indicies) to
+ * @queueCount              - Must pass the amount of struct uvr_vk_queue (VkQueue,VkQueueFamily indicies) to
  *                            create along with a given logical device
  * @queues                  - Must pass a pointer to an array of struct uvr_vk_queue (VkQueue,VkQueueFamily indicies) to
  *                            create along with a given logical device
  */
 struct uvr_vk_lgdev_create_info {
-  VkInstance               vkinst;
-  VkPhysicalDevice         phdev;
-  VkDeviceCreateFlags      lgdevflags;
+  VkInstance               vkInst;
+  VkPhysicalDevice         vkPhdev;
   VkPhysicalDeviceFeatures *pEnabledFeatures;
   uint32_t                 enabledExtensionCount;
   const char *const        *ppEnabledExtensionNames;
-  uint32_t                 numqueues;
+  uint32_t                 queueCount;
   struct uvr_vk_queue      *queues;
 };
 
@@ -292,18 +291,18 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev,
  * struct uvr_vk_surface_format (Underview Renderer Vulkan Surface Format)
  *
  * members:
- * @fcount  - Amount of color formats a given surface supports
- * @formats - Pointer to a array of VkSurfaceFormatKHR which stores color space and pixel format
+ * @surfaceFormatCount - Amount of color formats a given surface supports
+ * @surfaceFormats     - Pointer to a array of VkSurfaceFormatKHR which stores color space and pixel format
  */
 struct uvr_vk_surface_format {
-  uint32_t           fcount;
-  VkSurfaceFormatKHR *formats;
+  uint32_t           surfaceFormatCount;
+  VkSurfaceFormatKHR *surfaceFormats;
 };
 
 
 /*
- * uvr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given surface supports
- *                             Application must free struct uvr_vk_surface_format { member: formats }
+ * uvr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given physical device supports
+ *                             Application must free struct uvr_vk_surface_format { member: surfaceFormats }
  *
  * args:
  * @phdev   - Must pass a valid VkPhysicalDevice handle
@@ -319,18 +318,18 @@ struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, 
  * struct uvr_vk_surface_present_mode (Underview Renderer Vulkan Surface Present Mode)
  *
  * members:
- * @mcount - Amount of present modes a given surface supports
- * @modes  - Pointer to an array of VkPresentModeKHR which stores values of potential surface present modes
+ * @presentModeCount - Amount of present modes a given surface supports
+ * @presentModes     - Pointer to an array of VkPresentModeKHR which stores values of potential surface present modes
  */
 struct uvr_vk_surface_present_mode {
-  uint32_t         mcount;
-  VkPresentModeKHR *modes;
+  uint32_t         presentModeCount;
+  VkPresentModeKHR *presentModes;
 };
 
 
 /*
  * uvr_vk_get_surface_present_modes: Creates block of memory with all supported presentation modes for a surface
- *                                   Application must free struct uvr_vk_surface_present_mode { member: modes }
+ *                                   Application must free struct uvr_vk_surface_present_mode { member: presentModes }
  *                                   More information on presentation modes can be found here:
  *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
  *
@@ -348,12 +347,12 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
  * struct uvr_vk_swapchain (Underview Renderer Vulkan Swapchain)
  *
  * members:
- * @lgdev     - Logical device used when swapchain was created
- * @swapchain - Vulkan handle/object representing the swapchain itself
+ * @vkDevice    - Logical device used when swapchain was created
+ * @vkSwapchain - Vulkan handle/object representing the swapchain itself
  */
 struct uvr_vk_swapchain {
-  VkDevice       lgdev;
-  VkSwapchainKHR swapchain;
+  VkDevice       vkDevice;
+  VkSwapchainKHR vkSwapchain;
 };
 
 
@@ -361,11 +360,11 @@ struct uvr_vk_swapchain {
  * struct uvr_vk_swapchain_create_info (Underview Renderer Vulkan Swapchain Create Information)
  *
  * members:
- * @lgdev                 - Must pass a valid VkDevice handle (Logical Device)
- * @surfaceKHR            - Must pass a valid VkSurfaceKHR handle. From uvr_vk_surface_create(3)
- * @surfcap               - Passed the queried surface capabilities. From uvr_vk_get_surface_capabilities(3)
- * @surfaceFormat         - Pass colorSpace & pixel format of choice. Recommend querrying first via uvr_vk_get_surface_formats(3)
- *                          then check if pixel format and colorSpace you want is supported by a given surface.
+ * @vkDevice            - Must pass a valid VkDevice handle (Logical Device)
+ * @vkSurface           - Must pass a valid VkSurfaceKHR handle. From uvr_vk_surface_create(3)
+ * @surfaceCapabilities - Passed the queried surface capabilities. From uvr_vk_get_surface_capabilities(3)
+ * @surfaceFormat       - Pass colorSpace & pixel format of choice. Recommend querrying first via uvr_vk_get_surface_formats(3)
+ *                        then check if pixel format and colorSpace you want is supported by a given surface.
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkSwapchainCreateInfoKHR.html for bellow members
  * @extent2D
  * @imageArrayLayers
@@ -379,9 +378,9 @@ struct uvr_vk_swapchain {
  * @oldSwapchain
  */
 struct uvr_vk_swapchain_create_info {
-  VkDevice                    lgdev;
-  VkSurfaceKHR                surfaceKHR;
-  VkSurfaceCapabilitiesKHR    surfcap;
+  VkDevice                    vkDevice;
+  VkSurfaceKHR                vkSurface;
+  VkSurfaceCapabilitiesKHR    surfaceCapabilities;
   VkSurfaceFormatKHR          surfaceFormat;
   VkExtent2D                  extent2D;
   uint32_t                    imageArrayLayers;
@@ -410,36 +409,44 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
 
 
 /*
+ * struct uvr_vk_image_handle (Underview Renderer Vulkan Image Handle)
+ *
+ * @image - Represents actual image itself. May be a texture, etc...
+ */
+struct uvr_vk_image_handle {
+  VkImage image;
+};
+
+
+/*
+ * struct uvr_vk_image_view_handle (Underview Renderer Vulkan Image View Handle)
+ *
+ * @view - Represents a way to access the actual image itself
+ */
+struct uvr_vk_image_view_handle {
+  VkImageView view;
+};
+
+
+/*
  * struct uvr_vk_image (Underview Renderer Vulkan Image)
  *
  * members:
- * @lgdev     - Logical device used to associate a VkImageView with a VkImage
- * @icount    - Amount of VkImage's created. If VkSwapchainKHR reference is passed value would
- *              be the amount of images in the given swapchain.
- * @images    - Pointer to an array of VkImage handles
- *            + @image - Represents actual image itself. May be a texture, etc...
- * @vcount    - Amount of VkImageView's to associate with VkImage's. If VkSwapchainKHR reference is passed
- *              value would be the amount of images in the given swapchain
- * @views     - Pointer to an array of VkImageView handles
- *            + @view - Represents a way to access the actual image itself
- * @swapchain - Member not required, but used for storage purposes. A valid VkSwapchainKHR
- *              reference to the VkSwapchainKHR passed to uvr_vk_image_create. Represents
- *              the swapchain that created VkImage's.
+ * @vkDevice     - Logical device used to associate a VkImageView with a VkImage
+ * @imageCount   - Amount of VkImage's created. If VkSwapchainKHR reference is passed value would
+ *                 be the amount of images in the given swapchain.
+ * @vkImages     - Pointer to an array of VkImage handles
+ * @vkImageViews - Pointer to an array of VkImageView handles
+ * @vkSwapchain  - Member not required, but used for storage purposes. A valid VkSwapchainKHR
+ *                 reference to the VkSwapchainKHR passed to uvr_vk_image_create. Represents
+ *                 the swapchain that created VkImage's.
  */
 struct uvr_vk_image {
-  VkDevice lgdev;
-
-  uint32_t icount;
-  struct uvrvkimage {
-    VkImage image;
-  } *images;
-
-  uint32_t vcount;
-  struct uvrvkview {
-    VkImageView view;
-  } *views;
-
-  VkSwapchainKHR swapchain;
+  VkDevice                         vkDevice;
+  uint32_t                         imageCount;
+  struct uvr_vk_image_handle       *vkImages;
+  struct uvr_vk_image_view_handle  *vkImageViews;
+  VkSwapchainKHR                   vkSwapchain;
 };
 
 
@@ -447,10 +454,10 @@ struct uvr_vk_image {
  * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
  *
  * members:
- * @lgdev     - Must pass a valid VkDevice handle (Logical Device)
- * @swapchain - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
- *              If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
- * @viewcount - Must pass amount of VkImage/VkImageView's to create
+ * @vkDevice    - Must pass a valid VkDevice handle (Logical Device)
+ * @vkSwapchain - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
+ *                If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
+ * @viewcount   - Must pass amount of VkImage/VkImageView's to create
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for bellow members
  * @flags
  * @viewType
@@ -459,9 +466,9 @@ struct uvr_vk_image {
  * @subresourceRange
  */
 struct uvr_vk_image_create_info {
-  VkDevice                lgdev;
-  VkSwapchainKHR          swapchain;
-  uint32_t                viewcount;
+  VkDevice                vkDevice;
+  VkSwapchainKHR          vkSwapchain;
+  uint32_t                viewCount;
   VkImageViewCreateFlags  flags;
   VkImageViewType         viewType;
   VkFormat                format;
@@ -488,12 +495,12 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk);
  * struct uvr_vk_shader_module (Underview Renderer Vulkan Shader Module)
  *
  * members:
- * @lgdev  - Logical device used when shader module was created
- * @shader - Contains shader code and one or more entry points.
- * @name   - Name given to shader module can be safely ignored not required by API.
+ * @vkDevice - Logical device used when shader module was created
+ * @shader   - Contains shader code and one or more entry points.
+ * @name     - Name given to shader module can be safely ignored not required by API.
  */
 struct uvr_vk_shader_module {
-  VkDevice       lgdev;
+  VkDevice       vkDevice;
   VkShaderModule shader;
   const char     *name;
 };
@@ -503,13 +510,13 @@ struct uvr_vk_shader_module {
  * struct uvr_vk_shader_module_create_info (Underview Renderer Vulkan Shader Module Create Information)
  *
  * members:
- * @lgdev    - Must pass a valid active logical device
+ * @vkDevice - Must pass a valid active logical device
  * @codeSize - Sizeof SPIR-V byte code
  * @pCode    - SPIR-V byte code itself
-  * @name    - Name given to shader module can be safely ignored not required by API.
+ * @name     - Name given to shader module can be safely ignored not required by API.
  */
 struct uvr_vk_shader_module_create_info {
-  VkDevice   lgdev;
+  VkDevice   vkDevice;
   size_t     codeSize;
   const char *pCode;
   const char *name;
@@ -532,12 +539,12 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
  * struct uvr_vk_pipeline_layout (Underview Renderer Vulkan Pipeline Layout)
  *
  * members:
- * @lgdev   - Logical device used when creating VkPipelineLayout handle
- * @playout - Represents what resources are needed to produce final image
+ * @vkDevice         - Logical device used when creating VkPipelineLayout handle
+ * @vkPipelineLayout - Represents what resources are needed to produce final image
  */
 struct uvr_vk_pipeline_layout {
-  VkDevice         lgdev;
-  VkPipelineLayout playout;
+  VkDevice         vkDevice;
+  VkPipelineLayout vkPipelineLayout;
 };
 
 
@@ -545,7 +552,7 @@ struct uvr_vk_pipeline_layout {
  * struct uvr_vk_pipeline_layout_create_info (Underview Renderer Vulkan Pipeline Layout Create Information)
  *
  * members:
- * @lgdev                  - Must pass a valid active logical device
+ * @vkDevice                  - Must pass a valid active logical device
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineLayoutCreateInfo.html for bellow members
  * @setLayoutCount
  * @pSetLayouts
@@ -553,7 +560,7 @@ struct uvr_vk_pipeline_layout {
  * @pPushConstantRanges
  */
 struct uvr_vk_pipeline_layout_create_info {
-  VkDevice                    lgdev;
+  VkDevice                    vkDevice;
   uint32_t                    setLayoutCount;
   const VkDescriptorSetLayout *pSetLayouts;
   uint32_t                    pushConstantRangeCount;
@@ -579,12 +586,12 @@ struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeli
  * struct uvr_vk_render_pass (Underview Renderer Vulkan Render Pass)
  *
  * members:
- * @lgdev      - Logical device used when creating VkRenderPass handle
+ * @vkDevice      - Logical device used when creating VkRenderPass handle
  * @renderpass - Represents a collection of attachments, subpasses, and dependencies between the subpasses
  */
 struct uvr_vk_render_pass {
-  VkDevice     lgdev;
-  VkRenderPass renderpass;
+  VkDevice     vkDevice;
+  VkRenderPass renderPass;
 };
 
 
@@ -592,7 +599,7 @@ struct uvr_vk_render_pass {
  * struct uvr_vk_render_pass_create_info (Underview Renderer Vulkan Render Pass Create Information)
  *
  * members:
- * @lgdev - Must pass a valid active logical device
+ * @vkDevice - Must pass a valid active logical device
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html for bellow members
  * @attachmentCount
  * @pAttachments
@@ -602,7 +609,7 @@ struct uvr_vk_render_pass {
  * @pDependencies
  */
 struct uvr_vk_render_pass_create_info {
-  VkDevice                      lgdev;
+  VkDevice                      vkDevice;
   uint32_t                      attachmentCount;
   const VkAttachmentDescription *pAttachments;
   uint32_t                      subpassCount;
@@ -633,12 +640,12 @@ struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_cr
  * struct uvr_vk_graphics_pipeline (Underview Renderer Vulkan Graphics Pipeline)
  *
  * members:
- * @lgdev             - Logical device used when creating VkPipeline handle
- * @graphics_pipeline - Handle to a pipeline object
+ * @vkDevice         - Logical device used when creating VkPipeline handle
+ * @graphicsPipeline - Handle to a pipeline object
  */
 struct uvr_vk_graphics_pipeline {
-  VkDevice   lgdev;
-  VkPipeline graphics_pipeline;
+  VkDevice   vkDevice;
+  VkPipeline graphicsPipeline;
 };
 
 
@@ -646,7 +653,7 @@ struct uvr_vk_graphics_pipeline {
  * struct uvr_vk_graphics_pipeline_create_info (Underview Renderer Vulkan Graphics Pipeline Create Information)
  *
  * members:
- * @lgdev - Must pass a valid active logical device
+ * @vkDevice - Must pass a valid active logical device
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkGraphicsPipelineCreateInfo.html for bellow members
  * @stageCount
  * @pStages
@@ -664,7 +671,7 @@ struct uvr_vk_graphics_pipeline {
  * @subpass
  */
 struct uvr_vk_graphics_pipeline_create_info {
-  VkDevice                                      lgdev;
+  VkDevice                                      vkDevice;
   uint32_t                                      stageCount;
   const VkPipelineShaderStageCreateInfo         *pStages;
   const VkPipelineVertexInputStateCreateInfo    *pVertexInputState;
@@ -676,7 +683,7 @@ struct uvr_vk_graphics_pipeline_create_info {
   const VkPipelineDepthStencilStateCreateInfo   *pDepthStencilState;
   const VkPipelineColorBlendStateCreateInfo     *pColorBlendState;
   const VkPipelineDynamicStateCreateInfo        *pDynamicState;
-  VkPipelineLayout                              layout;
+  VkPipelineLayout                              vkPipelineLayout;
   VkRenderPass                                  renderPass;
   uint32_t                                      subpass;
 };
@@ -699,21 +706,27 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
 
 
 /*
+ * struct uvr_vk_framebuffer_handle (Underview Renderer Vulkan Framebuffer Handle)
+ *
+ * @fb - Framebuffers represent a collection of specific memory attachments that a render pass instance uses.
+ */
+struct uvr_vk_framebuffer_handle {
+  VkFramebuffer fb;
+};
+
+
+/*
  * struct uvr_vk_framebuffer (Underview Renderer Vulkan Framebuffer)
  *
  * members:
- * @lgdev     - Logical device used when VkFramebuffer handle was created.
- * @fbcount   - Amount of VkFramebuffer handles created
- * @vkfbs     - Pointer to an array of VkFramebuffer handles
- *            + @vkfb - Framebuffers represent a collection of specific memory attachments that a render pass instance uses.
+ * @vkDevice         - Logical device used when VkFramebuffer handle was created.
+ * @frameBufferCount - Amount of VkFramebuffer handles created
+ * @vkFrameBuffers   - Pointer to an array of VkFramebuffer handles
  */
 struct uvr_vk_framebuffer {
-  VkDevice lgdev;
-
-  uint32_t fbcount;
-  struct uvrvkframebuffer {
-    VkFramebuffer vkfb;
-  } *vkfbs;
+  VkDevice                          vkDevice;
+  uint32_t                          frameBufferCount;
+  struct uvr_vk_framebuffer_handle  *vkFrameBuffers;
 };
 
 
@@ -721,29 +734,29 @@ struct uvr_vk_framebuffer {
  * struct uvr_vk_framebuffer_create_info (Underview Renderer Vulkan Framebuffer Create Information)
  *
  * members:
- * @lgdev        - Must pass a valid active logical device
- * @fbcount      - Amount of VkFramebuffer handles to create
- * @vkimageviews - Pointer to an array of VkImageView handles which will be used in a render pass instance.
- * @renderPass   - Defines the render pass a given framebuffer is compatible with
- * @width        - Framebuffer width in pixels
- * @height       - Framebuffer height in pixels
+ * @vkDevice         - Must pass a valid active logical device
+ * @frameBufferCount - Amount of VkFramebuffer handles to create
+ * @vkImageViews     - Pointer to an array of VkImageView handles which will be used in a render pass instance.
+ * @renderPass       - Defines the render pass a given framebuffer is compatible with
+ * @width            - Framebuffer width in pixels
+ * @height           - Framebuffer height in pixels
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for bellow members
  * @layers
  */
 struct uvr_vk_framebuffer_create_info {
-  VkDevice         lgdev;
-  uint32_t         fbcount;
-  struct uvrvkview *vkimageviews;
-  VkRenderPass     renderPass;
-  uint32_t         width;
-  uint32_t         height;
-  uint32_t         layers;
+  VkDevice                         vkDevice;
+  uint32_t                         frameBufferCount;
+  struct uvr_vk_image_view_handle  *vkImageViews;
+  VkRenderPass                     renderPass;
+  uint32_t                         width;
+  uint32_t                         height;
+  uint32_t                         layers;
 };
 
 
 /*
- * uvr_vk_framebuffer_create: Creates @fbcount amount of VkFramebuffer handles. For simplicity each VkFramebuffer handle
- *                            created only has one VkImageView attached.
+ * uvr_vk_framebuffer_create: Creates @frameBufferCount amount of VkFramebuffer handles. For simplicity each VkFramebuffer
+ *                            handle created only has one VkImageView attached.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_framebuffer_create_info
@@ -753,26 +766,30 @@ struct uvr_vk_framebuffer_create_info {
  */
 struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_create_info *uvrvk);
 
+/*
+ * struct uvr_vk_command_buffer_handle (Underview Renderer Vulkan Command Buffer Handle)
+ *
+ * @buffer - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
+ */
+struct uvr_vk_command_buffer_handle {
+  VkCommandBuffer buffer;
+};
+
 
 /*
  * struct uvr_vk_command_buffer (Underview Renderer Vulkan Command Buffer)
  *
  * members:
- * @lgdev       - Logical device used to create command pool/buffers
- * @cmdpool     - The command pool which the buffers where allocated from.
- * @cmdbuff_cnt - Amount of VkCommandBuffer's alloocated
- * @cmdbuffs    - Pointer to an array of VkCommandBuffer handles
- *              + @cmdbuff - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
+ * @vkDevice            - Logical device used to create command pool/buffers
+ * @cmdpool             - The command pool which the buffers where allocated from.
+ * @commandBufferCount  - Amount of VkCommandBuffer's alloocated
+ * @vkCommandbuffers    - Pointer to an array of VkCommandBuffer handles
  */
 struct uvr_vk_command_buffer {
-  VkDevice lgdev;
-
-  VkCommandPool cmdpool;
-
-  uint32_t cmdbuff_cnt;
-  struct uvrvkcmdbuffer {
-    VkCommandBuffer cmdbuff;
-  } *cmdbuffs;
+  VkDevice                            vkDevice;
+  VkCommandPool                       vkCommandPool;
+  uint32_t                            commandBufferCount;
+  struct uvr_vk_command_buffer_handle *vkCommandbuffers;
 };
 
 
@@ -780,13 +797,13 @@ struct uvr_vk_command_buffer {
  * struct uvr_vk_command_buffer_create_info (Underview Renderer Vulkan Command Buffer Create Information)
  *
  * members:
- * @lgdev              - Must pass a valid active logical device
+ * @vkDevice           - Must pass a valid active logical device
  * @queueFamilyIndex   - Designates a queue family with VkCommandPool. All command buffers allocated from VkCommandPool
  *                       must used same queue.
  * @commandBufferCount - The amount of command buffers to allocate from a given pool
  */
 struct uvr_vk_command_buffer_create_info {
-  VkDevice lgdev;
+  VkDevice vkDevice;
   uint32_t queueFamilyIndex;
   uint32_t commandBufferCount;
 };
@@ -811,13 +828,13 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
  * struct uvr_vk_command_buffer_record_info (Underview Renderer Vulkan Command Buffer Record Information)
  *
  * members:
- * @cmdbuff_cnt - Amount of VkCommandBuffer handles allocated
- * @cmdbuffs    - Pointer to an array of struct uvrvkcmdbuffer which contains your actual VkCommandBuffer handles to start writing commands to.
- * @flags       - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
+ * @commandBufferCount - Amount of VkCommandBuffer handles allocated
+ * @vkCommandbuffers   - Pointer to an array of struct uvr_vk_command_buffer_handle which contains your actual VkCommandBuffer handles to start writing commands to.
+ * @flags              - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
  */
 struct uvr_vk_command_buffer_record_info {
-  uint32_t cmdbuff_cnt;
-  struct uvrvkcmdbuffer *cmdbuffs;
+  uint32_t commandBufferCount;
+  struct uvr_vk_command_buffer_handle *vkCommandbuffers;
   VkCommandBufferUsageFlagBits flags;
 };
 

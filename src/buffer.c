@@ -12,10 +12,10 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
   struct uvr_buffer_object *bois = NULL;
 
   if (uvrbuff->bType == GBM_BUFFER || uvrbuff->bType == GBM_BUFFER_WITH_MODIFIERS) {
-    gbmdev = gbm_create_device(uvrbuff->kmsfd);
+    gbmdev = gbm_create_device(uvrbuff->kmsFd);
     if (!gbmdev) goto exit_uvr_buffer_null_struct;
 
-    bois = calloc(uvrbuff->buff_cnt, sizeof(struct uvr_buffer_object));
+    bois = calloc(uvrbuff->bufferCount, sizeof(struct uvr_buffer_object));
     if (!bois) {
       uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
       goto exit_uvr_buffer_gbmdev_destroy;
@@ -23,9 +23,9 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
   }
 
   if (uvrbuff->bType == GBM_BUFFER) {
-    for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
-      bois[b].kmsfd = uvrbuff->kmsfd;
-      bois[b].bo = gbm_bo_create(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->gbm_bo_flags);
+    for (unsigned b = 0; b < uvrbuff->bufferCount; b++) {
+      bois[b].kmsFd = uvrbuff->kmsFd;
+      bois[b].bo = gbm_bo_create(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->gbmBoFlags);
       if (!bois[b].bo) {
         uvr_utils_log(UVR_DANGER, "[x] gbm_bo_create: failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
         goto exit_uvr_buffer_gbm_bo_detroy;
@@ -34,9 +34,9 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
   }
 
   if (uvrbuff->bType == GBM_BUFFER_WITH_MODIFIERS) {
-    for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
-      bois[b].kmsfd = uvrbuff->kmsfd;
-      bois[b].bo = gbm_bo_create_with_modifiers2(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->modifiers, uvrbuff->modifiers_cnt, uvrbuff->gbm_bo_flags);
+    for (unsigned b = 0; b < uvrbuff->bufferCount; b++) {
+      bois[b].kmsFd = uvrbuff->kmsFd;
+      bois[b].bo = gbm_bo_create_with_modifiers2(gbmdev, uvrbuff->width, uvrbuff->height, uvrbuff->pixformat, uvrbuff->modifiers, uvrbuff->modifierCount, uvrbuff->gbmBoFlags);
       if (!bois[b].bo) {
         uvr_utils_log(UVR_DANGER, "[x] gbm_bo_create_with_modifiers: failed to create gbm_bo with res %u x %u", uvrbuff->width, uvrbuff->height);
         goto exit_uvr_buffer_gbm_bo_detroy;
@@ -44,12 +44,12 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
     }
   }
 
-  for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
-    bois[b].num_planes = gbm_bo_get_plane_count(bois[b].bo);
+  for (unsigned b = 0; b < uvrbuff->bufferCount; b++) {
+    bois[b].planeCount = gbm_bo_get_plane_count(bois[b].bo);
     bois[b].modifier = gbm_bo_get_modifier(bois[b].bo);
     bois[b].format = gbm_bo_get_format(bois[b].bo);
 
-    for (unsigned p = 0; p < bois[b].num_planes; p++) {
+    for (unsigned p = 0; p < bois[b].planeCount; p++) {
       union gbm_bo_handle h;
       memset(&h,0,sizeof(h));
 
@@ -79,7 +79,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
        * Retrieve a DMA-BUF fd (PRIME fd) for a given GEM buffer via the GEM handle.
        * This fd can be passed along to other processes
        */
-      if (ioctl(bois[b].kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime_request) == -1)  {
+      if (ioctl(bois[b].kmsFd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime_request) == -1)  {
         uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_PRIME_HANDLE_TO_FD): %s", strerror(errno));
         goto exit_uvr_buffer_gbm_bo_detroy;
       }
@@ -120,7 +120,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
       f.handle = bois[b].gem_handles[0];
       bois[b].fbid = 0;
 
-      if (ioctl(bois[b].kmsfd, DRM_IOCTL_MODE_ADDFB, &f) == -1) {
+      if (ioctl(bois[b].kmsFd, DRM_IOCTL_MODE_ADDFB, &f) == -1) {
         uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB): %s", strerror(errno));
         goto exit_uvr_buffer_gbm_bo_detroy;
       }
@@ -143,7 +143,7 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
       memcpy(f.modifier, uvrbuff->modifiers , sizeof(f.modifier));
       bois[b].fbid = 0;
 
-      if (ioctl(bois[b].kmsfd, DRM_IOCTL_MODE_ADDFB2, &f) == -1) {
+      if (ioctl(bois[b].kmsFd, DRM_IOCTL_MODE_ADDFB2, &f) == -1) {
         uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB2): %s", strerror(errno));
         goto exit_uvr_buffer_gbm_bo_detroy;
       }
@@ -154,17 +154,17 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff) {
 
   uvr_utils_log(UVR_SUCCESS, "Successfully create GBM buffers");
 
-  return (struct uvr_buffer) { .gbmdev = gbmdev, .buffers_cnt = uvrbuff->buff_cnt, .buffers = bois };
+  return (struct uvr_buffer) { .gbmdev = gbmdev, .bufferCount = uvrbuff->bufferCount, .buffers = bois };
 
 exit_uvr_buffer_gbm_bo_detroy:
-  for (unsigned b = 0; b < uvrbuff->buff_cnt; b++) {
+  for (unsigned b = 0; b < uvrbuff->bufferCount; b++) {
     if (bois[b].fbid)
-      ioctl(bois[b].kmsfd, DRM_IOCTL_MODE_RMFB, &bois[b].fbid);
+      ioctl(bois[b].kmsFd, DRM_IOCTL_MODE_RMFB, &bois[b].fbid);
     if (bois[b].bo)
       gbm_bo_destroy(bois[b].bo);
-    for (unsigned p = 0; p < bois[b].num_planes; p++) {
+    for (unsigned p = 0; p < bois[b].planeCount; p++) {
       if (bois[b].dma_buf_fds[p] != -1) {
-        drmCloseBufferHandle(bois[b].kmsfd, bois[b].dma_buf_fds[p]);
+        drmCloseBufferHandle(bois[b].kmsFd, bois[b].dma_buf_fds[p]);
         bois[b].dma_buf_fds[p] = -1;
       }
     }
@@ -174,20 +174,20 @@ exit_uvr_buffer_gbmdev_destroy:
   if (gbmdev)
     gbm_device_destroy(gbmdev);
 exit_uvr_buffer_null_struct:
-  return (struct uvr_buffer) { .gbmdev = NULL, .buffers_cnt = 0, .buffers = NULL };
+  return (struct uvr_buffer) { .gbmdev = NULL, .bufferCount = 0, .buffers = NULL };
 }
 
 
 void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff) {
   for (unsigned uvrb = 0; uvrb < uvrbuff->uvr_buffer_cnt; uvrb++) {
-    for (unsigned b = 0; b < uvrbuff->uvr_buffer[uvrb].buffers_cnt; b++) {
+    for (unsigned b = 0; b < uvrbuff->uvr_buffer[uvrb].bufferCount; b++) {
       if (uvrbuff->uvr_buffer[uvrb].buffers[b].fbid)
-        ioctl(uvrbuff->uvr_buffer[uvrb].buffers[b].kmsfd, DRM_IOCTL_MODE_RMFB, &uvrbuff->uvr_buffer[uvrb].buffers[b].fbid);
+        ioctl(uvrbuff->uvr_buffer[uvrb].buffers[b].kmsFd, DRM_IOCTL_MODE_RMFB, &uvrbuff->uvr_buffer[uvrb].buffers[b].fbid);
       if (uvrbuff->uvr_buffer[uvrb].buffers[b].bo)
         gbm_bo_destroy(uvrbuff->uvr_buffer[uvrb].buffers[b].bo);
-      for (unsigned p = 0; p < uvrbuff->uvr_buffer[uvrb].buffers[b].num_planes; p++)  {
+      for (unsigned p = 0; p < uvrbuff->uvr_buffer[uvrb].buffers[b].planeCount; p++)  {
         if (uvrbuff->uvr_buffer[uvrb].buffers[b].dma_buf_fds[p] != -1)
-          drmCloseBufferHandle(uvrbuff->uvr_buffer[uvrb].buffers[b].kmsfd, uvrbuff->uvr_buffer[uvrb].buffers[b].dma_buf_fds[p]);
+          drmCloseBufferHandle(uvrbuff->uvr_buffer[uvrb].buffers[b].kmsFd, uvrbuff->uvr_buffer[uvrb].buffers[b].dma_buf_fds[p]);
       }
     }
     free(uvrbuff->uvr_buffer[uvrb].buffers);

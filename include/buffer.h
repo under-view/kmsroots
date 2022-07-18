@@ -37,7 +37,7 @@ enum uvr_buffer_type {
  * @modifier    - The modifier details information on how pixels should be within a buffer for different types
  *                operations such as scan out or rendering. (i.e linear, tiled, compressed, etc...)
  *                https://01.org/linuxgraphics/Linux-Window-Systems-with-DRM
- * @num_planes  - Number of Planer Formats
+ * @planeCount  - Number of Planer Formats
  *                More information can be found https://en.wikipedia.org/wiki/Planar_(computer_graphics)
  * @pitches     - pitch for each plane
  * @offsets     - offset of each plane
@@ -51,12 +51,12 @@ struct uvr_buffer_object {
   unsigned      fbid;
   unsigned      format;
   uint64_t      modifier;
-  unsigned      num_planes;
+  unsigned      planeCount;
   unsigned      pitches[4];
   unsigned      offsets[4];
   unsigned      gem_handles[4];
   int           dma_buf_fds[4];
-  int           kmsfd;
+  int           kmsFd;
 };
 
 
@@ -65,13 +65,13 @@ struct uvr_buffer_object {
  *
  * members:
  * @gbmdev      - A handle used to allocate gbm buffers & surfaces
- * @buffers_cnt - Amount of gbm_bo's
+ * @bufferCount - Amount of gbm_bo's
  * @buffers     - Stores an array of gbm_bo's and corresponding information
  *                about the individual buffer.
  */
 struct uvr_buffer {
   struct gbm_device        *gbmdev;
-  unsigned int             buffers_cnt;
+  unsigned int             bufferCount;
   struct uvr_buffer_object *buffers;
 };
 
@@ -81,35 +81,35 @@ struct uvr_buffer {
  *
  * members:
  * @bType         - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
- * @kmsfd         - Used by gbm_create_device. Must be a valid file descriptor
+ * @kmsFd         - Used by gbm_create_device. Must be a valid file descriptor
  *                  to a DRI device (GPU character device file)
- * @buff_cnt      - The amount of buffers to allocate.
+ * @bufferCount   - The amount of buffers to allocate.
  *                  * 2 for double buffering
  *                  * 3 for triple buffering
  * @width         - Amount of pixels going width wise on screen. Need to allocate buffer of similar size.
  * @height        - Amount of pixels going height wise on screen. Need to allocate buffer of similar size.
  * @bitdepth      - Bit depth: https://petapixel.com/2018/09/19/8-12-14-vs-16-bit-depth-what-do-you-really-need/
  * @bpp           - Pass the amount of bits per pixel
- * @gbm_bo_flags  - Flags to indicate gbm_bo usage. More info here:
+ * @gbmBoFlags    - Flags to indicate gbm_bo usage. More info here:
  *                  https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h#L213
  * @pixformat     - The format of an image details how each pixel color channels is laid out in
  *                  memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
  *                  ordering of each pixels color channels.
  * @modifiers     - List of drm format modifier
- * @modifiers_cnt - Number of drm format modifiers passed
+ * @modifierCount - Number of drm format modifiers passed
  */
 struct uvr_buffer_create_info {
   enum uvr_buffer_type bType;
-  unsigned int         kmsfd;
-  unsigned int         buff_cnt;
+  unsigned int         kmsFd;
+  unsigned int         bufferCount;
   unsigned int         width;
   unsigned int         height;
   unsigned int         bitdepth;
   unsigned int         bpp;
-  unsigned int         gbm_bo_flags;
+  unsigned int         gbmBoFlags;
   unsigned int         pixformat;
   uint64_t             *modifiers;
-  unsigned int         modifiers_cnt;
+  unsigned int         modifierCount;
 };
 
 

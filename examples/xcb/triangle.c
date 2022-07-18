@@ -101,8 +101,9 @@ int main(void) {
   if (record_vk_command_buffers(&app) == -1)
     goto exit_error;
 
-  uvr_xcb_window_display(&xc);
-  while (uvr_xcb_window_wait_for_event(&xc));
+  while (uvr_xcb_window_wait_for_event(&xc)) {
+    // Initentionally left blank
+  }
 
 
 exit_error:
@@ -154,7 +155,7 @@ int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc, int UNU
   struct uvr_xcb_window_create_info xcb_win_info;
   xcb_win_info.display = NULL;
   xcb_win_info.screen = NULL;
-  xcb_win_info.appname = "Example App";
+  xcb_win_info.appName = "Example App";
   xcb_win_info.fullscreen = true;
   xcb_win_info.transparent = false;
 
@@ -166,7 +167,7 @@ int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc, int UNU
    * Create Vulkan Surface
    */
   struct uvr_vk_surface_create_info vk_surface_info;
-  vk_surface_info.vkinst = app->instance;
+  vk_surface_info.vkInst = app->instance;
   vk_surface_info.sType = XCB_CLIENT_SURFACE;
   vk_surface_info.display = xc->conn;
   vk_surface_info.window = xc->window;
@@ -198,8 +199,8 @@ int create_vk_instance(struct uvr_vk *app) {
   };
 
   struct uvr_vk_instance_create_info vkinst;
-  vkinst.app_name = "Example App";
-  vkinst.engine_name = "No Engine";
+  vkinst.appName = "Example App";
+  vkinst.engineName = "No Engine";
   vkinst.enabledLayerCount = ARRAY_LEN(validation_layers);
   vkinst.ppEnabledLayerNames = validation_layers;
   vkinst.enabledExtensionCount = ARRAY_LEN(instance_extensions);
@@ -220,10 +221,10 @@ int create_vk_device(struct uvr_vk *app) {
   };
 
   struct uvr_vk_phdev_create_info vkphdev;
-  vkphdev.vkinst = app->instance;
-  vkphdev.vkpdtype = VK_PHYSICAL_DEVICE_TYPE;
+  vkphdev.vkInst = app->instance;
+  vkphdev.vkPhdevType = VK_PHYSICAL_DEVICE_TYPE;
 #ifdef INCLUDE_KMS
-  vkphdev.kmsfd = -1;
+  vkphdev.kmsFd = -1;
 #endif
 
   app->phdev = uvr_vk_phdev_create(&vkphdev);
@@ -231,26 +232,26 @@ int create_vk_device(struct uvr_vk *app) {
     return -1;
 
   struct uvr_vk_queue_create_info vkqueueinfo;
-  vkqueueinfo.phdev = app->phdev;
+  vkqueueinfo.vkPhdev = app->phdev;
   vkqueueinfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
   app->graphics_queue = uvr_vk_queue_create(&vkqueueinfo);
-  if (app->graphics_queue.famindex == -1)
+  if (app->graphics_queue.familyIndex == -1)
     return -1;
 
   VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app->phdev);
 
   struct uvr_vk_lgdev_create_info vklgdevinfo;
-  vklgdevinfo.vkinst = app->instance;
-  vklgdevinfo.phdev = app->phdev;
+  vklgdevinfo.vkInst = app->instance;
+  vklgdevinfo.vkPhdev = app->phdev;
   vklgdevinfo.pEnabledFeatures = &phdevfeats;
   vklgdevinfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
   vklgdevinfo.ppEnabledExtensionNames = device_extensions;
-  vklgdevinfo.numqueues = 1;
+  vklgdevinfo.queueCount = 1;
   vklgdevinfo.queues = &app->graphics_queue;
 
   app->lgdev = uvr_vk_lgdev_create(&vklgdevinfo);
-  if (!app->lgdev.device)
+  if (!app->lgdev.vkDevice)
     return -1;
 
   return 0;
@@ -266,25 +267,25 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
   struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev, app->surface);
 
   /* Choose surface format based */
-  for (uint32_t s = 0; s < sformats.fcount; s++) {
-    if (sformats.formats[s].format == VK_FORMAT_B8G8R8A8_SRGB && sformats.formats[s].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-      *sformat = sformats.formats[s];
+  for (uint32_t s = 0; s < sformats.surfaceFormatCount; s++) {
+    if (sformats.surfaceFormats[s].format == VK_FORMAT_B8G8R8A8_SRGB && sformats.surfaceFormats[s].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      *sformat = sformats.surfaceFormats[s];
     }
   }
 
-  for (uint32_t p = 0; p < spmodes.mcount; p++) {
-    if (spmodes.modes[p] == VK_PRESENT_MODE_MAILBOX_KHR) {
-      presmode = spmodes.modes[p];
+  for (uint32_t p = 0; p < spmodes.presentModeCount; p++) {
+    if (spmodes.presentModes[p] == VK_PRESENT_MODE_MAILBOX_KHR) {
+      presmode = spmodes.presentModes[p];
     }
   }
 
-  free(sformats.formats); sformats.formats = NULL;
-  free(spmodes.modes); spmodes.modes = NULL;
+  free(sformats.surfaceFormats); sformats.surfaceFormats = NULL;
+  free(spmodes.presentModes); spmodes.presentModes = NULL;
 
   struct uvr_vk_swapchain_create_info scinfo;
-  scinfo.lgdev = app->lgdev.device;
-  scinfo.surfaceKHR = app->surface;
-  scinfo.surfcap = surfcap;
+  scinfo.vkDevice = app->lgdev.vkDevice;
+  scinfo.vkSurface = app->surface;
+  scinfo.surfaceCapabilities = surfcap;
   scinfo.surfaceFormat = *sformat;
   scinfo.extent2D = extent2D;
   scinfo.imageArrayLayers = 1;
@@ -298,7 +299,7 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
   scinfo.oldSwapchain = VK_NULL_HANDLE;
 
   app->schain = uvr_vk_swapchain_create(&scinfo);
-  if (!app->schain.swapchain)
+  if (!app->schain.vkSwapchain)
     return -1;
 
   return 0;
@@ -308,8 +309,8 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
 int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
   struct uvr_vk_image_create_info vkimage_create_info;
-  vkimage_create_info.lgdev = app->lgdev.device;
-  vkimage_create_info.swapchain = app->schain.swapchain;
+  vkimage_create_info.vkDevice = app->lgdev.vkDevice;
+  vkimage_create_info.vkSwapchain = app->schain.vkSwapchain;
   vkimage_create_info.flags = 0;
   vkimage_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
   vkimage_create_info.format = sformat->format;
@@ -324,7 +325,7 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.subresourceRange.layerCount = 1;
 
   app->vkimages = uvr_vk_image_create(&vkimage_create_info);
-  if (!app->vkimages.views[0].view)
+  if (!app->vkimages.vkImageViews[0].view)
     return -1;
 
   return 0;
@@ -386,7 +387,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 #endif
 
   struct uvr_vk_shader_module_create_info vertex_shader_module_create_info;
-  vertex_shader_module_create_info.lgdev = app->lgdev.device;
+  vertex_shader_module_create_info.vkDevice = app->lgdev.vkDevice;
   vertex_shader_module_create_info.codeSize = app->vertex_shader.bsize;
   vertex_shader_module_create_info.pCode = app->vertex_shader.bytes;
   vertex_shader_module_create_info.name = "vertex";
@@ -396,7 +397,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     return -1;
 
   struct uvr_vk_shader_module_create_info frag_shader_module_create_info;
-  frag_shader_module_create_info.lgdev = app->lgdev.device;
+  frag_shader_module_create_info.vkDevice = app->lgdev.vkDevice;
   frag_shader_module_create_info.codeSize = app->fragment_shader.bsize;
   frag_shader_module_create_info.pCode = app->fragment_shader.bytes;
   frag_shader_module_create_info.name = "fragment";
@@ -533,18 +534,18 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   subpass.pColorAttachments = &colorAttachmentRef;
 
   struct uvr_vk_pipeline_layout_create_info gplayout_info;
-  gplayout_info.lgdev = app->lgdev.device;
+  gplayout_info.vkDevice = app->lgdev.vkDevice;
   gplayout_info.setLayoutCount = 0;
   gplayout_info.pSetLayouts = NULL;
   gplayout_info.pushConstantRangeCount = 0;
   gplayout_info.pPushConstantRanges = NULL;
 
   app->gplayout = uvr_vk_pipeline_layout_create(&gplayout_info);
-  if (!app->gplayout.playout)
+  if (!app->gplayout.vkPipelineLayout)
     return -1;
 
   struct uvr_vk_render_pass_create_info renderpass_info;
-  renderpass_info.lgdev = app->lgdev.device;
+  renderpass_info.vkDevice = app->lgdev.vkDevice;
   renderpass_info.attachmentCount = 1;
   renderpass_info.pAttachments = &colorAttachment;
   renderpass_info.subpassCount = 1;
@@ -553,11 +554,11 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   renderpass_info.pDependencies = NULL;
 
   app->rpass = uvr_vk_render_pass_create(&renderpass_info);
-  if (!app->rpass.renderpass)
+  if (!app->rpass.renderPass)
     return -1;
 
   struct uvr_vk_graphics_pipeline_create_info gpipeline_info;
-  gpipeline_info.lgdev = app->lgdev.device;
+  gpipeline_info.vkDevice = app->lgdev.vkDevice;
   gpipeline_info.stageCount = ARRAY_LEN(shaderStages);
   gpipeline_info.pStages = shaderStages;
   gpipeline_info.pVertexInputState = &vertexInputInfo;
@@ -569,12 +570,12 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   gpipeline_info.pDepthStencilState = NULL;
   gpipeline_info.pColorBlendState = &colorBlending;
   gpipeline_info.pDynamicState = &dynamicState;
-  gpipeline_info.layout = app->gplayout.playout;
-  gpipeline_info.renderPass = app->rpass.renderpass;
+  gpipeline_info.vkPipelineLayout = app->gplayout.vkPipelineLayout;
+  gpipeline_info.renderPass = app->rpass.renderPass;
   gpipeline_info.subpass = 0;
 
   app->gpipeline = uvr_vk_graphics_pipeline_create(&gpipeline_info);
-  if (!app->gpipeline.graphics_pipeline)
+  if (!app->gpipeline.graphicsPipeline)
     return -1;
 
   return 0;
@@ -584,16 +585,16 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
   struct uvr_vk_framebuffer_create_info vkframebuffer_create_info;
-  vkframebuffer_create_info.lgdev = app->lgdev.device;
-  vkframebuffer_create_info.fbcount = app->vkimages.vcount;
-  vkframebuffer_create_info.vkimageviews = app->vkimages.views;
-  vkframebuffer_create_info.renderPass = app->rpass.renderpass;
+  vkframebuffer_create_info.vkDevice = app->lgdev.vkDevice;
+  vkframebuffer_create_info.frameBufferCount = app->vkimages.imageCount;
+  vkframebuffer_create_info.vkImageViews = app->vkimages.vkImageViews;
+  vkframebuffer_create_info.renderPass = app->rpass.renderPass;
   vkframebuffer_create_info.width = extent2D.width;
   vkframebuffer_create_info.height = extent2D.height;
   vkframebuffer_create_info.layers = 1;
 
   app->vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_create_info);
-  if (!app->vkframebuffs.vkfbs[0].vkfb)
+  if (!app->vkframebuffs.vkFrameBuffers[0].fb)
     return -1;
 
   return 0;
@@ -602,17 +603,17 @@ int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
 int record_vk_command_buffers(struct uvr_vk *app) {
   struct uvr_vk_command_buffer_create_info cmdbuff_create_info;
-  cmdbuff_create_info.lgdev = app->lgdev.device;
-  cmdbuff_create_info.queueFamilyIndex = app->graphics_queue.famindex;
+  cmdbuff_create_info.vkDevice = app->lgdev.vkDevice;
+  cmdbuff_create_info.queueFamilyIndex = app->graphics_queue.familyIndex;
   cmdbuff_create_info.commandBufferCount = 1;
 
   app->vkcbuffs = uvr_vk_command_buffer_create(&cmdbuff_create_info);
-  if (!app->vkcbuffs.cmdpool)
+  if (!app->vkcbuffs.vkCommandPool)
     return -1;
 
   struct uvr_vk_command_buffer_record_info cbuffrec;
-  cbuffrec.cmdbuff_cnt = app->vkcbuffs.cmdbuff_cnt;
-  cbuffrec.cmdbuffs = app->vkcbuffs.cmdbuffs;
+  cbuffrec.commandBufferCount = app->vkcbuffs.commandBufferCount;
+  cbuffrec.vkCommandbuffers = app->vkcbuffs.vkCommandbuffers;
   cbuffrec.flags = 0;
 
   if (uvr_vk_command_buffer_record_begin(&cbuffrec) == -1)

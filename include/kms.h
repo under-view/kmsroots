@@ -27,6 +27,27 @@
 
 
 /*
+ * struct uvr_kms_node (Underview Renderer KMS Node)
+ *
+ * members:
+ * @kmsFd          - A valid file descriptor to an open DRI device node
+ * @vtFd           - File descriptor to open tty character device (i.e '/dev/tty0')
+ * @kbmode         - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
+ * @uvr_sd_session - Stores address of struct uvr_sd_session. Used when releasing a device
+ * @useLogind      - Stores whether systemd-logind is utilized or not
+ */
+struct uvr_kms_node {
+  int                   kmsFd;
+  int                   vtfd;
+  int                   kbmode;
+#ifdef INCLUDE_SDBUS
+  struct uvr_sd_session *uvr_sd_session;
+  bool                  useLogind;
+#endif
+};
+
+
+/*
  * struct uvr_kms_node_create_info (Underview Renderer KMS Node Create Information)
  *
  * members:
@@ -34,41 +55,20 @@
  *                   with systemd-logind via D-Bus systemd-logind interface. Needed by
  *                   kms_node_create to acquire and taken control of a device without the
  *                   need of being root.
- * @use_logind     - Not redundant. If one include -Dsd-bus=yes meson option, but doesn't
- *                   want to utilize systemd-logind D-bus interface to open/take control of a
- *                   GPU device set member to false. If variable is set to true this will use
- *                   systemd-logind D-bus interface.
- * @kmsnode        - Path to character device associated with GPU. If set to NULL. List of
- *                   available kmsnode's will be queried and one will be automatically
- *                   choosen for you.
+ * @useLogind     - Not redundant. If one includes -Dsd-bus=yes meson option, but doesn't
+ *                  want to utilize systemd-logind D-bus interface to open/take control of a
+ *                  GPU device set member to false. If variable is set to true this will use
+ *                  systemd-logind D-bus interface.
+ * @kmsNode       - Path to character device associated with GPU. If set to NULL. List of
+ *                  available kmsnode's will be queried and one will be automatically
+ *                  choosen for you.
  */
 struct uvr_kms_node_create_info {
 #ifdef INCLUDE_SDBUS
   struct uvr_sd_session *uvr_sd_session;
-  bool                  use_logind;
+  bool                  useLogind;
 #endif
-  const char            *kmsnode;
-};
-
-
-/*
- * struct uvr_kms_node (Underview Renderer KMS Node)
- *
- * members:
- * @kmsfd          - A valid file descriptor to an open DRI device node
- * @vtfd           - File descriptor to open tty character device (i.e '/dev/tty0')
- * @kbmode         - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
- * @uvr_sd_session - Stores address of struct uvr_sd_session. Used when releasing a device
- * @use_logind     - Stores whether systemd-logind is utilized or not
- */
-struct uvr_kms_node {
-  int                   kmsfd;
-  int                   vtfd;
-  int                   kbmode;
-#ifdef INCLUDE_SDBUS
-  struct uvr_sd_session *uvr_sd_session;
-  bool                  use_logind;
-#endif
+  const char            *kmsNode;
 };
 
 
@@ -144,10 +144,10 @@ struct uvr_kms_node_display_output_chain {
  * struct uvr_kms_node_display_output_chain_create_info (Underview Renderer KMS Node display Output Chain Create Information)
  *
  * members:
- * @kmsfd - The file descriptor associated with open KMS device node.
+ * @kmsFd - The file descriptor associated with open KMS device node.
  */
 struct uvr_kms_node_display_output_chain_create_info {
-  int kmsfd;
+  int kmsFd;
 };
 
 
@@ -171,7 +171,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  *
  * members:
  * @uvr_kms_node                      - Must pass a valid struct uvr_kms_node. Which contains information about the
- *                                      file descriptor associated with open KMS device node to be closed. Stores
+ *                                      file descriptor associated with open DRI device node to be closed. Stores
  *                                      information about logind session bus, id, and path needed to release control
  *                                      of a given device. That given device is a DRI device file.
  * @uvr_kms_node_display_output_chain - Must pass a valid struct uvr_kms_node_display_output_chain. Stores information
