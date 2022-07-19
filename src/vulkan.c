@@ -894,7 +894,8 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
 
   if (uvrvk->uvr_vk_command_buffer) {
     for (i = 0; i < uvrvk->uvr_vk_command_buffer_cnt; i++) {
-      vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].lgdev, uvrvk->uvr_vk_command_buffer[i].cmdpool, NULL);
+      if (uvrvk->uvr_vk_command_buffer[i].lgdev && uvrvk->uvr_vk_command_buffer[i].cmdpool)
+        vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].lgdev, uvrvk->uvr_vk_command_buffer[i].cmdpool, NULL);
       free(uvrvk->uvr_vk_command_buffer[i].cmdbuffs);
     }
   }
