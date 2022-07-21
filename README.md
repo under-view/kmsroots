@@ -7,6 +7,10 @@ For better dependency version control underview builds all packages required fro
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
 going.
 
+**Tested Distro's**
+
+    * Ubuntu 20.04
+
 **Building**
 
 All features are disabled by default
