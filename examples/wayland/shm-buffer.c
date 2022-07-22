@@ -13,6 +13,7 @@ struct uvr_wc {
 };
 
 
+/* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L825 */
 static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
   uint8_t next;
 

@@ -8,8 +8,8 @@ For better dependency version control underview builds all packages required fro
 going.
 
 **Tested Distro's**
-
-    * Ubuntu 20.04
+- Ubuntu 20.04
+- Ubuntu 22.04
 
 **Building**
 
