@@ -30,7 +30,7 @@ void render(bool UNUSED *running, int *cbuf, void *data) {
   struct uvr_wc *wc = data;
 
   unsigned int width = 3840, height = 2160, bytes_per_pixel = 4;
-  unsigned int UNUSED stride = width * bytes_per_pixel;
+  unsigned int stride = width * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;
 
   srand(time(NULL));

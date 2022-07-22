@@ -55,7 +55,7 @@ static void registry_handle_global(void *data,
 
   if (core->iType & UVR_WC_XDG_WM_BASE_INTERFACE) {
     if (!strcmp(interface, xdg_wm_base_interface.name)) {
-      core->xdgWmBase = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
+      core->xdgWmBase = wl_registry_bind(registry, name, &xdg_wm_base_interface, 3);
       xdg_wm_base_add_listener(core->xdgWmBase, &xdg_wm_base_listener, NULL);
     }
   }
@@ -177,9 +177,7 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
   int stride = uvrwc->width * uvrwc->bytesPerPixel;
 
   for (int c=0; c < uvrwc->bufferCount; c++) {
-    // adding sizeof(uint8_t*) because example external renderer seem to
-    // write pixels data beyond the shm_pool_size
-    uvrwcshmbufs[c].shmPoolSize = stride * uvrwc->height;
+    uvrwcshmbufs[c].shmPoolSize = stride * uvrwc->height * sizeof(uint8_t*);
     uvrwcshmbufs[c].shmFd = -1;
 
     /* Create POSIX shared memory file of size shm_pool_size */
@@ -282,6 +280,7 @@ static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel UNUSED *xd
   *rinfo->running = false;
 }
 
+
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
   .configure = noop,
   .close = xdg_toplevel_handle_close,
@@ -295,8 +294,12 @@ static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED 
   struct uvr_wc_renderer_info *rinfo = (struct uvr_wc_renderer_info *) data;
   struct uvr_wc_surface *wcsurf = rinfo->wcsurf;
 
-  if (wcsurf->bufferCount)
-    *rinfo->cbuf = (*rinfo->cbuf + 1) % wcsurf->bufferCount;
+  if (callback)
+    wl_callback_destroy(callback);
+
+  // Register a frame callback to know when we need to draw the next frame
+  wcsurf->wlCallback = wl_surface_frame(wcsurf->wlSurface);
+  wl_callback_add_listener(wcsurf->wlCallback, &frame_listener, rinfo);
 
   rinfo->renderer(rinfo->running, rinfo->cbuf, rinfo->rendererdata);
 
@@ -306,13 +309,11 @@ static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED 
   /* Indicate that the entire surface as changed and needs to be redrawn */
   wl_surface_damage_buffer(wcsurf->wlSurface, 0, 0, INT32_MAX, INT32_MAX);
 
-  if (callback)
-    wl_callback_destroy(callback);
-
-  // Register a frame callback to know when we need to draw the next frame
-  wcsurf->wlCallback = wl_surface_frame(wcsurf->wlSurface);
-  wl_callback_add_listener(wcsurf->wlCallback, &frame_listener, rinfo);
+  /* Submit a frame for this event */
   wl_surface_commit(wcsurf->wlSurface);
+
+  if (wcsurf->bufferCount)
+    *rinfo->cbuf = (*rinfo->cbuf + 1) % wcsurf->bufferCount;
 }
 
 
