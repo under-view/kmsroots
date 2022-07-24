@@ -40,7 +40,7 @@ struct uvr_wc {
 };
 
 
-int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, int *cbuf, bool *running);
+int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running);
 int create_vk_instance(struct uvr_vk *uvrvk);
 int create_vk_device(struct uvr_vk *app);
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
@@ -52,7 +52,7 @@ int create_vk_command_buffers(struct uvr_vk *app);
 int record_vk_command_buffers(struct uvr_vk *app);
 
 
-void UNUSED render(bool UNUSED *running, int UNUSED *cbuf, void UNUSED *data) {
+void UNUSED render(bool UNUSED *running, uint32_t UNUSED *cbuf, void UNUSED *data) {
   // Initentionally left blank for now
 }
 
@@ -77,7 +77,7 @@ int main(void) {
   if (create_vk_instance(&app) == -1)
     goto exit_error;
 
-  static int cbuf = 0;
+  static uint32_t cbuf = 0;
   static bool running = true;
   if (create_wc_vk_surface(&app, &wc, &cbuf, &running) == -1)
     goto exit_error;
@@ -148,7 +148,7 @@ exit_error:
 }
 
 
-int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, int *cbuf, bool *running) {
+int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running) {
 
   struct uvr_wc_core_interface_create_info wc_core_interfaces_info;
   wc_core_interfaces_info.wlDisplayName = NULL;
@@ -161,7 +161,7 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, int *cbuf, bool 
 
   struct uvr_wc_surface_create_info uvr_wc_surface_info;
   uvr_wc_surface_info.uvrWcCore = &wc->wcinterfaces;
-  uvr_wc_surface_info.uvrwcbuff = NULL;
+  uvr_wc_surface_info.uvrWcBuffer = NULL;
   uvr_wc_surface_info.appName = "WL Vulkan Triangle Example";
   uvr_wc_surface_info.fullscreen = true;
   uvr_wc_surface_info.renderer = NULL;

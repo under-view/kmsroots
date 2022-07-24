@@ -175,7 +175,7 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
  * Given that the arguments of the function are a pointer to a boolean,
  * pointer to an integer, and a pointer to void data type
  */
-typedef void (*uvr_wc_renderer_impl)(bool*, int*, void*);
+typedef void (*uvr_wc_renderer_impl)(bool*, uint32_t*, void*);
 
 
 /*
@@ -209,9 +209,12 @@ struct uvr_wc_surface {
  * members:
  * @uvrWcCore      - Pointer to a struct uvr_wc_core_interface contains all objects/interfaces
  *                   necessary for a client to run.
- * @uvrwcbuff      - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
+ * @uvrWcBuffer    - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
  *                   to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
- *                   will be displayed
+ *                   will be displayed. Passing this variable also enables in API swapping between shm buffers.
+ *                   Swapping goes up to @bufferCount.
+ * @bufferCount    - Unrelated to @uvrWcBuffer. If value assigned not zero and @uvrWcBuffer equals NULL. Then
+ *                   this variable will be utilzed to swap between buffers.
  * @appName        - Sets the window name.
  * @fullscreen     - Determines if window should be fullscreen or not
  * @renderer       - Function pointer that allows custom external renderers to be executed by the api
@@ -223,12 +226,13 @@ struct uvr_wc_surface {
  */
 struct uvr_wc_surface_create_info {
   struct uvr_wc_core_interface *uvrWcCore;
-  struct uvr_wc_buffer         *uvrwcbuff;
+  struct uvr_wc_buffer         *uvrWcBuffer;
+  uint32_t                     bufferCount;
   const char                   *appName;
   bool                         fullscreen;
   uvr_wc_renderer_impl         renderer;
   void                         *rendererData;
-  int                          *rendererCbuf;
+  uint32_t                     *rendererCbuf;
   bool                         *rendererRuning;
 };
 

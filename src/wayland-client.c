@@ -255,7 +255,7 @@ struct uvr_wc_renderer_info {
   struct uvr_wc_surface *wcsurf;
   uvr_wc_renderer_impl renderer;
   void *rendererdata;
-  int *cbuf;
+  uint32_t *cbuf;
   bool *running;
 };
 
@@ -297,9 +297,11 @@ static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED 
   if (callback)
     wl_callback_destroy(callback);
 
-  // Register a frame callback to know when we need to draw the next frame
+  /* Register a frame callback to know when we need to draw the next frame */
   wcsurf->wlCallback = wl_surface_frame(wcsurf->wlSurface);
   wl_callback_add_listener(wcsurf->wlCallback, &frame_listener, rinfo);
+  /* Submit a frame for this event */
+  wl_surface_commit(wcsurf->wlSurface);
 
   rinfo->renderer(rinfo->running, rinfo->cbuf, rinfo->rendererdata);
 
@@ -329,9 +331,13 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
   static struct uvr_wc_renderer_info rinfo;
   memset(&rinfo, 0, sizeof(rinfo));
 
-  if (uvrwc->uvrwcbuff) {
-    uvrwc_surf.bufferCount = uvrwc->uvrwcbuff->bufferCount;
-    uvrwc_surf.uvrWcWlBuffers = uvrwc->uvrwcbuff->uvrWcWlBuffers;
+  if (uvrwc->uvrWcBuffer) {
+    uvrwc_surf.bufferCount = uvrwc->uvrWcBuffer->bufferCount;
+    uvrwc_surf.uvrWcWlBuffers = uvrwc->uvrWcBuffer->uvrWcWlBuffers;
+  } else if (uvrwc->bufferCount) {
+    uvrwc_surf.bufferCount = uvrwc->bufferCount;
+  } else {
+    uvrwc_surf.bufferCount = 0;
   }
 
   /* Assign pointer and data that a given client suface needs to watch */
