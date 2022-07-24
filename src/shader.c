@@ -53,14 +53,14 @@ struct uvr_shader_file uvr_shader_file_load(const char *filename) {
 
   fclose(stream);
 
-  return (struct uvr_shader_file) { .bytes = bytes, .bsize = bsize };
+  return (struct uvr_shader_file) { .bytes = bytes, .byteSize = bsize };
 
 exit_shader_file_load_free_bytes:
   free(bytes);
 exit_shader_file_load_fclose:
   fclose(stream);
 exit_shader_file_load:
-  return (struct uvr_shader_file) { .bytes = NULL, .bsize = 0 };
+  return (struct uvr_shader_file) { .bytes = NULL, .byteSize = 0 };
 }
 
 
@@ -111,7 +111,7 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
 
   result = shaderc_compile_into_spv(compiler, uvrshader->source, strlen(uvrshader->source),
                                     shader_map_table[uvrshader->kind], uvrshader->filename,
-                                    uvrshader->entry_point, options);
+                                    uvrshader->entryPoint, options);
 
   if (!result) {
     uvr_utils_log(UVR_DANGER, "[x] shaderc_compile_into_spv: %s", shaderc_result_get_error_message(result));
@@ -130,7 +130,7 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
   shaderc_compile_options_release(options);
   shaderc_compiler_release(compiler);
 
-  return (struct uvr_shader_spirv) { .result = result, .bytes = bytes, .bsize = bsize };
+  return (struct uvr_shader_spirv) { .result = result, .bytes = bytes, .byteSize = bsize };
 
 exit_shader_compile_bytes_to_spirv_release_result:
   if (result)
@@ -141,7 +141,7 @@ exit_shader_compile_bytes_to_spirv_compiler_release:
   if (compiler)
     shaderc_compiler_release(compiler);
 exit_shader_compile_bytes_to_spirv:
-  return (struct uvr_shader_spirv) { .result = NULL, .bytes = NULL, .bsize = 0 };
+  return (struct uvr_shader_spirv) { .result = NULL, .bytes = NULL, .byteSize = 0 };
 }
 #endif
 

@@ -370,13 +370,13 @@ int create_vk_shader_modules(struct uvr_vk *app) {
   vert_shader_create_info.kind = VK_SHADER_STAGE_VERTEX_BIT;
   vert_shader_create_info.source = vertex_shader;
   vert_shader_create_info.filename = "vert.spv";
-  vert_shader_create_info.entry_point = "main";
+  vert_shader_create_info.entryPoint = "main";
 
   struct uvr_shader_spirv_create_info frag_shader_create_info;
   frag_shader_create_info.kind = VK_SHADER_STAGE_FRAGMENT_BIT;
   frag_shader_create_info.source = fragment_shader;
   frag_shader_create_info.filename = "frag.spv";
-  frag_shader_create_info.entry_point = "main";
+  frag_shader_create_info.entryPoint = "main";
 
   app->vertex_shader = uvr_shader_compile_buffer_to_spirv(&vert_shader_create_info);
   if (!app->vertex_shader.bytes)
@@ -397,7 +397,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
   struct uvr_vk_shader_module_create_info vertex_shader_module_create_info;
   vertex_shader_module_create_info.vkDevice = app->lgdev.vkDevice;
-  vertex_shader_module_create_info.codeSize = app->vertex_shader.bsize;
+  vertex_shader_module_create_info.codeSize = app->vertex_shader.byteSize;
   vertex_shader_module_create_info.pCode = app->vertex_shader.bytes;
   vertex_shader_module_create_info.name = "vertex";
 
@@ -407,7 +407,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
   struct uvr_vk_shader_module_create_info frag_shader_module_create_info;
   frag_shader_module_create_info.vkDevice = app->lgdev.vkDevice;
-  frag_shader_module_create_info.codeSize = app->fragment_shader.bsize;
+  frag_shader_module_create_info.codeSize = app->fragment_shader.byteSize;
   frag_shader_module_create_info.pCode = app->fragment_shader.bytes;
   frag_shader_module_create_info.name = "fragment";
 

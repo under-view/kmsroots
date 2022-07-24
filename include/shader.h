@@ -7,12 +7,12 @@
  * struct uvr_shader_file (Underview Renderer Shader File)
  *
  * members:
- * @bytes - Buffer that stores a given file's content
- * @bsize - Size of buffer storing a given file's content
+ * @bytes    - Buffer that stores a given file's content
+ * @byteSize - Size of buffer storing a given file's content
  */
 struct uvr_shader_file {
   char *bytes;
-  long bsize;
+  long byteSize;
 };
 
 
@@ -45,13 +45,13 @@ struct uvr_shader_file uvr_shader_file_load(const char *filename);
  *                key: VkShaderStageFlagBits, value: shaderc_shader_kind
  * @source      - Pointer to a buffer containing actual shader code
  * @filename    - Used as a tag to identify the source string
- * @entry_point - Used to define the function name in the GLSL source that acts as an entry point for the shader
+ * @entryPoint  - Used to define the function name in the GLSL source that acts as an entry point for the shader
  */
 struct uvr_shader_spirv_create_info {
   unsigned int kind;
   const char   *source;
   const char   *filename;
-  const char   *entry_point;
+  const char   *entryPoint;
 };
 
 
@@ -59,15 +59,15 @@ struct uvr_shader_spirv_create_info {
  * struct uvr_shader_spirv (Underview Renderer Shader SPIRV)
  *
  * members:
- * @result - An opaque handle to the results of a call to any shaderc_compile_into_*()
- *           Unfortunately we can't release until after the shader module is created.
- * @bytes  - Buffer that stores a given file's content
- * @bsize  - Size of buffer storing a given file's content
+ * @result   - An opaque handle to the results of a call to any shaderc_compile_into_*()
+ *             Unfortunately we can't release until after the shader module is created.
+ * @bytes    - Buffer that stores a given file's content
+ * @byteSize - Size of buffer storing a given file's content
  */
 struct uvr_shader_spirv {
   shaderc_compilation_result_t result;
   char                         *bytes;
-  long                         bsize;
+  long                         byteSize;
 };
 
 
