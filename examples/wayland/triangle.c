@@ -49,7 +49,7 @@ int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D);
 int create_vk_command_buffers(struct uvr_vk *app);
-int record_vk_command_buffers(struct uvr_vk *app);
+int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D);
 
 
 void UNUSED render(bool UNUSED *running, uint32_t UNUSED *cbuf, void UNUSED *data) {
@@ -103,7 +103,13 @@ int main(void) {
   if (create_vk_graphics_pipeline(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
-  if (record_vk_command_buffers(&app) == -1)
+  if (create_vk_framebuffers(&app, extent2D) == -1)
+    goto exit_error;
+
+  if (create_vk_command_buffers(&app) == -1)
+    goto exit_error;
+
+  if (record_vk_draw_commands(&app, 0, extent2D) == -1)
     goto exit_error;
 
 exit_error:
@@ -516,7 +522,7 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 
   VkDynamicState dynamicStates[2];
   dynamicStates[0] = VK_DYNAMIC_STATE_VIEWPORT;
-  dynamicStates[1] = VK_DYNAMIC_STATE_LINE_WIDTH;
+  dynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
 
   VkPipelineDynamicStateCreateInfo dynamicState = {};
   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -610,25 +616,76 @@ int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 }
 
 
-int record_vk_command_buffers(struct uvr_vk *app) {
-  struct uvr_vk_command_buffer_create_info cmdbuff_create_info;
-  cmdbuff_create_info.vkDevice = app->lgdev.vkDevice;
-  cmdbuff_create_info.queueFamilyIndex = app->graphics_queue.familyIndex;
-  cmdbuff_create_info.commandBufferCount = 1;
+int create_vk_command_buffers(struct uvr_vk *app) {
+  struct uvr_vk_command_buffer_create_info commandBufferCreateInfo;
+  commandBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
+  commandBufferCreateInfo.queueFamilyIndex = app->graphics_queue.familyIndex;
+  commandBufferCreateInfo.commandBufferCount = 1;
 
-  app->vkcbuffs = uvr_vk_command_buffer_create(&cmdbuff_create_info);
+  app->vkcbuffs = uvr_vk_command_buffer_create(&commandBufferCreateInfo);
   if (!app->vkcbuffs.vkCommandPool)
     return -1;
 
-  struct uvr_vk_command_buffer_record_info cbuffrec;
-  cbuffrec.commandBufferCount = app->vkcbuffs.commandBufferCount;
-  cbuffrec.vkCommandbuffers = app->vkcbuffs.vkCommandbuffers;
-  cbuffrec.flags = 0;
+  return 0;
+}
 
-  if (uvr_vk_command_buffer_record_begin(&cbuffrec) == -1)
+
+int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D) {
+  struct uvr_vk_command_buffer_record_info commandBufferRecordInfo;
+  commandBufferRecordInfo.commandBufferCount = app->vkcbuffs.commandBufferCount;
+  commandBufferRecordInfo.vkCommandbuffers = app->vkcbuffs.vkCommandbuffers;
+  commandBufferRecordInfo.flags = 0;
+
+  if (uvr_vk_command_buffer_record_begin(&commandBufferRecordInfo) == -1)
     return -1;
 
-  if (uvr_vk_command_buffer_record_end(&cbuffrec) == -1)
+  VkCommandBuffer cmdBuffer = app->vkcbuffs.vkCommandbuffers[vkSwapchainImageIndex].buffer;
+
+  VkRect2D renderArea = {};
+  renderArea.offset.x = 0;
+  renderArea.offset.y = 0;
+  renderArea.extent = extent2D;
+
+  VkViewport viewport = {};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = (float) extent2D.width;
+  viewport.height = (float) extent2D.height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+
+  /*
+   * Values used by VK_ATTACHMENT_LOAD_OP_CLEAR
+   * Black with 100% opacity
+   */
+  float float32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  int32_t int32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  uint32_t uint32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+  VkClearValue clearColor[1];
+  memcpy(clearColor[0].color.float32, float32, ARRAY_LEN(float32));
+  memcpy(clearColor[0].color.int32, int32, ARRAY_LEN(int32));
+  memcpy(clearColor[0].color.int32, uint32, ARRAY_LEN(uint32));
+  clearColor[0].depthStencil.depth = 0.0f;
+  clearColor[0].depthStencil.stencil = 0;
+
+  VkRenderPassBeginInfo renderPassInfo = {};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassInfo.pNext = NULL;
+  renderPassInfo.renderPass = app->rpass.renderPass;
+  renderPassInfo.framebuffer = app->vkframebuffs.vkFrameBuffers[0].fb;
+  renderPassInfo.renderArea = renderArea;
+  renderPassInfo.clearValueCount = 1;
+  renderPassInfo.pClearValues = clearColor;
+
+  vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gpipeline.graphicsPipeline);
+  vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+  vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
+  vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
+  vkCmdEndRenderPass(cmdBuffer);
+
+  if (uvr_vk_command_buffer_record_end(&commandBufferRecordInfo) == -1)
     return -1;
 
   return 0;

@@ -208,7 +208,7 @@ struct uvr_vk_queue_create_info {
  */
 struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
 
-\
+
 /*
  * struct uvr_vk_lgdev (Underview Renderer Vulkan Logical Device)
  *
@@ -781,7 +781,7 @@ struct uvr_vk_command_buffer_handle {
  *
  * members:
  * @vkDevice            - Logical device used to create command pool/buffers
- * @cmdpool             - The command pool which the buffers where allocated from.
+ * @vkCommandPool       - The command pool which the buffers where allocated from.
  * @commandBufferCount  - Amount of VkCommandBuffer's alloocated
  * @vkCommandbuffers    - Pointer to an array of VkCommandBuffer handles
  */
