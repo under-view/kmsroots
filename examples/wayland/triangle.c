@@ -31,12 +31,19 @@ struct uvr_vk {
   struct uvr_vk_graphics_pipeline gpipeline;
   struct uvr_vk_framebuffer vkframebuffs;
   struct uvr_vk_command_buffer vkcbuffs;
+  struct uvr_vk_sync_obj vksyncs;
 };
 
 
 struct uvr_wc {
   struct uvr_wc_core_interface wcinterfaces;
   struct uvr_wc_surface wcsurf;
+};
+
+
+struct uvr_vk_wc {
+  struct uvr_wc *uvr_wc;
+  struct uvr_vk *uvr_vk;
 };
 
 
@@ -49,11 +56,65 @@ int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D);
 int create_vk_command_buffers(struct uvr_vk *app);
+int create_vk_sync_objs(struct uvr_vk *app);
 int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D);
+int submit_vk_draw_commands();
 
 
-void UNUSED render(bool UNUSED *running, uint32_t UNUSED *cbuf, void UNUSED *data) {
-  // Initentionally left blank for now
+void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
+  VkExtent2D extent2D = {1920, 1080};
+  struct uvr_vk_wc *vkwc = data;
+  struct uvr_wc UNUSED *wc = vkwc->uvr_wc;
+  struct uvr_vk *app = vkwc->uvr_vk;
+
+  if (!app->vksyncs.vkFences || !app->vksyncs.vkSemaphores)
+    return;
+
+  VkFence imageFence = app->vksyncs.vkFences[0].fence;
+  VkSemaphore imageSemaphore = app->vksyncs.vkSemaphores[0].semaphore;
+  VkSemaphore renderSemaphore = app->vksyncs.vkSemaphores[1].semaphore;
+
+  vkWaitForFences(app->lgdev.vkDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
+
+  vkAcquireNextImageKHR(app->lgdev.vkDevice, app->schain.vkSwapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
+
+  record_vk_draw_commands(app, *imageIndex, extent2D);
+
+  VkSemaphore waitSemaphores[1] = { imageSemaphore };
+  VkSemaphore signalSemaphores[1] = { renderSemaphore };
+  VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+  VkSubmitInfo submitInfo;
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.pNext = NULL;
+  submitInfo.waitSemaphoreCount = ARRAY_LEN(waitSemaphores);
+  submitInfo.pWaitSemaphores = waitSemaphores;
+  submitInfo.pWaitDstStageMask = waitStages;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &app->vkcbuffs.vkCommandbuffers[0].buffer;
+  submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
+  submitInfo.pSignalSemaphores = signalSemaphores;
+
+  vkResetFences(app->lgdev.vkDevice, 1, &imageFence);
+
+  /* Submit draw command */
+  if (vkQueueSubmit(app->graphics_queue.vkQueue, 1, &submitInfo, imageFence) != VK_SUCCESS) {
+    uvr_utils_log(UVR_WARNING, "vkQueueSubmit: failed");
+  }
+
+  VkPresentInfoKHR presentInfo;
+  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  presentInfo.pNext = NULL;
+  presentInfo.waitSemaphoreCount = ARRAY_LEN(signalSemaphores);
+  presentInfo.pWaitSemaphores = signalSemaphores;
+  presentInfo.swapchainCount = 1;
+  presentInfo.pSwapchains = &app->schain.vkSwapchain;
+  presentInfo.pImageIndices = imageIndex;
+  presentInfo.pResults = NULL;
+
+  if (vkQueuePresentKHR(app->graphics_queue.vkQueue, &presentInfo) != VK_SUCCESS) {
+    uvr_utils_log(UVR_WARNING, "vkQueuePresentKHR: failed");
+  }
 }
 
 
@@ -90,7 +151,7 @@ int main(void) {
     goto exit_error;
 
   VkSurfaceFormatKHR sformat;
-  VkExtent2D extent2D = {3840, 2160};
+  VkExtent2D extent2D = {1920, 1080};
   if (create_vk_swapchain(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
@@ -109,8 +170,12 @@ int main(void) {
   if (create_vk_command_buffers(&app) == -1)
     goto exit_error;
 
-  if (record_vk_draw_commands(&app, 0, extent2D) == -1)
+  if (create_vk_sync_objs(&app) == -1)
     goto exit_error;
+
+  while (wl_display_dispatch(wc.wcinterfaces.wlDisplay) != -1 && running) {
+    // Leave blank
+  }
 
 exit_error:
 #ifdef INCLUDE_SHADERC
@@ -145,6 +210,8 @@ exit_error:
   appd.uvr_vk_framebuffer = &app.vkframebuffs;
   appd.uvr_vk_command_buffer_cnt = 1;
   appd.uvr_vk_command_buffer = &app.vkcbuffs;
+  appd.uvr_vk_sync_obj_cnt = 1;
+  appd.uvr_vk_sync_obj = &app.vksyncs;
   uvr_vk_destory(&appd);
 
   wcd.uvr_wc_core_interface = wc.wcinterfaces;
@@ -155,7 +222,6 @@ exit_error:
 
 
 int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running) {
-
   struct uvr_wc_core_interface_create_info wc_core_interfaces_info;
   wc_core_interfaces_info.wlDisplayName = NULL;
   wc_core_interfaces_info.iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE   |
@@ -165,13 +231,18 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, 
   if (!wc->wcinterfaces.wlDisplay || !wc->wcinterfaces.wlRegistry || !wc->wcinterfaces.wlCompositor)
     return -1;
 
+  static struct uvr_vk_wc vkwc;
+  vkwc.uvr_wc = wc;
+  vkwc.uvr_vk = app;
+
   struct uvr_wc_surface_create_info uvr_wc_surface_info;
   uvr_wc_surface_info.uvrWcCore = &wc->wcinterfaces;
   uvr_wc_surface_info.uvrWcBuffer = NULL;
+  uvr_wc_surface_info.bufferCount = 0;
   uvr_wc_surface_info.appName = "WL Vulkan Triangle Example";
   uvr_wc_surface_info.fullscreen = true;
-  uvr_wc_surface_info.renderer = NULL;
-  uvr_wc_surface_info.rendererData = wc;
+  uvr_wc_surface_info.renderer = render;
+  uvr_wc_surface_info.rendererData = &vkwc;
   uvr_wc_surface_info.rendererCbuf = cbuf;
   uvr_wc_surface_info.rendererRuning = running;
 
@@ -352,6 +423,24 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 #ifdef INCLUDE_SHADERC
   const char vertex_shader[] =
     "#version 450\n"
+    "vec2 positions[3] = vec2[](\n"
+    "  vec2(0.0, -0.5),\n"
+    "  vec2(0.5, 0.5),\n"
+    "  vec2(-0.5, 0.5)\n"
+    ");\n\n"
+    "void main() {\n"
+    "  gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);\n"
+    "}";
+
+  const char fragment_shader[] =
+    "#version 450\n"
+    "layout(location = 0) out vec4 outColor;\n"
+    "void main() {\n"
+    "  outColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+    "}";
+
+/*
+  const char vertex_shader[] =
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "out gl_PerVertex {\n"
     "   vec4 gl_Position;\n"
@@ -364,13 +453,13 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     "   v_Color = i_Color;\n"
     "}";
 
-
   const char fragment_shader[] =
     "#version 450\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "layout(location = 0) in vec3 v_Color;\n"
     "layout(location = 0) out vec4 o_Color;\n"
     "void main() { o_Color = vec4(v_Color, 1.0); }";
+*/
 
   struct uvr_shader_spirv_create_info vert_shader_create_info;
   vert_shader_create_info.kind = VK_SHADER_STAGE_VERTEX_BIT;
@@ -559,14 +648,23 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   if (!app->gplayout.vkPipelineLayout)
     return -1;
 
+  VkSubpassDependency subPassDependency;
+  subPassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  subPassDependency.dstSubpass = 0;
+  subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subPassDependency.srcAccessMask = 0;
+  subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subPassDependency.dependencyFlags = 0;
+
   struct uvr_vk_render_pass_create_info renderpass_info;
   renderpass_info.vkDevice = app->lgdev.vkDevice;
   renderpass_info.attachmentCount = 1;
   renderpass_info.pAttachments = &colorAttachment;
   renderpass_info.subpassCount = 1;
   renderpass_info.pSubpasses = &subpass;
-  renderpass_info.dependencyCount = 0;
-  renderpass_info.pDependencies = NULL;
+  renderpass_info.dependencyCount = 1;
+  renderpass_info.pDependencies = &subPassDependency;
 
   app->rpass = uvr_vk_render_pass_create(&renderpass_info);
   if (!app->rpass.renderPass)
@@ -630,6 +728,20 @@ int create_vk_command_buffers(struct uvr_vk *app) {
 }
 
 
+int create_vk_sync_objs(struct uvr_vk *app) {
+  struct uvr_vk_sync_obj_create_info syncObjsCreateInfo;
+  syncObjsCreateInfo.vkDevice = app->lgdev.vkDevice;
+  syncObjsCreateInfo.fenceCount = 1;
+  syncObjsCreateInfo.semaphoreCount = 2;
+
+  app->vksyncs = uvr_vk_sync_obj_create(&syncObjsCreateInfo);
+  if (!app->vksyncs.vkFences[0].fence && !app->vksyncs.vkSemaphores[0].semaphore)
+    return -1;
+
+  return 0;
+}
+
+
 int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D) {
   struct uvr_vk_command_buffer_record_info commandBufferRecordInfo;
   commandBufferRecordInfo.commandBufferCount = app->vkcbuffs.commandBufferCount;
@@ -639,7 +751,7 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   if (uvr_vk_command_buffer_record_begin(&commandBufferRecordInfo) == -1)
     return -1;
 
-  VkCommandBuffer cmdBuffer = app->vkcbuffs.vkCommandbuffers[vkSwapchainImageIndex].buffer;
+  VkCommandBuffer cmdBuffer = app->vkcbuffs.vkCommandbuffers[0].buffer;
 
   VkRect2D renderArea = {};
   renderArea.offset.x = 0;
@@ -669,11 +781,11 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   clearColor[0].depthStencil.depth = 0.0f;
   clearColor[0].depthStencil.stencil = 0;
 
-  VkRenderPassBeginInfo renderPassInfo = {};
+  VkRenderPassBeginInfo renderPassInfo;
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.pNext = NULL;
   renderPassInfo.renderPass = app->rpass.renderPass;
-  renderPassInfo.framebuffer = app->vkframebuffs.vkFrameBuffers[0].fb;
+  renderPassInfo.framebuffer = app->vkframebuffs.vkFrameBuffers[vkSwapchainImageIndex].fb;
   renderPassInfo.renderArea = renderArea;
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues = clearColor;

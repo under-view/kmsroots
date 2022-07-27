@@ -963,13 +963,16 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
 
   if (uvrvk->uvr_vk_sync_obj) {
     for (i = 0; i < uvrvk->uvr_vk_sync_obj_cnt; i++) {
-      for (j = 0; j < uvrvk->uvr_vk_sync_obj[i].semaphoreCount; j++) {
-        if (uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore)
-          vkDestroySemaphore(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore, NULL);
-      }
       for (j = 0; j < uvrvk->uvr_vk_sync_obj[i].fenceCount; j++) {
-        if (uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence)
+        if (uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence) {
+          vkWaitForFences(uvrvk->uvr_vk_sync_obj[i].vkDevice, 1, &uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence, VK_TRUE, UINT64_MAX);
           vkDestroyFence(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence, NULL);
+        }
+      }
+      for (j = 0; j < uvrvk->uvr_vk_sync_obj[i].semaphoreCount; j++) {
+        if (uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore) {
+          vkDestroySemaphore(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore, NULL);
+        }
       }
     }
   }
