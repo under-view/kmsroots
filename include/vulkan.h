@@ -866,6 +866,78 @@ int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *u
 
 
 /*
+ * struct uvr_vk_fence_handle (Underview Renderer Vulkan Fence Handle)
+ *
+ * @fence - May be used to insert a dependency from a queue to the host. Used to block host (CPU) operations
+ *          until commands in a command buffer are finished. Keeps CPU and GPU in sync.
+ */
+struct uvr_vk_fence_handle {
+  VkFence fence;
+};
+
+
+/*
+ * struct uvr_vk_semaphore_handle (Underview Renderer Vulkan Semaphore Handle)
+ *
+ * @semaphore - May be used to insert a dependency between queue operations or between a queue operation
+ *              and the host. Used to block queue operations until commands in a command buffer are finished.
+ */
+struct uvr_vk_semaphore_handle {
+  VkSemaphore semaphore;
+};
+
+
+/*
+ * struct uvr_vk_sync_obj (Underview Renderer Vulkan Synchronization Objects)
+ *
+ * members:
+ * @vkDevice       - Logical device used to create command pool/buffers
+ * @fenceCount     - Amount of handles in @vkFence array
+ * @vkFences       - Pointer to an array of VkFence handles
+ * @semaphoreCount - Amount of handles in @vkSemaphore array
+ * @vkSemaphores   - Pointer to an array of VkSemaphore handles
+ */
+struct uvr_vk_sync_obj {
+  VkDevice vkDevice;
+  uint32_t fenceCount;
+  struct uvr_vk_fence_handle *vkFences;
+  uint32_t semaphoreCount;
+  struct uvr_vk_semaphore_handle *vkSemaphores;
+};
+
+
+/*
+ * struct uvr_vk_sync_obj_create_info (Underview Renderer Vulkan Command Buffer Create Information)
+ *
+ * members:
+ * @vkDevice       - Must pass a valid active logical device
+ * @fenceCount     - Amount of VkFence objects to allocate.
+ * @semaphoreCount - Amount of VkSemaphore objects to allocate.
+ */
+struct uvr_vk_sync_obj_create_info {
+  VkDevice vkDevice;
+  uint32_t fenceCount;
+  uint32_t semaphoreCount;
+};
+
+
+/*
+ * uvr_vk_sync_obj_create: Creates VkFence and VkSemaphore synchronization objects. Vulkan API calls that execute work
+ *                         on the GPU happen asynchronously. Vulkan API function calls return before operations are fully finished.
+ *                         So we need synchronization objects to make sure operations that require other operations to finish can
+ *                         happen after.
+ *
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_sync_obj_create_info
+ * return:
+ *    on success struct uvr_vk_sync_obj
+ *    on failure struct uvr_vk_sync_obj { with member nulled }
+ */
+struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
@@ -888,7 +960,9 @@ int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *u
  * @uvr_vk_framebuffer_cnt       - Must pass the amount of elements in struct uvr_vk_framebuffer array
  * @uvr_vk_framebuffer           - Must pass a pointer to an array of valid struct uvr_vk_framebuffer { free'd members: VkFramebuffer handle, *vkfbs }
  * @uvr_vk_command_buffer_cnt    - Must pass the amount of elements in struct uvr_vk_command_buffer array
- * @uvr_vk_command_buffer        - Must pass a pointer to an array of valid struct uvr_vk_command_buffer { free'd members: VkCommandPool handle, *cmdbuffs }
+ * @uvr_vk_command_buffer        - Must pass a pointer to an array of valid struct uvr_vk_command_buffer { free'd members: VkCommandPool handle, *vkCommandbuffers }
+ * @uvr_vk_sync_obj_cnt          - Must pass the amount of elements in struct uvr_vk_sync_obj array
+ * @uvr_vk_sync_obj              - Must pass a pointer to an array of valid struct uvr_vk_sync_obj { free'd members: VkFence handle, VkSemaphore handle, *vkFences, *vkSemaphores }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -920,6 +994,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_command_buffer_cnt;
   struct uvr_vk_command_buffer *uvr_vk_command_buffer;
+
+  uint32_t uvr_vk_sync_obj_cnt;
+  struct uvr_vk_sync_obj *uvr_vk_sync_obj;
 };
 
 

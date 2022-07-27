@@ -893,8 +893,86 @@ int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *u
 }
 
 
+struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  struct uvr_vk_fence_handle *vkFences = NULL;
+  struct uvr_vk_semaphore_handle *vkSemaphores = NULL;
+  uint32_t s;
+
+  vkFences = calloc(uvrvk->fenceCount, sizeof(vkFences));
+  if (!vkFences) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_sync_obj;
+  }
+
+  vkSemaphores = calloc(uvrvk->semaphoreCount, sizeof(vkSemaphores));
+  if (!vkSemaphores) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_sync_obj_free_vk_fence;
+  }
+
+  VkFenceCreateInfo fence_create_info = {};
+  fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fence_create_info.pNext = NULL;
+  fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+  VkSemaphoreCreateInfo semphore_create_info = {};
+  semphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  semphore_create_info.pNext = NULL;
+  semphore_create_info.flags = 0;
+
+  for (s = 0; s < uvrvk->fenceCount; s++) {
+    res = vkCreateFence(uvrvk->vkDevice, &fence_create_info, NULL, &vkFences[s].fence);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkCreateFence: %s", vkres_msg(res));
+      goto exit_vk_sync_obj_destroy_vk_fence;
+    }
+  }
+
+  for (s = 0; s < uvrvk->semaphoreCount; s++) {
+    res = vkCreateSemaphore(uvrvk->vkDevice, &semphore_create_info, NULL, &vkSemaphores[s].semaphore);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkCreateSemaphore: %s", vkres_msg(res));
+      goto exit_vk_sync_obj_destroy_vk_semaphore;
+    }
+  }
+
+  return (struct uvr_vk_sync_obj) { .vkDevice = uvrvk->vkDevice, .fenceCount = uvrvk->fenceCount, .vkFences = vkFences,
+                                    .semaphoreCount = uvrvk->semaphoreCount, .vkSemaphores = vkSemaphores };
+
+
+exit_vk_sync_obj_destroy_vk_semaphore:
+  for (s = 0; s < uvrvk->semaphoreCount; s++)
+    if (vkSemaphores[s].semaphore)
+      vkDestroySemaphore(uvrvk->vkDevice, vkSemaphores[s].semaphore, NULL);
+exit_vk_sync_obj_destroy_vk_fence:
+  for (s = 0; s < uvrvk->fenceCount; s++)
+    if (vkFences[s].fence)
+      vkDestroyFence(uvrvk->vkDevice, vkFences[s].fence, NULL);
+//exit_vk_sync_obj_free_vk_semaphore:
+  free(vkSemaphores);
+exit_vk_sync_obj_free_vk_fence:
+  free(vkFences);
+exit_vk_sync_obj:
+  return (struct uvr_vk_sync_obj) { .vkDevice = VK_NULL_HANDLE, .fenceCount = 0, .vkFences = NULL, .semaphoreCount = 0, .vkSemaphores = NULL };
+};
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
+
+  if (uvrvk->uvr_vk_sync_obj) {
+    for (i = 0; i < uvrvk->uvr_vk_sync_obj_cnt; i++) {
+      for (j = 0; j < uvrvk->uvr_vk_sync_obj[i].semaphoreCount; j++) {
+        if (uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore)
+          vkDestroySemaphore(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore, NULL);
+      }
+      for (j = 0; j < uvrvk->uvr_vk_sync_obj[i].fenceCount; j++) {
+        if (uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence)
+          vkDestroyFence(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence, NULL);
+      }
+    }
+  }
 
   if (uvrvk->uvr_vk_command_buffer) {
     for (i = 0; i < uvrvk->uvr_vk_command_buffer_cnt; i++) {
