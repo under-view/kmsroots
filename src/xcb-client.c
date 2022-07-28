@@ -44,7 +44,6 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
     goto error_exit_xcb_window_destroy;
   }
 
-  uvr_utils_log(UVR_INFO, "Informations of screen %" PRIu32, screen->root);
   uvr_utils_log(UVR_WARNING, "Screen dimensions: %d, %d", screen->width_in_pixels, screen->height_in_pixels);
 
   /* Create window */
@@ -121,15 +120,20 @@ int uvr_xcb_window_wait_for_event(struct uvr_xcb_window_wait_for_event_info *uvr
     case XCB_KEY_PRESS: {
       xcb_key_press_event_t *press = (xcb_key_press_event_t *) event;
       //uvr_utils_log(UVR_INFO, "uvr_xcb_window_wait_for_event: Key pressed %d", press->detail);
-      if (press->detail == 9 || press->detail == 24) /* ESCAPE key, Q key */
+      /* ESCAPE key, Q key */
+      if (press->detail == 9 || press->detail == 24) {
+        uvrxcb->rendererRuning = false;
         goto error_exit_xcb_window_event_loop;
+      }
       break;
     }
 
     case XCB_CLIENT_MESSAGE: {
       xcb_client_message_event_t *message = (xcb_client_message_event_t *) event;
-      if (message->data.data32[0] == uvrxcb->uvrXcbWindow->delWindow->atom)
+      if (message->data.data32[0] == uvrxcb->uvrXcbWindow->delWindow->atom) {
+        uvrxcb->rendererRuning = false;
         goto error_exit_xcb_window_event_loop;
+      }
       break;
     }
 

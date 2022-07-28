@@ -91,10 +91,10 @@ struct uvr_xcb_window_wait_for_event_info {
 
 /*
  * uvr_xcb_window_wait_for_event: In an X program, everything is driven by events. This functions calls
- *                                xcb_wait_for_event which blocks until an event is queued in the X server.
- *                                The main event watched by function is KEY_PRESSING, when either the 'Q'
- *                                or 'ESC' keys are pressed the function will return failure status. Function
- *                                is meant to be utilized as a while loop conditional/expression.
+ *                                xcb_poll_for_event which doesn't block operations and returns events from
+ *                                X server when available. The main event watched by function is KEY_PRESSING,
+ *                                when either the 'Q' or 'ESC' keys are pressed the function will return
+ *                                failure status. Function is meant to be utilized as a while loop conditional/expression.
  *
  *                                https://xcb.freedesktop.org/tutorial/events
  * args:

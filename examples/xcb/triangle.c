@@ -181,9 +181,9 @@ int main(void) {
   eventInfo.renderer = render;
   eventInfo.rendererData = &vkxc;
   eventInfo.rendererCbuf = &cbuf;
-  eventInfo.rendererRuning = &running; // UNUSED
+  eventInfo.rendererRuning = &running;
 
-  while (uvr_xcb_window_wait_for_event(&eventInfo)) {
+  while (uvr_xcb_window_wait_for_event(&eventInfo) && running) {
     // Initentionally left blank
   }
 
