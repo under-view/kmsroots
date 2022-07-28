@@ -59,6 +59,37 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 
 
 /*
+ * Underview Renderer Implementation
+ * Function pointer used by struct uvr_xcb_window_wait_for_event_info
+ * Allows to pass the address of an external function you want to run
+ * Given that the arguments of the function are a pointer to a boolean,
+ * pointer to an integer, and a pointer to void data type
+ */
+typedef void (*uvr_xcb_renderer_impl)(bool*, uint32_t*, void*);
+
+
+/*
+ * struct uvr_xcb_window_wait_for_event_info (Underview Renderer XCB Wait For Event Information)
+ *
+ * members:
+ * @uvrXcbWindow   - Pointer to a struct uvr_xcb_window contains all objects necessary to manage xcb client
+ * @renderer       - Function pointer that allows custom external renderers to be executed by the api
+ *                   when before registering a frame wl_callback. Renderer before presenting
+ * @rendererData   - Pointer to an optional address. This address may be the address of a struct. Reference
+ *                   passed depends on external render function.
+ * @rendererCbuf   - Pointer to an integer used by the api to update the current displayable buffer
+ * @rendererRuning - Pointer to a boolean that determines if a given window/surface is actively running
+ */
+struct uvr_xcb_window_wait_for_event_info {
+  struct uvr_xcb_window *uvrXcbWindow;
+  uvr_xcb_renderer_impl renderer;
+  void                  *rendererData;
+  uint32_t              *rendererCbuf;
+  bool                  *rendererRuning;
+};
+
+
+/*
  * uvr_xcb_window_wait_for_event: In an X program, everything is driven by events. This functions calls
  *                                xcb_wait_for_event which blocks until an event is queued in the X server.
  *                                The main event watched by function is KEY_PRESSING, when either the 'Q'
@@ -67,13 +98,13 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
  *
  *                                https://xcb.freedesktop.org/tutorial/events
  * args:
- * @client - pointer to a struct uvrxcb contains all objects necessary for an
- *           xcb client to run. struct Member used xcb_connection_t *conn.
+ * @client - pointer to a struct uvr_xcb_window_wait_for_event_info contains all objects necessary for an
+ *           xcb client to run and pointers to execute custom renderers.
  * return:
  *    on success 1
  *    on failure 0
  */
-int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb);
+int uvr_xcb_window_wait_for_event(struct uvr_xcb_window_wait_for_event_info *uvrxcb);
 
 
 /*

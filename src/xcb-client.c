@@ -107,13 +107,14 @@ error_exit_xcb_window_create:
 }
 
 
-int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
+int uvr_xcb_window_wait_for_event(struct uvr_xcb_window_wait_for_event_info *uvrxcb) {
   xcb_generic_event_t *event = NULL;
 
-  event = xcb_wait_for_event(uvrxcb->conn);
+  uvrxcb->renderer(uvrxcb->rendererRuning, uvrxcb->rendererCbuf, uvrxcb->rendererData);
+
+  event = xcb_poll_for_event(uvrxcb->uvrXcbWindow->conn);
   if (!event) {
-    uvr_utils_log(UVR_DANGER, "[x] xcb_wait_for_event: Error receiving event");
-    goto error_exit_xcb_window_event_loop;
+    goto exit_xcb_window_event_loop;
   }
 
   switch (event->response_type & ~0x80) {
@@ -127,7 +128,7 @@ int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
 
     case XCB_CLIENT_MESSAGE: {
       xcb_client_message_event_t *message = (xcb_client_message_event_t *) event;
-      if (message->data.data32[0] == uvrxcb->delWindow->atom)
+      if (message->data.data32[0] == uvrxcb->uvrXcbWindow->delWindow->atom)
         goto error_exit_xcb_window_event_loop;
       break;
     }
@@ -136,6 +137,7 @@ int uvr_xcb_window_wait_for_event(struct uvr_xcb_window *uvrxcb) {
       break;
   }
 
+exit_xcb_window_event_loop:
   free(event);
   return 1;
 
