@@ -6,6 +6,8 @@
 #include "vulkan.h"
 #include "shader.h"
 
+#define WIDTH 1920
+#define HEIGHT 1080
 
 struct uvr_vk {
   VkInstance instance;
@@ -62,7 +64,7 @@ int submit_vk_draw_commands();
 
 
 void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
-  VkExtent2D extent2D = {1920, 1080};
+  VkExtent2D extent2D = {WIDTH, HEIGHT};
   struct uvr_vk_wc *vkwc = data;
   struct uvr_wc UNUSED *wc = vkwc->uvr_wc;
   struct uvr_vk *app = vkwc->uvr_vk;
@@ -151,7 +153,7 @@ int main(void) {
     goto exit_error;
 
   VkSurfaceFormatKHR sformat;
-  VkExtent2D extent2D = {1920, 1080};
+  VkExtent2D extent2D = {WIDTH, HEIGHT};
   if (create_vk_swapchain(&app, &sformat, extent2D) == -1)
     goto exit_error;
 

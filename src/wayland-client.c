@@ -177,7 +177,7 @@ struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrw
   int stride = uvrwc->width * uvrwc->bytesPerPixel;
 
   for (int c=0; c < uvrwc->bufferCount; c++) {
-    uvrwcshmbufs[c].shmPoolSize = stride * uvrwc->height * sizeof(uint8_t*);
+    uvrwcshmbufs[c].shmPoolSize = stride * uvrwc->height;
     uvrwcshmbufs[c].shmFd = -1;
 
     /* Create POSIX shared memory file of size shm_pool_size */

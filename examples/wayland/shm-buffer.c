@@ -5,6 +5,9 @@
 
 #include "wclient.h"
 
+#define WIDTH 1920
+#define HEIGHT 1080
+
 
 struct uvr_wc {
   struct uvr_wc_core_interface wcinterfaces;
@@ -30,8 +33,8 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
 void render(bool UNUSED *running, uint32_t *cbuf, void *data) {
   struct uvr_wc *wc = data;
 
-  unsigned int width = 3840, height = 2160, bytes_per_pixel = 4;
-  unsigned int stride = width * bytes_per_pixel;
+  unsigned int bytes_per_pixel = 4, offset = 0;
+  unsigned int stride = WIDTH * bytes_per_pixel;
   bool r_up = true, g_up = true, b_up = true;
 
   srand(time(NULL));
@@ -39,9 +42,13 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data) {
   uint8_t g = next_color(&g_up, rand() % 0xff, 10);
   uint8_t b = next_color(&b_up, rand() % 0xff, 5);
 
-  for (unsigned int x = 0; x < width; x++)
-    for (unsigned int y = 0; y < height; y++)
-      *(uint32_t *) &wc->wcbuffs.uvrWcShmBuffers[*cbuf].shmPoolData[stride * x + y * bytes_per_pixel] = (r << 16) | (g << 8) | b;
+  for (unsigned int x = 0; x < WIDTH; x++) {
+    for (unsigned int y = 0; y < HEIGHT; y++) {
+      offset = (x * bytes_per_pixel) + (y * stride);
+      if (wc->wcbuffs.uvrWcShmBuffers[*cbuf].shmPoolSize <= offset) break;
+      *(uint32_t *) &wc->wcbuffs.uvrWcShmBuffers[*cbuf].shmPoolData[offset] = (r << 16) | (g << 8) | b;
+    }
+  }
 }
 
 
@@ -67,8 +74,8 @@ int main(void) {
   struct uvr_wc_buffer_create_info wc_buffer_info;
   wc_buffer_info.uvrWcCore = &wc.wcinterfaces;
   wc_buffer_info.bufferCount = 2;
-  wc_buffer_info.width = 3840;
-  wc_buffer_info.height = 2160;
+  wc_buffer_info.width = WIDTH;
+  wc_buffer_info.height = HEIGHT;
   wc_buffer_info.bytesPerPixel = 4;
   wc_buffer_info.wlBufferPixelFormat = WL_SHM_FORMAT_XRGB8888;
 
