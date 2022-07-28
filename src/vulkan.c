@@ -974,6 +974,8 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
           vkDestroySemaphore(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkSemaphores[j].semaphore, NULL);
         }
       }
+      free(uvrvk->uvr_vk_sync_obj[i].vkFences);
+      free(uvrvk->uvr_vk_sync_obj[i].vkSemaphores);
     }
   }
 
