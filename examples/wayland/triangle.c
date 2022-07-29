@@ -100,9 +100,7 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   vkResetFences(app->lgdev.vkDevice, 1, &imageFence);
 
   /* Submit draw command */
-  if (vkQueueSubmit(app->graphics_queue.vkQueue, 1, &submitInfo, imageFence) != VK_SUCCESS) {
-    uvr_utils_log(UVR_WARNING, "vkQueueSubmit: failed");
-  }
+  vkQueueSubmit(app->graphics_queue.vkQueue, 1, &submitInfo, imageFence);
 
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -114,9 +112,7 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   presentInfo.pImageIndices = imageIndex;
   presentInfo.pResults = NULL;
 
-  if (vkQueuePresentKHR(app->graphics_queue.vkQueue, &presentInfo) != VK_SUCCESS) {
-    uvr_utils_log(UVR_WARNING, "vkQueuePresentKHR: failed");
-  }
+  vkQueuePresentKHR(app->graphics_queue.vkQueue, &presentInfo);
 }
 
 

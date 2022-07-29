@@ -44,15 +44,23 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
     goto error_exit_xcb_window_destroy;
   }
 
-  uvr_utils_log(UVR_WARNING, "Screen dimensions: %d, %d", screen->width_in_pixels, screen->height_in_pixels);
+  if ((uvrxcb->width >= screen->width_in_pixels || uvrxcb->height >= screen->height_in_pixels) && !uvrxcb->fullscreen) {
+    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_window_create: Currently don't support initializing xcb windows, that are greater than or equal to the resolution of the screen");
+    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_window_create: Screen dimensions: %dx%d", screen->width_in_pixels, screen->height_in_pixels);
+    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_window_create: Chosen Window resolution: %dx%d", uvrxcb->width, uvrxcb->height);
+    goto error_exit_xcb_window_destroy;
+  }
+
+  uvr_utils_log(UVR_WARNING, "Screen dimensions: %dx%d", screen->width_in_pixels, screen->height_in_pixels);
+  uvr_utils_log(UVR_WARNING, "Chosen Window resolution: %dx%d", uvrxcb->width, uvrxcb->height);
 
   /* Create window */
   uint32_t prop_name = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
   uint32_t prop_value[2] = { screen->black_pixel, XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_KEY_PRESS };
 
   xcb_create_window(conn, screen->root_depth, window, screen->root, 0,
-                    0, screen->width_in_pixels, screen->height_in_pixels, 0,
-                    XCB_WINDOW_CLASS_COPY_FROM_PARENT, screen->root_visual,
+                    0, uvrxcb->width, uvrxcb->height, 0,
+                    XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
                     prop_name, prop_value);
 
   /* Change window property name */
@@ -106,10 +114,8 @@ error_exit_xcb_window_create:
 }
 
 
-int uvr_xcb_window_wait_for_event(struct uvr_xcb_window_wait_for_event_info *uvrxcb) {
+int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb) {
   xcb_generic_event_t *event = NULL;
-
-  uvrxcb->renderer(uvrxcb->rendererRuning, uvrxcb->rendererCbuf, uvrxcb->rendererData);
 
   event = xcb_poll_for_event(uvrxcb->uvrXcbWindow->conn);
   if (!event) {
@@ -142,6 +148,7 @@ int uvr_xcb_window_wait_for_event(struct uvr_xcb_window_wait_for_event_info *uvr
   }
 
 exit_xcb_window_event_loop:
+  uvrxcb->renderer(uvrxcb->rendererRuning, uvrxcb->rendererCbuf, uvrxcb->rendererData);
   free(event);
   return 1;
 

@@ -33,6 +33,8 @@ struct uvr_xcb_window {
  * @screen      - Number for the screen that should be connected. When set to NULL,
  *                the screen number is set to 0.
  * @appName     - Sets the window name. Can not be more than 60 characters.
+ * @width       - Width of window in pixels
+ * @height      - Height of window in pixels
  * @fullscreen  - Set to true to go fullscreen, false to display normal window.
  * @transparent - Set to true to have fully transparent window. False will display black background.
  */
@@ -40,6 +42,8 @@ struct uvr_xcb_window_create_info {
   const char *display;
   int        *screen;
   const char *appName;
+  uint16_t   width;
+  uint16_t   height;
   bool       fullscreen;
   bool       transparent;
 };
@@ -69,7 +73,7 @@ typedef void (*uvr_xcb_renderer_impl)(bool*, uint32_t*, void*);
 
 
 /*
- * struct uvr_xcb_window_wait_for_event_info (Underview Renderer XCB Wait For Event Information)
+ * struct uvr_xcb_window_handle_event_info (Underview Renderer XCB Window Handle Event Information)
  *
  * members:
  * @uvrXcbWindow   - Pointer to a struct uvr_xcb_window contains all objects necessary to manage xcb client
@@ -80,7 +84,7 @@ typedef void (*uvr_xcb_renderer_impl)(bool*, uint32_t*, void*);
  * @rendererCbuf   - Pointer to an integer used by the api to update the current displayable buffer
  * @rendererRuning - Pointer to a boolean that determines if a given window/surface is actively running
  */
-struct uvr_xcb_window_wait_for_event_info {
+struct uvr_xcb_window_handle_event_info {
   struct uvr_xcb_window *uvrXcbWindow;
   uvr_xcb_renderer_impl renderer;
   void                  *rendererData;
@@ -90,13 +94,14 @@ struct uvr_xcb_window_wait_for_event_info {
 
 
 /*
- * uvr_xcb_window_wait_for_event: In an X program, everything is driven by events. This functions calls
- *                                xcb_poll_for_event which doesn't block operations and returns events from
- *                                X server when available. The main event watched by function is KEY_PRESSING,
- *                                when either the 'Q' or 'ESC' keys are pressed the function will return
- *                                failure status. Function is meant to be utilized as a while loop conditional/expression.
+ * uvr_xcb_window_handle_event: In an X program, everything is driven by events. This functions calls
+ *                              xcb_poll_for_event which doesn't block operations and returns events from
+ *                              X server when available. The main event watched by function is KEY_PRESSING,
+ *                              when either the 'Q' or 'ESC' keys are pressed the function will return
+ *                              failure status. Function is meant to be utilized as a while loop conditional/expression.
  *
- *                                https://xcb.freedesktop.org/tutorial/events
+ *                              https://xcb.freedesktop.org/tutorial/events
+ *
  * args:
  * @client - pointer to a struct uvr_xcb_window_wait_for_event_info contains all objects necessary for an
  *           xcb client to run and pointers to execute custom renderers.
@@ -104,7 +109,7 @@ struct uvr_xcb_window_wait_for_event_info {
  *    on success 1
  *    on failure 0
  */
-int uvr_xcb_window_wait_for_event(struct uvr_xcb_window_wait_for_event_info *uvrxcb);
+int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb);
 
 
 /*

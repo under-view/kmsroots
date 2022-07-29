@@ -8,6 +8,8 @@
 
 #define WIDTH 1920
 #define HEIGHT 1080
+//#define WIDTH 3840
+//#define HEIGHT 2160
 
 struct uvr_vk {
   VkInstance instance;
@@ -93,9 +95,7 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   vkResetFences(app->lgdev.vkDevice, 1, &imageFence);
 
   /* Submit draw command */
-  if (vkQueueSubmit(app->graphics_queue.vkQueue, 1, &submitInfo, imageFence) != VK_SUCCESS) {
-    uvr_utils_log(UVR_WARNING, "vkQueueSubmit: failed");
-  }
+  vkQueueSubmit(app->graphics_queue.vkQueue, 1, &submitInfo, imageFence);
 
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -107,9 +107,7 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   presentInfo.pImageIndices = imageIndex;
   presentInfo.pResults = NULL;
 
-  if (vkQueuePresentKHR(app->graphics_queue.vkQueue, &presentInfo) != VK_SUCCESS) {
-    uvr_utils_log(UVR_WARNING, "vkQueuePresentKHR: failed");
-  }
+  vkQueuePresentKHR(app->graphics_queue.vkQueue, &presentInfo);
 }
 
 
@@ -176,14 +174,14 @@ int main(void) {
   vkxc.uvr_xcb_window = &xc;
   vkxc.uvr_vk = &app;
 
-  struct uvr_xcb_window_wait_for_event_info eventInfo;
+  struct uvr_xcb_window_handle_event_info eventInfo;
   eventInfo.uvrXcbWindow = &xc;
   eventInfo.renderer = render;
   eventInfo.rendererData = &vkxc;
   eventInfo.rendererCbuf = &cbuf;
   eventInfo.rendererRuning = &running;
 
-  while (uvr_xcb_window_wait_for_event(&eventInfo) && running) {
+  while (uvr_xcb_window_handle_event(&eventInfo) && running) {
     // Initentionally left blank
   }
 
@@ -240,7 +238,9 @@ int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc) {
   xcb_win_info.display = NULL;
   xcb_win_info.screen = NULL;
   xcb_win_info.appName = "Example App";
-  xcb_win_info.fullscreen = true;
+  xcb_win_info.width = WIDTH;
+  xcb_win_info.height = HEIGHT;
+  xcb_win_info.fullscreen = false;
   xcb_win_info.transparent = false;
 
   *xc = uvr_xcb_window_create(&xcb_win_info);
@@ -291,8 +291,7 @@ int create_vk_instance(struct uvr_vk *app) {
   vkinst.ppEnabledExtensionNames = instance_extensions;
 
   app->instance = uvr_vk_instance_create(&vkinst);
-  if (!app->instance)
-    return -1;
+  if (!app->instance) return -1;
 
   return 0;
 }
@@ -437,7 +436,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     "  outColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
     "}";
 
-  /*
+/*
   const char vertex_shader[] =
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "out gl_PerVertex {\n"
@@ -457,7 +456,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     "layout(location = 0) in vec3 v_Color;\n"
     "layout(location = 0) out vec4 o_Color;\n"
     "void main() { o_Color = vec4(v_Color, 1.0); }";
-  */
+*/
 
   struct uvr_shader_spirv_create_info vert_shader_create_info;
   vert_shader_create_info.kind = VK_SHADER_STAGE_VERTEX_BIT;
