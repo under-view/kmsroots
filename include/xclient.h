@@ -53,13 +53,27 @@ struct uvr_xcb_window_create_info {
  * uvr_xcb_window_create: create a fulls xcb client window (can be fullscreen).
  *
  * args:
- * @client - pointer to a struct uvrxcb contains all objects necessary
- *           for an xcb client to run.
+ * @uvrxcb - pointer to a struct uvr_xcb_window_create_info contains all information
+ *           required to created an xcb client and some added window configuration options.
  * return:
  *    on success struct uvr_xcb_window
  *    on failure struct uvr_xcb_window { with members nulled }
  */
 struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb);
+
+
+/*
+ * uvr_xcb_window_make_visible: Creates the window that we display on by informing server to map the window to the screen.
+ *                              NOTE: If window is created before vulkan can establish VkSurfaceKHR/VkFramebuffer
+ *                              objects it leads to window being in a deadlock state. With no way of recovery without
+ *                              a power recycle. Validation layers report - vkCreateFramebuffer(): VkFramebufferCreateInfo
+ *                              attachment #0 mip level 0 has width (1848) smaller than the corresponding framebuffer width (1920).
+ *
+ * args:
+ * @uvrxcb - pointer to a struct uvr_xcb_window contains all objects necessary
+ *           for an xcb client window to display.
+ */
+void uvr_xcb_window_make_visible(struct uvr_xcb_window *uvrxcb);
 
 
 /*
@@ -104,7 +118,7 @@ struct uvr_xcb_window_handle_event_info {
  *
  * args:
  * @client - pointer to a struct uvr_xcb_window_wait_for_event_info contains all objects necessary for an
- *           xcb client to run and pointers to execute custom renderers.
+ *           xcb client to run and pointer to custom renderer to execute and the arguments used by said renderer.
  * return:
  *    on success 1
  *    on failure 0

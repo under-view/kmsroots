@@ -44,16 +44,6 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
     goto error_exit_xcb_window_destroy;
   }
 
-  if ((uvrxcb->width >= screen->width_in_pixels || uvrxcb->height >= screen->height_in_pixels) && !uvrxcb->fullscreen) {
-    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_window_create: Currently don't support initializing xcb windows, that are greater than or equal to the resolution of the screen");
-    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_window_create: Screen dimensions: %dx%d", screen->width_in_pixels, screen->height_in_pixels);
-    uvr_utils_log(UVR_DANGER, "[x] uvr_xcb_window_create: Chosen Window resolution: %dx%d", uvrxcb->width, uvrxcb->height);
-    goto error_exit_xcb_window_destroy;
-  }
-
-  uvr_utils_log(UVR_WARNING, "Screen dimensions: %dx%d", screen->width_in_pixels, screen->height_in_pixels);
-  uvr_utils_log(UVR_WARNING, "Chosen Window resolution: %dx%d", uvrxcb->width, uvrxcb->height);
-
   /* Create window */
   uint32_t prop_name = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
   uint32_t prop_value[2] = { screen->black_pixel, XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_KEY_PRESS };
@@ -98,9 +88,6 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
   xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, winprotosreply->atom, 4, 32, 1, &windeletereply->atom);
   free(winprotosreply);
 
-  xcb_map_window(conn, window);
-  xcb_flush(conn);
-
   return (struct uvr_xcb_window) { .conn = conn, .window = window, .delWindow = windeletereply };
 
 error_exit_xcb_window_destroy:
@@ -111,6 +98,12 @@ error_exit_xcb_window_disconnect:
     xcb_disconnect(conn);
 error_exit_xcb_window_create:
   return (struct uvr_xcb_window) { .conn = NULL, .window = 0, .delWindow = 0 };
+}
+
+
+void uvr_xcb_window_make_visible(struct uvr_xcb_window *uvrxcb) {
+  xcb_map_window(uvrxcb->conn, uvrxcb->window);
+  xcb_flush(uvrxcb->conn);
 }
 
 

@@ -59,7 +59,7 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
 
 
 void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
-  VkExtent2D extent2D = {WIDTH, HEIGHT};
+  VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
   struct uvr_vk_xcb *vkxcb = (struct uvr_vk_xcb *) data;
   struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
   struct uvr_vk *app = vkxcb->uvr_vk;
@@ -142,7 +142,7 @@ int main(void) {
     goto exit_error;
 
   VkSurfaceFormatKHR sformat;
-  VkExtent2D extent2D = {WIDTH, HEIGHT};
+  VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
   if (create_vk_swapchain(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
@@ -166,6 +166,9 @@ int main(void) {
 
   if (record_vk_draw_commands(&app, 0, extent2D) == -1)
     goto exit_error;
+
+  /* Map the window to the screen */
+  uvr_xcb_window_make_visible(&xc);
 
   static uint32_t cbuf = 0;
   static bool running = true;
@@ -784,7 +787,7 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   renderPassInfo.renderPass = app->rpass.renderPass;
   renderPassInfo.framebuffer = app->vkframebuffs.vkFrameBuffers[vkSwapchainImageIndex].fb;
   renderPassInfo.renderArea = renderArea;
-  renderPassInfo.clearValueCount = 1;
+  renderPassInfo.clearValueCount = ARRAY_LEN(clearColor);
   renderPassInfo.pClearValues = clearColor;
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
