@@ -1,7 +1,9 @@
-#version 450
+#version 450  // GLSL 4.5
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(location = 0) in vec3 v_Color;
-layout(location = 0) out vec4 o_Color;
+layout(location = 0) in vec3 inColor;
+layout(location = 0) out vec4 outColor;
 
-void main() { o_Color = vec4(v_Color, 1.0); }
+void main() {
+  outColor = vec4(inColor, 1.0);
+}

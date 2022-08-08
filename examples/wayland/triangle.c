@@ -402,11 +402,11 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
   vkimage_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
   vkimage_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  vkimage_create_info.subresourceRange.baseMipLevel = 0;
-  vkimage_create_info.subresourceRange.levelCount = 1;
-  vkimage_create_info.subresourceRange.baseArrayLayer = 0;
-  vkimage_create_info.subresourceRange.layerCount = 1;
+  vkimage_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+  vkimage_create_info.subresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+  vkimage_create_info.subresourceRange.levelCount = 1;                          // Number of mipmap levels to view
+  vkimage_create_info.subresourceRange.baseArrayLayer = 0;                      // Start array level to view from
+  vkimage_create_info.subresourceRange.layerCount = 1;                          // Number of array levels to view
 
   app->vkimages = uvr_vk_image_create(&vkimage_create_info);
   if (!app->vkimages.vkImageViews[0].view)
@@ -420,21 +420,30 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
 #ifdef INCLUDE_SHADERC
   const char vertex_shader[] =
-    "#version 450\n"
+    "#version 450\n"  // GLSL 4.5
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "layout(location = 0) out vec3 outColor;\n"
     "vec2 positions[3] = vec2[](\n"
     "  vec2(0.0, -0.5),\n"
     "  vec2(0.5, 0.5),\n"
     "  vec2(-0.5, 0.5)\n"
     ");\n\n"
+    "vec3 colors[3] = vec3[](\n"
+    "  vec3(1.0, 0.0, 0.0),\n"
+    "  vec3(0.0, 1.0, 0.0),\n"
+    "  vec3(0.0, 0.0, 1.0)\n"
+    ");\n\n"
     "void main() {\n"
     "  gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);\n"
+    "  outColor = colors[gl_VertexIndex];\n"
     "}";
 
   const char fragment_shader[] =
-    "#version 450\n"
+    "#version 450\n"  // GLSL 4.5
+    "layout(location = 0) in vec3 inColor;\n"
     "layout(location = 0) out vec4 outColor;\n"
     "void main() {\n"
-    "  outColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+    "  outColor = vec4(inColor, 1.0);\n"
     "}";
 
 /*
@@ -485,7 +494,8 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     return -1;
 
   app->fragment_shader = uvr_shader_file_load(TRIANGLE_FRAGMENT_SHADER_SPIRV);
-  if (!app->fragment_shader.bytes) goto exit_error;
+  if (!app->fragment_shader.bytes)
+    return -1;
 #endif
 
   struct uvr_vk_shader_module_create_info vertex_shader_module_create_info;
@@ -514,7 +524,6 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D) {
 
-  /* Taken directly from https://vulkan-tutorial.com */
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -529,9 +538,6 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 
   VkPipelineShaderStageCreateInfo shaderStages[2] = {vertShaderStageInfo, fragShaderStageInfo};
 
-  /*
-   * Provides details for loading vertex data
-   */
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputInfo.vertexBindingDescriptionCount = 0;
@@ -616,6 +622,17 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   dynamicState.dynamicStateCount = ARRAY_LEN(dynamicStates);
   dynamicState.pDynamicStates = dynamicStates;
 
+  struct uvr_vk_pipeline_layout_create_info gplayout_info;
+  gplayout_info.vkDevice = app->lgdev.vkDevice;
+  gplayout_info.setLayoutCount = 0;
+  gplayout_info.pSetLayouts = NULL;
+  gplayout_info.pushConstantRangeCount = 0;
+  gplayout_info.pPushConstantRanges = NULL;
+
+  app->gplayout = uvr_vk_pipeline_layout_create(&gplayout_info);
+  if (!app->gplayout.vkPipelineLayout)
+    return -1;
+
   VkAttachmentDescription colorAttachment = {};
   colorAttachment.format = sformat->format;
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -634,17 +651,6 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &colorAttachmentRef;
-
-  struct uvr_vk_pipeline_layout_create_info gplayout_info;
-  gplayout_info.vkDevice = app->lgdev.vkDevice;
-  gplayout_info.setLayoutCount = 0;
-  gplayout_info.pSetLayouts = NULL;
-  gplayout_info.pushConstantRangeCount = 0;
-  gplayout_info.pPushConstantRanges = NULL;
-
-  app->gplayout = uvr_vk_pipeline_layout_create(&gplayout_info);
-  if (!app->gplayout.vkPipelineLayout)
-    return -1;
 
   VkSubpassDependency subPassDependency;
   subPassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;

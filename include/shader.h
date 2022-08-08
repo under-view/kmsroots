@@ -56,7 +56,7 @@ struct uvr_shader_spirv_create_info {
 
 
 /*
- * struct uvr_shader_spirv (Underview Renderer Shader SPIRV)
+ * struct uvr_shader_spirv (Underview Renderer Shader SPIRV [Standard Portable Intermediate Representation - Vulkan])
  *
  * members:
  * @result   - An opaque handle to the results of a call to any shaderc_compile_into_*()
