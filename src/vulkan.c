@@ -557,21 +557,23 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
   uint32_t icount = 0, i;
   VkImage *vkimages = NULL;
 
-  res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, NULL);
-  if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
-    goto exit_vk_image;
+  if (uvrvk->vkSwapchain) {
+    res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, NULL);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
+      goto exit_vk_image;
+    }
+
+    vkimages = alloca(icount * sizeof(VkImage));
+
+    res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, vkimages);
+    if (res) {
+      uvr_utils_log(UVR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
+      goto exit_vk_image;
+    }
+
+    uvr_utils_log(UVR_INFO, "uvr_vk_image_create: Total images in swapchain %u", icount);
   }
-
-  vkimages = alloca(icount * sizeof(VkImage));
-
-  res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, vkimages);
-  if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
-    goto exit_vk_image;
-  }
-
-  uvr_utils_log(UVR_INFO, "uvr_vk_image_create: Total images in swapchain %u", icount);
 
   images = calloc(icount, sizeof(images));
   if (!images) {
