@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stddef.h> // For offsetof(3)
+
+#include <cglm/cglm.h>
 
 #include "wclient.h"
 #include "vulkan.h"
@@ -34,6 +37,7 @@ struct uvr_vk {
   struct uvr_vk_framebuffer vkframebuffs;
   struct uvr_vk_command_buffer vkcbuffs;
   struct uvr_vk_sync_obj vksyncs;
+  struct uvr_vk_buffer vkbuffer;
 };
 
 
@@ -49,12 +53,26 @@ struct uvr_vk_wc {
 };
 
 
+struct uvr_vertex_data {
+  vec2 pos;
+  vec3 color;
+};
+
+
+const struct uvr_vertex_data vertices_pos_color[3] = {
+  {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+  {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+  {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+};
+
+
 int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running);
 int create_vk_instance(struct uvr_vk *uvrvk);
 int create_vk_device(struct uvr_vk *app);
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
 int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat);
 int create_vk_shader_modules(struct uvr_vk *app);
+int create_vk_buffers(struct uvr_vk *app);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D);
 int create_vk_command_buffers(struct uvr_vk *app);
@@ -159,6 +177,9 @@ int main(void) {
   if (create_vk_shader_modules(&app) == -1)
     goto exit_error;
 
+  if (create_vk_buffers(&app) == -1)
+    goto exit_error;
+
   if (create_vk_graphics_pipeline(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
@@ -210,6 +231,8 @@ exit_error:
   appd.uvr_vk_command_buffer = &app.vkcbuffs;
   appd.uvr_vk_sync_obj_cnt = 1;
   appd.uvr_vk_sync_obj = &app.vksyncs;
+  appd.uvr_vk_buffer_cnt = 1;
+  appd.uvr_vk_buffer = &app.vkbuffer;
   uvr_vk_destory(&appd);
 
   wcd.uvr_wc_core_interface = wc.wcinterfaces;
@@ -422,51 +445,20 @@ int create_vk_shader_modules(struct uvr_vk *app) {
   const char vertex_shader[] =
     "#version 450\n"  // GLSL 4.5
     "#extension GL_ARB_separate_shader_objects : enable\n"
-    "layout(location = 0) out vec3 outColor;\n"
-    "vec2 positions[3] = vec2[](\n"
-    "  vec2(0.0, -0.5),\n"
-    "  vec2(0.5, 0.5),\n"
-    "  vec2(-0.5, 0.5)\n"
-    ");\n\n"
-    "vec3 colors[3] = vec3[](\n"
-    "  vec3(1.0, 0.0, 0.0),\n"
-    "  vec3(0.0, 1.0, 0.0),\n"
-    "  vec3(0.0, 0.0, 1.0)\n"
-    ");\n\n"
+    "layout(location = 0) out vec3 outColor;\n\n"
+    "layout(location = 0) in vec2 inPosition;\n"
+    "layout(location = 1) in vec3 inColor;\n"
     "void main() {\n"
-    "  gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);\n"
-    "  outColor = colors[gl_VertexIndex];\n"
-    "}";
-
-  const char fragment_shader[] =
-    "#version 450\n"  // GLSL 4.5
-    "layout(location = 0) in vec3 inColor;\n"
-    "layout(location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "  outColor = vec4(inColor, 1.0);\n"
-    "}";
-
-/*
-  const char vertex_shader[] =
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "out gl_PerVertex {\n"
-    "   vec4 gl_Position;\n"
-    "};\n"
-    "layout(location = 0) in vec2 i_Position;\n"
-    "layout(location = 1) in vec3 i_Color;\n"
-    "layout(location = 0) out vec3 v_Color;\n"
-    "void main() {\n"
-    "   gl_Position = vec4(i_Position, 0.0, 1.0);\n"
-    "   v_Color = i_Color;\n"
+    "   gl_Position = vec4(inPosition, 0.0, 1.0);\n"
+    "   outColor = inColor;\n"
     "}";
 
   const char fragment_shader[] =
     "#version 450\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
-    "layout(location = 0) in vec3 v_Color;\n"
-    "layout(location = 0) out vec4 o_Color;\n"
-    "void main() { o_Color = vec4(v_Color, 1.0); }";
-*/
+    "layout(location = 0) in vec3 inColor;\n"
+    "layout(location = 0) out vec4 outColor;\n"
+    "void main() { outColor = vec4(inColor, 1.0); }";
 
   struct uvr_shader_spirv_create_info vert_shader_create_info;
   vert_shader_create_info.kind = VK_SHADER_STAGE_VERTEX_BIT;
@@ -522,6 +514,32 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 }
 
 
+int create_vk_buffers(struct uvr_vk *app) {
+  // Create vertex buffer
+  struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
+  vkVertexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
+  vkVertexBufferCreateInfo.vkPhdev = app->phdev;
+  vkVertexBufferCreateInfo.bufferFlags = 0;
+  vkVertexBufferCreateInfo.bufferSize = sizeof(vertices_pos_color);
+  vkVertexBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  vkVertexBufferCreateInfo.queueFamilyIndexCount = 0;
+  vkVertexBufferCreateInfo.queueFamilyIndices = NULL;
+  vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+  app->vkbuffer = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
+  if (!app->vkbuffer.vkBuffer || !app->vkbuffer.vkDeviceMemory)
+    return -1;
+
+  void *data = NULL;
+  vkMapMemory(app->lgdev.vkDevice, app->vkbuffer.vkDeviceMemory, 0, sizeof(vertices_pos_color), 0, &data);
+  memcpy(data, vertices_pos_color, sizeof(vertices_pos_color));
+  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffer.vkDeviceMemory);
+
+  return 0;
+}
+
+
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D) {
 
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -538,12 +556,35 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 
   VkPipelineShaderStageCreateInfo shaderStages[2] = {vertShaderStageInfo, fragShaderStageInfo};
 
+  VkVertexInputBindingDescription VkVertexInputBindingDescription = {};
+  VkVertexInputBindingDescription.binding = 0;
+  VkVertexInputBindingDescription.stride = sizeof(struct uvr_vertex_data); // Number of bytes from one entry to another
+  VkVertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Move to next data entry after each vertex
+
+  // Two incomming vertex atributes in the vertex shader.
+  VkVertexInputAttributeDescription vertexAttributeDescriptions[2];
+
+  // position attribute
+  vertexAttributeDescriptions[0].location = 0;
+  vertexAttributeDescriptions[0].binding = 0;
+  // defines the byte size of attribute data
+  vertexAttributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // vec2 - RG color channels match size of vec2
+  // specifies number of bytes for struct uvr_vertex_data member vec2 pos
+  vertexAttributeDescriptions[0].offset = offsetof(struct uvr_vertex_data, pos);
+
+  // color attribute
+  vertexAttributeDescriptions[1].location = 1;
+  vertexAttributeDescriptions[1].binding = 0;
+  vertexAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT; // vec2 - RGB color channels match size of vec3
+  // specifies number of bytes for struct uvr_vertex_data member vec3 color
+  vertexAttributeDescriptions[1].offset = offsetof(struct uvr_vertex_data, color);
+
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount = 0;
-  vertexInputInfo.pVertexBindingDescriptions = NULL;
-  vertexInputInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputInfo.pVertexAttributeDescriptions = NULL;
+  vertexInputInfo.vertexBindingDescriptionCount = 1;
+  vertexInputInfo.pVertexBindingDescriptions = &VkVertexInputBindingDescription;
+  vertexInputInfo.vertexAttributeDescriptionCount = ARRAY_LEN(vertexAttributeDescriptions);
+  vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions;
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
   inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -794,11 +835,15 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues = clearColor;
 
+  VkBuffer vertexBuffers[1] = {app->vkbuffer.vkBuffer};
+  VkDeviceSize offsets[] = {0};
+
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gpipeline.graphicsPipeline);
+  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
-  vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
+  vkCmdDraw(cmdBuffer, ARRAY_LEN(vertices_pos_color), 1, 0, 0);
   vkCmdEndRenderPass(cmdBuffer);
 
   if (uvr_vk_command_buffer_record_end(&commandBufferRecordInfo) == -1)

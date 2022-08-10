@@ -960,6 +960,67 @@ exit_vk_sync_obj:
 };
 
 
+static uint32_t retrieve_memory_type_index(VkPhysicalDevice vkPhdev, uint32_t memoryType, VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties mem_props;
+  vkGetPhysicalDeviceMemoryProperties(vkPhdev, &mem_props);
+
+  for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+    if (memoryType & (1 << i) && (mem_props.memoryTypes[i].propertyFlags & properties) == properties) {
+      return i;
+    }
+  }
+
+  uvr_utils_log(UVR_DANGER, "[x] retrieve_memory_type: failed to find suitable memory type");
+
+  return UINT32_MAX;
+}
+
+
+struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkBuffer buffer = VK_NULL_HANDLE;
+  VkDeviceMemory memory = VK_NULL_HANDLE;
+
+  VkBufferCreateInfo buffer_create_info = {};
+  buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_create_info.pNext = NULL;
+  buffer_create_info.flags = uvrvk->bufferFlags;
+  buffer_create_info.size  = uvrvk->bufferSize;
+  buffer_create_info.usage = uvrvk->bufferUsage;
+  buffer_create_info.sharingMode = uvrvk->bufferSharingMode;
+  buffer_create_info.queueFamilyIndexCount = uvrvk->queueFamilyIndexCount;
+  buffer_create_info.pQueueFamilyIndices = uvrvk->queueFamilyIndices;
+
+  /* Creates underlying buffer header */
+  res = vkCreateBuffer(uvrvk->vkDevice, &buffer_create_info, NULL, &buffer);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkCreateBuffer: %s", vkres_msg(res));
+    goto exit_vk_buffer;
+  }
+
+  VkMemoryRequirements mem_reqs;
+  vkGetBufferMemoryRequirements(uvrvk->vkDevice, buffer, &mem_reqs);
+
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = mem_reqs.size;
+  alloc_info.memoryTypeIndex = retrieve_memory_type_index(uvrvk->vkPhdev, mem_reqs.memoryTypeBits, uvrvk->memPropertyFlags);
+
+  res = vkAllocateMemory(uvrvk->vkDevice, &alloc_info, NULL, &memory);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkAllocateMemory: %s", vkres_msg(res));
+    goto exit_vk_buffer;
+  }
+
+  vkBindBufferMemory(uvrvk->vkDevice, buffer, memory, 0);
+
+  return (struct uvr_vk_buffer) { .vkDevice = uvrvk->vkDevice, .vkBuffer = buffer, .vkDeviceMemory = memory };
+
+exit_vk_buffer:
+  return (struct uvr_vk_buffer) { .vkDevice = VK_NULL_HANDLE, .vkBuffer = VK_NULL_HANDLE, .vkDeviceMemory = VK_NULL_HANDLE };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
@@ -986,6 +1047,15 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
       if (uvrvk->uvr_vk_command_buffer[i].vkDevice && uvrvk->uvr_vk_command_buffer[i].vkCommandPool)
         vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].vkDevice, uvrvk->uvr_vk_command_buffer[i].vkCommandPool, NULL);
       free(uvrvk->uvr_vk_command_buffer[i].vkCommandbuffers);
+    }
+  }
+
+  if (uvrvk->uvr_vk_buffer) {
+    for (i = 0; i < uvrvk->uvr_vk_buffer_cnt; i++) {
+      if (uvrvk->uvr_vk_buffer[i].vkBuffer)
+        vkDestroyBuffer(uvrvk->uvr_vk_buffer[i].vkDevice, uvrvk->uvr_vk_buffer[i].vkBuffer, NULL);
+      if (uvrvk->uvr_vk_buffer[i].vkDeviceMemory)
+        vkFreeMemory(uvrvk->uvr_vk_buffer[i].vkDevice, uvrvk->uvr_vk_buffer[i].vkDeviceMemory, NULL);
     }
   }
 

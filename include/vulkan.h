@@ -861,9 +861,9 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
  * @flags              - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
  */
 struct uvr_vk_command_buffer_record_info {
-  uint32_t commandBufferCount;
+  uint32_t                            commandBufferCount;
   struct uvr_vk_command_buffer_handle *vkCommandbuffers;
-  VkCommandBufferUsageFlagBits flags;
+  VkCommandBufferUsageFlagBits        flags;
 };
 
 
@@ -970,6 +970,62 @@ struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info
 
 
 /*
+ * struct uvr_vk_buffer (Underview Renderer Vulkan Buffer)
+ *
+ * members:
+ * @vkDevice       - VkDevice handle (Logical Device) associated with VkBuffer
+ * @vkBuffer       - Header of a given buffer that stores information about the buffer
+ * @vkDeviceMemory - Actual memory whether CPU or GPU visible associate with VkBuffer header object
+ */
+struct uvr_vk_buffer {
+  VkDevice vkDevice;
+  VkBuffer vkBuffer;
+  VkDeviceMemory vkDeviceMemory;
+};
+
+
+/*
+ * struct uvr_vk_buffer_create_info (Underview Renderer Vulkan Buffer Create Information)
+ *
+ * members:
+ * @vkDevice              - Must pass a valid VkDevice handle (Logical Device)
+ * @vkPhdev               -
+ * @bufferFlags           - Used when configuring sparse buffer memory
+ * @bufferSize            - Size of underlying buffer to allocate
+ * @bufferUsage           - Specifies type of buffer (i.e vertex, etc...). Multiple buffer types can be selected here
+ *                          via bitwise or operations.
+ * @bufferSharingMode     - Vulkan buffers may be owned by one device queue family or shared by multiple device queue families.
+ * @queueFamilyIndexCount - Amount of queue families may own given vulkan buffer.
+ * @queueFamilyIndices    - Pointer to an array of queue families to associate/own a given vulkan buffer.
+ * @memPropertyFlags      - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
+ */
+struct uvr_vk_buffer_create_info {
+  VkDevice                 vkDevice;
+  VkPhysicalDevice         vkPhdev;
+  VkBufferCreateFlagBits   bufferFlags;
+  VkDeviceSize             bufferSize;
+  VkBufferUsageFlags       bufferUsage;
+  VkSharingMode            bufferSharingMode;
+  uint32_t                 queueFamilyIndexCount;
+  const uint32_t           *queueFamilyIndices;
+  VkMemoryPropertyFlagBits memPropertyFlags;
+};
+
+
+/*
+ * uvr_vk_buffer_create: Function creates vulkan buffer header and binds actual memory to said vulkan buffer headers. This
+ *                       allows host visible data (i.e vertex data) to be given to the GPU.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_buffer_create_info
+ * return:
+ *    on success struct uvr_vk_buffer
+ *    on failure struct uvr_vk_buffer { with member nulled }
+ */
+struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
@@ -995,6 +1051,8 @@ struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info
  * @uvr_vk_command_buffer        - Must pass a pointer to an array of valid struct uvr_vk_command_buffer { free'd members: VkCommandPool handle, *vkCommandbuffers }
  * @uvr_vk_sync_obj_cnt          - Must pass the amount of elements in struct uvr_vk_sync_obj array
  * @uvr_vk_sync_obj              - Must pass a pointer to an array of valid struct uvr_vk_sync_obj { free'd members: VkFence handle, VkSemaphore handle, *vkFences, *vkSemaphores }
+ * @uvr_vk_buffer_cnt            -
+ * @uvr_vk_buffer                -
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -1029,6 +1087,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_sync_obj_cnt;
   struct uvr_vk_sync_obj *uvr_vk_sync_obj;
+
+  uint32_t uvr_vk_buffer_cnt;
+  struct uvr_vk_buffer *uvr_vk_buffer;
 };
 
 
