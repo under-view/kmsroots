@@ -571,14 +571,14 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   vertexAttributeDescriptions[0].binding = 0;
   // defines the byte size of attribute data
   vertexAttributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // vec2 - RG color channels match size of vec2
-  // specifies number of bytes for struct uvr_vertex_data member vec2 pos
+  // specifies the byte where struct uvr_vertex_data member vec2 pos is located
   vertexAttributeDescriptions[0].offset = offsetof(struct uvr_vertex_data, pos);
 
   // color attribute
   vertexAttributeDescriptions[1].location = 1;
   vertexAttributeDescriptions[1].binding = 0;
   vertexAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT; // vec2 - RGB color channels match size of vec3
-  // specifies number of bytes for struct uvr_vertex_data member vec3 color
+  // specifies the byte where struct uvr_vertex_data member vec3 color is located
   vertexAttributeDescriptions[1].offset = offsetof(struct uvr_vertex_data, color);
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
