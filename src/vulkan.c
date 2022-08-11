@@ -843,18 +843,19 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
   }
 
   for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
-    cbuffs[i].buffer = cmdbuffs[i];
-    uvr_utils_log(UVR_WARNING, "uvr_vk_command_buffer_create: VkCommandBuffer successfully created retval(%p)", cbuffs[i].buffer);
+    cbuffs[i].commandBuffer = cmdbuffs[i];
+    uvr_utils_log(UVR_WARNING, "uvr_vk_command_buffer_create: VkCommandBuffer successfully created retval(%p)", cbuffs[i].commandBuffer);
   }
 
-  return (struct uvr_vk_command_buffer) { .vkDevice = uvrvk->vkDevice, .vkCommandPool = cmdpool,
-                                          .commandBufferCount = uvrvk->commandBufferCount, .vkCommandbuffers = cbuffs };
+  return (struct uvr_vk_command_buffer) { .vkDevice = uvrvk->vkDevice, .commandPool = cmdpool,
+                                          .commandBufferCount = uvrvk->commandBufferCount,
+                                          .commandBuffers = cbuffs };
 
 exit_vk_command_buffer_destroy_cmd_pool:
   vkDestroyCommandPool(uvrvk->vkDevice, cmdpool, NULL);
 exit_vk_command_buffer:
-  return (struct uvr_vk_command_buffer) { .vkDevice = VK_NULL_HANDLE, .vkCommandPool = VK_NULL_HANDLE,
-                                          .commandBufferCount = 0, .vkCommandbuffers = NULL };
+  return (struct uvr_vk_command_buffer) { .vkDevice = VK_NULL_HANDLE, .commandPool = VK_NULL_HANDLE,
+                                          .commandBufferCount = 0, .commandBuffers = NULL };
 }
 
 
@@ -869,7 +870,7 @@ int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info 
   begin_info.pInheritanceInfo = NULL;
 
   for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
-    res = vkBeginCommandBuffer(uvrvk->vkCommandbuffers[i].buffer, &begin_info);
+    res = vkBeginCommandBuffer(uvrvk->commandBuffers[i].commandBuffer, &begin_info);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkBeginCommandBuffer: %s", vkres_msg(res));
       return -1;
@@ -884,7 +885,7 @@ int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *u
   VkResult res = VK_RESULT_MAX_ENUM;
 
   for (uint32_t i = 0; i < uvrvk->commandBufferCount; i++) {
-    res = vkEndCommandBuffer(uvrvk->vkCommandbuffers[i].buffer);
+    res = vkEndCommandBuffer(uvrvk->commandBuffers[i].commandBuffer);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkEndCommandBuffer: %s", vkres_msg(res));
       return -1;
@@ -1021,6 +1022,47 @@ exit_vk_buffer:
 }
 
 
+int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk) {
+  struct uvr_vk_command_buffer_handle command_buffer_handle;
+  command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
+
+  struct uvr_vk_command_buffer_record_info command_buffer_record_info;
+  command_buffer_record_info.commandBufferCount = 1;
+  command_buffer_record_info.commandBuffers = &command_buffer_handle;
+  command_buffer_record_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  if (uvr_vk_command_buffer_record_begin(&command_buffer_record_info) == -1)
+    return -1;
+
+  VkCommandBuffer cmdBuffer = command_buffer_handle.commandBuffer;
+
+  VkBufferCopy copy_region;
+  copy_region.srcOffset = 0;
+  copy_region.dstOffset = 0;
+  copy_region.size = uvrvk->bufferSize;
+  vkCmdCopyBuffer(cmdBuffer, uvrvk->srcBuffer, uvrvk->dstBuffer, 1, &copy_region);
+
+  if (uvr_vk_command_buffer_record_end(&command_buffer_record_info) == -1)
+    return -1;
+
+  VkSubmitInfo submit_info;
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.pNext = NULL;
+  submit_info.waitSemaphoreCount = 0;
+  submit_info.pWaitSemaphores = NULL;
+  submit_info.pWaitDstStageMask = NULL;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &cmdBuffer;
+  submit_info.signalSemaphoreCount = 0;
+  submit_info.pSignalSemaphores = NULL;
+
+  vkQueueSubmit(uvrvk->vkQueue, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(uvrvk->vkQueue);
+
+  return 0;
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
@@ -1044,9 +1086,9 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
 
   if (uvrvk->uvr_vk_command_buffer) {
     for (i = 0; i < uvrvk->uvr_vk_command_buffer_cnt; i++) {
-      if (uvrvk->uvr_vk_command_buffer[i].vkDevice && uvrvk->uvr_vk_command_buffer[i].vkCommandPool)
-        vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].vkDevice, uvrvk->uvr_vk_command_buffer[i].vkCommandPool, NULL);
-      free(uvrvk->uvr_vk_command_buffer[i].vkCommandbuffers);
+      if (uvrvk->uvr_vk_command_buffer[i].vkDevice && uvrvk->uvr_vk_command_buffer[i].commandPool)
+        vkDestroyCommandPool(uvrvk->uvr_vk_command_buffer[i].vkDevice, uvrvk->uvr_vk_command_buffer[i].commandPool, NULL);
+      free(uvrvk->uvr_vk_command_buffer[i].commandBuffers);
     }
   }
 

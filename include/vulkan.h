@@ -797,10 +797,10 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
 /*
  * struct uvr_vk_command_buffer_handle (Underview Renderer Vulkan Command Buffer Handle)
  *
- * @buffer - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
+ * @commandBuffer - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
  */
 struct uvr_vk_command_buffer_handle {
-  VkCommandBuffer buffer;
+  VkCommandBuffer commandBuffer;
 };
 
 
@@ -808,16 +808,16 @@ struct uvr_vk_command_buffer_handle {
  * struct uvr_vk_command_buffer (Underview Renderer Vulkan Command Buffer)
  *
  * members:
- * @vkDevice            - VkDevice handle (Logical Device) associated with VkCommandPool
- * @vkCommandPool       - The command pool which the buffers where allocated from.
- * @commandBufferCount  - Amount of VkCommandBuffer's alloocated
- * @vkCommandbuffers    - Pointer to an array of VkCommandBuffer handles
+ * @vkDevice           - VkDevice handle (Logical Device) associated with VkCommandPool
+ * @commandPool        - The command pool which the buffers where allocated from.
+ * @commandBufferCount - Amount of VkCommandBuffer's alloocated
+ * @commandBuffers     - Pointer to an array of VkCommandBuffer handles
  */
 struct uvr_vk_command_buffer {
   VkDevice                            vkDevice;
-  VkCommandPool                       vkCommandPool;
+  VkCommandPool                       commandPool;
   uint32_t                            commandBufferCount;
-  struct uvr_vk_command_buffer_handle *vkCommandbuffers;
+  struct uvr_vk_command_buffer_handle *commandBuffers;
 };
 
 
@@ -857,12 +857,12 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
  *
  * members:
  * @commandBufferCount - Amount of VkCommandBuffer handles allocated
- * @vkCommandbuffers   - Pointer to an array of struct uvr_vk_command_buffer_handle which contains your actual VkCommandBuffer handles to start writing commands to.
+ * @commandBuffers     - Pointer to an array of struct uvr_vk_command_buffer_handle which contains your actual VkCommandBuffer handles to start writing commands to.
  * @flags              - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
  */
 struct uvr_vk_command_buffer_record_info {
   uint32_t                            commandBufferCount;
-  struct uvr_vk_command_buffer_handle *vkCommandbuffers;
+  struct uvr_vk_command_buffer_handle *commandBuffers;
   VkCommandBufferUsageFlagBits        flags;
 };
 
@@ -1023,6 +1023,40 @@ struct uvr_vk_buffer_create_info {
  *    on failure struct uvr_vk_buffer { with member nulled }
  */
 struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrvk);
+
+
+/*
+ * struct uvr_vk_buffer_copy_info (Underview Renderer Vulkan Buffer Copy Information)
+ *
+ * members:
+ * @commandBuffer - Command buffer used for recording. Best to utilize one already create via
+ *                  uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ * @srcBuffer     - Source buffer containing data.
+ * @dstBuffer     - Destination buffer to copy source buffer data to.
+ * @bufferSize    - Amount of data to copy over in bytes.
+ * @vkQueue       - The physical device queue (graphics or transfer) to submit the copy buffer command to.
+ */
+struct uvr_vk_buffer_copy_info {
+  VkCommandBuffer commandBuffer;
+  VkBuffer        srcBuffer;
+  VkBuffer        dstBuffer;
+  uint32_t        bufferSize;
+  VkQueue         vkQueue;
+};
+
+
+/*
+ * uvr_vk_buffer_copy: Function copies data from one VkBuffer to another. Best utilized when copying
+ *                     data from CPU visible buffer over to GPU visible buffer. That way the GPU can
+ *                     acquire data (vertex data) more quickly.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_buffer_copy_info
+ * return:
+ *    on success 0
+ *    on failure -1
+ */
+int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk);
 
 
 /*

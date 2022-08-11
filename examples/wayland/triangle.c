@@ -37,7 +37,7 @@ struct uvr_vk {
   struct uvr_vk_framebuffer vkframebuffs;
   struct uvr_vk_command_buffer vkcbuffs;
   struct uvr_vk_sync_obj vksyncs;
-  struct uvr_vk_buffer vkbuffer;
+  struct uvr_vk_buffer vkbuffers[2];
 };
 
 
@@ -111,7 +111,7 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   submitInfo.pWaitSemaphores = waitSemaphores;
   submitInfo.pWaitDstStageMask = waitStages;
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &app->vkcbuffs.vkCommandbuffers[0].buffer;
+  submitInfo.pCommandBuffers = &app->vkcbuffs.commandBuffers[0].commandBuffer;
   submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
   submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -177,9 +177,6 @@ int main(void) {
   if (create_vk_shader_modules(&app) == -1)
     goto exit_error;
 
-  if (create_vk_buffers(&app) == -1)
-    goto exit_error;
-
   if (create_vk_graphics_pipeline(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
@@ -191,6 +188,9 @@ int main(void) {
 
   if (create_vk_sync_objs(&app) == -1)
     goto exit_error;
+
+  if (create_vk_buffers(&app) == -1)
+      goto exit_error;
 
   while (wl_display_dispatch(wc.wcinterfaces.wlDisplay) != -1 && running) {
     // Leave blank
@@ -231,8 +231,8 @@ exit_error:
   appd.uvr_vk_command_buffer = &app.vkcbuffs;
   appd.uvr_vk_sync_obj_cnt = 1;
   appd.uvr_vk_sync_obj = &app.vksyncs;
-  appd.uvr_vk_buffer_cnt = 1;
-  appd.uvr_vk_buffer = &app.vkbuffer;
+  appd.uvr_vk_buffer_cnt = ARRAY_LEN(app.vkbuffers);
+  appd.uvr_vk_buffer = app.vkbuffers;
   uvr_vk_destory(&appd);
 
   wcd.uvr_wc_core_interface = wc.wcinterfaces;
@@ -515,26 +515,56 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
 
 int create_vk_buffers(struct uvr_vk *app) {
-  // Create vertex buffer
+  // Create CPU visible vertex buffer
   struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
   vkVertexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
   vkVertexBufferCreateInfo.vkPhdev = app->phdev;
   vkVertexBufferCreateInfo.bufferFlags = 0;
   vkVertexBufferCreateInfo.bufferSize = sizeof(vertices_pos_color);
-  vkVertexBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
+                                          VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   vkVertexBufferCreateInfo.queueFamilyIndexCount = 0;
   vkVertexBufferCreateInfo.queueFamilyIndices = NULL;
   vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-  app->vkbuffer = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-  if (!app->vkbuffer.vkBuffer || !app->vkbuffer.vkDeviceMemory)
+  app->vkbuffers[0] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
+  if (!app->vkbuffers[0].vkBuffer || !app->vkbuffers[0].vkDeviceMemory)
     return -1;
 
+  // Copy vertex data into CPU visible vertex
   void *data = NULL;
-  vkMapMemory(app->lgdev.vkDevice, app->vkbuffer.vkDeviceMemory, 0, sizeof(vertices_pos_color), 0, &data);
+  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory, 0, sizeof(vertices_pos_color), 0, &data);
   memcpy(data, vertices_pos_color, sizeof(vertices_pos_color));
-  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffer.vkDeviceMemory);
+  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory);
+
+  if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    // Create GPU visible vertex buffer
+    struct uvr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
+    vkVertexBufferGPUCreateInfo.vkDevice = app->lgdev.vkDevice;
+    vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev;
+    vkVertexBufferGPUCreateInfo.bufferFlags = 0;
+    vkVertexBufferGPUCreateInfo.bufferSize = sizeof(vertices_pos_color);
+    vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vkVertexBufferGPUCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    vkVertexBufferGPUCreateInfo.queueFamilyIndexCount = 0;
+    vkVertexBufferGPUCreateInfo.queueFamilyIndices = NULL;
+    vkVertexBufferGPUCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    app->vkbuffers[1] = uvr_vk_buffer_create(&vkVertexBufferGPUCreateInfo);
+    if (!app->vkbuffers[1].vkBuffer || !app->vkbuffers[1].vkDeviceMemory)
+      return -1;
+
+    struct uvr_vk_buffer_copy_info bufferCopyInfo;
+    bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
+    bufferCopyInfo.srcBuffer = app->vkbuffers[0].vkBuffer;
+    bufferCopyInfo.dstBuffer = app->vkbuffers[1].vkBuffer;
+    bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
+    bufferCopyInfo.bufferSize = sizeof(vertices_pos_color);
+
+    if (uvr_vk_buffer_copy(&bufferCopyInfo) == -1)
+      return -1;
+  }
 
   return 0;
 }
@@ -766,7 +796,7 @@ int create_vk_command_buffers(struct uvr_vk *app) {
   commandBufferCreateInfo.commandBufferCount = 1;
 
   app->vkcbuffs = uvr_vk_command_buffer_create(&commandBufferCreateInfo);
-  if (!app->vkcbuffs.vkCommandPool)
+  if (!app->vkcbuffs.commandPool)
     return -1;
 
   return 0;
@@ -790,13 +820,13 @@ int create_vk_sync_objs(struct uvr_vk *app) {
 int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D) {
   struct uvr_vk_command_buffer_record_info commandBufferRecordInfo;
   commandBufferRecordInfo.commandBufferCount = app->vkcbuffs.commandBufferCount;
-  commandBufferRecordInfo.vkCommandbuffers = app->vkcbuffs.vkCommandbuffers;
+  commandBufferRecordInfo.commandBuffers = app->vkcbuffs.commandBuffers;
   commandBufferRecordInfo.flags = 0;
 
   if (uvr_vk_command_buffer_record_begin(&commandBufferRecordInfo) == -1)
     return -1;
 
-  VkCommandBuffer cmdBuffer = app->vkcbuffs.vkCommandbuffers[0].buffer;
+  VkCommandBuffer cmdBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
 
   VkRect2D renderArea = {};
   renderArea.offset.x = 0;
@@ -835,7 +865,7 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues = clearColor;
 
-  VkBuffer vertexBuffers[1] = {app->vkbuffer.vkBuffer};
+  VkBuffer vertexBuffers[1] = {app->vkbuffers[1].vkBuffer};
   VkDeviceSize offsets[] = {0};
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
