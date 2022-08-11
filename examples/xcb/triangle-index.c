@@ -5,12 +5,14 @@
 
 #include <cglm/cglm.h>
 
-#include "wclient.h"
+#include "xclient.h"
 #include "vulkan.h"
 #include "shader.h"
 
 #define WIDTH 1920
 #define HEIGHT 1080
+//#define WIDTH 3840
+//#define HEIGHT 2160
 
 struct uvr_vk {
   VkInstance instance;
@@ -41,19 +43,15 @@ struct uvr_vk {
   /*
    * 1. CPU visible transfer buffer
    * 2. GPU visible vertex buffer
+   * 3. CPU visible transfer buffer
+   * 4. GPU visible index buffer
    */
-  struct uvr_vk_buffer vkbuffers[2];
+  struct uvr_vk_buffer vkbuffers[4];
 };
 
 
-struct uvr_wc {
-  struct uvr_wc_core_interface wcinterfaces;
-  struct uvr_wc_surface wcsurf;
-};
-
-
-struct uvr_vk_wc {
-  struct uvr_wc *uvr_wc;
+struct uvr_vk_xcb {
+  struct uvr_xcb_window *uvr_xcb_window;
   struct uvr_vk *uvr_vk;
 };
 
@@ -64,14 +62,20 @@ struct uvr_vertex_data {
 };
 
 
-const struct uvr_vertex_data vertices_pos_color[3] = {
-  {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-  {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-  {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+const struct uvr_vertex_data vertices_pos_color[4] = {
+  {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Top-left     - red
+  {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},  // Top-right    - green
+  {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},   // Bottom-right - blue
+  {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}   // Bottom-left  - white
 };
 
 
-int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running);
+const uint16_t indices[] = {
+  0, 1, 2, 2, 3, 0
+};
+
+
+int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc);
 int create_vk_instance(struct uvr_vk *uvrvk);
 int create_vk_device(struct uvr_vk *app);
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
@@ -86,10 +90,10 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
 
 
 void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
-  VkExtent2D extent2D = {WIDTH, HEIGHT};
-  struct uvr_vk_wc *vkwc = data;
-  struct uvr_wc UNUSED *wc = vkwc->uvr_wc;
-  struct uvr_vk *app = vkwc->uvr_vk;
+  VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
+  struct uvr_vk_xcb *vkxcb = (struct uvr_vk_xcb *) data;
+  struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
+  struct uvr_vk *app = vkxcb->uvr_vk;
 
   if (!app->vksyncs.vkFences || !app->vksyncs.vkSemaphores)
     return;
@@ -147,10 +151,10 @@ int main(void) {
   memset(&app, 0, sizeof(app));
   memset(&appd, 0, sizeof(appd));
 
-  struct uvr_wc wc;
-  struct uvr_wc_destroy wcd;
-  memset(&wcd, 0, sizeof(wcd));
-  memset(&wc, 0, sizeof(wc));
+  struct uvr_xcb_window xc;
+  struct uvr_xcb_destroy xcd;
+  memset(&xc, 0, sizeof(xc));
+  memset(&xcd, 0, sizeof(xcd));
 
   struct uvr_shader_destroy shadercd;
   memset(&shadercd, 0, sizeof(shadercd));
@@ -158,9 +162,7 @@ int main(void) {
   if (create_vk_instance(&app) == -1)
     goto exit_error;
 
-  static uint32_t cbuf = 0;
-  static bool running = true;
-  if (create_wc_vk_surface(&app, &wc, &cbuf, &running) == -1)
+  if (create_xcb_vk_surface(&app, &xc) == -1)
     goto exit_error;
 
   /*
@@ -171,7 +173,7 @@ int main(void) {
     goto exit_error;
 
   VkSurfaceFormatKHR sformat;
-  VkExtent2D extent2D = {WIDTH, HEIGHT};
+  VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
   if (create_vk_swapchain(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
@@ -194,11 +196,29 @@ int main(void) {
     goto exit_error;
 
   if (create_vk_buffers(&app) == -1)
-      goto exit_error;
+    goto exit_error;
 
-  while (wl_display_dispatch(wc.wcinterfaces.wlDisplay) != -1 && running) {
-    // Leave blank
+  /* Map the window to the screen */
+  uvr_xcb_window_make_visible(&xc);
+
+  static uint32_t cbuf = 0;
+  static bool running = true;
+
+  static struct uvr_vk_xcb vkxc;
+  vkxc.uvr_xcb_window = &xc;
+  vkxc.uvr_vk = &app;
+
+  struct uvr_xcb_window_handle_event_info eventInfo;
+  eventInfo.uvrXcbWindow = &xc;
+  eventInfo.renderer = render;
+  eventInfo.rendererData = &vkxc;
+  eventInfo.rendererCbuf = &cbuf;
+  eventInfo.rendererRuning = &running;
+
+  while (uvr_xcb_window_handle_event(&eventInfo) && running) {
+    // Initentionally left blank
   }
+
 
 exit_error:
 #ifdef INCLUDE_SHADERC
@@ -239,52 +259,40 @@ exit_error:
   appd.uvr_vk_buffer = app.vkbuffers;
   uvr_vk_destory(&appd);
 
-  wcd.uvr_wc_core_interface = wc.wcinterfaces;
-  wcd.uvr_wc_surface = wc.wcsurf;
-  uvr_wc_destroy(&wcd);
+  xcd.uvr_xcb_window = xc;
+  uvr_xcb_destory(&xcd);
   return 0;
 }
 
 
-int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running) {
-  struct uvr_wc_core_interface_create_info wc_core_interfaces_info;
-  wc_core_interfaces_info.wlDisplayName = NULL;
-  wc_core_interfaces_info.iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE   |
-                                  UVR_WC_WL_SEAT_INTERFACE       | UVR_WC_ZWP_FULLSCREEN_SHELL_V1;
+int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc) {
 
-  wc->wcinterfaces = uvr_wc_core_interface_create(&wc_core_interfaces_info);
-  if (!wc->wcinterfaces.wlDisplay || !wc->wcinterfaces.wlRegistry || !wc->wcinterfaces.wlCompositor)
-    return -1;
+  /*
+   * Create xcb client
+   */
+  struct uvr_xcb_window_create_info xcb_win_info;
+  xcb_win_info.display = NULL;
+  xcb_win_info.screen = NULL;
+  xcb_win_info.appName = "Example App";
+  xcb_win_info.width = WIDTH;
+  xcb_win_info.height = HEIGHT;
+  xcb_win_info.fullscreen = false;
+  xcb_win_info.transparent = false;
 
-  static struct uvr_vk_wc vkwc;
-  vkwc.uvr_wc = wc;
-  vkwc.uvr_vk = app;
-
-  struct uvr_wc_surface_create_info uvr_wc_surface_info;
-  uvr_wc_surface_info.uvrWcCore = &wc->wcinterfaces;
-  uvr_wc_surface_info.uvrWcBuffer = NULL;
-  uvr_wc_surface_info.bufferCount = 0;
-  uvr_wc_surface_info.appName = "WL Vulkan Triangle Example";
-  uvr_wc_surface_info.fullscreen = true;
-  uvr_wc_surface_info.renderer = render;
-  uvr_wc_surface_info.rendererData = &vkwc;
-  uvr_wc_surface_info.rendererCbuf = cbuf;
-  uvr_wc_surface_info.rendererRuning = running;
-
-  wc->wcsurf = uvr_wc_surface_create(&uvr_wc_surface_info);
-  if (!wc->wcsurf.wlSurface)
+  *xc = uvr_xcb_window_create(&xcb_win_info);
+  if (!xc->conn)
     return -1;
 
   /*
    * Create Vulkan Surface
    */
-  struct uvr_vk_surface_create_info vksurf;
-  vksurf.vkInst = app->instance;
-  vksurf.sType = WAYLAND_CLIENT_SURFACE;
-  vksurf.display = wc->wcinterfaces.wlDisplay;
-  vksurf.surface = wc->wcsurf.wlSurface;
+  struct uvr_vk_surface_create_info vk_surface_info;
+  vk_surface_info.vkInst = app->instance;
+  vk_surface_info.sType = XCB_CLIENT_SURFACE;
+  vk_surface_info.display = xc->conn;
+  vk_surface_info.window = xc->window;
 
-  app->surface = uvr_vk_surface_create(&vksurf);
+  app->surface = uvr_vk_surface_create(&vk_surface_info);
   if (!app->surface)
     return -1;
 
@@ -304,7 +312,7 @@ int create_vk_instance(struct uvr_vk *app) {
   };
 
   const char *instance_extensions[] = {
-    "VK_KHR_wayland_surface",
+    "VK_KHR_xcb_surface",
     "VK_KHR_surface",
     "VK_KHR_display",
     "VK_EXT_debug_utils"
@@ -541,6 +549,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory, 0, vkVertexBufferCreateInfo.bufferSize, 0, &data);
   memcpy(data, vertices_pos_color, vkVertexBufferCreateInfo.bufferSize);
   vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory);
+  data = NULL;
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
@@ -559,12 +568,64 @@ int create_vk_buffers(struct uvr_vk *app) {
     if (!app->vkbuffers[1].vkBuffer || !app->vkbuffers[1].vkDeviceMemory)
       return -1;
 
+    // Copy contents from CPU visible buffer over to GPU visible vertex buffer
     struct uvr_vk_buffer_copy_info bufferCopyInfo;
     bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
     bufferCopyInfo.srcBuffer = app->vkbuffers[0].vkBuffer;
     bufferCopyInfo.dstBuffer = app->vkbuffers[1].vkBuffer;
     bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
     bufferCopyInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
+
+    if (uvr_vk_buffer_copy(&bufferCopyInfo) == -1)
+      return -1;
+  }
+
+  // Create CPU visible index buffer
+  struct uvr_vk_buffer_create_info vkIndexBufferCreateInfo;
+  vkIndexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
+  vkIndexBufferCreateInfo.vkPhdev = app->phdev;
+  vkIndexBufferCreateInfo.bufferFlags = 0;
+  vkIndexBufferCreateInfo.bufferSize = sizeof(indices);
+  vkIndexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
+                                         VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  vkIndexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  vkIndexBufferCreateInfo.queueFamilyIndexCount = 0;
+  vkIndexBufferCreateInfo.queueFamilyIndices = NULL;
+  vkIndexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+  app->vkbuffers[2] = uvr_vk_buffer_create(&vkIndexBufferCreateInfo);
+  if (!app->vkbuffers[2].vkBuffer || !app->vkbuffers[2].vkDeviceMemory)
+    return -1;
+
+  // Copy index data into CPU visible index buffer
+  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[2].vkDeviceMemory, 0, vkIndexBufferCreateInfo.bufferSize, 0, &data);
+  memcpy(data, indices, vkIndexBufferCreateInfo.bufferSize);
+  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[2].vkDeviceMemory);
+
+  if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    // Create GPU visible index buffer
+    struct uvr_vk_buffer_create_info vkIndexBufferGPUCreateInfo;
+    vkIndexBufferGPUCreateInfo.vkDevice = app->lgdev.vkDevice;
+    vkIndexBufferGPUCreateInfo.vkPhdev = app->phdev;
+    vkIndexBufferGPUCreateInfo.bufferFlags = 0;
+    vkIndexBufferGPUCreateInfo.bufferSize = vkIndexBufferCreateInfo.bufferSize;
+    vkIndexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    vkIndexBufferGPUCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    vkIndexBufferGPUCreateInfo.queueFamilyIndexCount = 0;
+    vkIndexBufferGPUCreateInfo.queueFamilyIndices = NULL;
+    vkIndexBufferGPUCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    app->vkbuffers[3] = uvr_vk_buffer_create(&vkIndexBufferGPUCreateInfo);
+    if (!app->vkbuffers[3].vkBuffer || !app->vkbuffers[3].vkDeviceMemory)
+      return -1;
+
+    // Copy contents from CPU visible buffer over to GPU visible vertex buffer
+    struct uvr_vk_buffer_copy_info bufferCopyInfo;
+    bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
+    bufferCopyInfo.srcBuffer = app->vkbuffers[2].vkBuffer;
+    bufferCopyInfo.dstBuffer = app->vkbuffers[3].vkBuffer;
+    bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
+    bufferCopyInfo.bufferSize = vkIndexBufferCreateInfo.bufferSize;
 
     if (uvr_vk_buffer_copy(&bufferCopyInfo) == -1)
       return -1;
@@ -870,10 +931,13 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   renderPassInfo.pClearValues = clearColor;
 
   VkBuffer vertexBuffer;
+  VkBuffer indexBuffer;
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     vertexBuffer = app->vkbuffers[1].vkBuffer;
+    indexBuffer = app->vkbuffers[3].vkBuffer;
   } else {
     vertexBuffer = app->vkbuffers[0].vkBuffer;
+    indexBuffer = app->vkbuffers[2].vkBuffer;
   }
 
   VkDeviceSize offsets[] = {0};
@@ -881,9 +945,11 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gpipeline.graphicsPipeline);
   vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, offsets);
+  vkCmdBindIndexBuffer(cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
   vkCmdDraw(cmdBuffer, ARRAY_LEN(vertices_pos_color), 1, 0, 0);
+  vkCmdDrawIndexed(cmdBuffer, ARRAY_LEN(indices), 1, 0, 0, 0);
   vkCmdEndRenderPass(cmdBuffer);
 
   if (uvr_vk_command_buffer_record_end(&commandBufferRecordInfo) == -1)

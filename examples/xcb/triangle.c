@@ -39,6 +39,11 @@ struct uvr_vk {
   struct uvr_vk_framebuffer vkframebuffs;
   struct uvr_vk_command_buffer vkcbuffs;
   struct uvr_vk_sync_obj vksyncs;
+
+  /*
+   * 1. CPU visible transfer buffer
+   * 2. GPU visible vertex buffer
+   */
   struct uvr_vk_buffer vkbuffers[2];
 };
 
@@ -533,8 +538,8 @@ int create_vk_buffers(struct uvr_vk *app) {
 
   // Copy vertex data into CPU visible vertex
   void *data = NULL;
-  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory, 0, sizeof(vertices_pos_color), 0, &data);
-  memcpy(data, vertices_pos_color, sizeof(vertices_pos_color));
+  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory, 0, vkVertexBufferCreateInfo.bufferSize, 0, &data);
+  memcpy(data, vertices_pos_color, vkVertexBufferCreateInfo.bufferSize);
   vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory);
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
@@ -543,7 +548,7 @@ int create_vk_buffers(struct uvr_vk *app) {
     vkVertexBufferGPUCreateInfo.vkDevice = app->lgdev.vkDevice;
     vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev;
     vkVertexBufferGPUCreateInfo.bufferFlags = 0;
-    vkVertexBufferGPUCreateInfo.bufferSize = sizeof(vertices_pos_color);
+    vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
     vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     vkVertexBufferGPUCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     vkVertexBufferGPUCreateInfo.queueFamilyIndexCount = 0;
@@ -559,7 +564,7 @@ int create_vk_buffers(struct uvr_vk *app) {
     bufferCopyInfo.srcBuffer = app->vkbuffers[0].vkBuffer;
     bufferCopyInfo.dstBuffer = app->vkbuffers[1].vkBuffer;
     bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
-    bufferCopyInfo.bufferSize = sizeof(vertices_pos_color);
+    bufferCopyInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
 
     if (uvr_vk_buffer_copy(&bufferCopyInfo) == -1)
       return -1;
@@ -864,12 +869,18 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues = clearColor;
 
-  VkBuffer vertexBuffers[1] = {app->vkbuffers[1].vkBuffer};
+  VkBuffer vertexBuffer;
+  if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    vertexBuffer = app->vkbuffers[1].vkBuffer;
+  } else {
+    vertexBuffer = app->vkbuffers[0].vkBuffer;
+  }
+
   VkDeviceSize offsets[] = {0};
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gpipeline.graphicsPipeline);
-  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
+  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, offsets);
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
   vkCmdDraw(cmdBuffer, ARRAY_LEN(vertices_pos_color), 1, 0, 0);

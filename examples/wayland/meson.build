@@ -15,6 +15,14 @@ if wayland_client.found()
              include_directories: [inc],
              c_args: pargs,
              install: false)
+
+  executable('underview-renderer-wayland-client-vk-triangle-index',
+             'triangle-index.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc],
+             c_args: pargs,
+             install: false)
 endif
 
 
