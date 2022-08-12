@@ -1063,6 +1063,30 @@ int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk) {
 }
 
 
+struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct uvr_vk_descriptor_set_layout_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+
+  VkDescriptorSetLayoutCreateInfo desc_layout_create_info;
+  desc_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  desc_layout_create_info.pNext = NULL;
+  desc_layout_create_info.flags = uvrvk->descriptorSetLayoutCreateflags;
+  desc_layout_create_info.bindingCount = uvrvk->descriptorSetLayoutBindingCount;
+  desc_layout_create_info.pBindings = uvrvk->descriptorSetLayoutBindings;
+
+  res = vkCreateDescriptorSetLayout(uvrvk->vkDevice, &desc_layout_create_info, VK_NULL_HANDLE, &layout);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkCreateDescriptorSetLayout: %s", vkres_msg(res));
+    goto exit_vk_descriptor_set_layout;
+  }
+
+  return (struct uvr_vk_descriptor_set_layout) { .vkDevice = uvrvk->vkDevice, .descriptorSetLayout = layout };
+
+exit_vk_descriptor_set_layout:
+  return (struct uvr_vk_descriptor_set_layout) { .vkDevice = VK_NULL_HANDLE, .descriptorSetLayout = VK_NULL_HANDLE };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
@@ -1098,6 +1122,13 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
         vkDestroyBuffer(uvrvk->uvr_vk_buffer[i].vkDevice, uvrvk->uvr_vk_buffer[i].vkBuffer, NULL);
       if (uvrvk->uvr_vk_buffer[i].vkDeviceMemory)
         vkFreeMemory(uvrvk->uvr_vk_buffer[i].vkDevice, uvrvk->uvr_vk_buffer[i].vkDeviceMemory, NULL);
+    }
+  }
+
+  if (uvrvk->uvr_vk_descriptor_set_layout) {
+    for (i = 0; i < uvrvk->uvr_vk_descriptor_set_layout_cnt; i++) {
+      if (uvrvk->uvr_vk_descriptor_set_layout[i].vkDevice && uvrvk->uvr_vk_descriptor_set_layout[i].descriptorSetLayout)
+        vkDestroyDescriptorSetLayout(uvrvk->uvr_vk_descriptor_set_layout[i].vkDevice, uvrvk->uvr_vk_descriptor_set_layout[i].descriptorSetLayout, NULL);
     }
   }
 

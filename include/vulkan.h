@@ -989,7 +989,7 @@ struct uvr_vk_buffer {
  *
  * members:
  * @vkDevice              - Must pass a valid VkDevice handle (Logical Device)
- * @vkPhdev               -
+ * @vkPhdev               - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
  * @bufferFlags           - Used when configuring sparse buffer memory
  * @bufferSize            - Size of underlying buffer to allocate
  * @bufferUsage           - Specifies type of buffer (i.e vertex, etc...). Multiple buffer types can be selected here
@@ -1060,33 +1060,84 @@ int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk);
 
 
 /*
+ * struct uvr_vk_descriptor_set_layout (Underview Renderer Vulkan Descriptor Set Layout)
+ *
+ * members:
+ * @vkDevice            - VkDevice handle (Logical Device) associated with VkDescriptorSetLayout
+ * @descriptorSetLayout - An array of VkDescriptorBindings. An array that defines what type of
+ *                        descriptor sets to allocate, where a given shader can access vulkan
+ *                        resources through descriptor, and at what pipeline stage.
+ */
+struct uvr_vk_descriptor_set_layout {
+  VkDevice              vkDevice;
+  VkDescriptorSetLayout descriptorSetLayout;
+};
+
+
+/*
+ * struct uvr_vk_descriptor_set_layout_create_info (Underview Renderer Vulkan Descriptor Set Layout Create Information)
+ *
+ * members:
+ * @vkDevice                        - Must pass a valid VkDevice handle (Logical Device)
+ * @descriptorSetLayoutCreateflags  - Options for descriptor set layout
+ * @descriptorSetLayoutBindingCount - Must pass the amount of elements in VkDescriptorSetLayoutBinding array
+ * @descriptorSetLayoutBindings     - Pointer to an array of vulkan descriptor set attributes. Attributes include the
+ *                                    binding location in the shader, the type of descriptor allowed to be allocated,
+ *                                    at what Pipeline stage will have access to the resources assoicated with a @binding.
+ */
+struct uvr_vk_descriptor_set_layout_create_info {
+  VkDevice                         vkDevice;
+  VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateflags;
+  uint32_t                         descriptorSetLayoutBindingCount;
+  VkDescriptorSetLayoutBinding     *descriptorSetLayoutBindings;
+};
+
+
+/*
+ * uvr_vk_descriptor_set_layout_create: Function creates descriptor set layout which is used during pipeline creation to
+ *                                      define how a given shader may access vulkan resources. Also used during VkDescriptorSet
+ *                                      creation to define what type of descriptor sets to allocate, where a given shader can
+ *                                      access vulkan resources through descriptor, and at what pipeline stage.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_descriptor_set_layout_create_info
+ * return:
+ *    on success struct uvr_vk_descriptor_set_layout
+ *    on failure struct uvr_vk_descriptor_set_layout { with member nulled }
+ */
+struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct uvr_vk_descriptor_set_layout_create_info *uvrvk);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:
- * @vkinst                       - Must pass a valid VkInstance handle
- * @vksurf                       - Must pass a valid VkSurfaceKHR handle
- * @uvr_vk_lgdev_cnt             - Must pass the amount of elements in struct uvr_vk_lgdev array
- * @uvr_vk_lgdev                 - Must pass a pointer to an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
- * @uvr_vk_swapchain_cnt         - Must pass the amount of elements in struct uvr_vk_swapchain array
- * @uvr_vk_swapchain             - Must pass a pointer to an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
- * @uvr_vk_image_cnt             - Must pass the amount of elements in struct uvr_vk_image array
- * @uvr_vk_image                 - Must pass a pointer to an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
- * @uvr_vk_shader_module_cnt     - Must pass the amount of elements in struct uvr_vk_shader_module array
- * @uvr_vk_shader_module         - Must pass a pointer to an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
- * @uvr_vk_render_pass_cnt       - Must pass the amount of elements in struct uvr_vk_render_pass array
- * @uvr_vk_render_pass           - Must pass a pointer to an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
- * @uvr_vk_pipeline_layout_cnt   - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
- * @uvr_vk_pipeline_layout       - Must pass a pointer to an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
- * @uvr_vk_graphics_pipeline_cnt - Must pass the amount of elements in struct uvr_vk_graphics_pipeline array
- * @uvr_vk_graphics_pipeline     - Must pass a pointer to an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
- * @uvr_vk_framebuffer_cnt       - Must pass the amount of elements in struct uvr_vk_framebuffer array
- * @uvr_vk_framebuffer           - Must pass a pointer to an array of valid struct uvr_vk_framebuffer { free'd members: VkFramebuffer handle, *vkfbs }
- * @uvr_vk_command_buffer_cnt    - Must pass the amount of elements in struct uvr_vk_command_buffer array
- * @uvr_vk_command_buffer        - Must pass a pointer to an array of valid struct uvr_vk_command_buffer { free'd members: VkCommandPool handle, *vkCommandbuffers }
- * @uvr_vk_sync_obj_cnt          - Must pass the amount of elements in struct uvr_vk_sync_obj array
- * @uvr_vk_sync_obj              - Must pass a pointer to an array of valid struct uvr_vk_sync_obj { free'd members: VkFence handle, VkSemaphore handle, *vkFences, *vkSemaphores }
- * @uvr_vk_buffer_cnt            -
- * @uvr_vk_buffer                -
+ * @vkinst                           - Must pass a valid VkInstance handle
+ * @vksurf                           - Must pass a valid VkSurfaceKHR handle
+ * @uvr_vk_lgdev_cnt                 - Must pass the amount of elements in struct uvr_vk_lgdev array
+ * @uvr_vk_lgdev                     - Must pass a pointer to an array of valid struct uvr_vk_lgdev { free'd  members: VkDevice handle }
+ * @uvr_vk_swapchain_cnt             - Must pass the amount of elements in struct uvr_vk_swapchain array
+ * @uvr_vk_swapchain                 - Must pass a pointer to an array of valid struct uvr_vk_swapchain { free'd members: VkSwapchainKHR handle }
+ * @uvr_vk_image_cnt                 - Must pass the amount of elements in struct uvr_vk_image array
+ * @uvr_vk_image                     - Must pass a pointer to an array of valid struct uvr_vk_image { free'd members: VkImageView handle, *views, *images }
+ * @uvr_vk_shader_module_cnt         - Must pass the amount of elements in struct uvr_vk_shader_module array
+ * @uvr_vk_shader_module             - Must pass a pointer to an array of valid struct uvr_vk_shader_module { free'd members: VkShaderModule handle }
+ * @uvr_vk_render_pass_cnt           - Must pass the amount of elements in struct uvr_vk_render_pass array
+ * @uvr_vk_render_pass               - Must pass a pointer to an array of valid struct uvr_vk_render_pass { free'd members: VkRenderPass handle }
+ * @uvr_vk_pipeline_layout_cnt       - Must pass the amount of elements in struct uvr_vk_pipeline_layout array [VkPipelineLayout Count]
+ * @uvr_vk_pipeline_layout           - Must pass a pointer to an array of valid struct uvr_vk_pipeline_layout { free'd members: VkPipelineLayout handle }
+ * @uvr_vk_graphics_pipeline_cnt     - Must pass the amount of elements in struct uvr_vk_graphics_pipeline array
+ * @uvr_vk_graphics_pipeline         - Must pass a pointer to an array of valid struct uvr_vk_graphics_pipeline { free'd members: VkPipeline handle }
+ * @uvr_vk_framebuffer_cnt           - Must pass the amount of elements in struct uvr_vk_framebuffer array
+ * @uvr_vk_framebuffer               - Must pass a pointer to an array of valid struct uvr_vk_framebuffer { free'd members: VkFramebuffer handle, *vkfbs }
+ * @uvr_vk_command_buffer_cnt        - Must pass the amount of elements in struct uvr_vk_command_buffer array
+ * @uvr_vk_command_buffer            - Must pass a pointer to an array of valid struct uvr_vk_command_buffer { free'd members: VkCommandPool handle, *vkCommandbuffers }
+ * @uvr_vk_sync_obj_cnt              - Must pass the amount of elements in struct uvr_vk_sync_obj array
+ * @uvr_vk_sync_obj                  - Must pass a pointer to an array of valid struct uvr_vk_sync_obj { free'd members: VkFence handle, VkSemaphore handle, *vkFences, *vkSemaphores }
+ * @uvr_vk_buffer_cnt                - Must pass the amount of elements in struct uvr_vk_buffer array
+ * @uvr_vk_buffer                    - Must pass a pointer to an array of valid struct uvr_vk_buffer { free'd members: VkBuffer handle, VkDeviceMemory handle }
+ * @uvr_vk_descriptor_set_layout_cnt - Must pass the amount of elements in struct uvr_vk_descriptor_set_layout array
+ * @uvr_vk_descriptor_set_layout     - Must pass a pointer to an array of valid struct uvr_vk_descriptor_set_layout { free'd members: VkDescriptorSetLayout handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -1124,6 +1175,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_buffer_cnt;
   struct uvr_vk_buffer *uvr_vk_buffer;
+
+  uint32_t uvr_vk_descriptor_set_layout_cnt;
+  struct uvr_vk_descriptor_set_layout *uvr_vk_descriptor_set_layout;
 };
 
 
