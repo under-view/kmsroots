@@ -1147,11 +1147,16 @@ exit_vk_descriptor_set:
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
+  for (i = 0; i < uvrvk->uvr_vk_lgdev_cnt; i++) {
+    if (uvrvk->uvr_vk_lgdev[i].vkDevice) {
+      vkDeviceWaitIdle(uvrvk->uvr_vk_lgdev[i].vkDevice);
+    }
+  }
+
   if (uvrvk->uvr_vk_sync_obj) {
     for (i = 0; i < uvrvk->uvr_vk_sync_obj_cnt; i++) {
       for (j = 0; j < uvrvk->uvr_vk_sync_obj[i].fenceCount; j++) {
         if (uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence) {
-          vkWaitForFences(uvrvk->uvr_vk_sync_obj[i].vkDevice, 1, &uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence, VK_TRUE, UINT64_MAX);
           vkDestroyFence(uvrvk->uvr_vk_sync_obj[i].vkDevice, uvrvk->uvr_vk_sync_obj[i].vkFences[j].fence, NULL);
         }
       }
@@ -1255,7 +1260,6 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
 
   for (i = 0; i < uvrvk->uvr_vk_lgdev_cnt; i++) {
     if (uvrvk->uvr_vk_lgdev[i].vkDevice) {
-      vkDeviceWaitIdle(uvrvk->uvr_vk_lgdev[i].vkDevice);
       vkDestroyDevice(uvrvk->uvr_vk_lgdev[i].vkDevice, NULL);
     }
   }
