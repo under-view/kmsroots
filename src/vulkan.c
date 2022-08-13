@@ -1065,7 +1065,7 @@ int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk) {
 
 struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct uvr_vk_descriptor_set_layout_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
-  VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+  VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 
   VkDescriptorSetLayoutCreateInfo desc_layout_create_info;
   desc_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1074,16 +1074,73 @@ struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct u
   desc_layout_create_info.bindingCount = uvrvk->descriptorSetLayoutBindingCount;
   desc_layout_create_info.pBindings = uvrvk->descriptorSetLayoutBindings;
 
-  res = vkCreateDescriptorSetLayout(uvrvk->vkDevice, &desc_layout_create_info, VK_NULL_HANDLE, &layout);
+  res = vkCreateDescriptorSetLayout(uvrvk->vkDevice, &desc_layout_create_info, VK_NULL_HANDLE, &descriptorSetLayout);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkCreateDescriptorSetLayout: %s", vkres_msg(res));
     goto exit_vk_descriptor_set_layout;
   }
 
-  return (struct uvr_vk_descriptor_set_layout) { .vkDevice = uvrvk->vkDevice, .descriptorSetLayout = layout };
+  return (struct uvr_vk_descriptor_set_layout) { .vkDevice = uvrvk->vkDevice, .descriptorSetLayout = descriptorSetLayout };
 
 exit_vk_descriptor_set_layout:
   return (struct uvr_vk_descriptor_set_layout) { .vkDevice = VK_NULL_HANDLE, .descriptorSetLayout = VK_NULL_HANDLE };
+}
+
+
+struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descriptor_set_create_info *uvrvk) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+
+  struct uvr_vk_descriptor_set_handle *descriptorSets = NULL;
+  VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+  VkDescriptorSet *descriptorsets = VK_NULL_HANDLE;
+
+  VkDescriptorPoolCreateInfo desc_pool_create_info;
+  desc_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  desc_pool_create_info.pNext = NULL;
+  desc_pool_create_info.flags = uvrvk->descriptorPoolCreateflags;
+  desc_pool_create_info.maxSets = uvrvk->descriptorPoolSetsInfoCount;
+  desc_pool_create_info.poolSizeCount = uvrvk->descriptorPoolSetsInfoCount;
+  desc_pool_create_info.pPoolSizes = uvrvk->descriptorPoolSetsInfo;
+
+  res = vkCreateDescriptorPool(uvrvk->vkDevice, &desc_pool_create_info, VK_NULL_HANDLE, &descriptorPool);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkCreateDescriptorSetLayout: %s", vkres_msg(res));
+    goto exit_vk_descriptor_set;
+  }
+
+  descriptorsets = alloca(uvrvk->descriptorPoolSetsInfoCount * sizeof(VkDescriptorSet));
+
+  VkDescriptorSetAllocateInfo desc_set_alloc_info;
+  desc_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  desc_set_alloc_info.pNext = NULL;
+  desc_set_alloc_info.descriptorPool = descriptorPool;
+  desc_set_alloc_info.descriptorSetCount = uvrvk->descriptorPoolSetsInfoCount;
+  desc_set_alloc_info.pSetLayouts = uvrvk->descriptorSetLayouts;
+
+  res = vkAllocateDescriptorSets(uvrvk->vkDevice, &desc_set_alloc_info, descriptorsets);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkAllocateDescriptorSets: %s", vkres_msg(res));
+    goto exit_vk_descriptor_set_destroy_pool;
+  }
+
+  descriptorSets = calloc(uvrvk->descriptorPoolSetsInfoCount, sizeof(struct uvr_vk_descriptor_set_handle));
+  if (!descriptorSets) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_descriptor_set_destroy_pool;
+  }
+
+  for (uint32_t i = 0; i < uvrvk->descriptorPoolSetsInfoCount; i++) {
+    descriptorSets[i].descriptorSet = descriptorsets[i];
+    uvr_utils_log(UVR_WARNING, "uvr_vk_descriptor_set_create: VkDescriptorSet successfully created retval(%p)", descriptorSets[i].descriptorSet);
+  }
+
+  return (struct uvr_vk_descriptor_set) { .vkDevice = uvrvk->vkDevice, .descriptorPool = descriptorPool, .descriptorSets = descriptorSets, .descriptorSetsCount = uvrvk->descriptorPoolSetsInfoCount };
+
+exit_vk_descriptor_set_destroy_pool:
+  if (descriptorPool)
+    vkDestroyDescriptorPool(uvrvk->vkDevice, descriptorPool, NULL);
+exit_vk_descriptor_set:
+  return (struct uvr_vk_descriptor_set) { .vkDevice = VK_NULL_HANDLE, .descriptorPool = VK_NULL_HANDLE, .descriptorSets = VK_NULL_HANDLE, .descriptorSetsCount = 0 };
 }
 
 
@@ -1122,6 +1179,14 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
         vkDestroyBuffer(uvrvk->uvr_vk_buffer[i].vkDevice, uvrvk->uvr_vk_buffer[i].vkBuffer, NULL);
       if (uvrvk->uvr_vk_buffer[i].vkDeviceMemory)
         vkFreeMemory(uvrvk->uvr_vk_buffer[i].vkDevice, uvrvk->uvr_vk_buffer[i].vkDeviceMemory, NULL);
+    }
+  }
+
+  if (uvrvk->uvr_vk_descriptor_set) {
+    for (i = 0; i < uvrvk->uvr_vk_descriptor_set_cnt; i++) {
+      if (uvrvk->uvr_vk_descriptor_set[i].vkDevice && uvrvk->uvr_vk_descriptor_set[i].descriptorPool)
+        vkDestroyDescriptorPool(uvrvk->uvr_vk_descriptor_set[i].vkDevice, uvrvk->uvr_vk_descriptor_set[i].descriptorPool, NULL);
+      free(uvrvk->uvr_vk_descriptor_set[i].descriptorSets);
     }
   }
 

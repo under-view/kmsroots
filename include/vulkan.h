@@ -1065,8 +1065,9 @@ int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk);
  * members:
  * @vkDevice            - VkDevice handle (Logical Device) associated with VkDescriptorSetLayout
  * @descriptorSetLayout - An array of VkDescriptorBindings. An array that defines what type of
- *                        descriptor sets to allocate, where a given shader can access vulkan
- *                        resources through descriptor, and at what pipeline stage.
+ *                        descriptor set to allocate, a binding link used by vulkan to give
+ *                        shader access to resources, and at what graphics pipeline stage will
+ *                        the shader descriptor need access to a given resource.
  */
 struct uvr_vk_descriptor_set_layout {
   VkDevice              vkDevice;
@@ -1081,9 +1082,10 @@ struct uvr_vk_descriptor_set_layout {
  * @vkDevice                        - Must pass a valid VkDevice handle (Logical Device)
  * @descriptorSetLayoutCreateflags  - Options for descriptor set layout
  * @descriptorSetLayoutBindingCount - Must pass the amount of elements in VkDescriptorSetLayoutBinding array
- * @descriptorSetLayoutBindings     - Pointer to an array of vulkan descriptor set attributes. Attributes include the
- *                                    binding location in the shader, the type of descriptor allowed to be allocated,
- *                                    at what Pipeline stage will have access to the resources assoicated with a @binding.
+ * @descriptorSetLayoutBindings     - Pointer to an array of shader variable (descriptor) attributes. Attributes include the
+ *                                    binding location set in the shader, the type of descriptor allowed to be allocated,
+ *                                    what graphics pipeline stage will shader have access to vulkan resources assoicated with
+ *                                    VkDescriptorSetLayoutBinding { @binding }.
  */
 struct uvr_vk_descriptor_set_layout_create_info {
   VkDevice                         vkDevice;
@@ -1096,8 +1098,9 @@ struct uvr_vk_descriptor_set_layout_create_info {
 /*
  * uvr_vk_descriptor_set_layout_create: Function creates descriptor set layout which is used during pipeline creation to
  *                                      define how a given shader may access vulkan resources. Also used during VkDescriptorSet
- *                                      creation to define what type of descriptor sets to allocate, where a given shader can
- *                                      access vulkan resources through descriptor, and at what pipeline stage.
+ *                                      creation to define what type of descriptor of descriptor to allocate within a descriptor
+ *                                      set, binding locate used by both vulkan and shader to determine how shader can access vulkan
+ *                                      resources, and at what pipeline stage.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_descriptor_set_layout_create_info
@@ -1106,6 +1109,75 @@ struct uvr_vk_descriptor_set_layout_create_info {
  *    on failure struct uvr_vk_descriptor_set_layout { with member nulled }
  */
 struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct uvr_vk_descriptor_set_layout_create_info *uvrvk);
+
+
+/*
+ * struct uvr_vk_descriptor_set_handle (Underview Renderer Vulkan Descriptor Set Handle)
+ *
+ * @descriptorSet - Set of pointers to vulkan resources (buffer & image). Individual descriptors
+ *                  that belong to a set are located in the shader. If there is only one uniform
+ *                  variable (type of descriptor) in the shader then there is only one descriptor
+ *                  in the set. If the uniform variable (type of descriptor) in the shader is an
+ *                  array of size N. Then there are N descriptors of the same type in a given
+ *                  descriptor set.
+ */
+struct uvr_vk_descriptor_set_handle {
+  VkDescriptorSet descriptorSet;
+};
+
+
+/*
+ * struct uvr_vk_descriptor_set (Underview Renderer Vulkan Descriptor Set)
+ *
+ * members:
+ * @vkDevice            - VkDevice handle (Logical Device) associated with VkDescriptorPool which contain sets
+ * @descriptorPool      - Pointer to a Vulkan Descriptor Pool used to allocate and dellocate descriptor sets.
+ * @descriptorSets      - Pointer to an array of descriptor sets
+ * @descriptorSetsCount - Number of descriptor sets in the @descriptorSets array
+ */
+struct uvr_vk_descriptor_set {
+  VkDevice                            vkDevice;
+  VkDescriptorPool                    descriptorPool;
+  struct uvr_vk_descriptor_set_handle *descriptorSets;
+  uint32_t                            descriptorSetsCount;
+};
+
+
+/*
+ * struct uvr_vk_descriptor_set_create_info (Underview Renderer Vulkan Descriptor Set Create Information)
+ *
+ * members:
+ * @vkDevice                    - Must pass a valid VkDevice handle (Logical Device)
+ * @descriptorPoolSetsInfo      - Must pass a pointer to an array of descriptor sets information. With each element
+ *                                information corresponding to number of descriptors in a set the the type of descriptor
+ *                                in that set. Each set can only contain 1 type of descriptor with multiple descriptors
+ *                                being of that type.
+ * @descriptorPoolSetsInfoCount - Number of descriptor sets in pool or array size of @descriptorPoolSetsInfo
+ * @descriptorSetLayouts        - Pointer to an array of VkDescriptorSetLayout. Each set must contain it's own layout.
+ *                                Per my understanding the
+ * @descriptorPoolCreateflags   - Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
+ */
+struct uvr_vk_descriptor_set_create_info {
+  VkDevice                    vkDevice;
+  VkDescriptorPoolSize        *descriptorPoolSetsInfo;
+  uint32_t                    descriptorPoolSetsInfoCount;
+  VkDescriptorSetLayout       *descriptorSetLayouts;
+  VkDescriptorPoolCreateFlags descriptorPoolCreateflags;
+};
+
+
+/*
+ * uvr_vk_descriptor_set_create: Function allocates a descriptor pool then @descriptorPoolSetsInfoCount amount of sets
+ *                               from descriptor pool. This is how we establishes connection between a descriptor in the
+ *                               shader and vulkan resources at specific graphics pipeline stages.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_descriptor_set_create_info
+ * return:
+ *    on success struct uvr_vk_descriptor_set
+ *    on failure struct uvr_vk_descriptor_set { with member nulled }
+ */
+struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descriptor_set_create_info *uvrvk);
 
 
 /*
@@ -1138,6 +1210,8 @@ struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct u
  * @uvr_vk_buffer                    - Must pass a pointer to an array of valid struct uvr_vk_buffer { free'd members: VkBuffer handle, VkDeviceMemory handle }
  * @uvr_vk_descriptor_set_layout_cnt - Must pass the amount of elements in struct uvr_vk_descriptor_set_layout array
  * @uvr_vk_descriptor_set_layout     - Must pass a pointer to an array of valid struct uvr_vk_descriptor_set_layout { free'd members: VkDescriptorSetLayout handle }
+ * @uvr_vk_descriptor_set_cnt        - Must pass the amount of elements in struct uvr_vk_descriptor_set array
+ * @uvr_vk_descriptor_set            - Must pass a pointer to an array of valid struct uvr_vk_descriptor_set { free'd members: VkDescriptorPool handle, *descriptorSets }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -1178,6 +1252,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_descriptor_set_layout_cnt;
   struct uvr_vk_descriptor_set_layout *uvr_vk_descriptor_set_layout;
+
+  uint32_t uvr_vk_descriptor_set_cnt;
+  struct uvr_vk_descriptor_set *uvr_vk_descriptor_set;
 };
 
 
