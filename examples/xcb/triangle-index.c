@@ -603,13 +603,10 @@ int create_vk_buffers(struct uvr_vk *app) {
 
       if (uvr_vk_buffer_copy(&bufferCopyInfo) == -1)
         return -1;
-
-      cpuVisibleBuffer+=2;
-      gpuVisibleBuffer+=2;
-    } else {
-      cpuVisibleBuffer++;
-      gpuVisibleBuffer++;
     }
+
+    cpuVisibleBuffer+=2;
+    gpuVisibleBuffer+=2;
   }
 
   // Create CPU visible index buffer
@@ -626,7 +623,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   vkIndexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   app->vkbuffers[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkIndexBufferCreateInfo);
-  if (!app->vkbuffers[cpuVisibleBuffer].vkBuffer || !app->vkbuffers[4].vkDeviceMemory)
+  if (!app->vkbuffers[cpuVisibleBuffer].vkBuffer || !app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory)
     return -1;
 
   // Copy index data into CPU visible index buffer
