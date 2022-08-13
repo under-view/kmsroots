@@ -8,7 +8,7 @@ if wayland_client.found()
              c_args: pargs,
              install: false)
 
-  executable('underview-renderer-wayland-client-vk-triangle',
+  executable('underview-renderer-wayland-client-triangle',
              'triangle.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
@@ -16,8 +16,16 @@ if wayland_client.found()
              c_args: pargs,
              install: false)
 
-  executable('underview-renderer-wayland-client-vk-triangle-index',
+  executable('underview-renderer-wayland-client-triangle-index',
              'triangle-index.c',
+             link_with: lib_underview_renderer,
+             dependencies: lib_uvr_deps,
+             include_directories: [inc],
+             c_args: pargs,
+             install: false)
+
+  executable('underview-renderer-wayland-client-spin-rectangle',
+             ['spin-rectangle.c', examples_dir + '/clock.c'],
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
              include_directories: [inc],

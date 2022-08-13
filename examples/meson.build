@@ -7,6 +7,8 @@ elif gpu == 'cpu'
   pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=4']
 endif
 
+examples_dir = meson.current_source_dir()
+
 subdir('shaders')
 subdir('kms')
 subdir('wayland')
