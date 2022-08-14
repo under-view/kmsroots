@@ -1148,12 +1148,12 @@ struct uvr_vk_descriptor_set {
  * members:
  * @vkDevice                    - Must pass a valid VkDevice handle (Logical Device)
  * @descriptorPoolSetsInfo      - Must pass a pointer to an array of descriptor sets information. With each element
- *                                information corresponding to number of descriptors in a set the the type of descriptor
+ *                                information corresponding to number of descriptors in a set the and the type of descriptor
  *                                in that set. Each set can only contain 1 type of descriptor with multiple descriptors
  *                                being of that type.
  * @descriptorPoolSetsInfoCount - Number of descriptor sets in pool or array size of @descriptorPoolSetsInfo
  * @descriptorSetLayouts        - Pointer to an array of VkDescriptorSetLayout. Each set must contain it's own layout.
- *                                Per my understanding the
+ *                                This variable must be of same size as @descriptorPoolSetsInfo
  * @descriptorPoolCreateflags   - Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
  */
 struct uvr_vk_descriptor_set_create_info {
@@ -1167,8 +1167,16 @@ struct uvr_vk_descriptor_set_create_info {
 
 /*
  * uvr_vk_descriptor_set_create: Function allocates a descriptor pool then @descriptorPoolSetsInfoCount amount of sets
- *                               from descriptor pool. This is how we establishes connection between a descriptor in the
- *                               shader and vulkan resources at specific graphics pipeline stages.
+ *                               from descriptor pool. This is how we establishes connection between a the shader
+ *                               and vulkan resources at specific graphics pipeline stages. One can think of a
+ *                               descriptor pool as a range of addresses that contain segments or sub range addresses.
+ *                               Each segment is a descriptor set within the pool and each set contains a certain number
+ *                               of descriptors.
+ *                                                                   Descriptor Pool
+ *                               [--------------------------------------------------------------------------------------------]
+ *                                   descriptor set 1   |   descriptor set 2   |   descriptor set 3   |  descriptor set 4
+ *                               [---------------------][---------------------][---------------------][-----------------------]
+ *                   descriptor: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][   1       |     2     ]
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_descriptor_set_create_info

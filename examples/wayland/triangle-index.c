@@ -39,12 +39,12 @@ struct uvr_vk {
   struct uvr_vk_sync_obj vksyncs;
 
   /*
-   * 1. CPU visible transfer buffer
-   * 2. GPU visible vertex buffer
-   * 3. CPU visible transfer buffer
-   * 4. GPU visible vertex buffer
-   * 5. CPU visible transfer buffer
-   * 6. GPU visible index buffer
+   * 0. CPU visible transfer buffer
+   * 1. GPU visible vertex buffer
+   * 2. CPU visible transfer buffer
+   * 3. GPU visible vertex buffer
+   * 4. CPU visible transfer buffer
+   * 5. GPU visible index buffer
    */
   struct uvr_vk_buffer vkbuffers[6];
 };
@@ -976,12 +976,13 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gpipeline.graphicsPipeline);
+  vkCmdBindIndexBuffer(cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
 
   for (uint32_t i = 0; i < ARRAY_LEN(vertexBuffers); i++) {
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers[i], offsets);
-    vkCmdBindIndexBuffer(cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
     vkCmdDrawIndexed(cmdBuffer, ARRAY_LEN(indices), 1, 0, 0, 0);
   }
 
