@@ -1102,14 +1102,14 @@ void update_uniform_buffer(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, V
   struct uvr_uniform_buffer ubo = {};
 
   static float lastTime = 0;
-  float now = (float) (uvr_utils_nanosecond() / 100000000ULL);
+  float now = (float) (uvr_utils_nanosecond() / 1000000ULL);
   float deltaTime = now - lastTime;
   lastTime = now;
 
   // Update model matrix
   static float angle = 0.0f;
 
-  angle += deltaTime * glm_rad(2.0f);
+  angle += deltaTime * glm_rad(0.1f);
   if (angle > 360.0f) angle -= 360.0f;
 
   vec3 axis = {0.0f, 0.0f, 1.0f};
