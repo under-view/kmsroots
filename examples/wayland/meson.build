@@ -25,7 +25,7 @@ if wayland_client.found()
              install: false)
 
   executable('underview-renderer-wayland-client-spin-rectangle',
-             ['spin-rectangle.c', examples_dir + '/clock.c'],
+             'spin-rectangle.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
              include_directories: [inc],

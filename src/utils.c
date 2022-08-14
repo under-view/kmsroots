@@ -5,6 +5,14 @@
 #include <stdarg.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <stdint.h>
+#define HAVE_POSIX_TIMER
+#include <time.h>
+#ifdef CLOCK_MONOTONIC
+# define CLOCKID CLOCK_MONOTONIC
+#else
+# define CLOCKID CLOCK_REALTIME
+#endif
 
 #include "utils.h"
 
@@ -96,4 +104,22 @@ int allocate_shm_file(size_t size) {
   }
 
   return fd;
+}
+
+
+// https://www.roxlu.com/2014/047/high-resolution-timer-function-in-c-c--
+uint64_t uvr_utils_nanosecond(void) {
+  static uint64_t is_init = 0;
+  static struct timespec linux_rate;
+
+  if (is_init == 0) {
+    clock_getres(CLOCKID, &linux_rate);
+    is_init = 1;
+  }
+
+  uint64_t now;
+  struct timespec spec;
+  clock_gettime(CLOCKID, &spec);
+  now = spec.tv_sec * 1.0e9 + spec.tv_nsec;
+  return now;
 }

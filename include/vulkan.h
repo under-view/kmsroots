@@ -1064,10 +1064,10 @@ int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk);
  *
  * members:
  * @vkDevice            - VkDevice handle (Logical Device) associated with VkDescriptorSetLayout
- * @descriptorSetLayout - An array of VkDescriptorBindings. An array that defines what type of
- *                        descriptor set to allocate, a binding link used by vulkan to give
- *                        shader access to resources, and at what graphics pipeline stage will
- *                        the shader descriptor need access to a given resource.
+ * @descriptorSetLayout - How descriptor set connects up to graphics pipeline. The layout defines
+ *                        what type of descriptor set to allocate, a binding link used by vulkan
+ *                        to give shader access to resources, and at what graphics pipeline stage
+ *                        will the shader descriptor need access to a given resource.
  */
 struct uvr_vk_descriptor_set_layout {
   VkDevice              vkDevice;
@@ -1114,12 +1114,11 @@ struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct u
 /*
  * struct uvr_vk_descriptor_set_handle (Underview Renderer Vulkan Descriptor Set Handle)
  *
- * @descriptorSet - Set of pointers to vulkan resources (buffer & image). Individual descriptors
- *                  that belong to a set are located in the shader. If there is only one uniform
- *                  variable (type of descriptor) in the shader then there is only one descriptor
- *                  in the set. If the uniform variable (type of descriptor) in the shader is an
- *                  array of size N. Then there are N descriptors of the same type in a given
- *                  descriptor set.
+ * @descriptorSet - Set of descriptors. Descriptors can be defined as resources shared across draw operations.
+ *                  If there is only one uniform buffer object (type of descriptor) in the shader then there is
+ *                  only one descriptor in the set. If the uniform buffer object (type of descriptor) in the shader
+ *                  is an array of size N. Then there are N descriptors of the same type in a given
+ *                  descriptor set. Types of descriptor sets include Images, Samplers, uniform...
  */
 struct uvr_vk_descriptor_set_handle {
   VkDescriptorSet descriptorSet;

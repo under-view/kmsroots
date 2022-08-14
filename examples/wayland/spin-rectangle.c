@@ -105,8 +105,6 @@ int create_vk_sync_objs(struct uvr_vk *app);
 int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D);
 void update_uniform_buffer(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D);
 
-// Defined in clock.c
-uint64_t nanosecond();
 
 void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   VkExtent2D extent2D = {WIDTH, HEIGHT};
@@ -1063,13 +1061,13 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
 
 void update_uniform_buffer(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D) {
   static uint64_t startTime = 0;
-  startTime = nanosecond();
+  startTime = uvr_utils_nanosecond();
 
   uint32_t uboSize = sizeof(struct uvr_uniform_buffer);
   struct uvr_uniform_buffer ubo = {};
 
   VkDeviceMemory uniformBufferDeviceMemory = app->vkbuffers[4].vkDeviceMemory;
-  float time = nanosecond() - startTime;
+  float time = uvr_utils_nanosecond() - startTime;
 
   // Update model matrix
   float angle = time * glm_rad(90.0f);
