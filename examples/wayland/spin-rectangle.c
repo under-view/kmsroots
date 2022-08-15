@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stddef.h> // For offsetof(3)
+#include <stddef.h>   // For offsetof(3)
+#include <stdalign.h> // _Alignas( )
 
 #include <cglm/cglm.h>
 
@@ -73,9 +74,9 @@ struct uvr_vertex_data {
 
 
 struct uvr_uniform_buffer {
-  mat4 model;
-  mat4 view;
-  mat4 proj;
+  _Alignas(16) mat4 model;
+  _Alignas(16) mat4 view;
+  _Alignas(16) mat4 proj;
 };
 
 
