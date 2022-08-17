@@ -4,7 +4,7 @@ if wayland_client.found()
              'shm-buffer.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 
@@ -12,7 +12,7 @@ if wayland_client.found()
              'triangle.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 
@@ -20,7 +20,7 @@ if wayland_client.found()
              'triangle-index.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 
@@ -28,7 +28,7 @@ if wayland_client.found()
              'spin-rectangle.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 endif
@@ -39,7 +39,7 @@ if wlroots.found() and wayland_server.found()
              'compositor.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 endif

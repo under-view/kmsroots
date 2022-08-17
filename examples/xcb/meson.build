@@ -4,7 +4,7 @@ if libxcb.found() and libxcbewmh.found()
              'triangle.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 
@@ -12,7 +12,7 @@ if libxcb.found() and libxcbewmh.found()
              'triangle-index.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 
@@ -20,7 +20,7 @@ if libxcb.found() and libxcbewmh.found()
              'spin-rectangle.c',
              link_with: lib_underview_renderer,
              dependencies: lib_uvr_deps,
-             include_directories: [inc],
+             include_directories: [inc, examples_inc],
              c_args: pargs,
              install: false)
 endif

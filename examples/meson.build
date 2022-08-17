@@ -8,6 +8,7 @@ elif gpu == 'cpu'
 endif
 
 examples_dir = meson.current_source_dir()
+examples_inc = include_directories('include')
 
 subdir('shaders')
 subdir('kms')
