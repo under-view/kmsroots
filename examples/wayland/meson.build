@@ -1,45 +1,29 @@
 
 if wayland_client.found()
-  executable('underview-renderer-wayland-client-shm-buffer',
-             'shm-buffer.c',
-             link_with: lib_underview_renderer,
-             dependencies: lib_uvr_deps,
-             include_directories: [inc, examples_inc],
-             c_args: pargs,
-             install: false)
+  progs = ['shm-buffer.c', 'triangle.c', 'triangle-index.c', 'spin-rectangle.c']
 
-  executable('underview-renderer-wayland-client-triangle',
-             'triangle.c',
-             link_with: lib_underview_renderer,
-             dependencies: lib_uvr_deps,
-             include_directories: [inc, examples_inc],
-             c_args: pargs,
-             install: false)
-
-  executable('underview-renderer-wayland-client-triangle-index',
-             'triangle-index.c',
-             link_with: lib_underview_renderer,
-             dependencies: lib_uvr_deps,
-             include_directories: [inc, examples_inc],
-             c_args: pargs,
-             install: false)
-
-  executable('underview-renderer-wayland-client-spin-rectangle',
-             'spin-rectangle.c',
-             link_with: lib_underview_renderer,
-             dependencies: lib_uvr_deps,
-             include_directories: [inc, examples_inc],
-             c_args: pargs,
-             install: false)
+  foreach p : progs
+    exec_name='underview-renderer-wayland-client-' + p.substring(0,-2) # remove .c extension from name
+    executable(exec_name, p,
+               link_with: lib_underview_renderer,
+               dependencies: lib_uvr_deps,
+               include_directories: [inc, examples_inc],
+               c_args: pargs,
+               install: false)
+  endforeach
 endif
 
 
 if wlroots.found() and wayland_server.found()
-  executable('underview-renderer-wayland-comp',
-             'compositor.c',
-             link_with: lib_underview_renderer,
-             dependencies: lib_uvr_deps,
-             include_directories: [inc, examples_inc],
-             c_args: pargs,
-             install: false)
+  progs = ['compositor.c']
+
+  foreach p : progs
+    exec_name='underview-renderer-wayland-' + p.substring(0,-2) # remove .c extension from name
+    executable(exec_name, p,
+               link_with: lib_underview_renderer,
+               dependencies: lib_uvr_deps,
+               include_directories: [inc, examples_inc],
+               c_args: pargs,
+               install: false)
+  endforeach
 endif
