@@ -370,7 +370,9 @@ struct uvr_vk_swapchain {
  * @surfaceCapabilities   - Passed the queried surface capabilities. From uvr_vk_get_surface_capabilities(3)
  * @surfaceFormat         - Pass colorSpace & pixel format of choice. Recommend querrying first via uvr_vk_get_surface_formats(3)
  *                          then check if pixel format and colorSpace you want is supported by a given physical device.
+ *
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkSwapchainCreateInfoKHR.html for more info on bellow members
+ *
  * @extent2D              - The width and height of the images in the swapchain in amount of pixels.
  * @imageArrayLayers
  * @imageUsage            - Intended use of images in swapchain
@@ -465,29 +467,60 @@ struct uvr_vk_image {
  * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
  *
  * members:
- * @vkDevice         - Must pass a valid VkDevice handle (Logical Device)
- * @vkSwapchain      - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
- *                     If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
- * @viewcount        - Must pass amount of VkImage/VkImageView's to create
+ * @vkDevice                   - Must pass a valid VkDevice handle (Logical Device)
+ * @vkSwapchain                - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
+ *                               If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
+ * @imageViewCount             - Must pass amount of VkImage/VkImageView's to create. Only pass if @vkSwapchain = VK_NULL_HANDLE
+ *
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for more info on bellow members
- * @flags            - Specifies additional prameters associated with VkImageView. Normally set to zero.
- * @viewType         - Specifies what the image view type is. From what I'm seeting it means the dimensions allowed by a
- *                     given image view. 2D image requires 2D image view 3D image require 3D image view.
- * @format           - Image Format (Bits per color channel, the color channel ordering, etc...)
- * @components       - Makes it so that we can select what value goes to what color channel. Basically if we want to assign
- *                     red channel value to green channel. Or set all (RGBA) color channel values to the value at B channel
- *                     this is how we achieve that.
- * @subresourceRange - Gates an image so that only a part of an image is allowed to be viewable.
+ *
+ * @imageViewflags             - Specifies additional prameters associated with VkImageView. Normally set to zero.
+ * @imageViewType              - Specifies what the image view type is. From what I'm seeting it means the dimensions allowed by a
+ *                               given image view. 2D image requires 2D image view 3D image require 3D image view.
+ * @imageViewFormat            - Image Format (Bits per color channel, the color channel ordering, etc...). Format is utilized by
+ *                               both image view and image create info structs.
+ * @imageViewComponents        - Makes it so that we can select what value goes to what color channel. Basically if we want to assign
+ *                               red channel value to green channel. Or set all (RGBA) color channel values to the value at B channel
+ *                               this is how we achieve that.
+ * @imageViewSubresourceRange  - Gates an image so that only a part of an image is allowed to be viewable.
+ *
+ * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html for more info on bellow members
+ *
+ * Bellow only required if @vkSwapchain == VK_NULL_HANDLE
+ * @imageflags                 -
+ * @imageType                  -
+ * @imageExtent3D              -
+ * @imageMipLevels             -
+ * @imageArrayLayers           -
+ * @imageSamples               -
+ * @imageTiling                -
+ * @imageUsage                 -
+ * @imageSharingMode           -
+ * @imageQueueFamilyIndexCount -
+ * @imageQueueFamilyIndices    -
+ * @imageInitialLayout         -
  */
 struct uvr_vk_image_create_info {
   VkDevice                vkDevice;
   VkSwapchainKHR          vkSwapchain;
-  uint32_t                viewCount;
-  VkImageViewCreateFlags  flags;
-  VkImageViewType         viewType;
-  VkFormat                format;
-  VkComponentMapping      components;
-  VkImageSubresourceRange subresourceRange;
+  uint32_t                imageViewCount;
+  VkImageViewCreateFlags  imageViewflags;
+  VkImageViewType         imageViewType;
+  VkFormat                imageViewFormat;
+  VkComponentMapping      imageViewComponents;
+  VkImageSubresourceRange imageViewSubresourceRange;
+  VkImageCreateFlags      imageflags;
+  VkImageType             imageType;
+  VkExtent3D              imageExtent3D;
+  uint32_t                imageMipLevels;
+  uint32_t                imageArrayLayers;
+  VkSampleCountFlagBits   imageSamples;
+  VkImageTiling           imageTiling;
+  VkImageUsageFlags       imageUsage;
+  VkSharingMode           imageSharingMode;
+  uint32_t                imageQueueFamilyIndexCount;
+  const uint32_t          *imageQueueFamilyIndices;
+  VkImageLayout           imageInitialLayout;
 };
 
 
@@ -568,7 +601,9 @@ struct uvr_vk_pipeline_layout {
  *
  * members:
  * @vkDevice                  - Must pass a valid VkDevice handle (Logical Device)
+ *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineLayoutCreateInfo.html for more info on bellow members
+ *
  * @setLayoutCount
  * @pSetLayouts
  * @pushConstantRangeCount
@@ -616,7 +651,9 @@ struct uvr_vk_render_pass {
  *
  * members:
  * @vkDevice        - Must pass a valid VkDevice handle (Logical Device)
+ *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html for more info on bellow members
+ *
  * @attachmentCount
  * @pAttachments
  * @subpassCount
@@ -672,9 +709,11 @@ struct uvr_vk_graphics_pipeline {
  *
  * members:
  * @vkDevice            - Must pass a valid VkDevice handle (Logical Device)
+ *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkGraphicsPipelineCreateInfo.html for more info on bellow members
+ *
  * @stageCount          - Amount of shaders being used by graphics pipeline
- * @pStages             - Defines shaders and at what shader stages this GP will utilize
+ * @pStages             - Defines shaders and at what shader stages this GP will utilize them
  * @pVertexInputState   - Defines the layout and format of vertex input data. Provides details for loading vertex data.
  * @pInputAssemblyState - Defines how to assemble vertices to primitives (i.e. triangles or lines).
  * @pTessellationState  -
@@ -765,7 +804,9 @@ struct uvr_vk_framebuffer {
  * @renderPass       - Defines the render pass a given framebuffer is compatible with
  * @width            - Framebuffer width in pixels
  * @height           - Framebuffer height in pixels
+ *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for more info on bellow members
+ *
  * @layers
  */
 struct uvr_vk_framebuffer_create_info {

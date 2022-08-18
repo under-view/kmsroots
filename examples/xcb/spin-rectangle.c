@@ -474,18 +474,32 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   struct uvr_vk_image_create_info vkimage_create_info;
   vkimage_create_info.vkDevice = app->lgdev.vkDevice;
   vkimage_create_info.vkSwapchain = app->schain.vkSwapchain;
-  vkimage_create_info.flags = 0;
-  vkimage_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  vkimage_create_info.format = sformat->format;
-  vkimage_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-  vkimage_create_info.subresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-  vkimage_create_info.subresourceRange.levelCount = 1;                          // Number of mipmap levels to view
-  vkimage_create_info.subresourceRange.baseArrayLayer = 0;                      // Start array level to view from
-  vkimage_create_info.subresourceRange.layerCount = 1;                          // Number of array levels to view
+  vkimage_create_info.imageViewCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
+  vkimage_create_info.imageViewflags = 0;
+  vkimage_create_info.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+  vkimage_create_info.imageViewFormat = sformat->format;
+  vkimage_create_info.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+  vkimage_create_info.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  vkimage_create_info.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+  vkimage_create_info.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+  vkimage_create_info.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+  vkimage_create_info.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+  vkimage_create_info.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
+  vkimage_create_info.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
+  vkimage_create_info.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+  /* Not create images manually so rest of struct members can be safely ignored */
+  vkimage_create_info.imageflags = 0;
+  vkimage_create_info.imageType = 0;
+  vkimage_create_info.imageExtent3D = (VkExtent3D) { 0, 0, 0 };
+  vkimage_create_info.imageMipLevels = 0;
+  vkimage_create_info.imageArrayLayers = 0;
+  vkimage_create_info.imageSamples = 0;
+  vkimage_create_info.imageTiling = 0;
+  vkimage_create_info.imageUsage = 0;
+  vkimage_create_info.imageSharingMode = 0;
+  vkimage_create_info.imageQueueFamilyIndexCount = 0;
+  vkimage_create_info.imageQueueFamilyIndices = NULL;
+  vkimage_create_info.imageInitialLayout = 0;
 
   app->vkimages = uvr_vk_image_create(&vkimage_create_info);
   if (!app->vkimages.vkImageViews[0].view)

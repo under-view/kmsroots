@@ -94,6 +94,22 @@ static const char *vkres_msg(int err) {
 }
 
 
+static uint32_t retrieve_memory_type_index(VkPhysicalDevice vkPhdev, uint32_t memoryType, VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties mem_props;
+  vkGetPhysicalDeviceMemoryProperties(vkPhdev, &mem_props);
+
+  for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+    if (memoryType & (1 << i) && (mem_props.memoryTypes[i].propertyFlags & properties) == properties) {
+      return i;
+    }
+  }
+
+  uvr_utils_log(UVR_DANGER, "[x] retrieve_memory_type: failed to find suitable memory type");
+
+  return UINT32_MAX;
+}
+
+
 VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkInstance instance = VK_NULL_HANDLE;
@@ -573,6 +589,27 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
     }
 
     uvr_utils_log(UVR_INFO, "uvr_vk_image_create: Total images in swapchain %u", icount);
+  } else {
+
+    VkImageCreateInfo UNUSED image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.flags = uvrvk->imageflags;
+    image_create_info.imageType = uvrvk->imageType;
+    image_create_info.format = uvrvk->imageViewFormat;
+    image_create_info.extent = uvrvk->imageExtent3D;
+    image_create_info.mipLevels = uvrvk->imageMipLevels;
+    image_create_info.arrayLayers = uvrvk->imageArrayLayers;
+    image_create_info.samples = uvrvk->imageSamples;
+    image_create_info.tiling = uvrvk->imageTiling;
+    image_create_info.usage = uvrvk->imageUsage;
+    image_create_info.sharingMode = uvrvk->imageSharingMode;
+    image_create_info.queueFamilyIndexCount = uvrvk->imageQueueFamilyIndexCount;
+    image_create_info.pQueueFamilyIndices = uvrvk->imageQueueFamilyIndices;
+    image_create_info.initialLayout = uvrvk->imageInitialLayout;
+
+    icount = uvrvk->imageViewCount;
+    vkimages = alloca(icount * sizeof(VkImage));
   }
 
   images = calloc(icount, sizeof(images));
@@ -590,11 +627,11 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
   VkImageViewCreateInfo create_info;
   create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   create_info.pNext = NULL;
-  create_info.flags = uvrvk->flags;
-  create_info.viewType = uvrvk->viewType;
-  create_info.format = uvrvk->format;
-  create_info.components = uvrvk->components;
-  create_info.subresourceRange = uvrvk->subresourceRange;
+  create_info.flags = uvrvk->imageViewflags;
+  create_info.viewType = uvrvk->imageViewType;
+  create_info.format = uvrvk->imageViewFormat;
+  create_info.components = uvrvk->imageViewComponents;
+  create_info.subresourceRange = uvrvk->imageViewSubresourceRange;
 
   for (i = 0; i < icount; i++) {
     create_info.image = images[i].image = vkimages[i];
@@ -959,22 +996,6 @@ exit_vk_sync_obj_free_vk_fence:
 exit_vk_sync_obj:
   return (struct uvr_vk_sync_obj) { .vkDevice = VK_NULL_HANDLE, .fenceCount = 0, .vkFences = NULL, .semaphoreCount = 0, .vkSemaphores = NULL };
 };
-
-
-static uint32_t retrieve_memory_type_index(VkPhysicalDevice vkPhdev, uint32_t memoryType, VkMemoryPropertyFlags properties) {
-  VkPhysicalDeviceMemoryProperties mem_props;
-  vkGetPhysicalDeviceMemoryProperties(vkPhdev, &mem_props);
-
-  for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
-    if (memoryType & (1 << i) && (mem_props.memoryTypes[i].propertyFlags & properties) == properties) {
-      return i;
-    }
-  }
-
-  uvr_utils_log(UVR_DANGER, "[x] retrieve_memory_type: failed to find suitable memory type");
-
-  return UINT32_MAX;
-}
 
 
 struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrvk) {
