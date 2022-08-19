@@ -488,6 +488,8 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
   vkimage_create_info.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
   /* Not create images manually so rest of struct members can be safely ignored */
+  vkimage_create_info.vkPhdev = VK_NULL_HANDLE;
+  vkimage_create_info.memPropertyFlags = 0;
   vkimage_create_info.imageflags = 0;
   vkimage_create_info.imageType = 0;
   vkimage_create_info.imageExtent3D = (VkExtent3D) { 0, 0, 0 };

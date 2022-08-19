@@ -463,7 +463,7 @@ struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, 
     goto exit_vk_surface_formats;
   }
 
-  formats = (VkSurfaceFormatKHR *) calloc(fcount, sizeof(formats));
+  formats = (VkSurfaceFormatKHR *) calloc(fcount, sizeof(VkSurfaceFormatKHR));
   if (!formats) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_surface_formats;
@@ -495,7 +495,7 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
     goto exit_vk_surface_present_modes;
   }
 
-  modes = (VkPresentModeKHR *) calloc(mcount, sizeof(modes));
+  modes = (VkPresentModeKHR *) calloc(mcount, sizeof(VkPresentModeKHR));
   if (!modes) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_surface_present_modes;
@@ -572,6 +572,7 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
 
   uint32_t icount = 0, i;
   VkImage *vkimages = NULL;
+  VkDeviceMemory *vkDeviceMemories = NULL;
 
   if (uvrvk->vkSwapchain) {
     res = vkGetSwapchainImagesKHR(uvrvk->vkDevice, uvrvk->vkSwapchain, &icount, NULL);
@@ -591,7 +592,7 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
     uvr_utils_log(UVR_INFO, "uvr_vk_image_create: Total images in swapchain %u", icount);
   } else {
 
-    VkImageCreateInfo UNUSED image_create_info = {};
+    VkImageCreateInfo image_create_info;
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.pNext = NULL;
     image_create_info.flags = uvrvk->imageflags;
@@ -610,36 +611,70 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
 
     icount = uvrvk->imageViewCount;
     vkimages = alloca(icount * sizeof(VkImage));
+    vkDeviceMemories = alloca(icount * sizeof(VkDeviceMemory));
+
+    memset(vkimages, 0, icount * sizeof(VkImage));
+    memset(vkDeviceMemories, 0, icount * sizeof(VkDeviceMemory));
+
+    for (i = 0; i < icount; i++) {
+      res = vkCreateImage(uvrvk->vkDevice, &image_create_info, NULL, &vkimages[i]);
+      if (res) {
+        uvr_utils_log(UVR_DANGER, "[x] vkCreateImage: %s", vkres_msg(res));
+        goto exit_vk_image_free_images;
+      }
+
+      VkMemoryRequirements mem_reqs;
+      vkGetImageMemoryRequirements(uvrvk->vkDevice, vkimages[i], &mem_reqs);
+
+      VkMemoryAllocateInfo alloc_info = {};
+      alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      alloc_info.allocationSize = mem_reqs.size;
+      alloc_info.memoryTypeIndex = retrieve_memory_type_index(uvrvk->vkPhdev, mem_reqs.memoryTypeBits, uvrvk->memPropertyFlags);
+
+      res = vkAllocateMemory(uvrvk->vkDevice, &alloc_info, NULL, &vkDeviceMemories[i]);
+      if (res) {
+        uvr_utils_log(UVR_DANGER, "[x] vkAllocateMemory: %s", vkres_msg(res));
+        goto exit_vk_image_free_images;
+      }
+
+      vkBindImageMemory(uvrvk->vkDevice, vkimages[i], vkDeviceMemories[i], 0);
+    }
   }
 
-  images = calloc(icount, sizeof(images));
+  images = calloc(icount, sizeof(struct uvr_vk_image_handle));
   if (!images) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto exit_vk_image;
+    goto exit_vk_image_free_images;
   }
 
-  views = calloc(icount, sizeof(views));
+  views = calloc(icount, sizeof(struct uvr_vk_image_view_handle));
   if (!views) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_image_free_images;
   }
 
-  VkImageViewCreateInfo create_info;
-  create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  create_info.pNext = NULL;
-  create_info.flags = uvrvk->imageViewflags;
-  create_info.viewType = uvrvk->imageViewType;
-  create_info.format = uvrvk->imageViewFormat;
-  create_info.components = uvrvk->imageViewComponents;
-  create_info.subresourceRange = uvrvk->imageViewSubresourceRange;
+  VkImageViewCreateInfo image_view_create_info;
+  image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  image_view_create_info.pNext = NULL;
+  image_view_create_info.flags = uvrvk->imageViewflags;
+  image_view_create_info.viewType = uvrvk->imageViewType;
+  image_view_create_info.format = uvrvk->imageViewFormat;
+  image_view_create_info.components = uvrvk->imageViewComponents;
+  image_view_create_info.subresourceRange = uvrvk->imageViewSubresourceRange;
 
   for (i = 0; i < icount; i++) {
-    create_info.image = images[i].image = vkimages[i];
+    image_view_create_info.image = images[i].image = vkimages[i];
+    images[i].vkDeviceMemory = VK_NULL_HANDLE;
 
-    res = vkCreateImageView(uvrvk->vkDevice, &create_info, NULL, &views[i].view);
+    if (vkDeviceMemories) {
+      if (vkDeviceMemories[i])
+        images[i].vkDeviceMemory = vkDeviceMemories[i];
+    }
+
+    res = vkCreateImageView(uvrvk->vkDevice, &image_view_create_info, NULL, &views[i].view);
     if (res) {
       uvr_utils_log(UVR_DANGER, "[x] vkCreateImageView: %s", vkres_msg(res));
-      goto exit_vk_image_free_image_view;
+      goto exit_vk_image_free_image_views;
     }
 
     uvr_utils_log(UVR_WARNING, "uvr_vk_image_create: VkImage (%p) associate with VkImageView", images[i].image);
@@ -649,17 +684,23 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk) 
   return (struct uvr_vk_image) { .vkDevice = uvrvk->vkDevice, .imageCount = icount, .vkImages = images,
                                  .vkImageViews = views, .vkSwapchain = uvrvk->vkSwapchain };
 
-
-exit_vk_image_free_image_view:
+exit_vk_image_free_image_views:
   if (views) {
     for (i = 0; i < icount; i++) {
       if (views[i].view)
         vkDestroyImageView(uvrvk->vkDevice, views[i].view, NULL);
     }
   }
-//exit_vk_image_free_image_views:
   free(views);
 exit_vk_image_free_images:
+  if (vkimages && vkDeviceMemories && !uvrvk->vkSwapchain) {
+    for (i = 0; i < icount; i++) {
+      if (vkimages[i])
+        vkDestroyImage(uvrvk->vkDevice, vkimages[i], NULL);
+      if (vkDeviceMemories[i])
+        vkFreeMemory(uvrvk->vkDevice, vkDeviceMemories[i], NULL);
+    }
+  }
   free(images);
 exit_vk_image:
   return (struct uvr_vk_image) { .vkDevice = VK_NULL_HANDLE, .imageCount = 0, .vkImages = NULL,
@@ -797,7 +838,7 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
   struct uvr_vk_framebuffer_handle *vkfbs = NULL;
   uint32_t fbc;
 
-  vkfbs = (struct uvr_vk_framebuffer_handle *) calloc(uvrvk->frameBufferCount, sizeof(vkfbs));
+  vkfbs = (struct uvr_vk_framebuffer_handle *) calloc(uvrvk->frameBufferCount, sizeof(struct uvr_vk_framebuffer_handle));
   if (!vkfbs) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_framebuffer;
@@ -939,13 +980,13 @@ struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info
   struct uvr_vk_semaphore_handle *vkSemaphores = NULL;
   uint32_t s;
 
-  vkFences = calloc(uvrvk->fenceCount, sizeof(vkFences));
+  vkFences = calloc(uvrvk->fenceCount, sizeof(struct uvr_vk_fence_handle));
   if (!vkFences) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_sync_obj;
   }
 
-  vkSemaphores = calloc(uvrvk->semaphoreCount, sizeof(vkSemaphores));
+  vkSemaphores = calloc(uvrvk->semaphoreCount, sizeof(struct uvr_vk_semaphore_handle));
   if (!vkSemaphores) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_sync_obj_free_vk_fence;
@@ -1264,6 +1305,10 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   if (uvrvk->uvr_vk_image) {
     for (i = 0; i < uvrvk->uvr_vk_image_cnt; i++) {
       for (j = 0; j < uvrvk->uvr_vk_image[i].imageCount; j++) {
+        if (uvrvk->uvr_vk_image[i].vkDevice && uvrvk->uvr_vk_image[i].vkImages[j].image && !uvrvk->uvr_vk_image[i].vkSwapchain)
+          vkDestroyImage(uvrvk->uvr_vk_image[i].vkDevice, uvrvk->uvr_vk_image[i].vkImages[j].image, NULL);
+        if (uvrvk->uvr_vk_image[i].vkDevice && uvrvk->uvr_vk_image[i].vkImages[j].vkDeviceMemory && !uvrvk->uvr_vk_image[i].vkSwapchain)
+          vkFreeMemory(uvrvk->uvr_vk_image[i].vkDevice, uvrvk->uvr_vk_image[i].vkImages[j].vkDeviceMemory, NULL);
         if (uvrvk->uvr_vk_image[i].vkDevice && uvrvk->uvr_vk_image[i].vkImageViews[j].view)
           vkDestroyImageView(uvrvk->uvr_vk_image[i].vkDevice, uvrvk->uvr_vk_image[i].vkImageViews[j].view, NULL);
       }

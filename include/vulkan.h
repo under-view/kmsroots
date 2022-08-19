@@ -422,10 +422,12 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
 /*
  * struct uvr_vk_image_handle (Underview Renderer Vulkan Image Handle)
  *
- * @image - Represents actual image itself. May be a texture, etc...
+ * @image          - Represents actual image itself. May be a texture, etc...
+ * @vkDeviceMemory - Actual memory whether CPU or GPU visible associate with VkImage object
  */
 struct uvr_vk_image_handle {
-  VkImage image;
+  VkImage        image;
+  VkDeviceMemory vkDeviceMemory;
 };
 
 
@@ -470,13 +472,13 @@ struct uvr_vk_image {
  * @vkDevice                   - Must pass a valid VkDevice handle (Logical Device)
  * @vkSwapchain                - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
  *                               If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
- * @imageViewCount             - Must pass amount of VkImage/VkImageView's to create. Only pass if @vkSwapchain = VK_NULL_HANDLE
+ * @imageViewCount             - Must pass amount of VkImage/VkImageView's to create. Only pass if @vkSwapchain == VK_NULL_HANDLE
  *
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for more info on bellow members
  *
  * @imageViewflags             - Specifies additional prameters associated with VkImageView. Normally set to zero.
- * @imageViewType              - Specifies what the image view type is. From what I'm seeting it means the dimensions allowed by a
- *                               given image view. 2D image requires 2D image view 3D image require 3D image view.
+ * @imageViewType              - Specifies what the image view type is. Specifies coordinate system utilized by the image when
+ *                               being addressed. Image view type must have compatible @imageType when @vkSwapchain == VK_NULL_HANDLE.
  * @imageViewFormat            - Image Format (Bits per color channel, the color channel ordering, etc...). Format is utilized by
  *                               both image view and image create info structs.
  * @imageViewComponents        - Makes it so that we can select what value goes to what color channel. Basically if we want to assign
@@ -487,40 +489,45 @@ struct uvr_vk_image {
  * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html for more info on bellow members
  *
  * Bellow only required if @vkSwapchain == VK_NULL_HANDLE
- * @imageflags                 -
- * @imageType                  -
- * @imageExtent3D              -
+ * @vkPhdev                    - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
+ * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
+ * @imageflags                 - Bits used to specify additional parameters for a given VkImage.
+ * @imageType                  - Coordinate system the pixels in the image will use when being addressed.
+ * @imageExtent3D              - Dimension (i.e. width, height, and depth) of the given image(s).
  * @imageMipLevels             -
  * @imageArrayLayers           -
  * @imageSamples               -
  * @imageTiling                -
- * @imageUsage                 -
- * @imageSharingMode           -
- * @imageQueueFamilyIndexCount -
- * @imageQueueFamilyIndices    -
- * @imageInitialLayout         -
+ * @imageUsage                 - Describes to vulkan the intended usage for the VkImage
+ * @imageSharingMode           - Vulkan image may be owned by one device queue family or shared by multiple device queue families.
+ *                               Sets whether images can only be accessed by a single queue or multiple queues
+ * @imageQueueFamilyIndexCount - Array size of @imageQueueFamilyIndices. Amount of queue families may own given vulkan image.
+ * @imageQueueFamilyIndices    - Pointer to an array of queue families to associate/own a given vulkan image.
+ * @imageInitialLayout         - Set the inital memory layout of a VkImage
  */
 struct uvr_vk_image_create_info {
-  VkDevice                vkDevice;
-  VkSwapchainKHR          vkSwapchain;
-  uint32_t                imageViewCount;
-  VkImageViewCreateFlags  imageViewflags;
-  VkImageViewType         imageViewType;
-  VkFormat                imageViewFormat;
-  VkComponentMapping      imageViewComponents;
-  VkImageSubresourceRange imageViewSubresourceRange;
-  VkImageCreateFlags      imageflags;
-  VkImageType             imageType;
-  VkExtent3D              imageExtent3D;
-  uint32_t                imageMipLevels;
-  uint32_t                imageArrayLayers;
-  VkSampleCountFlagBits   imageSamples;
-  VkImageTiling           imageTiling;
-  VkImageUsageFlags       imageUsage;
-  VkSharingMode           imageSharingMode;
-  uint32_t                imageQueueFamilyIndexCount;
-  const uint32_t          *imageQueueFamilyIndices;
-  VkImageLayout           imageInitialLayout;
+  VkDevice                 vkDevice;
+  VkSwapchainKHR           vkSwapchain;
+  uint32_t                 imageViewCount;
+  VkImageViewCreateFlags   imageViewflags;
+  VkImageViewType          imageViewType;
+  VkFormat                 imageViewFormat;
+  VkComponentMapping       imageViewComponents;
+  VkImageSubresourceRange  imageViewSubresourceRange;
+  VkPhysicalDevice         vkPhdev;
+  VkMemoryPropertyFlagBits memPropertyFlags;
+  VkImageCreateFlags       imageflags;
+  VkImageType              imageType;
+  VkExtent3D               imageExtent3D;
+  uint32_t                 imageMipLevels;
+  uint32_t                 imageArrayLayers;
+  VkSampleCountFlagBits    imageSamples;
+  VkImageTiling            imageTiling;
+  VkImageUsageFlags        imageUsage;
+  VkSharingMode            imageSharingMode;
+  uint32_t                 imageQueueFamilyIndexCount;
+  const uint32_t           *imageQueueFamilyIndices;
+  VkImageLayout            imageInitialLayout;
 };
 
 
@@ -1036,7 +1043,7 @@ struct uvr_vk_buffer {
  * @bufferUsage           - Specifies type of buffer (i.e vertex, etc...). Multiple buffer types can be selected here
  *                          via bitwise or operations.
  * @bufferSharingMode     - Vulkan buffers may be owned by one device queue family or shared by multiple device queue families.
- * @queueFamilyIndexCount - Amount of queue families may own given vulkan buffer.
+ * @queueFamilyIndexCount - Array size of @queueFamilyIndices. Amount of queue families may own given vulkan buffer.
  * @queueFamilyIndices    - Pointer to an array of queue families to associate/own a given vulkan buffer.
  * @memPropertyFlags      - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
  */
