@@ -1165,6 +1165,45 @@ exit_vk_descriptor_set:
 }
 
 
+struct uvr_vk_sampler uvr_vk_sampler_create(struct uvr_vk_sampler_create_info *uvrvk) {
+  VkSampler vkSampler = VK_NULL_HANDLE;
+  VkResult res = VK_RESULT_MAX_ENUM;
+
+  VkSamplerCreateInfo sampler_create_info = {};
+  sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler_create_info.pNext = NULL;
+  sampler_create_info.flags = uvrvk->samplerFlags;
+  sampler_create_info.magFilter = uvrvk->samplerMagFilter;
+  sampler_create_info.minFilter = uvrvk->samplerMinFilter;
+  sampler_create_info.mipmapMode = uvrvk->samplerMipmapMode;
+  sampler_create_info.addressModeU = uvrvk->samplerAddressModeU;
+  sampler_create_info.addressModeV = uvrvk->samplerAddressModeV;
+  sampler_create_info.addressModeW = uvrvk->samplerAddressModeW;
+  sampler_create_info.mipLodBias = uvrvk->samplerMipLodBias;
+  sampler_create_info.anisotropyEnable = uvrvk->samplerAnisotropyEnable;
+  sampler_create_info.maxAnisotropy = uvrvk->samplerMaxAnisotropy;
+  sampler_create_info.compareEnable = uvrvk->samplerCompareEnable;
+  sampler_create_info.compareOp = uvrvk->samplerCompareOp;
+  sampler_create_info.minLod = uvrvk->samplerMinLod;
+  sampler_create_info.maxLod = uvrvk->samplerMaxLod;
+  sampler_create_info.borderColor = uvrvk->samplerBorderColor;
+  sampler_create_info.unnormalizedCoordinates = uvrvk->samplerUnnormalizedCoordinates;
+
+  res = vkCreateSampler(uvrvk->vkDevice, &sampler_create_info, NULL, &vkSampler);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkCreateSampler: %s", vkres_msg(res));
+    goto exit_vk_sampler;
+  }
+
+  uvr_utils_log(UVR_SUCCESS, "uvr_vk_sampler_create: VkSampler created retval(%p)", vkSampler);
+
+  return (struct uvr_vk_sampler) { .vkDevice = uvrvk->vkDevice, .vkSampler = vkSampler };
+
+exit_vk_sampler:
+  return (struct uvr_vk_sampler) { .vkDevice = VK_NULL_HANDLE, .vkSampler = VK_NULL_HANDLE };
+}
+
+
 int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk) {
   struct uvr_vk_command_buffer_handle command_buffer_handle;
   command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
@@ -1355,6 +1394,13 @@ void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
     for (i = 0; i < uvrvk->uvr_vk_shader_module_cnt; i++) {
       if (uvrvk->uvr_vk_shader_module[i].vkDevice && uvrvk->uvr_vk_shader_module[i].shader)
         vkDestroyShaderModule(uvrvk->uvr_vk_shader_module[i].vkDevice, uvrvk->uvr_vk_shader_module[i].shader, NULL);
+    }
+  }
+
+  if (uvrvk->uvr_vk_sampler) {
+    for (i = 0; i < uvrvk->uvr_vk_sampler_cnt; i++) {
+      if (uvrvk->uvr_vk_sampler[i].vkDevice && uvrvk->uvr_vk_sampler[i].vkSampler)
+        vkDestroySampler(uvrvk->uvr_vk_sampler[i].vkDevice, uvrvk->uvr_vk_sampler[i].vkSampler, NULL);
     }
   }
 

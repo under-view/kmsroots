@@ -734,7 +734,7 @@ struct uvr_vk_graphics_pipeline {
  * @pColorBlendState    - Defines how to blend fragments at the end of the pipeline.
  * @pDynamicState       - Graphics pipelines settings are static once set they can't change. To get new settings you'd have to create a whole new pipeline.
  *                        There are settings however that can be changed at runtime. We define which settings here.
- * @layout              - Pass VkPipelineLayout handle to define the resources (i.e. descriptor sets, push constants) given to the pipeline for a single draw operation
+ * @vkPipelineLayout    - Pass VkPipelineLayout handle to define the resources (i.e. descriptor sets, push constants) given to the pipeline for a single draw operation
  * @renderPass          - Pass VkRenderPAss handle which Holds a pipeline and handles how it is execute. With final outputs being to a framebuffer.
  *                        One can have multiple smaller subpasses inside of it that each use a different pipeline.
  *                        Contains multiple attachments that go to all plausible pipeline outputs (i.e Depth, Color, etc..)
@@ -979,10 +979,10 @@ struct uvr_vk_semaphore_handle {
  * @vkSemaphores   - Pointer to an array of VkSemaphore handles
  */
 struct uvr_vk_sync_obj {
-  VkDevice vkDevice;
-  uint32_t fenceCount;
-  struct uvr_vk_fence_handle *vkFences;
-  uint32_t semaphoreCount;
+  VkDevice                       vkDevice;
+  uint32_t                       fenceCount;
+  struct uvr_vk_fence_handle     *vkFences;
+  uint32_t                       semaphoreCount;
   struct uvr_vk_semaphore_handle *vkSemaphores;
 };
 
@@ -1026,8 +1026,8 @@ struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info
  * @vkDeviceMemory - Actual memory whether CPU or GPU visible associate with VkBuffer header object
  */
 struct uvr_vk_buffer {
-  VkDevice vkDevice;
-  VkBuffer vkBuffer;
+  VkDevice       vkDevice;
+  VkBuffer       vkBuffer;
   VkDeviceMemory vkDeviceMemory;
 };
 
@@ -1202,6 +1202,77 @@ struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descript
 
 
 /*
+ * struct uvr_vk_sampler (Underview Renderer Vulkan Sampler)
+ *
+ * members:
+ * @vkDevice     - VkDevice handle (Logical Device) associated with VkSampler
+ * @vkSampler    - VkSampler handle represent the state of an image sampler which is used by the implementation
+ *                 to read image data and apply filtering and other transformations for the shader.
+ *                 TAKEN FROM: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSampler.html
+ */
+struct uvr_vk_sampler {
+  VkDevice  vkDevice;
+  VkSampler vkSampler;
+};
+
+
+/*
+ * struct uvr_vk_sampler_create_info (Underview Renderer Vulkan Sampler Create Information)
+ *
+ * members:
+ * @vkDevice - Must pass a valid VkDevice handle (Logical Device)
+ * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerCreateInfo.html for more information
+ * @samplerFlags
+ * @samplerMagFilter
+ * @samplerMinFilter
+ * @samplerMipmapMode
+ * @samplerAddressModeU
+ * @samplerAddressModeV
+ * @samplerAddressModeW
+ * @samplerMipLodBias
+ * @samplerAnisotropyEnable
+ * @samplerMaxAnisotropy
+ * @samplerCompareEnable
+ * @samplerCompareOp
+ * @samplerMinLod
+ * @samplerMaxLod
+ * @samplerBorderColor
+ * @samplerUnnormalizedCoordinates
+ */
+struct uvr_vk_sampler_create_info {
+  VkDevice                vkDevice;
+  VkSamplerCreateFlags    samplerFlags;
+  VkFilter                samplerMagFilter;
+  VkFilter                samplerMinFilter;
+  VkSamplerMipmapMode     samplerMipmapMode;
+  VkSamplerAddressMode    samplerAddressModeU;
+  VkSamplerAddressMode    samplerAddressModeV;
+  VkSamplerAddressMode    samplerAddressModeW;
+  float                   samplerMipLodBias;
+  VkBool32                samplerAnisotropyEnable;
+  float                   samplerMaxAnisotropy;
+  VkBool32                samplerCompareEnable;
+  VkCompareOp             samplerCompareOp;
+  float                   samplerMinLod;
+  float                   samplerMaxLod;
+  VkBorderColor           samplerBorderColor;
+  VkBool32                samplerUnnormalizedCoordinates;
+};
+
+
+/*
+ * uvr_vk_sampler_create: Functions creates VkSampler handle
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_sampler_create_info
+ * return:
+ *    on success struct uvr_vk_sampler
+ *    on failure struct uvr_vk_sampler { with member nulled }
+ */
+struct uvr_vk_sampler uvr_vk_sampler_create(struct uvr_vk_sampler_create_info *uvrvk);
+
+
+/*
  * enum uvr_vk_copy_info (Underview Renderer Vulkan Copy Type)
  *
  * ENUM Used by uvr_vk_copy_info to specify type of source
@@ -1327,6 +1398,8 @@ int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_inf
  * @uvr_vk_descriptor_set_layout     - Must pass a pointer to an array of valid struct uvr_vk_descriptor_set_layout { free'd members: VkDescriptorSetLayout handle }
  * @uvr_vk_descriptor_set_cnt        - Must pass the amount of elements in struct uvr_vk_descriptor_set array
  * @uvr_vk_descriptor_set            - Must pass a pointer to an array of valid struct uvr_vk_descriptor_set { free'd members: VkDescriptorPool handle, *descriptorSets }
+ * @uvr_vk_sampler_cnt               - Must pass the amount of elements in struct uvr_vk_sampler array
+ * @uvr_vk_sampler                   - Must pass a pointer to an array of valid struct uvr_vk_sampler { free'd members: VkSampler handle }
  */
 struct uvr_vk_destroy {
   VkInstance vkinst;
@@ -1370,6 +1443,9 @@ struct uvr_vk_destroy {
 
   uint32_t uvr_vk_descriptor_set_cnt;
   struct uvr_vk_descriptor_set *uvr_vk_descriptor_set;
+
+  uint32_t uvr_vk_sampler_cnt;
+  struct uvr_vk_sampler *uvr_vk_sampler;
 };
 
 
