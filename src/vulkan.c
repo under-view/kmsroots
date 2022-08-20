@@ -1084,103 +1084,6 @@ exit_vk_buffer:
 }
 
 
-int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk) {
-  struct uvr_vk_command_buffer_handle command_buffer_handle;
-  command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
-
-  struct uvr_vk_command_buffer_record_info command_buffer_record_info;
-  command_buffer_record_info.commandBufferCount = 1;
-  command_buffer_record_info.commandBuffers = &command_buffer_handle;
-  command_buffer_record_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  if (uvr_vk_command_buffer_record_begin(&command_buffer_record_info) == -1)
-    return -1;
-
-  VkCommandBuffer cmdBuffer = command_buffer_handle.commandBuffer;
-
-  switch (uvrvk->resourceCopyType) {
-    case UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER:
-      {
-        vkCmdCopyBuffer(cmdBuffer, (VkBuffer) uvrvk->srcResource, (VkBuffer) uvrvk->dstResource, 1, uvrvk->bufferCopyInfo);
-        break;
-      }
-    case UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE:
-      {
-        vkCmdCopyBufferToImage(cmdBuffer, (VkBuffer) uvrvk->srcResource, (VkImage) uvrvk->dstResource, uvrvk->imageLayout, 1, uvrvk->bufferImageCopyInfo);
-        break;
-      }
-    case UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER:
-    {
-      vkCmdCopyImageToBuffer(cmdBuffer, (VkImage) uvrvk->srcResource, uvrvk->imageLayout, (VkBuffer) uvrvk->dstResource,  1, uvrvk->bufferImageCopyInfo);
-      break;
-    }
-    default:
-      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_buffer_copy: Must pass a valid uvr_vk_buffer_copy_type value");
-      return -1;
-  }
-
-  if (uvr_vk_command_buffer_record_end(&command_buffer_record_info) == -1)
-    return -1;
-
-  VkSubmitInfo submit_info;
-  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit_info.pNext = NULL;
-  submit_info.waitSemaphoreCount = 0;
-  submit_info.pWaitSemaphores = NULL;
-  submit_info.pWaitDstStageMask = NULL;
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &cmdBuffer;
-  submit_info.signalSemaphoreCount = 0;
-  submit_info.pSignalSemaphores = NULL;
-
-  vkQueueSubmit(uvrvk->vkQueue, 1, &submit_info, VK_NULL_HANDLE);
-  vkQueueWaitIdle(uvrvk->vkQueue);
-
-  return 0;
-}
-
-
-int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk) {
-  struct uvr_vk_command_buffer_handle command_buffer_handle;
-  command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
-
-  struct uvr_vk_command_buffer_record_info command_buffer_record_info;
-  command_buffer_record_info.commandBufferCount = 1;
-  command_buffer_record_info.commandBuffers = &command_buffer_handle;
-  command_buffer_record_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  if (uvr_vk_command_buffer_record_begin(&command_buffer_record_info) == -1)
-    return -1;
-
-  vkCmdPipelineBarrier(command_buffer_handle.commandBuffer,
-                       uvrvk->srcPipelineStage,
-                       uvrvk->dstPipelineStage,
-                       uvrvk->dependencyFlags,
-                       (uvrvk->memoryBarrier      ) ? 1 : 0, uvrvk->memoryBarrier,
-                       (uvrvk->bufferMemoryBarrier) ? 1 : 0, uvrvk->bufferMemoryBarrier,
-                       (uvrvk->imageMemoryBarrier ) ? 1 : 0, uvrvk->imageMemoryBarrier);
-
-  if (uvr_vk_command_buffer_record_end(&command_buffer_record_info) == -1)
-    return -1;
-
-  VkSubmitInfo submit_info;
-  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit_info.pNext = NULL;
-  submit_info.waitSemaphoreCount = 0;
-  submit_info.pWaitSemaphores = NULL;
-  submit_info.pWaitDstStageMask = NULL;
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &command_buffer_handle.commandBuffer;
-  submit_info.signalSemaphoreCount = 0;
-  submit_info.pSignalSemaphores = NULL;
-
-  vkQueueSubmit(uvrvk->vkQueue, 1, &submit_info, VK_NULL_HANDLE);
-  vkQueueWaitIdle(uvrvk->vkQueue);
-
-  return 0;
-}
-
-
 struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct uvr_vk_descriptor_set_layout_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
@@ -1259,6 +1162,103 @@ exit_vk_descriptor_set_destroy_pool:
     vkDestroyDescriptorPool(uvrvk->vkDevice, descriptorPool, NULL);
 exit_vk_descriptor_set:
   return (struct uvr_vk_descriptor_set) { .vkDevice = VK_NULL_HANDLE, .descriptorPool = VK_NULL_HANDLE, .descriptorSets = VK_NULL_HANDLE, .descriptorSetsCount = 0 };
+}
+
+
+int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk) {
+  struct uvr_vk_command_buffer_handle command_buffer_handle;
+  command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
+
+  struct uvr_vk_command_buffer_record_info command_buffer_record_info;
+  command_buffer_record_info.commandBufferCount = 1;
+  command_buffer_record_info.commandBuffers = &command_buffer_handle;
+  command_buffer_record_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  if (uvr_vk_command_buffer_record_begin(&command_buffer_record_info) == -1)
+    return -1;
+
+  VkCommandBuffer cmdBuffer = command_buffer_handle.commandBuffer;
+
+  switch (uvrvk->resourceCopyType) {
+    case UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER:
+    {
+      vkCmdCopyBuffer(cmdBuffer, (VkBuffer) uvrvk->srcResource, (VkBuffer) uvrvk->dstResource, 1, uvrvk->bufferCopyInfo);
+      break;
+    }
+    case UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE:
+    {
+      vkCmdCopyBufferToImage(cmdBuffer, (VkBuffer) uvrvk->srcResource, (VkImage) uvrvk->dstResource, uvrvk->imageLayout, 1, uvrvk->bufferImageCopyInfo);
+      break;
+    }
+    case UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER:
+    {
+      vkCmdCopyImageToBuffer(cmdBuffer, (VkImage) uvrvk->srcResource, uvrvk->imageLayout, (VkBuffer) uvrvk->dstResource,  1, uvrvk->bufferImageCopyInfo);
+      break;
+    }
+    default:
+      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_buffer_copy: Must pass a valid uvr_vk_buffer_copy_type value");
+      return -1;
+  }
+
+  if (uvr_vk_command_buffer_record_end(&command_buffer_record_info) == -1)
+    return -1;
+
+  VkSubmitInfo submit_info;
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.pNext = NULL;
+  submit_info.waitSemaphoreCount = 0;
+  submit_info.pWaitSemaphores = NULL;
+  submit_info.pWaitDstStageMask = NULL;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &cmdBuffer;
+  submit_info.signalSemaphoreCount = 0;
+  submit_info.pSignalSemaphores = NULL;
+
+  vkQueueSubmit(uvrvk->vkQueue, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(uvrvk->vkQueue);
+
+  return 0;
+}
+
+
+int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk) {
+  struct uvr_vk_command_buffer_handle command_buffer_handle;
+  command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
+
+  struct uvr_vk_command_buffer_record_info command_buffer_record_info;
+  command_buffer_record_info.commandBufferCount = 1;
+  command_buffer_record_info.commandBuffers = &command_buffer_handle;
+  command_buffer_record_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  if (uvr_vk_command_buffer_record_begin(&command_buffer_record_info) == -1)
+    return -1;
+
+  vkCmdPipelineBarrier(command_buffer_handle.commandBuffer,
+                       uvrvk->srcPipelineStage,
+                       uvrvk->dstPipelineStage,
+                       uvrvk->dependencyFlags,
+                       (uvrvk->memoryBarrier      ) ? 1 : 0, uvrvk->memoryBarrier,
+                       (uvrvk->bufferMemoryBarrier) ? 1 : 0, uvrvk->bufferMemoryBarrier,
+                       (uvrvk->imageMemoryBarrier ) ? 1 : 0, uvrvk->imageMemoryBarrier);
+
+  if (uvr_vk_command_buffer_record_end(&command_buffer_record_info) == -1)
+    return -1;
+
+  VkSubmitInfo submit_info;
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.pNext = NULL;
+  submit_info.waitSemaphoreCount = 0;
+  submit_info.pWaitSemaphores = NULL;
+  submit_info.pWaitDstStageMask = NULL;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &command_buffer_handle.commandBuffer;
+  submit_info.signalSemaphoreCount = 0;
+  submit_info.pSignalSemaphores = NULL;
+
+  vkQueueSubmit(uvrvk->vkQueue, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(uvrvk->vkQueue);
+
+  return 0;
 }
 
 

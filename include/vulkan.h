@@ -1074,100 +1074,6 @@ struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrv
 
 
 /*
- * enum uvr_vk_copy_info (Underview Renderer Vulkan Copy Type)
- *
- * ENUM Used by uvr_vk_copy_info to specify type of source
- * resource to copy over to a given type of destination resource.
- */
-typedef enum uvr_vk_copy_type {
-  UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER,
-  UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE,
-  UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER
-} uvr_vk_copy_type;
-
-
-/*
- * struct uvr_vk_copy_info (Underview Renderer Vulkan Copy Information)
- *
- * members:
- * @resourceCopyType     - Determines what vkCmdCopyBuffer* function to utilize
- * @commandBuffer        - Command buffer used for recording. Best to utilize one already create via
- *                         uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
- * @vkQueue              - The physical device queue (graphics or transfer) to submit the copy buffer command to.
- * @srcResource          - Pointer to source vulkan resource containing raw data. (i.e Vkbuffer, VkImage, etc...)
- * @dstResource          - Pointer to destination vulkan resource to copy source resource data to.
- *                         (i.e Vkbuffer, VkImage, etc...)
- * @bufferCopyInfo       - Specifies the starting memory address of @srcResource to copy @byteSize data from
- *                         to @dstResource memory address. Memory address is found by specifying an offset.
- * @bufferImageCopyInfo  - Specifies what portion of the image to update or copy to buffer.
- * @imageLayout          - Memory layout of the destination VkImage resource
- */
-struct uvr_vk_copy_info {
-  uvr_vk_copy_type        resourceCopyType;
-  VkCommandBuffer         commandBuffer;
-  VkQueue                 vkQueue;
-  void                    *srcResource;
-  void                    *dstResource;
-  VkBufferCopy            *bufferCopyInfo;      // Only allow 1 for now
-  VkBufferImageCopy       *bufferImageCopyInfo; // Only allow 1 for now
-  VkImageLayout           imageLayout;
-};
-
-
-/*
- * uvr_vk_copy: Function copies data from one vulkan resource to another. Best utilized when
- *              copying data from CPU visible buffer over to GPU visible buffer. That way the
- *              GPU can acquire data (vertex data) more quickly.
- *
- * args:
- * @uvrvk - pointer to a struct uvr_vk_copy_info
- * return:
- *    on success 0
- *    on failure -1
- */
-int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk);
-
-
-/*
- * struct uvr_vk_resource_pipeline_barrier_info (Underview Renderer Vulkan Resource Pipeline Barrier Information)
- *
- * members:
- * @commandBuffer       - Command buffer used for recording. Best to utilize one already create via
- *                        uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
- * @vkQueue             - The physical device queue (graphics or transfer) to submit the pipeline barrier command to.
- * @srcPipelineStage    - Specifies in which pipeline stage operations occur before the barrier.
- * @dstPipelineStage    - Specifies in which pipeline stage operations will wait on the barrier.
- * @VkDependencyFlags   - Defines types of dependencies
- * @memoryBarrier       - specifying pipeline barrier for vulkan memory
- * @bufferMemoryBarrier - Specifies pipeline barrier for vulkan buffer resource
- * @imageMemoryBarrier  - Specifies pipeline barrier for vulkan image resource
- */
-struct uvr_vk_resource_pipeline_barrier_info {
-  VkCommandBuffer                       commandBuffer;
-  VkQueue                               vkQueue;
-  VkPipelineStageFlags                  srcPipelineStage;
-  VkPipelineStageFlags                  dstPipelineStage;
-  VkDependencyFlags                     dependencyFlags;
-  VkMemoryBarrier                       *memoryBarrier;
-  VkBufferMemoryBarrier                 *bufferMemoryBarrier;
-  VkImageMemoryBarrier                  *imageMemoryBarrier;
-};
-
-
-/*
- * uvr_vk_resource_pipeline_barrier: Function is used to synchronize access to vulkan resources. Basically
- *                                   ensuring that a write to a resources finishes before reading from it.
- *
- * args:
- * @uvrvk - pointer to a struct uvr_vk_resource_pipeline_barrier_info
- * return:
- *    on success 0
- *    on failure -1
- */
-int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk);
-
-
-/*
  * struct uvr_vk_descriptor_set_layout (Underview Renderer Vulkan Descriptor Set Layout)
  *
  * members:
@@ -1293,6 +1199,100 @@ struct uvr_vk_descriptor_set_create_info {
  *    on failure struct uvr_vk_descriptor_set { with member nulled }
  */
 struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descriptor_set_create_info *uvrvk);
+
+
+/*
+ * enum uvr_vk_copy_info (Underview Renderer Vulkan Copy Type)
+ *
+ * ENUM Used by uvr_vk_copy_info to specify type of source
+ * resource to copy over to a given type of destination resource.
+ */
+typedef enum uvr_vk_copy_type {
+  UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER,
+  UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE,
+  UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER
+} uvr_vk_copy_type;
+
+
+/*
+ * struct uvr_vk_copy_info (Underview Renderer Vulkan Copy Information)
+ *
+ * members:
+ * @resourceCopyType     - Determines what vkCmdCopyBuffer* function to utilize
+ * @commandBuffer        - Command buffer used for recording. Best to utilize one already create via
+ *                         uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ * @vkQueue              - The physical device queue (graphics or transfer) to submit the copy buffer command to.
+ * @srcResource          - Pointer to source vulkan resource containing raw data. (i.e Vkbuffer, VkImage, etc...)
+ * @dstResource          - Pointer to destination vulkan resource to copy source resource data to.
+ *                         (i.e Vkbuffer, VkImage, etc...)
+ * @bufferCopyInfo       - Specifies the starting memory address of @srcResource to copy @byteSize data from
+ *                         to @dstResource memory address. Memory address is found by specifying an offset.
+ * @bufferImageCopyInfo  - Specifies what portion of the image to update or copy to buffer.
+ * @imageLayout          - Memory layout of the destination VkImage resource
+ */
+struct uvr_vk_copy_info {
+  uvr_vk_copy_type        resourceCopyType;
+  VkCommandBuffer         commandBuffer;
+  VkQueue                 vkQueue;
+  void                    *srcResource;
+  void                    *dstResource;
+  VkBufferCopy            *bufferCopyInfo;      // Only allow 1 for now
+  VkBufferImageCopy       *bufferImageCopyInfo; // Only allow 1 for now
+  VkImageLayout           imageLayout;
+};
+
+
+/*
+ * uvr_vk_copy: Function copies data from one vulkan resource to another. Best utilized when
+ *              copying data from CPU visible buffer over to GPU visible buffer. That way the
+ *              GPU can acquire data (vertex data) more quickly.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_copy_info
+ * return:
+ *    on success 0
+ *    on failure -1
+ */
+int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk);
+
+
+/*
+ * struct uvr_vk_resource_pipeline_barrier_info (Underview Renderer Vulkan Resource Pipeline Barrier Information)
+ *
+ * members:
+ * @commandBuffer       - Command buffer used for recording. Best to utilize one already create via
+ *                        uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ * @vkQueue             - The physical device queue (graphics or transfer) to submit the pipeline barrier command to.
+ * @srcPipelineStage    - Specifies in which pipeline stage operations occur before the barrier.
+ * @dstPipelineStage    - Specifies in which pipeline stage operations will wait on the barrier.
+ * @VkDependencyFlags   - Defines types of dependencies
+ * @memoryBarrier       - specifying pipeline barrier for vulkan memory
+ * @bufferMemoryBarrier - Specifies pipeline barrier for vulkan buffer resource
+ * @imageMemoryBarrier  - Specifies pipeline barrier for vulkan image resource
+ */
+struct uvr_vk_resource_pipeline_barrier_info {
+  VkCommandBuffer                       commandBuffer;
+  VkQueue                               vkQueue;
+  VkPipelineStageFlags                  srcPipelineStage;
+  VkPipelineStageFlags                  dstPipelineStage;
+  VkDependencyFlags                     dependencyFlags;
+  VkMemoryBarrier                       *memoryBarrier;
+  VkBufferMemoryBarrier                 *bufferMemoryBarrier;
+  VkImageMemoryBarrier                  *imageMemoryBarrier;
+};
+
+
+/*
+ * uvr_vk_resource_pipeline_barrier: Function is used to synchronize access to vulkan resources. Basically
+ *                                   ensuring that a write to a resources finishes before reading from it.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_resource_pipeline_barrier_info
+ * return:
+ *    on success 0
+ *    on failure -1
+ */
+int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk);
 
 
 /*
