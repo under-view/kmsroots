@@ -280,7 +280,7 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, 
    */
   struct uvr_vk_surface_create_info vksurf;
   vksurf.vkInst = app->instance;
-  vksurf.sType = WAYLAND_CLIENT_SURFACE;
+  vksurf.sType = UVR_WAYLAND_CLIENT_SURFACE;
   vksurf.display = wc->wcinterfaces.wlDisplay;
   vksurf.surface = wc->wcsurf.wlSurface;
 
@@ -535,6 +535,8 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
 
 int create_vk_buffers(struct uvr_vk *app) {
+  uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
+
   // Create CPU visible vertex buffer
   struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
   vkVertexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
@@ -548,15 +550,15 @@ int create_vk_buffers(struct uvr_vk *app) {
   vkVertexBufferCreateInfo.queueFamilyIndices = NULL;
   vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-  app->vkbuffers[0] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-  if (!app->vkbuffers[0].vkBuffer || !app->vkbuffers[0].vkDeviceMemory)
+  app->vkbuffers[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
+  if (!app->vkbuffers[cpuVisibleBuffer].vkBuffer || !app->vkbuffers[0].vkDeviceMemory)
     return -1;
 
   // Copy vertex data into CPU visible vertex
   void *data = NULL;
-  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory, 0, vkVertexBufferCreateInfo.bufferSize, 0, &data);
+  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory, 0, vkVertexBufferCreateInfo.bufferSize, 0, &data);
   memcpy(data, vertices_pos_color, vkVertexBufferCreateInfo.bufferSize);
-  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[0].vkDeviceMemory);
+  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory);
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
@@ -571,18 +573,27 @@ int create_vk_buffers(struct uvr_vk *app) {
     vkVertexBufferGPUCreateInfo.queueFamilyIndices = NULL;
     vkVertexBufferGPUCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    app->vkbuffers[1] = uvr_vk_buffer_create(&vkVertexBufferGPUCreateInfo);
-    if (!app->vkbuffers[1].vkBuffer || !app->vkbuffers[1].vkDeviceMemory)
+    app->vkbuffers[gpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferGPUCreateInfo);
+    if (!app->vkbuffers[gpuVisibleBuffer].vkBuffer || !app->vkbuffers[1].vkDeviceMemory)
       return -1;
 
-    struct uvr_vk_buffer_copy_info bufferCopyInfo;
-    bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
-    bufferCopyInfo.srcBuffer = app->vkbuffers[0].vkBuffer;
-    bufferCopyInfo.dstBuffer = app->vkbuffers[1].vkBuffer;
-    bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
-    bufferCopyInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
+    VkBufferCopy copyRegion;
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = vkVertexBufferCreateInfo.bufferSize;
 
-    if (uvr_vk_buffer_copy(&bufferCopyInfo) == -1)
+    // Copy contents from CPU visible buffer over to GPU visible vertex buffer
+    struct uvr_vk_copy_info bufferCopyInfo;
+    bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER;
+    bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
+    bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
+    bufferCopyInfo.srcResource = app->vkbuffers[cpuVisibleBuffer].vkBuffer;
+    bufferCopyInfo.dstResource = app->vkbuffers[gpuVisibleBuffer].vkBuffer;
+    bufferCopyInfo.bufferCopyInfo = &copyRegion;
+    bufferCopyInfo.bufferImageCopyInfo = NULL;
+    bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    if (uvr_vk_copy(&bufferCopyInfo) == -1)
       return -1;
   }
 

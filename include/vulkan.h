@@ -79,14 +79,14 @@ VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk);
 
 
 /*
- * enum uvr_vk_surface_type (Underview Renderer Surface Type)
+ * enum uvr_vk_surface_type (Underview Renderer Vulkan Surface Type)
  *
  * Display server protocol options. ENUM Used by uvr_vk_surface_create
  * to create a VkSurfaceKHR object based upon platform specific information
  */
 typedef enum uvr_vk_surface_type {
-  WAYLAND_CLIENT_SURFACE,
-  XCB_CLIENT_SURFACE,
+  UVR_WAYLAND_CLIENT_SURFACE,
+  UVR_XCB_CLIENT_SURFACE,
 } uvr_vk_surface_type;
 
 
@@ -1074,37 +1074,58 @@ struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrv
 
 
 /*
- * struct uvr_vk_buffer_copy_info (Underview Renderer Vulkan Buffer Copy Information)
+ * enum uvr_vk_copy_info (Underview Renderer Vulkan Copy Type)
+ *
+ * ENUM Used by uvr_vk_copy_info to specify type of source
+ * resource to copy over to a given type of destination resource.
+ */
+typedef enum uvr_vk_copy_type {
+  UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER,
+  UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE,
+  UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER
+} uvr_vk_copy_type;
+
+
+/*
+ * struct uvr_vk_copy_info (Underview Renderer Vulkan Copy Information)
  *
  * members:
- * @commandBuffer - Command buffer used for recording. Best to utilize one already create via
- *                  uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
- * @srcBuffer     - Source buffer containing data.
- * @dstBuffer     - Destination buffer to copy source buffer data to.
- * @bufferSize    - Amount of data to copy over in bytes.
- * @vkQueue       - The physical device queue (graphics or transfer) to submit the copy buffer command to.
+ * @resourceCopyType     - Determines what vkCmdCopyBuffer* function to utilize
+ * @commandBuffer        - Command buffer used for recording. Best to utilize one already create via
+ *                         uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ * @vkQueue              - The physical device queue (graphics or transfer) to submit the copy buffer command to.
+ * @srcResource          - Pointer to source vulkan resource containing raw data. (i.e Vkbuffer, VkImage, etc...)
+ * @dstResource          - Pointer to destination vulkan resource to copy source resource data to.
+ *                         (i.e Vkbuffer, VkImage, etc...)
+ * @bufferCopyInfo       - Specifies the starting memory address of @srcResource to copy @byteSize data from
+ *                         to @dstResource memory address. Memory address is found by specifying an offset.
+ * @bufferImageCopyInfo  - Specifies what portion of the image to update or copy to buffer.
+ * @imageLayout          - Memory layout of the destination VkImage resource
  */
-struct uvr_vk_buffer_copy_info {
-  VkCommandBuffer commandBuffer;
-  VkBuffer        srcBuffer;
-  VkBuffer        dstBuffer;
-  uint32_t        bufferSize;
-  VkQueue         vkQueue;
+struct uvr_vk_copy_info {
+  uvr_vk_copy_type        resourceCopyType;
+  VkCommandBuffer         commandBuffer;
+  VkQueue                 vkQueue;
+  void                    *srcResource;
+  void                    *dstResource;
+  VkBufferCopy            *bufferCopyInfo;      // Only allow 1 for now
+  VkBufferImageCopy       *bufferImageCopyInfo; // Only allow 1 for now
+  VkImageLayout           imageLayout;
 };
 
 
 /*
- * uvr_vk_buffer_copy: Function copies data from one VkBuffer to another. Best utilized when copying
- *                     data from CPU visible buffer over to GPU visible buffer. That way the GPU can
- *                     acquire data (vertex data) more quickly.
+ * uvr_vk_copy: Function copies data from one vulkan resource to another. Best utilized when
+ *              copying data from CPU visible buffer over to GPU visible buffer. That way the
+ *              GPU can acquire data (vertex data) more quickly.
  *
  * args:
- * @uvrvk - pointer to a struct uvr_vk_buffer_copy_info
+ * @uvrvk - pointer to a struct uvr_vk_copy_info
  * return:
  *    on success 0
  *    on failure -1
  */
-int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk);
+int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk);
 
 
 /*

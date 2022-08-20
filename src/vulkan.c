@@ -168,13 +168,13 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
     return VK_NULL_HANDLE;
   }
 
-  if (uvrvk->sType != WAYLAND_CLIENT_SURFACE && uvrvk->sType != XCB_CLIENT_SURFACE) {
+  if (uvrvk->sType != UVR_WAYLAND_CLIENT_SURFACE && uvrvk->sType != UVR_XCB_CLIENT_SURFACE) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_surface_create: Must specify correct enum uvrvk_surface_type");
     return VK_NULL_HANDLE;
   }
 
 #ifdef INCLUDE_WAYLAND
-  if (uvrvk->sType == WAYLAND_CLIENT_SURFACE) {
+  if (uvrvk->sType == UVR_WAYLAND_CLIENT_SURFACE) {
     VkWaylandSurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     create_info.pNext = NULL;
@@ -191,7 +191,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
 #endif
 
 #ifdef INCLUDE_XCB
-  if (uvrvk->sType == XCB_CLIENT_SURFACE) {
+  if (uvrvk->sType == UVR_XCB_CLIENT_SURFACE) {
     VkXcbSurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     create_info.pNext = NULL;
@@ -1084,7 +1084,7 @@ exit_vk_buffer:
 }
 
 
-int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk) {
+int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk) {
   struct uvr_vk_command_buffer_handle command_buffer_handle;
   command_buffer_handle.commandBuffer = uvrvk->commandBuffer;
 
@@ -1098,11 +1098,26 @@ int uvr_vk_buffer_copy(struct uvr_vk_buffer_copy_info *uvrvk) {
 
   VkCommandBuffer cmdBuffer = command_buffer_handle.commandBuffer;
 
-  VkBufferCopy copy_region;
-  copy_region.srcOffset = 0;
-  copy_region.dstOffset = 0;
-  copy_region.size = uvrvk->bufferSize;
-  vkCmdCopyBuffer(cmdBuffer, uvrvk->srcBuffer, uvrvk->dstBuffer, 1, &copy_region);
+  switch (uvrvk->resourceCopyType) {
+    case UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER:
+      {
+        vkCmdCopyBuffer(cmdBuffer, (VkBuffer) uvrvk->srcResource, (VkBuffer) uvrvk->dstResource, 1, uvrvk->bufferCopyInfo);
+        break;
+      }
+    case UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE:
+      {
+        vkCmdCopyBufferToImage(cmdBuffer, (VkBuffer) uvrvk->srcResource, (VkImage) uvrvk->dstResource, uvrvk->imageLayout, 1, uvrvk->bufferImageCopyInfo);
+        break;
+      }
+    case UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER:
+    {
+      vkCmdCopyImageToBuffer(cmdBuffer, (VkImage) uvrvk->srcResource, uvrvk->imageLayout, (VkBuffer) uvrvk->dstResource,  1, uvrvk->bufferImageCopyInfo);
+      break;
+    }
+    default:
+      uvr_utils_log(UVR_DANGER, "[x] uvr_vk_buffer_copy: Must pass a valid uvr_vk_buffer_copy_type value");
+      return -1;
+  }
 
   if (uvr_vk_command_buffer_record_end(&command_buffer_record_info) == -1)
     return -1;
