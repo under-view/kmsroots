@@ -1129,6 +1129,45 @@ int uvr_vk_copy(struct uvr_vk_copy_info *uvrvk);
 
 
 /*
+ * struct uvr_vk_resource_pipeline_barrier_info (Underview Renderer Vulkan Resource Pipeline Barrier Information)
+ *
+ * members:
+ * @commandBuffer       - Command buffer used for recording. Best to utilize one already create via
+ *                        uvr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ * @vkQueue             - The physical device queue (graphics or transfer) to submit the pipeline barrier command to.
+ * @srcPipelineStage    - Specifies in which pipeline stage operations occur before the barrier.
+ * @dstPipelineStage    - Specifies in which pipeline stage operations will wait on the barrier.
+ * @VkDependencyFlags   - Defines types of dependencies
+ * @memoryBarrier       - specifying pipeline barrier for vulkan memory
+ * @bufferMemoryBarrier - Specifies pipeline barrier for vulkan buffer resource
+ * @imageMemoryBarrier  - Specifies pipeline barrier for vulkan image resource
+ */
+struct uvr_vk_resource_pipeline_barrier_info {
+  VkCommandBuffer                       commandBuffer;
+  VkQueue                               vkQueue;
+  VkPipelineStageFlags                  srcPipelineStage;
+  VkPipelineStageFlags                  dstPipelineStage;
+  VkDependencyFlags                     dependencyFlags;
+  VkMemoryBarrier                       *memoryBarrier;
+  VkBufferMemoryBarrier                 *bufferMemoryBarrier;
+  VkImageMemoryBarrier                  *imageMemoryBarrier;
+};
+
+
+/*
+ * uvr_vk_resource_pipeline_barrier: Function is used to synchronize access to vulkan resources. Basically
+ *                                   ensuring that a write to a resources finishes before reading from it.
+ *
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_resource_pipeline_barrier_info
+ * return:
+ *    on success 0
+ *    on failure -1
+ */
+int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk);
+
+
+/*
  * struct uvr_vk_descriptor_set_layout (Underview Renderer Vulkan Descriptor Set Layout)
  *
  * members:
