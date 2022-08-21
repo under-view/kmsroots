@@ -775,15 +775,21 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app) {
   if (!app->vkdesclayout.descriptorSetLayout)
     return -1;
 
+  /*
+   * Per my understanding this is just so the VkDescriptorPool knows what to preallocate. No descriptor is
+   * assigned to a set when the pool is created. Given an array of descriptor set layouts the actual assignment
+   * of descriptor to descriptor set happens in the vkAllocateDescriptorSets function.
+   */
   VkDescriptorPoolSize descriptorPoolSetsInfo;
-  descriptorPoolSetsInfo.type = descSetLayoutBinding.descriptorType;             // Each set must only contain the same type of descriptors
-  descriptorPoolSetsInfo.descriptorCount = descSetLayoutBinding.descriptorCount; // Number of descriptors in a set
+  descriptorPoolSetsInfo.type = descSetLayoutBinding.descriptorType;
+  descriptorPoolSetsInfo.descriptorCount = descSetLayoutBinding.descriptorCount;
 
   struct uvr_vk_descriptor_set_create_info descriptorSetsCreateInfo;
   descriptorSetsCreateInfo.vkDevice = app->lgdev.vkDevice;
-  descriptorSetsCreateInfo.descriptorPoolSetsInfo = &descriptorPoolSetsInfo;
-  descriptorSetsCreateInfo.descriptorPoolSetsInfoCount = 1;
+  descriptorSetsCreateInfo.descriptorPoolInfos = &descriptorPoolSetsInfo;
+  descriptorSetsCreateInfo.descriptorPoolInfoCount = 1;
   descriptorSetsCreateInfo.descriptorSetLayouts = &app->vkdesclayout.descriptorSetLayout;
+  descriptorSetsCreateInfo.descriptorSetLayoutCount = 1;
   descriptorSetsCreateInfo.descriptorPoolCreateflags = 0;
 
   app->vkdescset = uvr_vk_descriptor_set_create(&descriptorSetsCreateInfo);

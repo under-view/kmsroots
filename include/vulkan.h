@@ -1160,21 +1160,25 @@ struct uvr_vk_descriptor_set {
  * struct uvr_vk_descriptor_set_create_info (Underview Renderer Vulkan Descriptor Set Create Information)
  *
  * members:
- * @vkDevice                    - Must pass a valid VkDevice handle (Logical Device)
- * @descriptorPoolSetsInfo      - Must pass a pointer to an array of descriptor sets information. With each element
- *                                information corresponding to number of descriptors in a set the and the type of descriptor
- *                                in that set. Each set can only contain 1 type of descriptor with multiple descriptors
- *                                being of that type.
- * @descriptorPoolSetsInfoCount - Number of descriptor sets in pool or array size of @descriptorPoolSetsInfo
- * @descriptorSetLayouts        - Pointer to an array of VkDescriptorSetLayout. Each set must contain it's own layout.
- *                                This variable must be of same size as @descriptorPoolSetsInfo
- * @descriptorPoolCreateflags   - Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
+ * @vkDevice                  - Must pass a valid VkDevice handle (Logical Device)
+ * @descriptorPoolInfos       - Must pass a pointer to an array of descriptor sets information. With each elements information corresponding
+ *                              to number of descriptors a given pool needs to allocate the and type of descriptors in the pool. Per my
+ *                              understanding this is just so the VkDescriptorPool knows what to preallocate. No descriptor is assigned
+ *                              to a set when the pool is created. Given an array of descriptor set layouts the actual assignment of descriptor
+ *                              to descriptor set happens in the vkAllocateDescriptorSets function.
+ * @descriptorPoolInfoCount   - Number of descriptor sets in pool or array size of @descriptorPoolSetsInfo
+ * @descriptorSetLayouts      - Pointer to an array of VkDescriptorSetLayout. Each set must contain it's own layout.
+ *                              This variable must be of same size as @descriptorPoolSetsInfo
+ * @descriptorSetLayoutCount  - Array size of @descriptorSetLayouts corresponding to the actual number of descriptor
+ *                              sets in the pool.
+ * @descriptorPoolCreateflags - Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
  */
 struct uvr_vk_descriptor_set_create_info {
   VkDevice                    vkDevice;
-  VkDescriptorPoolSize        *descriptorPoolSetsInfo;
-  uint32_t                    descriptorPoolSetsInfoCount;
+  VkDescriptorPoolSize        *descriptorPoolInfos;
+  uint32_t                    descriptorPoolInfoCount;
   VkDescriptorSetLayout       *descriptorSetLayouts;
+  uint32_t                    descriptorSetLayoutCount;
   VkDescriptorPoolCreateFlags descriptorPoolCreateflags;
 };
 
@@ -1190,7 +1194,7 @@ struct uvr_vk_descriptor_set_create_info {
  *                               [--------------------------------------------------------------------------------------------]
  *                                   descriptor set 1   |   descriptor set 2   |   descriptor set 3   |  descriptor set 4
  *                               [---------------------][---------------------][---------------------][-----------------------]
- *                   descriptor: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][   1       |     2     ]
+ *                   descriptor: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][     1     |     2     ]
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_descriptor_set_create_info

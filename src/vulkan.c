@@ -1115,13 +1115,19 @@ struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descript
   VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
   VkDescriptorSet *descriptorsets = VK_NULL_HANDLE;
 
+  /*
+   * Per my understanding allocate VkDescriptorPool given a certain amount of information. Like the amount of sets,
+   * the layout for a given set, and descriptors. No descriptor is assigned to a set when the pool is created.
+   * Given a descriptor set layout the actual assignment of descriptor to descriptor set happens in the
+   * vkAllocateDescriptorSets function.
+   */
   VkDescriptorPoolCreateInfo desc_pool_create_info;
   desc_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   desc_pool_create_info.pNext = NULL;
   desc_pool_create_info.flags = uvrvk->descriptorPoolCreateflags;
-  desc_pool_create_info.maxSets = uvrvk->descriptorPoolSetsInfoCount;
-  desc_pool_create_info.poolSizeCount = uvrvk->descriptorPoolSetsInfoCount;
-  desc_pool_create_info.pPoolSizes = uvrvk->descriptorPoolSetsInfo;
+  desc_pool_create_info.maxSets = uvrvk->descriptorSetLayoutCount;
+  desc_pool_create_info.poolSizeCount = uvrvk->descriptorPoolInfoCount;
+  desc_pool_create_info.pPoolSizes = uvrvk->descriptorPoolInfos;
 
   res = vkCreateDescriptorPool(uvrvk->vkDevice, &desc_pool_create_info, VK_NULL_HANDLE, &descriptorPool);
   if (res) {
@@ -1129,13 +1135,13 @@ struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descript
     goto exit_vk_descriptor_set;
   }
 
-  descriptorsets = alloca(uvrvk->descriptorPoolSetsInfoCount * sizeof(VkDescriptorSet));
+  descriptorsets = alloca(uvrvk->descriptorSetLayoutCount * sizeof(VkDescriptorSet));
 
   VkDescriptorSetAllocateInfo desc_set_alloc_info;
   desc_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   desc_set_alloc_info.pNext = NULL;
   desc_set_alloc_info.descriptorPool = descriptorPool;
-  desc_set_alloc_info.descriptorSetCount = uvrvk->descriptorPoolSetsInfoCount;
+  desc_set_alloc_info.descriptorSetCount = uvrvk->descriptorSetLayoutCount;
   desc_set_alloc_info.pSetLayouts = uvrvk->descriptorSetLayouts;
 
   res = vkAllocateDescriptorSets(uvrvk->vkDevice, &desc_set_alloc_info, descriptorsets);
@@ -1144,18 +1150,18 @@ struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descript
     goto exit_vk_descriptor_set_destroy_pool;
   }
 
-  descriptorSets = calloc(uvrvk->descriptorPoolSetsInfoCount, sizeof(struct uvr_vk_descriptor_set_handle));
+  descriptorSets = calloc(uvrvk->descriptorSetLayoutCount, sizeof(struct uvr_vk_descriptor_set_handle));
   if (!descriptorSets) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto exit_vk_descriptor_set_destroy_pool;
   }
 
-  for (uint32_t i = 0; i < uvrvk->descriptorPoolSetsInfoCount; i++) {
+  for (uint32_t i = 0; i < uvrvk->descriptorSetLayoutCount; i++) {
     descriptorSets[i].descriptorSet = descriptorsets[i];
     uvr_utils_log(UVR_WARNING, "uvr_vk_descriptor_set_create: VkDescriptorSet successfully created retval(%p)", descriptorSets[i].descriptorSet);
   }
 
-  return (struct uvr_vk_descriptor_set) { .vkDevice = uvrvk->vkDevice, .descriptorPool = descriptorPool, .descriptorSets = descriptorSets, .descriptorSetsCount = uvrvk->descriptorPoolSetsInfoCount };
+  return (struct uvr_vk_descriptor_set) { .vkDevice = uvrvk->vkDevice, .descriptorPool = descriptorPool, .descriptorSets = descriptorSets, .descriptorSetsCount = uvrvk->descriptorSetLayoutCount };
 
 exit_vk_descriptor_set_destroy_pool:
   if (descriptorPool)
