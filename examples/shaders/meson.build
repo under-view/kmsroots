@@ -1,6 +1,7 @@
 shaders = [
-  'triangle-shader.vert', 'triangle-shader.frag',
-  'spin-rectangle-shader.vert', 'spin-rectangle-shader.frag'
+  'triangle-shader.vert'        ,  'triangle-shader.frag'        ,
+  'spin-rectangle-shader.vert'  ,  'spin-rectangle-shader.frag'  ,
+  'texture-mapping-shader.vert' ,  'texture-mapping-shader.frag'
 ]
 
 foreach shader : shaders
@@ -23,5 +24,7 @@ pargs += [
   '-DTRIANGLE_VERTEX_SHADER_SPIRV='           + '"@0@'.format(meson.current_build_dir()) + '/triangle-shader-vert.spv"',
   '-DTRIANGLE_FRAGMENT_SHADER_SPIRV='         + '"@0@'.format(meson.current_build_dir()) + '/triangle-shader-frag.spv"',
   '-DTRIANGLE_UNIFORM_VERTEX_SHADER_SPIRV='   + '"@0@'.format(meson.current_build_dir()) + '/spin-rectangle-shader-vert.spv"',
-  '-DTRIANGLE_UNIFORM_FRAGMENT_SHADER_SPIRV=' + '"@0@'.format(meson.current_build_dir()) + '/spin-rectangle-shader-frag.spv"'
+  '-DTRIANGLE_UNIFORM_FRAGMENT_SHADER_SPIRV=' + '"@0@'.format(meson.current_build_dir()) + '/spin-rectangle-shader-frag.spv"',
+  '-DTEXTURE_MAPPING_VERTEX_SHADER_SPIRV='    + '"@0@'.format(meson.current_build_dir()) + '/texture-mapping-shader-vert.spv"',
+  '-DTEXTURE_MAPPING_FRAGMENT_SHADER_SPIRV='  + '"@0@'.format(meson.current_build_dir()) + '/texture-mapping-shader-frag.spv"'
 ]
