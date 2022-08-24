@@ -264,7 +264,7 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, 
   uvr_wc_surface_info.uvrWcCore = &wc->wcinterfaces;
   uvr_wc_surface_info.uvrWcBuffer = NULL;
   uvr_wc_surface_info.bufferCount = 0;
-  uvr_wc_surface_info.appName = "WL Vulkan Triangle Example";
+  uvr_wc_surface_info.appName = "Triangle Example App";
   uvr_wc_surface_info.fullscreen = true;
   uvr_wc_surface_info.renderer = render;
   uvr_wc_surface_info.rendererData = &vkwc;
@@ -311,7 +311,7 @@ int create_vk_instance(struct uvr_vk *app) {
   };
 
   struct uvr_vk_instance_create_info vkinst;
-  vkinst.appName = "Example App";
+  vkinst.appName = "Triangle Example App";
   vkinst.engineName = "No Engine";
   vkinst.enabledLayerCount = ARRAY_LEN(validation_layers);
   vkinst.ppEnabledLayerNames = validation_layers;

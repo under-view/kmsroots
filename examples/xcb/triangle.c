@@ -265,7 +265,7 @@ int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc) {
   struct uvr_xcb_window_create_info xcb_win_info;
   xcb_win_info.display = NULL;
   xcb_win_info.screen = NULL;
-  xcb_win_info.appName = "Example App";
+  xcb_win_info.appName = "Triangle Example App";
   xcb_win_info.width = WIDTH;
   xcb_win_info.height = HEIGHT;
   xcb_win_info.fullscreen = false;
@@ -311,7 +311,7 @@ int create_vk_instance(struct uvr_vk *app) {
   };
 
   struct uvr_vk_instance_create_info vkinst;
-  vkinst.appName = "Example App";
+  vkinst.appName = "Triangle Example App";
   vkinst.engineName = "No Engine";
   vkinst.enabledLayerCount = ARRAY_LEN(validation_layers);
   vkinst.ppEnabledLayerNames = validation_layers;

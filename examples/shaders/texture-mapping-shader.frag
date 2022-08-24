@@ -9,5 +9,5 @@ layout(location = 0) out vec4 outColor;
 layout(set = 0, binding = 1) uniform sampler2D outTexSampler;
 
 void main() {
-  outColor = texture(outTexSampler, inTexCoord);
+  outColor = vec4(inColor * texture(outTexSampler, inTexCoord).rgb, 1.0);
 }
