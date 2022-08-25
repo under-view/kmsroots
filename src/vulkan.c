@@ -312,13 +312,6 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
 }
 
 
-VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev) {
-  VkPhysicalDeviceFeatures features;
-  vkGetPhysicalDeviceFeatures(phdev, &features);
-  return features;
-}
-
-
 struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk) {
   uint32_t queue_count = 0, flagcnt = 0;
   VkQueueFamilyProperties *queue_families = NULL;
@@ -442,77 +435,6 @@ err_vk_lgdev_free_pQueueCreateInfo:
   free(pQueueCreateInfo);
 err_vk_lgdev_create:
   return (struct uvr_vk_lgdev) { .vkDevice = VK_NULL_HANDLE, .queueCount = -1, .queues = NULL };
-}
-
-
-VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
-  VkSurfaceCapabilitiesKHR cap;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phdev, surface, &cap);
-  return cap;
-}
-
-
-struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
-  VkResult res = VK_RESULT_MAX_ENUM;
-  VkSurfaceFormatKHR *formats = NULL;
-  uint32_t fcount = 0;
-
-  res = vkGetPhysicalDeviceSurfaceFormatsKHR(phdev, surface, &fcount, NULL);
-  if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfaceFormatsKHR: %s", vkres_msg(res));
-    goto exit_vk_surface_formats;
-  }
-
-  formats = (VkSurfaceFormatKHR *) calloc(fcount, sizeof(VkSurfaceFormatKHR));
-  if (!formats) {
-    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto exit_vk_surface_formats;
-  }
-
-  res = vkGetPhysicalDeviceSurfaceFormatsKHR(phdev, surface, &fcount, formats);
-  if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfaceFormatsKHR: %s", vkres_msg(res));
-    goto exit_vk_surface_formats_free;
-  }
-
-  return (struct uvr_vk_surface_format) { .surfaceFormatCount = fcount, .surfaceFormats = formats };
-
-exit_vk_surface_formats_free:
-  free(formats);
-exit_vk_surface_formats:
-  return (struct uvr_vk_surface_format) { .surfaceFormatCount = 0, .surfaceFormats = NULL };
-}
-
-
-struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
-  VkResult res = VK_RESULT_MAX_ENUM;
-  VkPresentModeKHR *modes = NULL;
-  uint32_t mcount = 0;
-
-  res = vkGetPhysicalDeviceSurfacePresentModesKHR(phdev, surface, &mcount, NULL);
-  if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfacePresentModesKHR: %s", vkres_msg(res));
-    goto exit_vk_surface_present_modes;
-  }
-
-  modes = (VkPresentModeKHR *) calloc(mcount, sizeof(VkPresentModeKHR));
-  if (!modes) {
-    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto exit_vk_surface_present_modes;
-  }
-
-  res = vkGetPhysicalDeviceSurfacePresentModesKHR(phdev, surface, &mcount, modes);
-  if (res) {
-    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfacePresentModesKHR: %s", vkres_msg(res));
-    goto exit_vk_surface_present_modes_free;
-  }
-
-  return (struct uvr_vk_surface_present_mode) { .presentModeCount = mcount, .presentModes = modes };
-
-exit_vk_surface_present_modes_free:
-  free(modes);
-exit_vk_surface_present_modes:
-  return (struct uvr_vk_surface_present_mode) { .presentModeCount = 0, .presentModes = NULL };
 }
 
 
@@ -1304,6 +1226,91 @@ int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_inf
   vkQueueWaitIdle(uvrvk->vkQueue);
 
   return 0;
+}
+
+
+VkPhysicalDeviceProperties uvr_vk_get_phdev_properties(VkPhysicalDevice phdev) {
+  VkPhysicalDeviceProperties properties;
+  vkGetPhysicalDeviceProperties(phdev, &properties);
+  return properties;
+}
+
+
+VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev) {
+  VkPhysicalDeviceFeatures features;
+  vkGetPhysicalDeviceFeatures(phdev, &features);
+  return features;
+}
+
+
+VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+  VkSurfaceCapabilitiesKHR cap;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phdev, surface, &cap);
+  return cap;
+}
+
+
+struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkSurfaceFormatKHR *formats = NULL;
+  uint32_t fcount = 0;
+
+  res = vkGetPhysicalDeviceSurfaceFormatsKHR(phdev, surface, &fcount, NULL);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfaceFormatsKHR: %s", vkres_msg(res));
+    goto exit_vk_surface_formats;
+  }
+
+  formats = (VkSurfaceFormatKHR *) calloc(fcount, sizeof(VkSurfaceFormatKHR));
+  if (!formats) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_surface_formats;
+  }
+
+  res = vkGetPhysicalDeviceSurfaceFormatsKHR(phdev, surface, &fcount, formats);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfaceFormatsKHR: %s", vkres_msg(res));
+    goto exit_vk_surface_formats_free;
+  }
+
+  return (struct uvr_vk_surface_format) { .surfaceFormatCount = fcount, .surfaceFormats = formats };
+
+exit_vk_surface_formats_free:
+  free(formats);
+exit_vk_surface_formats:
+  return (struct uvr_vk_surface_format) { .surfaceFormatCount = 0, .surfaceFormats = NULL };
+}
+
+
+struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface) {
+  VkResult res = VK_RESULT_MAX_ENUM;
+  VkPresentModeKHR *modes = NULL;
+  uint32_t mcount = 0;
+
+  res = vkGetPhysicalDeviceSurfacePresentModesKHR(phdev, surface, &mcount, NULL);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfacePresentModesKHR: %s", vkres_msg(res));
+    goto exit_vk_surface_present_modes;
+  }
+
+  modes = (VkPresentModeKHR *) calloc(mcount, sizeof(VkPresentModeKHR));
+  if (!modes) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_vk_surface_present_modes;
+  }
+
+  res = vkGetPhysicalDeviceSurfacePresentModesKHR(phdev, surface, &mcount, modes);
+  if (res) {
+    uvr_utils_log(UVR_DANGER, "[x] vkGetPhysicalDeviceSurfacePresentModesKHR: %s", vkres_msg(res));
+    goto exit_vk_surface_present_modes_free;
+  }
+
+  return (struct uvr_vk_surface_present_mode) { .presentModeCount = mcount, .presentModes = modes };
+
+exit_vk_surface_present_modes_free:
+  free(modes);
+exit_vk_surface_present_modes:
+  return (struct uvr_vk_surface_present_mode) { .presentModeCount = 0, .presentModes = NULL };
 }
 
 

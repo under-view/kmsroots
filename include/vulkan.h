@@ -157,17 +157,6 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk);
 
 
 /*
- * uvr_vk_get_phdev_features: Populates the VkPhysicalDeviceFeatures struct with features supported by a given VkPhysicalDevice
- *
- * args:
- * @phdev - Must pass a valid VkPhysicalDevice handle
- * return:
- *    populated VkPhysicalDeviceFeatures struct
- */
-VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
-
-
-/*
  * struct uvr_vk_queue (Underview Renderer Vulkan Queue)
  *
  * members:
@@ -277,75 +266,6 @@ struct uvr_vk_lgdev_create_info {
  *    on failure struct uvr_vk_lgdev { with members nulled, int's set to -1 }
  */
 struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
-
-
-/*
- * uvr_vk_get_surface_capabilities: Populates the VkSurfaceCapabilitiesKHR struct with supported GPU device surface capabilities.
- *                                  Queries what a physical device is capable of supporting for any given surface.
- *
- * args:
- * @phdev   - Must pass a valid VkPhysicalDevice handle
- * @surface - Must pass a valid VkSurfaceKHR handle
- * return:
- *    populated VkSurfaceCapabilitiesKHR
- */
-VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface);
-
-
-/*
- * struct uvr_vk_surface_format (Underview Renderer Vulkan Surface Format)
- *
- * members:
- * @surfaceFormatCount - Amount of color formats a given surface supports
- * @surfaceFormats     - Pointer to a array of VkSurfaceFormatKHR which stores color space and pixel format
- */
-struct uvr_vk_surface_format {
-  uint32_t           surfaceFormatCount;
-  VkSurfaceFormatKHR *surfaceFormats;
-};
-
-
-/*
- * uvr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given physical device
- *                             supports for any given surface. Application must free struct uvr_vk_surface_format { member: surfaceFormats }
- *
- * args:
- * @phdev   - Must pass a valid VkPhysicalDevice handle
- * @surface - Must pass a valid VkSurfaceKHR handle
- * return:
- *    on success struct uvr_vk_surface_format
- *    on failure struct uvr_vk_surface_format { with member nulled }
- */
-struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
-
-
-/*
- * struct uvr_vk_surface_present_mode (Underview Renderer Vulkan Surface Present Mode)
- *
- * members:
- * @presentModeCount - Amount of present modes a given surface supports
- * @presentModes     - Pointer to an array of VkPresentModeKHR which stores values of potential surface present modes
- */
-struct uvr_vk_surface_present_mode {
-  uint32_t         presentModeCount;
-  VkPresentModeKHR *presentModes;
-};
-
-
-/*
- * uvr_vk_get_surface_present_modes: Creates block of memory with all supported presentation modes for a surface
- *                                   Application must free struct uvr_vk_surface_present_mode { member: presentModes }
- *                                   More information on presentation modes can be found here:
- *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
- *
- * args:
- * @phdev   - Must pass a valid VkPhysicalDevice handle
- * @surface - Must pass a valid VkSurfaceKHR handle
- * return:
- *    on success struct uvr_vk_surface_present_mode
- *    on failure struct uvr_vk_surface_present_mode { with member nulled }
- */
-struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
 
 
 /*
@@ -1368,6 +1288,97 @@ struct uvr_vk_resource_pipeline_barrier_info {
  *    on failure -1
  */
 int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk);
+
+
+/*
+ * uvr_vk_get_phdev_properties: Populates the VkPhysicalDeviceProperties struct with properties and limits of a given VkPhysicalDevice
+ *
+ * args:
+ * @phdev - Must pass a valid VkPhysicalDevice handle
+ * return:
+ *    populated VkPhysicalDeviceFeatures struct
+ */
+VkPhysicalDeviceProperties uvr_vk_get_phdev_properties(VkPhysicalDevice phdev)
+
+
+/*
+ * uvr_vk_get_phdev_features: Populates the VkPhysicalDeviceFeatures struct with features supported by a given VkPhysicalDevice
+ *
+ * args:
+ * @phdev - Must pass a valid VkPhysicalDevice handle
+ * return:
+ *    populated VkPhysicalDeviceFeatures struct
+ */
+VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
+
+
+/*
+ * uvr_vk_get_surface_capabilities: Populates the VkSurfaceCapabilitiesKHR struct with supported GPU device surface capabilities.
+ *                                  Queries what a physical device is capable of supporting for any given surface.
+ *
+ * args:
+ * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @surface - Must pass a valid VkSurfaceKHR handle
+ * return:
+ *    populated VkSurfaceCapabilitiesKHR
+ */
+VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
+ * struct uvr_vk_surface_format (Underview Renderer Vulkan Surface Format)
+ *
+ * members:
+ * @surfaceFormatCount - Amount of color formats a given surface supports
+ * @surfaceFormats     - Pointer to a array of VkSurfaceFormatKHR which stores color space and pixel format
+ */
+struct uvr_vk_surface_format {
+  uint32_t           surfaceFormatCount;
+  VkSurfaceFormatKHR *surfaceFormats;
+};
+
+
+/*
+ * uvr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given physical device
+ *                             supports for any given surface. Application must free struct uvr_vk_surface_format { member: surfaceFormats }
+ *
+ * args:
+ * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @surface - Must pass a valid VkSurfaceKHR handle
+ * return:
+ *    on success struct uvr_vk_surface_format
+ *    on failure struct uvr_vk_surface_format { with member nulled }
+ */
+struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
+ * struct uvr_vk_surface_present_mode (Underview Renderer Vulkan Surface Present Mode)
+ *
+ * members:
+ * @presentModeCount - Amount of present modes a given surface supports
+ * @presentModes     - Pointer to an array of VkPresentModeKHR which stores values of potential surface present modes
+ */
+struct uvr_vk_surface_present_mode {
+  uint32_t         presentModeCount;
+  VkPresentModeKHR *presentModes;
+};
+
+
+/*
+ * uvr_vk_get_surface_present_modes: Creates block of memory with all supported presentation modes for a surface
+ *                                   Application must free struct uvr_vk_surface_present_mode { member: presentModes }
+ *                                   More information on presentation modes can be found here:
+ *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
+ *
+ * args:
+ * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @surface - Must pass a valid VkSurfaceKHR handle
+ * return:
+ *    on success struct uvr_vk_surface_present_mode
+ *    on failure struct uvr_vk_surface_present_mode { with member nulled }
+ */
+struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
 
 
 /*
