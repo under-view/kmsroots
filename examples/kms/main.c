@@ -5,7 +5,7 @@
 
 struct uvr_vk {
   VkInstance instance;
-  VkPhysicalDevice phdev;
+  struct uvr_vk_phdev phdev;
   struct uvr_vk_lgdev lgdev;
   struct uvr_vk_queue graphics_queue;
 };
@@ -187,23 +187,26 @@ int create_vk_device(struct uvr_vk *app, struct uvr_kms *kms) {
   vk_phdev_info.kmsFd = kms->kmsdev.kmsFd;
 
   app->phdev = uvr_vk_phdev_create(&vk_phdev_info);
-  if (!app->phdev)
+  if (!app->phdev.vkPhdev)
     return -1;
 
   struct uvr_vk_queue_create_info vk_queue_info;
-  vk_queue_info.vkPhdev = app->phdev;
+  vk_queue_info.vkPhdev = app->phdev.vkPhdev;
   vk_queue_info.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
   app->graphics_queue = uvr_vk_queue_create(&vk_queue_info);
   if (app->graphics_queue.familyIndex == -1)
     return -1;
 
-  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app->phdev);
-
+  /*
+   * Can Hardset features prior
+   * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+   * app->phdev.vkPhdevFeatures.depthBiasClamp = VK_TRUE;
+   */
   struct uvr_vk_lgdev_create_info vk_lgdev_info;
   vk_lgdev_info.vkInst = app->instance;
-  vk_lgdev_info.vkPhdev = app->phdev;
-  vk_lgdev_info.pEnabledFeatures = &phdevfeats;
+  vk_lgdev_info.vkPhdev = app->phdev.vkPhdev;
+  vk_lgdev_info.pEnabledFeatures = &app->phdev.vkPhdevFeatures;
   vk_lgdev_info.enabledExtensionCount = ARRAY_LEN(device_extensions);
   vk_lgdev_info.ppEnabledExtensionNames = device_extensions;
   vk_lgdev_info.queueCount = 1;

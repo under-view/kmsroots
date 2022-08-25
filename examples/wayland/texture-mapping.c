@@ -18,7 +18,7 @@
 
 struct uvr_vk {
   VkInstance instance;
-  VkPhysicalDevice phdev;
+  struct uvr_vk_phdev phdev;
   struct uvr_vk_lgdev lgdev;
   struct uvr_vk_queue graphics_queue;
 
@@ -404,24 +404,28 @@ int create_vk_device(struct uvr_vk *app) {
 #endif
 
   app->phdev = uvr_vk_phdev_create(&vkphdev);
-  if (!app->phdev)
+  if (!app->phdev.vkPhdev)
     return -1;
 
   struct uvr_vk_queue_create_info vkqueueinfo;
-  vkqueueinfo.vkPhdev = app->phdev;
+  vkqueueinfo.vkPhdev = app->phdev.vkPhdev;
   vkqueueinfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
   app->graphics_queue = uvr_vk_queue_create(&vkqueueinfo);
   if (app->graphics_queue.familyIndex == -1)
     return -1;
 
-  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app->phdev);
-  phdevfeats.samplerAnisotropy = VK_TRUE;
+  /*
+   * Can Hardset features prior
+   * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+   * app->phdev.vkPhdevFeatures.depthBiasClamp = VK_TRUE;
+   */
+  app->phdev.vkPhdevFeatures.samplerAnisotropy = VK_TRUE;
 
   struct uvr_vk_lgdev_create_info vklgdevinfo;
   vklgdevinfo.vkInst = app->instance;
-  vklgdevinfo.vkPhdev = app->phdev;
-  vklgdevinfo.pEnabledFeatures = &phdevfeats;
+  vklgdevinfo.vkPhdev = app->phdev.vkPhdev;
+  vklgdevinfo.pEnabledFeatures = &app->phdev.vkPhdevFeatures;
   vklgdevinfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
   vklgdevinfo.ppEnabledExtensionNames = device_extensions;
   vklgdevinfo.queueCount = 1;
@@ -439,9 +443,9 @@ int create_vk_device(struct uvr_vk *app) {
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D) {
   VkPresentModeKHR presmode;
 
-  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app->phdev, app->surface);
-  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app->phdev, app->surface);
-  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev, app->surface);
+  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app->phdev.vkPhdev, app->surface);
+  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app->phdev.vkPhdev, app->surface);
+  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev.vkPhdev, app->surface);
 
   /* Choose surface format based */
   for (uint32_t s = 0; s < sformats.surfaceFormatCount; s++) {
@@ -634,7 +638,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   // Create CPU visible vertex + index buffer
   struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
   vkVertexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkVertexBufferCreateInfo.vkPhdev = app->phdev;
+  vkVertexBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
   vkVertexBufferCreateInfo.bufferFlags = 0;
   vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(vertices_pos_color);
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
@@ -666,7 +670,7 @@ int create_vk_buffers(struct uvr_vk *app) {
     // Create GPU visible vertex buffer
     struct uvr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
     vkVertexBufferGPUCreateInfo.vkDevice = app->lgdev.vkDevice;
-    vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev;
+    vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev.vkPhdev;
     vkVertexBufferGPUCreateInfo.bufferFlags = 0;
     vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
     vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -705,7 +709,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   // Create CPU visible uniform buffers
   struct uvr_vk_buffer_create_info vkUniformBufferCreateInfo;
   vkUniformBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkUniformBufferCreateInfo.vkPhdev = app->phdev;
+  vkUniformBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
   vkUniformBufferCreateInfo.bufferFlags = 0;
   vkUniformBufferCreateInfo.bufferSize = sizeof(struct uvr_uniform_buffer) * 5; // 5 = Assumed amount available images in swapchain
   vkUniformBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -736,7 +740,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   // Create CPU visible buffer to store pixel data
   struct uvr_vk_buffer_create_info vkTextureBufferCreateInfo;
   vkTextureBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkTextureBufferCreateInfo.vkPhdev = app->phdev;
+  vkTextureBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
   vkTextureBufferCreateInfo.bufferFlags = 0;
   vkTextureBufferCreateInfo.bufferSize = imageSize;
   vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -773,7 +777,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
   vkimage_create_info.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
   vkimage_create_info.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
-  vkimage_create_info.vkPhdev = app->phdev;
+  vkimage_create_info.vkPhdev = app->phdev.vkPhdev;
   vkimage_create_info.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   vkimage_create_info.imageflags = 0;
   vkimage_create_info.imageType = VK_IMAGE_TYPE_2D;
@@ -862,9 +866,6 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
 
 int create_vk_image_sampler(struct uvr_vk *app) {
-  VkPhysicalDeviceProperties devProps = {};
-  vkGetPhysicalDeviceProperties(app->phdev, &devProps);
-
   struct uvr_vk_sampler_create_info vkSamplerCreateInfo;
   vkSamplerCreateInfo.vkDevice = app->lgdev.vkDevice;
   vkSamplerCreateInfo.samplerFlags = 0;
@@ -876,7 +877,7 @@ int create_vk_image_sampler(struct uvr_vk *app) {
   vkSamplerCreateInfo.samplerAddressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
   vkSamplerCreateInfo.samplerMipLodBias = 0.0f;
   vkSamplerCreateInfo.samplerAnisotropyEnable = VK_TRUE;
-  vkSamplerCreateInfo.samplerMaxAnisotropy = devProps.limits.maxSamplerAnisotropy;
+  vkSamplerCreateInfo.samplerMaxAnisotropy = app->phdev.vkPhdevProperties.limits.maxSamplerAnisotropy;
   vkSamplerCreateInfo.samplerCompareEnable = VK_FALSE;
   vkSamplerCreateInfo.samplerCompareOp = VK_COMPARE_OP_ALWAYS;
   vkSamplerCreateInfo.samplerMinLod = 0.0f;

@@ -144,16 +144,46 @@ struct uvr_vk_phdev_create_info {
 
 
 /*
- * uvr_vk_phdev_create: Retrieves a VkPhysicalDevice handle if certain characteristics of a physical device are meet
+ * struct uvr_vk_phdev (Underview Renderer Vulkan Physical Device)
+ *
+ * members:
+ * @vkInst               - Must pass a valid VkInstance handle which to find VkPhysicalDevice with
+ * @vkPhdev              - Must pass one of the supported VkPhysicalDeviceType's.
+ *                         https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
+ * @vkPhdevProperties    - Structure specifying physical device properties. Like allocate limits for Image Array Layers
+ *                         or maximum resolution that the device supports.
+ * @vkPhdevFeatures      - Structure describing the features that can be supported by an physical device
+ * @vkPhdevDrmProperties - Structure containing DRM information of a physical device. A VkPhysicalDeviceProperties2 structure
+ *                         is utilzed to populate this member. Member information is then checked by the implementation to see
+ *                         if passed KMS device node file descriptor struct uvr_vk_phdev_create_info { @kmsFd } is equal to the
+ *                         physical device suggested by struct uvr_vk_phdev_create_info { @vkPhdevType }. Contains data stored
+ *                         after associate a DRM file descriptor with a vulkan physical device.
+ * @kmsFd                - Must pass a valid KMS device node file descriptor for which a VkPhysicalDevice will be created.
+ */
+struct uvr_vk_phdev {
+  VkInstance                       vkInst;
+  VkPhysicalDevice                 vkPhdev;
+  VkPhysicalDeviceProperties       vkPhdevProperties;
+  VkPhysicalDeviceFeatures         vkPhdevFeatures;
+#ifdef INCLUDE_KMS
+  int                              kmsFd;
+  VkPhysicalDeviceDrmPropertiesEXT vkPhdevDrmProperties;
+#endif
+};
+
+
+/*
+ * uvr_vk_phdev_create: Retrieves a VkPhysicalDevice handle if certain characteristics of a physical device are meet.
+ *                      Also retrieves a given physical device properties and features to be later used by the application.
  *                      Characteristics include @vkPhdevType and @kmsFd.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_phdev_create_info
  * return:
- *    on success VkPhysicalDevice handle
- *    on failure VK_NULL_HANDLE
+ *    on success struct uvr_vk_phdev
+ *    on failure struct uvr_vk_phdev { with members nulled, int's set to -1 }
  */
-VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk);
+struct uvr_vk_phdev uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk);
 
 
 /*
@@ -1288,28 +1318,6 @@ struct uvr_vk_resource_pipeline_barrier_info {
  *    on failure -1
  */
 int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk);
-
-
-/*
- * uvr_vk_get_phdev_properties: Populates the VkPhysicalDeviceProperties struct with properties and limits of a given VkPhysicalDevice
- *
- * args:
- * @phdev - Must pass a valid VkPhysicalDevice handle
- * return:
- *    populated VkPhysicalDeviceFeatures struct
- */
-VkPhysicalDeviceProperties uvr_vk_get_phdev_properties(VkPhysicalDevice phdev)
-
-
-/*
- * uvr_vk_get_phdev_features: Populates the VkPhysicalDeviceFeatures struct with features supported by a given VkPhysicalDevice
- *
- * args:
- * @phdev - Must pass a valid VkPhysicalDevice handle
- * return:
- *    populated VkPhysicalDeviceFeatures struct
- */
-VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev);
 
 
 /*

@@ -14,7 +14,7 @@
 
 struct uvr_vk {
   VkInstance instance;
-  VkPhysicalDevice phdev;
+  struct uvr_vk_phdev phdev;
   struct uvr_vk_lgdev lgdev;
   struct uvr_vk_queue graphics_queue;
 
@@ -339,23 +339,26 @@ int create_vk_device(struct uvr_vk *app) {
 #endif
 
   app->phdev = uvr_vk_phdev_create(&vkphdev);
-  if (!app->phdev)
+  if (!app->phdev.vkPhdev)
     return -1;
 
   struct uvr_vk_queue_create_info vkqueueinfo;
-  vkqueueinfo.vkPhdev = app->phdev;
+  vkqueueinfo.vkPhdev = app->phdev.vkPhdev;
   vkqueueinfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
   app->graphics_queue = uvr_vk_queue_create(&vkqueueinfo);
   if (app->graphics_queue.familyIndex == -1)
     return -1;
 
-  VkPhysicalDeviceFeatures phdevfeats = uvr_vk_get_phdev_features(app->phdev);
-
+  /*
+   * Can Hardset features prior
+   * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+   * app->phdev.vkPhdevFeatures.depthBiasClamp = VK_TRUE;
+   */
   struct uvr_vk_lgdev_create_info vklgdevinfo;
   vklgdevinfo.vkInst = app->instance;
-  vklgdevinfo.vkPhdev = app->phdev;
-  vklgdevinfo.pEnabledFeatures = &phdevfeats;
+  vklgdevinfo.vkPhdev = app->phdev.vkPhdev;
+  vklgdevinfo.pEnabledFeatures = &app->phdev.vkPhdevFeatures;
   vklgdevinfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
   vklgdevinfo.ppEnabledExtensionNames = device_extensions;
   vklgdevinfo.queueCount = 1;
@@ -373,9 +376,9 @@ int create_vk_device(struct uvr_vk *app) {
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D) {
   VkPresentModeKHR presmode;
 
-  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app->phdev, app->surface);
-  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app->phdev, app->surface);
-  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev, app->surface);
+  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app->phdev.vkPhdev, app->surface);
+  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app->phdev.vkPhdev, app->surface);
+  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev.vkPhdev, app->surface);
 
   /* Choose surface format based */
   for (uint32_t s = 0; s < sformats.surfaceFormatCount; s++) {
@@ -540,7 +543,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   // Create CPU visible vertex buffer
   struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
   vkVertexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkVertexBufferCreateInfo.vkPhdev = app->phdev;
+  vkVertexBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
   vkVertexBufferCreateInfo.bufferFlags = 0;
   vkVertexBufferCreateInfo.bufferSize = sizeof(vertices_pos_color);
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
@@ -564,7 +567,7 @@ int create_vk_buffers(struct uvr_vk *app) {
     // Create GPU visible vertex buffer
     struct uvr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
     vkVertexBufferGPUCreateInfo.vkDevice = app->lgdev.vkDevice;
-    vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev;
+    vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev.vkPhdev;
     vkVertexBufferGPUCreateInfo.bufferFlags = 0;
     vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
     vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;

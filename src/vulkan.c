@@ -215,7 +215,7 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk) {
 }
 
 
-VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
+struct uvr_vk_phdev uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
   VkResult res = VK_RESULT_MAX_ENUM;
   VkPhysicalDevice device = VK_NULL_HANDLE;
   uint32_t device_count = 0;
@@ -224,18 +224,18 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
   if (!uvrvk->vkInst) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_vk_create_phdev: VkInstance not instantiated");
     uvr_utils_log(UVR_DANGER, "[x] Make a call to uvr_vk_create_instance");
-    return VK_NULL_HANDLE;
+    goto exit_error_vk_phdev_create;
   }
 
   res = vkEnumeratePhysicalDevices(uvrvk->vkInst, &device_count, NULL);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
-    return VK_NULL_HANDLE;
+    goto exit_error_vk_phdev_create;
   }
 
   if (device_count == 0) {
     uvr_utils_log(UVR_DANGER, "[x] failed to find GPU with Vulkan support!!!");
-    return VK_NULL_HANDLE;
+    goto exit_error_vk_phdev_create;
   }
 
   devices = (VkPhysicalDevice *) alloca((device_count * sizeof(VkPhysicalDevice)) + 1);
@@ -243,7 +243,7 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
   res = vkEnumeratePhysicalDevices(uvrvk->vkInst, &device_count, devices);
   if (res) {
     uvr_utils_log(UVR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
-    return VK_NULL_HANDLE;
+    goto exit_error_vk_phdev_create;
   }
 
 #ifdef INCLUDE_KMS
@@ -252,39 +252,41 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
   if (uvrvk->kmsFd != -1) {
     if (fstat(uvrvk->kmsFd, &drm_stat) == -1) {
       uvr_utils_log(UVR_DANGER, "[x] fstat('%d'): %s", uvrvk->kmsFd, strerror(errno));
-      return VK_NULL_HANDLE;
+      goto exit_error_vk_phdev_create;
     }
   }
 
-  VkPhysicalDeviceProperties2 devprops2;
-  VkPhysicalDeviceDrmPropertiesEXT drm_props;
-  memset(&devprops2, 0, sizeof(devprops2));
-  memset(&drm_props, 0, sizeof(drm_props));
+  /* Taken from wlroots: https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/vulkan/vulkan.c#L349 */
+  VkPhysicalDeviceProperties2 vkPhdevProperties2;
+  VkPhysicalDeviceDrmPropertiesEXT vkPhdevDrmProperties;
+  memset(&vkPhdevProperties2, 0, sizeof(vkPhdevProperties2));
+  memset(&vkPhdevDrmProperties, 0, sizeof(vkPhdevDrmProperties));
 
-  drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
-  devprops2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+  vkPhdevDrmProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
+  vkPhdevProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 #endif
 
   int enter = 0;
-  VkPhysicalDeviceFeatures devfeats;
-  VkPhysicalDeviceProperties devprops;
+  VkPhysicalDeviceFeatures vkPhdevFeatures;
+  VkPhysicalDeviceProperties vkPhdevProperties;
 
   /*
    * get a physical device that is suitable
    * to do the graphics related task that we need
    */
   for (uint32_t i = 0; i < device_count; i++) {
-    vkGetPhysicalDeviceFeatures(devices[i], &devfeats); /* Query device features */
-    vkGetPhysicalDeviceProperties(devices[i], &devprops); /* Query device properties */
+    vkGetPhysicalDeviceFeatures(devices[i], &vkPhdevFeatures); /* Query device features */
+    vkGetPhysicalDeviceProperties(devices[i], &vkPhdevProperties); /* Query device properties */
 
 #ifdef INCLUDE_KMS
     if (uvrvk->kmsFd) {
-      devprops2.pNext = &drm_props;
-      vkGetPhysicalDeviceProperties2(devices[i], &devprops2);
+      /* Taken from wlroots: https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/vulkan/vulkan.c#L311 */
+      vkPhdevProperties2.pNext = &vkPhdevDrmProperties;
+      vkGetPhysicalDeviceProperties2(devices[i], &vkPhdevProperties2);
 
-      drm_props.pNext = devprops2.pNext;
-      dev_t primary_devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
-      dev_t render_devid = makedev(drm_props.renderMajor, drm_props.renderMinor);
+      vkPhdevDrmProperties.pNext = vkPhdevProperties2.pNext;
+      dev_t primary_devid = makedev(vkPhdevDrmProperties.primaryMajor, vkPhdevDrmProperties.primaryMinor);
+      dev_t render_devid = makedev(vkPhdevDrmProperties.renderMajor, vkPhdevDrmProperties.renderMinor);
 
       /*
        * Enter will be one if condition succeeds
@@ -292,23 +294,43 @@ VkPhysicalDevice uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk) {
        * Need to make sure even if we have a valid DRI device node fd.
        * That the customer choosen device type is the same as the DRI device node.
        */
-      enter |= ((primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev) && devprops.deviceType == uvrvk->vkPhdevType);
+      enter |= ((primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev) && vkPhdevProperties.deviceType == uvrvk->vkPhdevType);
     }
 #endif
 
     /* Enter will be one if condition succeeds */
-    enter |= (devprops.deviceType == uvrvk->vkPhdevType);
+    enter |= (vkPhdevProperties.deviceType == uvrvk->vkPhdevType);
     if (enter) {
       memmove(&device, &devices[i], sizeof(devices[i]));
-      uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s, api version: %u", devprops.deviceName, devprops.apiVersion);
+      uvr_utils_log(UVR_SUCCESS, "Suitable GPU Found: %s, api version: %u", vkPhdevProperties.deviceName, vkPhdevProperties.apiVersion);
       break;
     }
   }
 
-  if (device == VK_NULL_HANDLE)
-    uvr_utils_log(UVR_DANGER, "Suitable GPU not found!");
+  if (device == VK_NULL_HANDLE) {
+    uvr_utils_log(UVR_DANGER, "[x] GPU that meets requirement not found!");
+    goto exit_error_vk_phdev_create;
+  }
 
-  return device;
+  return (struct uvr_vk_phdev) { .vkInst = uvrvk->vkInst, .vkPhdev = device, .vkPhdevProperties = vkPhdevProperties, .vkPhdevFeatures = vkPhdevFeatures,
+#ifdef INCLUDE_KMS
+  .kmsFd = uvrvk->kmsFd, .vkPhdevDrmProperties = vkPhdevDrmProperties
+#endif
+  };
+
+exit_error_vk_phdev_create:
+  memset(&vkPhdevFeatures, 0, sizeof(vkPhdevFeatures));
+  memset(&vkPhdevProperties, 0, sizeof(vkPhdevProperties));
+
+#ifdef INCLUDE_KMS
+  memset(&vkPhdevDrmProperties, 0, sizeof(vkPhdevDrmProperties));
+#endif
+
+  return (struct uvr_vk_phdev) { .vkInst = VK_NULL_HANDLE, .vkPhdev = VK_NULL_HANDLE, .vkPhdevProperties = vkPhdevProperties, .vkPhdevFeatures = vkPhdevFeatures,
+#ifdef INCLUDE_KMS
+  .kmsFd = -1, .vkPhdevDrmProperties = vkPhdevDrmProperties
+#endif
+  };
 }
 
 
@@ -1226,20 +1248,6 @@ int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_inf
   vkQueueWaitIdle(uvrvk->vkQueue);
 
   return 0;
-}
-
-
-VkPhysicalDeviceProperties uvr_vk_get_phdev_properties(VkPhysicalDevice phdev) {
-  VkPhysicalDeviceProperties properties;
-  vkGetPhysicalDeviceProperties(phdev, &properties);
-  return properties;
-}
-
-
-VkPhysicalDeviceFeatures uvr_vk_get_phdev_features(VkPhysicalDevice phdev) {
-  VkPhysicalDeviceFeatures features;
-  vkGetPhysicalDeviceFeatures(phdev, &features);
-  return features;
 }
 
 
