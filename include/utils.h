@@ -37,4 +37,51 @@ const char *_uvr_utils_strip_path(const char *filepath);
  */
 uint64_t uvr_utils_nanosecond();
 
+
+/*
+ * struct uvr_utils_aligned_buffer (Underview Utils Aligned Buffer)
+ *
+ * members:
+ * @bufferAlignment     - Calculated memory buffer alignment value
+ *                        @alignedBufferSize: 192 bytes then @bufferAlignment [ 64 | 64 | 64 ]
+ * @alignedBufferSize   - Amount of bytes in @alignedBufferMemory
+ * @alignedBufferMemory - Pointer to memory aligned range of addresses
+ */
+struct uvr_utils_aligned_buffer {
+  uint32_t bufferAlignment;
+  uint32_t alignedBufferSize;
+  void     *alignedBufferMemory;
+};
+
+
+/*
+ * struct uvr_utils_aligned_buffer_create_info (Underview Utils Aligned Buffer Create information)
+ *
+ * members:
+ * @bytesToAlign      - sizeof of data that will be stored in memory aligned buffer
+ * @bytesToAlignCount - Amount of @bytesToAlign. Used to allocate aligned buffer of size calculated (@bytesToAlign & bitmask @bufferAlignment) * @bytesToAlignCount
+ * @bufferAlignment   - Multiple that is used to determine aligned requirments of a given buffer (block of memory).
+ */
+struct uvr_utils_aligned_buffer_create_info {
+  size_t   bytesToAlign;
+  uint32_t bytesToAlignCount;
+  uint32_t bufferAlignment;
+};
+
+
+/*
+ * uvr_utils_aligned_buffer_create: Function calculates the alignment of @bytesToAlign given that it is a multiple of @bufferAlignment
+ *                                  and allocates an aligned memory buffer than can be used to store data.
+ *                                  By default malloc(3) aligns buffers by 8 bytes function calls aligned_alloc(3) to change aligment value.
+ *                                  Application must call free on struct uvr_utils_aligned_buffer { member: alignedBufferMemory }.
+ *
+ * args:
+ * @uvrutils - pointer to a struct uvr_utils_aligned_buffer_create_info
+ * return:
+ *    on success struct uvr_utils_aligned_buffer
+ *    on failure struct uvr_utils_aligned_buffer { with members nulled }
+ */
+struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils);
+
+
 #endif

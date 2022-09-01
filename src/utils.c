@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -122,4 +124,25 @@ uint64_t uvr_utils_nanosecond(void) {
   clock_gettime(CLOCKID, &spec);
   now = spec.tv_sec * 1.0e9 + spec.tv_nsec;
   return now;
+}
+
+
+struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils) {
+  uint32_t bufferAlignment = 0, alignedBufferSize = 0;
+  void *alignedBufferMemory = NULL;
+
+  int64_t bitMask = ~(uvrutils->bufferAlignment - 1);
+  bufferAlignment = (uvrutils->bytesToAlign + uvrutils->bufferAlignment - 1) & bitMask;
+
+  alignedBufferSize = bufferAlignment * uvrutils->bytesToAlignCount;
+  alignedBufferMemory = aligned_alloc(bufferAlignment, alignedBufferSize);
+  if (!alignedBufferMemory) {
+    uvr_utils_log(UVR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
+    goto exit_utils_aligned_buffer;
+  }
+
+  return (struct uvr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
+
+exit_utils_aligned_buffer:
+  return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
 }
