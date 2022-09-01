@@ -9,13 +9,16 @@ layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 
 layout(set = 0, binding = 0) uniform uniform_buffer {
-  mat4 model;
   mat4 view;
   mat4 proj;
-} ubo;
+} uboViewProjection;
+
+layout(set = 0, binding = 1) uniform uniform_buffer_model {
+  mat4 model;
+} uboModel;
 
 void main() {
-  gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
+  gl_Position = uboViewProjection.proj * uboViewProjection.view * uboModel.model * vec4(inPosition, 0.0, 1.0);
   outColor = inColor;
   outTexCoord = inTexCoord;
 }

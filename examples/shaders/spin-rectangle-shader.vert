@@ -6,13 +6,16 @@ layout(location = 0) out vec3 outColor;
 layout(location = 0) in vec2 inPosition;
 layout(location = 1) in vec3 inColor;
 
-layout(binding = 0) uniform uniform_buffer {
-  mat4 model;
+layout(set = 0, binding = 0) uniform uniform_buffer {
   mat4 view;
   mat4 proj;
-} ubo;
+} uboViewProjection;
+
+layout(set = 0, binding = 1) uniform uniform_buffer_model {
+  mat4 model;
+} uboModel;
 
 void main() {
-  gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
+  gl_Position = uboViewProjection.proj * uboViewProjection.view * uboModel.model * vec4(inPosition, 0.0, 1.0);
   outColor = inColor;
 }
