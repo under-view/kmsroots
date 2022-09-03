@@ -981,7 +981,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
   VkDescriptorBufferInfo bufferInfos[descriptorBindingCount];
   bufferInfos[0].buffer = app->vkbuffers[2].vkBuffer; // CPU visible uniform buffer
   bufferInfos[0].offset = 0;
-  bufferInfos[0].range = sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
+  bufferInfos[0].range = sizeof(struct uvr_uniform_buffer);
 
   bufferInfos[1].buffer = app->vkbuffers[2].vkBuffer; // CPU visible uniform buffer dynamic buffer
   bufferInfos[1].offset = sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
@@ -1143,12 +1143,21 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   dynamicState.dynamicStateCount = ARRAY_LEN(dynamicStates);
   dynamicState.pDynamicStates = dynamicStates;
 
+  /*
+  VkPushConstantRange pushConstantRange;
+  pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  pushConstantRange.offset = 0;
+  pushConstantRange.size = sizeof(uniform_buffer_model); // sizeof data to pass
+  */
+
   struct uvr_vk_pipeline_layout_create_info gplayout_info;
   gplayout_info.vkDevice = app->lgdev.vkDevice;
   gplayout_info.setLayoutCount = 1;
   gplayout_info.pSetLayouts = &app->vkdesclayout.descriptorSetLayout;
   gplayout_info.pushConstantRangeCount = 0;
   gplayout_info.pPushConstantRanges = NULL;
+  // gplayout_info.pushConstantRangeCount = 1;
+  // gplayout_info.pPushConstantRanges = &pushConstantRange;
 
   app->gplayout = uvr_vk_pipeline_layout_create(&gplayout_info);
   if (!app->gplayout.vkPipelineLayout)

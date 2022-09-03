@@ -17,6 +17,11 @@ layout(set = 0, binding = 1) uniform uniform_buffer_model {
   mat4 model;
 } uboModel;
 
+// Won't be included when shader is compiled as it's not in use
+layout(push_constant) uniform uniform_push_model {
+  mat4 model;
+} pushModel;
+
 void main() {
   gl_Position = uboViewProjection.proj * uboViewProjection.view * uboModel.model * vec4(inPosition, 0.0, 1.0);
   outColor = inColor;
