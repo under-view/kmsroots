@@ -148,16 +148,16 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   struct uvr_wc UNUSED *wc = vkwc->uvr_wc;
   struct uvr_vk *app = vkwc->uvr_vk;
 
-  if (!app->vksyncs.vkFences || !app->vksyncs.vkSemaphores)
+  if (!app->vksyncs.fenceHandles || !app->vksyncs.semaphoreHandles)
     return;
 
-  VkFence imageFence = app->vksyncs.vkFences[0].fence;
-  VkSemaphore imageSemaphore = app->vksyncs.vkSemaphores[0].semaphore;
-  VkSemaphore renderSemaphore = app->vksyncs.vkSemaphores[1].semaphore;
+  VkFence imageFence = app->vksyncs.fenceHandles[0].fence;
+  VkSemaphore imageSemaphore = app->vksyncs.semaphoreHandles[0].semaphore;
+  VkSemaphore renderSemaphore = app->vksyncs.semaphoreHandles[1].semaphore;
 
-  vkWaitForFences(app->lgdev.vkDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
+  vkWaitForFences(app->lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-  vkAcquireNextImageKHR(app->lgdev.vkDevice, app->schain.vkSwapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
+  vkAcquireNextImageKHR(app->lgdev.logicalDevice, app->schain.swapChain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
 
   record_vk_draw_commands(app, modelTransferSpace, *imageIndex, extent2D);
   update_uniform_buffer(app, modelTransferSpace, *imageIndex, extent2D);
@@ -177,10 +177,10 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
   submitInfo.pSignalSemaphores = signalSemaphores;
 
-  vkResetFences(app->lgdev.vkDevice, 1, &imageFence);
+  vkResetFences(app->lgdev.logicalDevice, 1, &imageFence);
 
   /* Submit draw command */
-  vkQueueSubmit(app->graphics_queue.vkQueue, 1, &submitInfo, imageFence);
+  vkQueueSubmit(app->graphics_queue.queue, 1, &submitInfo, imageFence);
 
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -188,11 +188,11 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
   presentInfo.waitSemaphoreCount = ARRAY_LEN(signalSemaphores);
   presentInfo.pWaitSemaphores = signalSemaphores;
   presentInfo.swapchainCount = 1;
-  presentInfo.pSwapchains = &app->schain.vkSwapchain;
+  presentInfo.pSwapchains = &app->schain.swapChain;
   presentInfo.pImageIndices = imageIndex;
   presentInfo.pResults = NULL;
 
-  vkQueuePresentKHR(app->graphics_queue.vkQueue, &presentInfo);
+  vkQueuePresentKHR(app->graphics_queue.queue, &presentInfo);
 }
 
 
@@ -282,8 +282,8 @@ exit_error:
   /*
    * Let the api know of what addresses to free and fd's to close
    */
-  appd.vkinst = app.instance;
-  appd.vksurf = app.surface;
+  appd.instance = app.instance;
+  appd.surface = app.surface;
   appd.uvr_vk_lgdev_cnt = 1;
   appd.uvr_vk_lgdev = &app.lgdev;
   appd.uvr_vk_swapchain_cnt = 1;
@@ -355,8 +355,8 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, 
    * Create Vulkan Surface
    */
   struct uvr_vk_surface_create_info vksurf;
-  vksurf.vkInst = app->instance;
-  vksurf.sType = UVR_WAYLAND_CLIENT_SURFACE;
+  vksurf.surfaceType = UVR_WAYLAND_CLIENT_SURFACE;
+  vksurf.instance = app->instance;
   vksurf.display = wc->wcinterfaces.wlDisplay;
   vksurf.surface = wc->wcsurf.wlSurface;
 
@@ -390,9 +390,9 @@ int create_vk_instance(struct uvr_vk *app) {
   vkinst.appName = "Texture Mapping Example App";
   vkinst.engineName = "No Engine";
   vkinst.enabledLayerCount = ARRAY_LEN(validation_layers);
-  vkinst.ppEnabledLayerNames = validation_layers;
+  vkinst.enabledLayerNames = validation_layers;
   vkinst.enabledExtensionCount = ARRAY_LEN(instance_extensions);
-  vkinst.ppEnabledExtensionNames = instance_extensions;
+  vkinst.enabledExtensionNames = instance_extensions;
 
   app->instance = uvr_vk_instance_create(&vkinst);
   if (!app->instance) return -1;
@@ -408,18 +408,18 @@ int create_vk_device(struct uvr_vk *app) {
   };
 
   struct uvr_vk_phdev_create_info vkphdev;
-  vkphdev.vkInst = app->instance;
-  vkphdev.vkPhdevType = VK_PHYSICAL_DEVICE_TYPE;
+  vkphdev.instance = app->instance;
+  vkphdev.deviceType = VK_PHYSICAL_DEVICE_TYPE;
 #ifdef INCLUDE_KMS
-  vkphdev.kmsFd = -1;
+  vkphdev.kmsfd = -1;
 #endif
 
   app->phdev = uvr_vk_phdev_create(&vkphdev);
-  if (!app->phdev.vkPhdev)
+  if (!app->phdev.physDevice)
     return -1;
 
   struct uvr_vk_queue_create_info vkqueueinfo;
-  vkqueueinfo.vkPhdev = app->phdev.vkPhdev;
+  vkqueueinfo.physDevice = app->phdev.physDevice;
   vkqueueinfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
   app->graphics_queue = uvr_vk_queue_create(&vkqueueinfo);
@@ -429,21 +429,21 @@ int create_vk_device(struct uvr_vk *app) {
   /*
    * Can Hardset features prior
    * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-   * app->phdev.vkPhdevFeatures.depthBiasClamp = VK_TRUE;
+   * app->phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
    */
-  app->phdev.vkPhdevFeatures.samplerAnisotropy = VK_TRUE;
+  app->phdev.physDeviceFeatures.samplerAnisotropy = VK_TRUE;
 
   struct uvr_vk_lgdev_create_info vklgdevinfo;
-  vklgdevinfo.vkInst = app->instance;
-  vklgdevinfo.vkPhdev = app->phdev.vkPhdev;
-  vklgdevinfo.pEnabledFeatures = &app->phdev.vkPhdevFeatures;
+  vklgdevinfo.instance = app->instance;
+  vklgdevinfo.physDevice = app->phdev.physDevice;
+  vklgdevinfo.enabledFeatures = &app->phdev.physDeviceFeatures;
   vklgdevinfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
-  vklgdevinfo.ppEnabledExtensionNames = device_extensions;
+  vklgdevinfo.enabledExtensionNames = device_extensions;
   vklgdevinfo.queueCount = 1;
   vklgdevinfo.queues = &app->graphics_queue;
 
   app->lgdev = uvr_vk_lgdev_create(&vklgdevinfo);
-  if (!app->lgdev.vkDevice)
+  if (!app->lgdev.logicalDevice)
     return -1;
 
   return 0;
@@ -454,9 +454,9 @@ int create_vk_device(struct uvr_vk *app) {
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D) {
   VkPresentModeKHR presmode;
 
-  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app->phdev.vkPhdev, app->surface);
-  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app->phdev.vkPhdev, app->surface);
-  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev.vkPhdev, app->surface);
+  VkSurfaceCapabilitiesKHR surfcap = uvr_vk_get_surface_capabilities(app->phdev.physDevice, app->surface);
+  struct uvr_vk_surface_format sformats = uvr_vk_get_surface_formats(app->phdev.physDevice, app->surface);
+  struct uvr_vk_surface_present_mode spmodes = uvr_vk_get_surface_present_modes(app->phdev.physDevice, app->surface);
 
   /* Choose surface format based */
   for (uint32_t s = 0; s < sformats.surfaceFormatCount; s++) {
@@ -475,8 +475,8 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
   free(spmodes.presentModes); spmodes.presentModes = NULL;
 
   struct uvr_vk_swapchain_create_info scinfo;
-  scinfo.vkDevice = app->lgdev.vkDevice;
-  scinfo.vkSurface = app->surface;
+  scinfo.logicalDevice = app->lgdev.logicalDevice;
+  scinfo.surface = app->surface;
   scinfo.surfaceCapabilities = surfcap;
   scinfo.surfaceFormat = *sformat;
   scinfo.extent2D = extent2D;
@@ -484,14 +484,14 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
   scinfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
   scinfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   scinfo.queueFamilyIndexCount = 0;
-  scinfo.pQueueFamilyIndices = NULL;
+  scinfo.queueFamilyIndices = NULL;
   scinfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   scinfo.presentMode = presmode;
   scinfo.clipped = VK_TRUE;
-  scinfo.oldSwapchain = VK_NULL_HANDLE;
+  scinfo.oldSwapChain = VK_NULL_HANDLE;
 
   app->schain = uvr_vk_swapchain_create(&scinfo);
-  if (!app->schain.vkSwapchain)
+  if (!app->schain.swapChain)
     return -1;
 
   return 0;
@@ -501,9 +501,9 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
 int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
   struct uvr_vk_image_create_info vkimage_create_info;
-  vkimage_create_info.vkDevice = app->lgdev.vkDevice;
-  vkimage_create_info.vkSwapchain = app->schain.vkSwapchain;
-  vkimage_create_info.imageViewCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
+  vkimage_create_info.logicalDevice = app->lgdev.logicalDevice;
+  vkimage_create_info.swapChain = app->schain.swapChain;
+  vkimage_create_info.imageCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
   vkimage_create_info.imageViewflags = 0;
   vkimage_create_info.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
   vkimage_create_info.imageViewFormat = sformat->format;
@@ -517,7 +517,7 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
   vkimage_create_info.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
   /* Not create images manually so rest of struct members can be safely ignored */
-  vkimage_create_info.vkPhdev = VK_NULL_HANDLE;
+  vkimage_create_info.physDevice = VK_NULL_HANDLE;
   vkimage_create_info.memPropertyFlags = 0;
   vkimage_create_info.imageflags = 0;
   vkimage_create_info.imageType = 0;
@@ -533,7 +533,7 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageInitialLayout = 0;
 
   app->vkimages[0] = uvr_vk_image_create(&vkimage_create_info);
-  if (!app->vkimages[0].vkImageViews[0].view)
+  if (!app->vkimages[0].imageViewHandles[0].view)
     return -1;
 
   return 0;
@@ -604,23 +604,23 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 #endif
 
   struct uvr_vk_shader_module_create_info vertex_shader_module_create_info;
-  vertex_shader_module_create_info.vkDevice = app->lgdev.vkDevice;
-  vertex_shader_module_create_info.codeSize = app->vertex_shader.byteSize;
-  vertex_shader_module_create_info.pCode = app->vertex_shader.bytes;
-  vertex_shader_module_create_info.name = "vertex";
+  vertex_shader_module_create_info.logicalDevice = app->lgdev.logicalDevice;
+  vertex_shader_module_create_info.sprivByteSize = app->vertex_shader.byteSize;
+  vertex_shader_module_create_info.sprivBytes = app->vertex_shader.bytes;
+  vertex_shader_module_create_info.shaderName = "vertex";
 
   app->shader_modules[0] = uvr_vk_shader_module_create(&vertex_shader_module_create_info);
-  if (!app->shader_modules[0].shader)
+  if (!app->shader_modules[0].shaderModule)
     return -1;
 
   struct uvr_vk_shader_module_create_info frag_shader_module_create_info;
-  frag_shader_module_create_info.vkDevice = app->lgdev.vkDevice;
-  frag_shader_module_create_info.codeSize = app->fragment_shader.byteSize;
-  frag_shader_module_create_info.pCode = app->fragment_shader.bytes;
-  frag_shader_module_create_info.name = "fragment";
+  frag_shader_module_create_info.logicalDevice = app->lgdev.logicalDevice;
+  frag_shader_module_create_info.sprivByteSize = app->fragment_shader.byteSize;
+  frag_shader_module_create_info.sprivBytes = app->fragment_shader.bytes;
+  frag_shader_module_create_info.shaderName = "fragment";
 
   app->shader_modules[1] = uvr_vk_shader_module_create(&frag_shader_module_create_info);
-  if (!app->shader_modules[1].shader)
+  if (!app->shader_modules[1].shaderModule)
     return -1;
 
   return 0;
@@ -629,7 +629,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
 
 int create_vk_command_buffers(struct uvr_vk *app) {
   struct uvr_vk_command_buffer_create_info commandBufferCreateInfo;
-  commandBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
+  commandBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   commandBufferCreateInfo.queueFamilyIndex = app->graphics_queue.familyIndex;
   commandBufferCreateInfo.commandBufferCount = 1;
 
@@ -650,8 +650,8 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 
   // Create CPU visible vertex + index buffer
   struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
-  vkVertexBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkVertexBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
+  vkVertexBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
+  vkVertexBufferCreateInfo.physDevice = app->phdev.physDevice;
   vkVertexBufferCreateInfo.bufferFlags = 0;
   vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(vertices_pos_color);
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
@@ -662,28 +662,28 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   app->vkbuffers[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-  if (!app->vkbuffers[cpuVisibleBuffer].vkBuffer || !app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory)
+  if (!app->vkbuffers[cpuVisibleBuffer].buffer || !app->vkbuffers[cpuVisibleBuffer].deviceMemory)
     return -1;
 
   // Copy index data into CPU visible index buffer
-  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory, 0, singleIndexBufferSize, 0, &data);
+  vkMapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory, 0, singleIndexBufferSize, 0, &data);
   memcpy(data, indices, singleIndexBufferSize);
-  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory);
+  vkUnmapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory);
   data = NULL;
 
   // Copy vertex data into CPU visible vertex buffer
   for (uint32_t vbuff = 0; vbuff < 2; vbuff++) {
-    vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory, singleIndexBufferSize + (singleMeshSize * vbuff), singleMeshSize, 0, &data);
+    vkMapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory, singleIndexBufferSize + (singleMeshSize * vbuff), singleMeshSize, 0, &data);
     memcpy(data, vertices_pos_color[vbuff], singleMeshSize);
-    vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory);
+    vkUnmapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory);
     data = NULL;
   }
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
     struct uvr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
-    vkVertexBufferGPUCreateInfo.vkDevice = app->lgdev.vkDevice;
-    vkVertexBufferGPUCreateInfo.vkPhdev = app->phdev.vkPhdev;
+    vkVertexBufferGPUCreateInfo.logicalDevice = app->lgdev.logicalDevice;
+    vkVertexBufferGPUCreateInfo.physDevice = app->phdev.physDevice;
     vkVertexBufferGPUCreateInfo.bufferFlags = 0;
     vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
     vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -693,7 +693,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
     vkVertexBufferGPUCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     app->vkbuffers[gpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferGPUCreateInfo);
-    if (!app->vkbuffers[gpuVisibleBuffer].vkBuffer || !app->vkbuffers[gpuVisibleBuffer].vkDeviceMemory)
+    if (!app->vkbuffers[gpuVisibleBuffer].buffer || !app->vkbuffers[gpuVisibleBuffer].deviceMemory)
       return -1;
 
     VkBufferCopy copyRegion;
@@ -702,17 +702,17 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
     copyRegion.size = vkVertexBufferCreateInfo.bufferSize;
 
     // Copy contents from CPU visible buffer over to GPU visible buffer
-    struct uvr_vk_copy_info bufferCopyInfo;
+    struct uvr_vk_resource_copy_info bufferCopyInfo;
     bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER;
     bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
-    bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
-    bufferCopyInfo.srcResource = app->vkbuffers[cpuVisibleBuffer].vkBuffer;
-    bufferCopyInfo.dstResource = app->vkbuffers[gpuVisibleBuffer].vkBuffer;
+    bufferCopyInfo.queue = app->graphics_queue.queue;
+    bufferCopyInfo.srcResource = app->vkbuffers[cpuVisibleBuffer].buffer;
+    bufferCopyInfo.dstResource = app->vkbuffers[gpuVisibleBuffer].buffer;
     bufferCopyInfo.bufferCopyInfo = &copyRegion;
     bufferCopyInfo.bufferImageCopyInfo = NULL;
     bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    if (uvr_vk_copy(&bufferCopyInfo) == -1)
+    if (uvr_vk_resource_copy(&bufferCopyInfo) == -1)
       return -1;
   }
 
@@ -722,7 +722,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   struct uvr_utils_aligned_buffer_create_info modelUniformBufferAlignment;
   modelUniformBufferAlignment.bytesToAlign = sizeof(struct uvr_uniform_buffer_model);
   modelUniformBufferAlignment.bytesToAlignCount = MAX_SCENE_OBJECTS;
-  modelUniformBufferAlignment.bufferAlignment = app->phdev.vkPhdevProperties.limits.minUniformBufferOffsetAlignment;
+  modelUniformBufferAlignment.bufferAlignment = app->phdev.physDeviceProperties.limits.minUniformBufferOffsetAlignment;
 
   *modelTransferSpace = uvr_utils_aligned_buffer_create(&modelUniformBufferAlignment);
   if (!modelTransferSpace->alignedBufferMemory)
@@ -730,8 +730,8 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 
   // Create CPU visible uniform buffer to store (view projection matrices in first have) (Dynamic uniform buffer (model matrix) in second half)
   struct uvr_vk_buffer_create_info vkUniformBufferCreateInfo;
-  vkUniformBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkUniformBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
+  vkUniformBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
+  vkUniformBufferCreateInfo.physDevice = app->phdev.physDevice;
   vkUniformBufferCreateInfo.bufferFlags = 0;
   vkUniformBufferCreateInfo.bufferSize = (sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE) + \
                                          (modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS);
@@ -742,7 +742,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkUniformBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   app->vkbuffers[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkUniformBufferCreateInfo);
-  if (!app->vkbuffers[cpuVisibleBuffer].vkBuffer || !app->vkbuffers[cpuVisibleBuffer].vkDeviceMemory)
+  if (!app->vkbuffers[cpuVisibleBuffer].buffer || !app->vkbuffers[cpuVisibleBuffer].deviceMemory)
     return -1;
 
   return 0;
@@ -762,8 +762,8 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
   // Create CPU visible buffer to store pixel data
   struct uvr_vk_buffer_create_info vkTextureBufferCreateInfo;
-  vkTextureBufferCreateInfo.vkDevice = app->lgdev.vkDevice;
-  vkTextureBufferCreateInfo.vkPhdev = app->phdev.vkPhdev;
+  vkTextureBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
+  vkTextureBufferCreateInfo.physDevice = app->phdev.physDevice;
   vkTextureBufferCreateInfo.bufferFlags = 0;
   vkTextureBufferCreateInfo.bufferSize = imageSize;
   vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -773,24 +773,24 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkTextureBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   app->vkbuffers[cpuVisibleImageBuffer] = uvr_vk_buffer_create(&vkTextureBufferCreateInfo);
-  if (!app->vkbuffers[cpuVisibleImageBuffer].vkBuffer || !app->vkbuffers[cpuVisibleImageBuffer].vkDeviceMemory) {
+  if (!app->vkbuffers[cpuVisibleImageBuffer].buffer || !app->vkbuffers[cpuVisibleImageBuffer].deviceMemory) {
     stbi_image_free(pixels);
     return -1;
   }
 
   void *data = NULL;
-  vkMapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleImageBuffer].vkDeviceMemory, 0, imageSize, 0, &data);
+  vkMapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleImageBuffer].deviceMemory, 0, imageSize, 0, &data);
   memcpy(data, pixels, imageSize);
-  vkUnmapMemory(app->lgdev.vkDevice, app->vkbuffers[cpuVisibleImageBuffer].vkDeviceMemory);
+  vkUnmapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleImageBuffer].deviceMemory);
 
   stbi_image_free(pixels);
 
   uint32_t imageTransferIndex = 0;
 
   struct uvr_vk_image_create_info vkimage_create_info;
-  vkimage_create_info.vkDevice = app->lgdev.vkDevice;
-  vkimage_create_info.vkSwapchain = VK_NULL_HANDLE;                                     // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
-  vkimage_create_info.imageViewCount = 1;                                               // Only creating 1 VkImage resource to store pixel data
+  vkimage_create_info.logicalDevice = app->lgdev.logicalDevice;
+  vkimage_create_info.swapChain = VK_NULL_HANDLE;                                     // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
+  vkimage_create_info.imageCount = 1;                                               // Only creating 1 VkImage resource to store pixel data
   vkimage_create_info.imageViewflags = 0;
   vkimage_create_info.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
   vkimage_create_info.imageViewFormat = sformat->format;
@@ -800,7 +800,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
   vkimage_create_info.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
   vkimage_create_info.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
-  vkimage_create_info.vkPhdev = app->phdev.vkPhdev;
+  vkimage_create_info.physDevice = app->phdev.physDevice;
   vkimage_create_info.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   vkimage_create_info.imageflags = 0;
   vkimage_create_info.imageType = VK_IMAGE_TYPE_2D;
@@ -816,7 +816,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
   app->vkimages[1] = uvr_vk_image_create(&vkimage_create_info);
-  if (!app->vkimages[1].vkImages[imageTransferIndex].image && !app->vkimages[1].vkImageViews[imageTransferIndex].view)
+  if (!app->vkimages[1].imageHandles[imageTransferIndex].image && !app->vkimages[1].imageViewHandles[imageTransferIndex].view)
     return -1;
 
   VkImageMemoryBarrier imageMemoryBarrier = {};
@@ -828,7 +828,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  imageMemoryBarrier.image = app->vkimages[1].vkImages[imageTransferIndex].image;
+  imageMemoryBarrier.image = app->vkimages[1].imageHandles[imageTransferIndex].image;
   imageMemoryBarrier.subresourceRange.aspectMask = vkimage_create_info.imageViewSubresourceRange.aspectMask;
   imageMemoryBarrier.subresourceRange.baseMipLevel = vkimage_create_info.imageViewSubresourceRange.baseMipLevel;
   imageMemoryBarrier.subresourceRange.levelCount = vkimage_create_info.imageViewSubresourceRange.levelCount;
@@ -837,7 +837,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
   struct uvr_vk_resource_pipeline_barrier_info pipelineBarrierInfo;
   pipelineBarrierInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
-  pipelineBarrierInfo.vkQueue = app->graphics_queue.vkQueue;
+  pipelineBarrierInfo.queue = app->graphics_queue.queue;
   pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
   pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
   pipelineBarrierInfo.dependencyFlags = 0;
@@ -861,17 +861,17 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   copyRegion.imageExtent = vkimage_create_info.imageExtent3D;
 
   /* Copy VkImage resource to VkBuffer resource */
-  struct uvr_vk_copy_info bufferCopyInfo;
+  struct uvr_vk_resource_copy_info bufferCopyInfo;
   bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
   bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
-  bufferCopyInfo.vkQueue = app->graphics_queue.vkQueue;
-  bufferCopyInfo.srcResource = app->vkbuffers[cpuVisibleImageBuffer].vkBuffer;
-  bufferCopyInfo.dstResource = app->vkimages[1].vkImages[imageTransferIndex].image;
+  bufferCopyInfo.queue = app->graphics_queue.queue;
+  bufferCopyInfo.srcResource = app->vkbuffers[cpuVisibleImageBuffer].buffer;
+  bufferCopyInfo.dstResource = app->vkimages[1].imageHandles[imageTransferIndex].image;
   bufferCopyInfo.bufferCopyInfo = NULL;
   bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
   bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-  if (uvr_vk_copy(&bufferCopyInfo) == -1)
+  if (uvr_vk_resource_copy(&bufferCopyInfo) == -1)
     return -1;
 
   imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -890,7 +890,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
 int create_vk_image_sampler(struct uvr_vk *app) {
   struct uvr_vk_sampler_create_info vkSamplerCreateInfo;
-  vkSamplerCreateInfo.vkDevice = app->lgdev.vkDevice;
+  vkSamplerCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   vkSamplerCreateInfo.samplerFlags = 0;
   vkSamplerCreateInfo.samplerMagFilter = VK_FILTER_LINEAR;
   vkSamplerCreateInfo.samplerMinFilter = VK_FILTER_LINEAR;
@@ -900,7 +900,7 @@ int create_vk_image_sampler(struct uvr_vk *app) {
   vkSamplerCreateInfo.samplerAddressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
   vkSamplerCreateInfo.samplerMipLodBias = 0.0f;
   vkSamplerCreateInfo.samplerAnisotropyEnable = VK_TRUE;
-  vkSamplerCreateInfo.samplerMaxAnisotropy = app->phdev.vkPhdevProperties.limits.maxSamplerAnisotropy;
+  vkSamplerCreateInfo.samplerMaxAnisotropy = app->phdev.physDeviceProperties.limits.maxSamplerAnisotropy;
   vkSamplerCreateInfo.samplerCompareEnable = VK_FALSE;
   vkSamplerCreateInfo.samplerCompareOp = VK_COMPARE_OP_ALWAYS;
   vkSamplerCreateInfo.samplerMinLod = 0.0f;
@@ -909,7 +909,7 @@ int create_vk_image_sampler(struct uvr_vk *app) {
   vkSamplerCreateInfo.samplerUnnormalizedCoordinates = VK_FALSE;
 
   app->texture_sampler = uvr_vk_sampler_create(&vkSamplerCreateInfo);
-  if (!app->texture_sampler.vkSampler)
+  if (!app->texture_sampler.sampler)
     return -1;
 
   return 0;
@@ -945,7 +945,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
   descSetLayoutBindings[2].pImmutableSamplers = NULL;
 
   struct uvr_vk_descriptor_set_layout_create_info descriptorCreateInfo;
-  descriptorCreateInfo.vkDevice = app->lgdev.vkDevice;
+  descriptorCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   descriptorCreateInfo.descriptorSetLayoutCreateflags = 0;
   descriptorCreateInfo.descriptorSetLayoutBindingCount = ARRAY_LEN(descSetLayoutBindings);
   descriptorCreateInfo.descriptorSetLayoutBindings = descSetLayoutBindings;
@@ -967,7 +967,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
 
   // Should allocate one pool. With one set containing multiple descriptors
   struct uvr_vk_descriptor_set_create_info descriptorSetsCreateInfo;
-  descriptorSetsCreateInfo.vkDevice = app->lgdev.vkDevice;
+  descriptorSetsCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   descriptorSetsCreateInfo.descriptorPoolInfos = descriptorPoolInfos;
   descriptorSetsCreateInfo.descriptorPoolInfoCount = ARRAY_LEN(descriptorPoolInfos);
   descriptorSetsCreateInfo.descriptorSetLayouts = &app->vkdesclayout.descriptorSetLayout;
@@ -975,29 +975,29 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
   descriptorSetsCreateInfo.descriptorPoolCreateflags = 0;
 
   app->vkdescset = uvr_vk_descriptor_set_create(&descriptorSetsCreateInfo);
-  if (!app->vkdescset.descriptorPool || !app->vkdescset.descriptorSets[0].descriptorSet)
+  if (!app->vkdescset.descriptorPool || !app->vkdescset.descriptorSetHandles[0].descriptorSet)
     return -1;
 
   VkDescriptorBufferInfo bufferInfos[descriptorBindingCount];
-  bufferInfos[0].buffer = app->vkbuffers[2].vkBuffer; // CPU visible uniform buffer
+  bufferInfos[0].buffer = app->vkbuffers[2].buffer; // CPU visible uniform buffer
   bufferInfos[0].offset = 0;
   bufferInfos[0].range = sizeof(struct uvr_uniform_buffer);
 
-  bufferInfos[1].buffer = app->vkbuffers[2].vkBuffer; // CPU visible uniform buffer dynamic buffer
+  bufferInfos[1].buffer = app->vkbuffers[2].buffer; // CPU visible uniform buffer dynamic buffer
   bufferInfos[1].offset = sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
   bufferInfos[1].range = modelTransferSpace->bufferAlignment;
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView = app->vkimages[1].vkImageViews[0].view;      // created in create_vk_texture_image
-  imageInfo.sampler = app->texture_sampler.vkSampler;               // created in create_vk_image_sampler
+  imageInfo.imageView = app->vkimages[1].imageViewHandles[0].view;      // created in create_vk_texture_image
+  imageInfo.sampler = app->texture_sampler.sampler;               // created in create_vk_image_sampler
 
   /* Binds multiple descriptors and their objects to the same set */
   VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
   for (uint32_t dw = 0; dw < ARRAY_LEN(descriptorWrites); dw++) {
     descriptorWrites[dw].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrites[dw].pNext = NULL;
-    descriptorWrites[dw].dstSet = app->vkdescset.descriptorSets[0].descriptorSet;
+    descriptorWrites[dw].dstSet = app->vkdescset.descriptorSetHandles[0].descriptorSet;
     descriptorWrites[dw].dstBinding = descSetLayoutBindings[dw].binding;
     descriptorWrites[dw].dstArrayElement = 0;
     descriptorWrites[dw].descriptorType = descSetLayoutBindings[dw].descriptorType;
@@ -1007,7 +1007,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
     descriptorWrites[dw].pTexelBufferView = NULL;
   }
 
-  vkUpdateDescriptorSets(app->lgdev.vkDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
+  vkUpdateDescriptorSets(app->lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
 
   return 0;
 }
@@ -1018,13 +1018,13 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = app->shader_modules[0].shader;
+  vertShaderStageInfo.module = app->shader_modules[0].shaderModule;
   vertShaderStageInfo.pName = "main";
 
   VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
   fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = app->shader_modules[1].shader;
+  fragShaderStageInfo.module = app->shader_modules[1].shaderModule;
   fragShaderStageInfo.pName = "main";
 
   VkPipelineShaderStageCreateInfo shaderStages[2] = {vertShaderStageInfo, fragShaderStageInfo};
@@ -1151,16 +1151,16 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   */
 
   struct uvr_vk_pipeline_layout_create_info gplayout_info;
-  gplayout_info.vkDevice = app->lgdev.vkDevice;
-  gplayout_info.setLayoutCount = 1;
-  gplayout_info.pSetLayouts = &app->vkdesclayout.descriptorSetLayout;
+  gplayout_info.logicalDevice = app->lgdev.logicalDevice;
+  gplayout_info.descriptorSetLayoutCount = 1;
+  gplayout_info.descriptorSetLayouts = &app->vkdesclayout.descriptorSetLayout;
   gplayout_info.pushConstantRangeCount = 0;
-  gplayout_info.pPushConstantRanges = NULL;
+  gplayout_info.pushConstantRanges = NULL;
   // gplayout_info.pushConstantRangeCount = 1;
-  // gplayout_info.pPushConstantRanges = &pushConstantRange;
+  // gplayout_info.pushConstantRanges = &pushConstantRange;
 
   app->gplayout = uvr_vk_pipeline_layout_create(&gplayout_info);
-  if (!app->gplayout.vkPipelineLayout)
+  if (!app->gplayout.pipelineLayout)
     return -1;
 
   VkAttachmentDescription colorAttachment = {};
@@ -1192,32 +1192,32 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   subPassDependency.dependencyFlags = 0;
 
   struct uvr_vk_render_pass_create_info renderpass_info;
-  renderpass_info.vkDevice = app->lgdev.vkDevice;
-  renderpass_info.attachmentCount = 1;
-  renderpass_info.pAttachments = &colorAttachment;
-  renderpass_info.subpassCount = 1;
-  renderpass_info.pSubpasses = &subpass;
-  renderpass_info.dependencyCount = 1;
-  renderpass_info.pDependencies = &subPassDependency;
+  renderpass_info.logicalDevice = app->lgdev.logicalDevice;
+  renderpass_info.attachmentDescriptionCount = 1;
+  renderpass_info.attachmentDescriptions = &colorAttachment;
+  renderpass_info.subpassDescriptionCount = 1;
+  renderpass_info.subpassDescriptions = &subpass;
+  renderpass_info.subpassDependencyCount = 1;
+  renderpass_info.subpassDependencies = &subPassDependency;
 
   app->rpass = uvr_vk_render_pass_create(&renderpass_info);
   if (!app->rpass.renderPass)
     return -1;
 
   struct uvr_vk_graphics_pipeline_create_info gpipeline_info;
-  gpipeline_info.vkDevice = app->lgdev.vkDevice;
-  gpipeline_info.stageCount = ARRAY_LEN(shaderStages);
-  gpipeline_info.pStages = shaderStages;
-  gpipeline_info.pVertexInputState = &vertexInputInfo;
-  gpipeline_info.pInputAssemblyState = &inputAssembly;
-  gpipeline_info.pTessellationState = NULL;
-  gpipeline_info.pViewportState = &viewportState;
-  gpipeline_info.pRasterizationState = &rasterizer;
-  gpipeline_info.pMultisampleState = &multisampling;
-  gpipeline_info.pDepthStencilState = NULL;
-  gpipeline_info.pColorBlendState = &colorBlending;
-  gpipeline_info.pDynamicState = &dynamicState;
-  gpipeline_info.vkPipelineLayout = app->gplayout.vkPipelineLayout;
+  gpipeline_info.logicalDevice = app->lgdev.logicalDevice;
+  gpipeline_info.shaderStageCount = ARRAY_LEN(shaderStages);
+  gpipeline_info.shaderStages = shaderStages;
+  gpipeline_info.vertexInputState = &vertexInputInfo;
+  gpipeline_info.inputAssemblyState = &inputAssembly;
+  gpipeline_info.tessellationState = NULL;
+  gpipeline_info.viewportState = &viewportState;
+  gpipeline_info.rasterizationState = &rasterizer;
+  gpipeline_info.multisampleState = &multisampling;
+  gpipeline_info.depthStencilState = NULL;
+  gpipeline_info.colorBlendState = &colorBlending;
+  gpipeline_info.dynamicState = &dynamicState;
+  gpipeline_info.pipelineLayout = app->gplayout.pipelineLayout;
   gpipeline_info.renderPass = app->rpass.renderPass;
   gpipeline_info.subpass = 0;
 
@@ -1232,16 +1232,16 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
   struct uvr_vk_framebuffer_create_info vkframebuffer_create_info;
-  vkframebuffer_create_info.vkDevice = app->lgdev.vkDevice;
+  vkframebuffer_create_info.logicalDevice = app->lgdev.logicalDevice;
   vkframebuffer_create_info.frameBufferCount = app->vkimages[0].imageCount;
-  vkframebuffer_create_info.vkImageViews = app->vkimages[0].vkImageViews;
+  vkframebuffer_create_info.imageViewHandles = app->vkimages[0].imageViewHandles;
   vkframebuffer_create_info.renderPass = app->rpass.renderPass;
   vkframebuffer_create_info.width = extent2D.width;
   vkframebuffer_create_info.height = extent2D.height;
   vkframebuffer_create_info.layers = 1;
 
   app->vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_create_info);
-  if (!app->vkframebuffs.vkFrameBuffers[0].fb)
+  if (!app->vkframebuffs.frameBufferHandles[0].frameBuffer)
     return -1;
 
   return 0;
@@ -1250,12 +1250,12 @@ int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
 int create_vk_sync_objs(struct uvr_vk *app) {
   struct uvr_vk_sync_obj_create_info syncObjsCreateInfo;
-  syncObjsCreateInfo.vkDevice = app->lgdev.vkDevice;
+  syncObjsCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   syncObjsCreateInfo.fenceCount = 1;
   syncObjsCreateInfo.semaphoreCount = 2;
 
   app->vksyncs = uvr_vk_sync_obj_create(&syncObjsCreateInfo);
-  if (!app->vksyncs.vkFences[0].fence && !app->vksyncs.vkSemaphores[0].semaphore)
+  if (!app->vksyncs.fenceHandles[0].fence && !app->vksyncs.semaphoreHandles[0].semaphore)
     return -1;
 
   return 0;
@@ -1266,7 +1266,7 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
   struct uvr_vk_command_buffer_record_info commandBufferRecordInfo;
   commandBufferRecordInfo.commandBufferCount = app->vkcbuffs.commandBufferCount;
   commandBufferRecordInfo.commandBuffers = app->vkcbuffs.commandBuffers;
-  commandBufferRecordInfo.flags = 0;
+  commandBufferRecordInfo.commandBufferUsageflags = 0;
 
   if (uvr_vk_command_buffer_record_begin(&commandBufferRecordInfo) == -1)
     return -1;
@@ -1305,7 +1305,7 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.pNext = NULL;
   renderPassInfo.renderPass = app->rpass.renderPass;
-  renderPassInfo.framebuffer = app->vkframebuffs.vkFrameBuffers[vkSwapchainImageIndex].fb;
+  renderPassInfo.framebuffer = app->vkframebuffs.frameBufferHandles[vkSwapchainImageIndex].frameBuffer;
   renderPassInfo.renderArea = renderArea;
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues = clearColor;
@@ -1314,7 +1314,7 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
    * 0. CPU visible vertex buffer
    * 1. GPU visible vertex buffer
    */
-  VkBuffer vertexBuffer = app->vkbuffers[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].vkBuffer;
+  VkBuffer vertexBuffer = app->vkbuffers[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].buffer;
   VkDeviceSize offsets[] = {sizeof(indices), sizeof(indices) + sizeof(vertices_pos_color[0]) };
   uint32_t dynamicUniformBufferOffset = 0;
 
@@ -1328,8 +1328,8 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
 
   for (uint32_t i = 0; i < MAX_SCENE_OBJECTS; i++) {
     dynamicUniformBufferOffset = i * modelTransferSpace->bufferAlignment;
-    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gplayout.vkPipelineLayout, 0, 1,
-                                       &app->vkdescset.descriptorSets[0].descriptorSet, 1, &dynamicUniformBufferOffset);
+    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->gplayout.pipelineLayout, 0, 1,
+                                       &app->vkdescset.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offsets[i]);
     vkCmdDrawIndexed(cmdBuffer, ARRAY_LEN(indices), 1, 0, 0, 0);
   }
@@ -1344,7 +1344,7 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
 
 
 void update_uniform_buffer(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace, uint32_t vkSwapchainImageIndex, VkExtent2D extent2D) {
-  VkDeviceMemory uniformBufferDeviceMemory = app->vkbuffers[2].vkDeviceMemory;
+  VkDeviceMemory uniformBufferDeviceMemory = app->vkbuffers[2].deviceMemory;
   uint32_t uboSize = sizeof(struct uvr_uniform_buffer);
   struct uvr_uniform_buffer ubo = {};
   struct uvr_uniform_buffer_model uboModels[MAX_SCENE_OBJECTS];
@@ -1367,9 +1367,9 @@ void update_uniform_buffer(struct uvr_vk *app, struct uvr_utils_aligned_buffer *
 
   // Copy VP data
   void *data = NULL;
-  vkMapMemory(app->lgdev.vkDevice, uniformBufferDeviceMemory, vkSwapchainImageIndex * uboSize, uboSize, 0, &data);
+  vkMapMemory(app->lgdev.logicalDevice, uniformBufferDeviceMemory, vkSwapchainImageIndex * uboSize, uboSize, 0, &data);
   memcpy(data, &ubo, sizeof(ubo));
-  vkUnmapMemory(app->lgdev.vkDevice, uniformBufferDeviceMemory);
+  vkUnmapMemory(app->lgdev.logicalDevice, uniformBufferDeviceMemory);
   data = NULL;
 
   static float lastTime = 0;
@@ -1401,7 +1401,7 @@ void update_uniform_buffer(struct uvr_vk *app, struct uvr_utils_aligned_buffer *
   }
 
   // Map all Model data
-  vkMapMemory(app->lgdev.vkDevice, uniformBufferDeviceMemory, uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE, modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS, 0, &data);
+  vkMapMemory(app->lgdev.logicalDevice, uniformBufferDeviceMemory, uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE, modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS, 0, &data);
   memcpy(data, modelTransferSpace->alignedBufferMemory, modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS);
-  vkUnmapMemory(app->lgdev.vkDevice, uniformBufferDeviceMemory);
+  vkUnmapMemory(app->lgdev.logicalDevice, uniformBufferDeviceMemory);
 }
