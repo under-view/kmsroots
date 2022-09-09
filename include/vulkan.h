@@ -571,8 +571,8 @@ struct uvr_vk_pipeline_layout {
  * @pushConstantRangeCount   - Must pass the array size of @descriptorSetLayouts
  * @pushConstantRanges       - Must pass a pointer to an array of push constant definitions that describe at what shader stage and the sizeof
  *                             the data being pushed to shader. If the shader needs to recieve smaller values quickly instead of creating
- *                             a dynamic uniform buffer and updating the value at memory address push constants allow for smaller data to
- *                             be more efficiently passed up to the GPU.
+ *                             a dynamic uniform buffer and updating the value at memory address. Push constants allow for smaller data to
+ *                             be more efficiently passed up to the GPU by passing values directly to the shader.
  */
 struct uvr_vk_pipeline_layout_create_info {
   VkDevice                    logicalDevice;
@@ -1396,6 +1396,34 @@ struct uvr_vk_surface_present_mode {
  *    on failure struct uvr_vk_surface_present_mode { with member nulled }
  */
 struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+
+
+/*
+ * struct uvr_vk_phdev_format_prop (Underview Renderer Vulkan Surface Present Mode)
+ *
+ * members:
+ * @formatProperties    - Pointer to an array of type (VkFormatProperties) specifying a given image format (VkFormat) properties
+ * @formatPropertyCount - The amount of elements contained in @formatProperties array
+ */
+struct uvr_vk_phdev_format_prop {
+  VkFormatProperties *formatProperties;
+  uint32_t           formatPropertyCount;
+};
+
+
+/*
+ * uvr_vk_get_phdev_format_properties: Queries a given physical device supported format properties
+ *                                     Application must free struct uvr_vk_phdev_format_prop { member: formatProperties }
+ *
+ * args:
+ * @phdev       - Must pass a valid VkPhysicalDevice handle
+ * @formats     - Must pass a pointer to an array of type VkFormat to get VkFormatProperties from
+ * @formatCount - Must pass the amount of elements in @formats array
+ * return:
+ *    on success struct uvr_vk_phdev_format_prop
+ *    on failure struct uvr_vk_phdev_format_prop { with member nulled }
+ */
+struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDevice phdev, VkFormat *formats, uint32_t formatCount);
 
 
 /*

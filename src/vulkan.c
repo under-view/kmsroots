@@ -1322,6 +1322,27 @@ exit_vk_surface_present_modes:
 }
 
 
+struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDevice phdev, VkFormat *formats, uint32_t formatCount) {
+  VkFormatProperties *formatProperties = NULL;
+
+  formatProperties = (VkFormatProperties *) calloc(formatCount, sizeof(VkFormatProperties));
+  if (!formatProperties) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_get_phdev_format_properties;
+  }
+
+  for (uint32_t f = 0; f < formatCount; f++) {
+    vkGetPhysicalDeviceFormatProperties(phdev, formats[f], &formatProperties[f]);
+  }
+
+  return (struct uvr_vk_phdev_format_prop) { .formatProperties = formatProperties, .formatPropertyCount = formatCount };
+
+exit_get_phdev_format_properties:
+  free(formatProperties);
+  return (struct uvr_vk_phdev_format_prop) { .formatProperties = NULL, .formatPropertyCount = 0 };
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk) {
   uint32_t i, j;
 
