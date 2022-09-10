@@ -797,9 +797,21 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
   create_info.height = uvrvk->height;
   create_info.layers = uvrvk->layers;
 
+  VkImageView *frameBufferAttachments = NULL;
   for (fbc = 0; fbc < uvrvk->frameBufferCount; fbc++) {
-    create_info.attachmentCount = 1;
-    create_info.pAttachments = &uvrvk->imageViewHandles[fbc].view;
+    create_info.attachmentCount = (uvrvk->miscImageViewHandles) ? uvrvk->miscImageViewHandleCount + 1 : 1;
+
+    if (uvrvk->miscImageViewHandles) {
+      frameBufferAttachments = alloca(create_info.attachmentCount * sizeof(VkImageView)); // +1 Color Attachment VkImageView always stored first
+
+      frameBufferAttachments[0] = uvrvk->imageViewHandles[fbc].view;
+      for (uint32_t attachItem = 0; attachItem < uvrvk->miscImageViewHandleCount; attachItem++)
+        frameBufferAttachments[attachItem+1] = uvrvk->miscImageViewHandles[attachItem].view;
+
+      create_info.pAttachments = frameBufferAttachments;
+    } else {
+      create_info.pAttachments = &uvrvk->imageViewHandles[fbc].view;
+    }
 
     res = vkCreateFramebuffer(uvrvk->logicalDevice, &create_info, NULL, &vkfbs[fbc].frameBuffer);
     if (res) {

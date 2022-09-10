@@ -762,12 +762,14 @@ struct uvr_vk_framebuffer {
  * struct uvr_vk_framebuffer_create_info (Underview Renderer Vulkan Framebuffer Create Information)
  *
  * members:
- * @logicalDevice    - Must pass a valid VkDevice handle (Logical Device)
- * @frameBufferCount - Amount of VkFramebuffer handles to create
- * @imageViewHandles - Pointer to an array of VkImageView handles which will be used in a render pass instance.
- * @renderPass       - Defines the render pass a given framebuffer is compatible with
- * @width            - Framebuffer width in pixels
- * @height           - Framebuffer height in pixels
+ * @logicalDevice            - Must pass a valid VkDevice handle (Logical Device)
+ * @frameBufferCount         - Amount of VkFramebuffer handles to create
+ * @imageViewHandles         - Pointer to an array of VkImageView handles which will be used in a render pass instance.
+ * @miscImageViewHandleCount - Amount of elements in @miscImageViewHandles array
+ * @miscImageViewHandles     - Pointer to an array of extra VkImageViews to attach to a given swap chain image View (i.e Depth Buffer Image View)
+ * @renderPass               - Defines the render pass a given framebuffer is compatible with
+ * @width                    - Framebuffer width in pixels
+ * @height                   - Framebuffer height in pixels
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for more info on bellow members
  *
@@ -777,6 +779,8 @@ struct uvr_vk_framebuffer_create_info {
   VkDevice                         logicalDevice;
   uint32_t                         frameBufferCount;
   struct uvr_vk_image_view_handle  *imageViewHandles;
+  uint32_t                         miscImageViewHandleCount;
+  struct uvr_vk_image_view_handle  *miscImageViewHandles;
   VkRenderPass                     renderPass;
   uint32_t                         width;
   uint32_t                         height;
