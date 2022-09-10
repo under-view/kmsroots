@@ -60,7 +60,7 @@ struct uvr_vertex_data {
 };
 
 
-const struct uvr_vertex_data vertices_pos_color[3] = {
+const struct uvr_vertex_data meshData[3] = {
   {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
   {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
   {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
@@ -545,7 +545,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   vkVertexBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   vkVertexBufferCreateInfo.physDevice = app->phdev.physDevice;
   vkVertexBufferCreateInfo.bufferFlags = 0;
-  vkVertexBufferCreateInfo.bufferSize = sizeof(vertices_pos_color);
+  vkVertexBufferCreateInfo.bufferSize = sizeof(meshData);
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
                                           VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -560,7 +560,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   // Copy vertex data into CPU visible vertex
   void *data = NULL;
   vkMapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory, 0, vkVertexBufferCreateInfo.bufferSize, 0, &data);
-  memcpy(data, vertices_pos_color, vkVertexBufferCreateInfo.bufferSize);
+  memcpy(data, meshData, vkVertexBufferCreateInfo.bufferSize);
   vkUnmapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory);
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
@@ -806,16 +806,18 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
-  struct uvr_vk_framebuffer_create_info vkframebuffer_create_info;
-  vkframebuffer_create_info.logicalDevice = app->lgdev.logicalDevice;
-  vkframebuffer_create_info.frameBufferCount = app->vkimages.imageCount;
-  vkframebuffer_create_info.imageViewHandles = app->vkimages.imageViewHandles;
-  vkframebuffer_create_info.renderPass = app->rpass.renderPass;
-  vkframebuffer_create_info.width = extent2D.width;
-  vkframebuffer_create_info.height = extent2D.height;
-  vkframebuffer_create_info.layers = 1;
+  struct uvr_vk_framebuffer_create_info frameBufferInfo;
+  frameBufferInfo.logicalDevice = app->lgdev.logicalDevice;
+  frameBufferInfo.frameBufferCount = app->vkimages.imageCount;           // Amount of images in swapchain
+  frameBufferInfo.imageViewHandles = app->vkimages.imageViewHandles;     // swapchain image views
+  frameBufferInfo.miscImageViewHandleCount = 0;                          // Should only be a depth image view
+  frameBufferInfo.miscImageViewHandles = app->vkimages.imageViewHandles; // Depth Buffer image
+  frameBufferInfo.renderPass = app->rpass.renderPass;
+  frameBufferInfo.width = extent2D.width;
+  frameBufferInfo.height = extent2D.height;
+  frameBufferInfo.layers = 1;
 
-  app->vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_create_info);
+  app->vkframebuffs = uvr_vk_framebuffer_create(&frameBufferInfo);
   if (!app->vkframebuffs.frameBufferHandles[0].frameBuffer)
     return -1;
 
@@ -913,7 +915,7 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
   vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, offsets);
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
-  vkCmdDraw(cmdBuffer, ARRAY_LEN(vertices_pos_color), 1, 0, 0);
+  vkCmdDraw(cmdBuffer, ARRAY_LEN(meshData), 1, 0, 0);
   vkCmdEndRenderPass(cmdBuffer);
 
   if (uvr_vk_command_buffer_record_end(&commandBufferRecordInfo) == -1)

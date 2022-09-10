@@ -68,7 +68,7 @@ struct uvr_vertex_data {
  * Comments define how to draw rectangle without index buffer
  * Actual array itself draws triangles utilizing index buffers.
  */
-const struct uvr_vertex_data vertices_pos_color[2][4] = {
+const struct uvr_vertex_data meshData[2][4] = {
   {
     {{-0.1f, -0.5f}, {1.0f, 0.0f, 0.0f}},   // Vertex 0. Top-right    - red
     {{-0.1f,  0.5f}, {0.0f, 1.0f, 0.0f}},   // Vertex 1. Bottom-right - green
@@ -567,7 +567,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
   void *data = NULL;
 
-  size_t singleMeshSize = sizeof(vertices_pos_color[0]);
+  size_t singleMeshSize = sizeof(meshData[0]);
   size_t singleIndexBufferSize = sizeof(indices);
 
   // Create CPU visible vertex + index buffer
@@ -575,7 +575,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   vkVertexBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   vkVertexBufferCreateInfo.physDevice = app->phdev.physDevice;
   vkVertexBufferCreateInfo.bufferFlags = 0;
-  vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(vertices_pos_color);
+  vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(meshData);
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
                                           VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -596,7 +596,7 @@ int create_vk_buffers(struct uvr_vk *app) {
   // Copy vertex data into CPU visible vertex buffer
   for (uint32_t vbuff = 0; vbuff < 2; vbuff++) {
     vkMapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory, singleIndexBufferSize + (singleMeshSize * vbuff), singleMeshSize, 0, &data);
-    memcpy(data, vertices_pos_color[vbuff], singleMeshSize);
+    memcpy(data, meshData[vbuff], singleMeshSize);
     vkUnmapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory);
     data = NULL;
   }
@@ -844,16 +844,18 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
-  struct uvr_vk_framebuffer_create_info vkframebuffer_create_info;
-  vkframebuffer_create_info.logicalDevice = app->lgdev.logicalDevice;
-  vkframebuffer_create_info.frameBufferCount = app->vkimages.imageCount;
-  vkframebuffer_create_info.imageViewHandles = app->vkimages.imageViewHandles;
-  vkframebuffer_create_info.renderPass = app->rpass.renderPass;
-  vkframebuffer_create_info.width = extent2D.width;
-  vkframebuffer_create_info.height = extent2D.height;
-  vkframebuffer_create_info.layers = 1;
+  struct uvr_vk_framebuffer_create_info frameBufferInfo;
+  frameBufferInfo.logicalDevice = app->lgdev.logicalDevice;
+  frameBufferInfo.frameBufferCount = app->vkimages.imageCount;           // Amount of images in swapchain
+  frameBufferInfo.imageViewHandles = app->vkimages.imageViewHandles;     // swapchain image views
+  frameBufferInfo.miscImageViewHandleCount = 0;                          // Should only be a depth image view
+  frameBufferInfo.miscImageViewHandles = app->vkimages.imageViewHandles; // Depth Buffer image
+  frameBufferInfo.renderPass = app->rpass.renderPass;
+  frameBufferInfo.width = extent2D.width;
+  frameBufferInfo.height = extent2D.height;
+  frameBufferInfo.layers = 1;
 
-  app->vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_create_info);
+  app->vkframebuffs = uvr_vk_framebuffer_create(&frameBufferInfo);
   if (!app->vkframebuffs.frameBufferHandles[0].frameBuffer)
     return -1;
 
@@ -942,7 +944,7 @@ int record_vk_draw_commands(struct uvr_vk *app, uint32_t vkSwapchainImageIndex, 
    * 1. GPU visible vertex buffer
    */
   VkBuffer vertexBuffer = app->vkbuffers[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].buffer;
-  VkDeviceSize offsets[] = {sizeof(indices), sizeof(indices) + sizeof(vertices_pos_color[0]) };
+  VkDeviceSize offsets[] = {sizeof(indices), sizeof(indices) + sizeof(meshData[0]) };
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 

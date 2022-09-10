@@ -4,6 +4,7 @@
 #include <stddef.h>   // For offsetof(3)
 #include <stdalign.h> // _Alignas( )
 
+#define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -27,7 +28,12 @@ struct uvr_vk {
   VkSurfaceKHR surface;
   struct uvr_vk_swapchain schain;
 
-  struct uvr_vk_image vkimages[2];
+  /*
+   * 0. Swapchain Images
+   * 1. Depth Image
+   * 2. Texture Image
+   */
+  struct uvr_vk_image vkimages[3];
 #ifdef INCLUDE_SHADERC
   struct uvr_shader_spirv vertex_shader;
   struct uvr_shader_spirv fragment_shader;
@@ -73,7 +79,7 @@ struct uvr_vk_wc {
 
 
 struct uvr_vertex_data {
-  vec2 pos;
+  vec3 pos;
   vec3 color;
   vec2 texCoord;
 };
@@ -94,22 +100,22 @@ struct uvr_uniform_buffer {
  * Comments define how to draw rectangle without index buffer
  * Actual array itself draws triangles utilizing index buffers.
  */
-const struct uvr_vertex_data vertices_pos_color[2][4] = {
+const struct uvr_vertex_data meshData[2][4] = {
   {
-    {{-0.1f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
-    {{-0.1f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},   // Vertex 1. Bottom-right - green
-    {{-0.9f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
-    //{{-0.9f,  0.5f}, {0.0f, 0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
-    {{-0.9f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}    // Vertex 3. Top-left     - yellow
-    //{{-0.1f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Vertex 0. Top-right    - red
+    {{-0.1f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
+    {{-0.1f,  0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},   // Vertex 1. Bottom-right - green
+    {{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
+    //{{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
+    {{-0.9f, -0.5f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}    // Vertex 3. Top-left     - yellow
+    //{{-0.1f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}, // Vertex 0. Top-right    - red
   },
   {
-    {{0.9f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
-    {{0.9f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},   // Vertex 1. Bottom-right - green
-    {{0.1f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},  // Vertex 2. Bottom-left  - blue
-    //{{0.1f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
-    {{0.1f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}    // Vertex 3. Top-left     - yellow
-    //{{0.9f, -0.5f, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},  // Vertex 0. Top-right    - red
+    {{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
+    {{0.9f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},   // Vertex 1. Bottom-right - green
+    {{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
+    //{{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
+    {{0.1f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}    // Vertex 3. Top-left     - yellow
+    //{{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}, // Vertex 0. Top-right    - red
   }
 };
 
@@ -127,7 +133,8 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, 
 int create_vk_instance(struct uvr_vk *uvrvk);
 int create_vk_device(struct uvr_vk *app);
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExtent2D extent2D);
-int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat);
+int create_vk_swapchain_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat);
+int create_vk_depth_image(struct uvr_vk *app);
 int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_command_buffers(struct uvr_vk *app);
 int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
@@ -234,7 +241,10 @@ int main(void) {
   if (create_vk_swapchain(&app, &sformat, extent2D) == -1)
     goto exit_error;
 
-  if (create_vk_images(&app, &sformat) == -1)
+  if (create_vk_swapchain_images(&app, &sformat) == -1)
+    goto exit_error;
+
+  if (create_vk_depth_image(&app) == -1)
     goto exit_error;
 
   if (create_vk_shader_modules(&app) == -1)
@@ -498,42 +508,106 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *sformat, VkExten
 }
 
 
-int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
+int create_vk_swapchain_images(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
 
-  struct uvr_vk_image_create_info vkimage_create_info;
-  vkimage_create_info.logicalDevice = app->lgdev.logicalDevice;
-  vkimage_create_info.swapChain = app->schain.swapChain;
-  vkimage_create_info.imageCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
-  vkimage_create_info.imageViewflags = 0;
-  vkimage_create_info.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-  vkimage_create_info.imageViewFormat = sformat->format;
-  vkimage_create_info.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-  vkimage_create_info.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-  vkimage_create_info.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-  vkimage_create_info.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
-  vkimage_create_info.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
-  vkimage_create_info.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+  struct uvr_vk_image_create_info swapChainImagesInfo;
+  swapChainImagesInfo.logicalDevice = app->lgdev.logicalDevice;
+  swapChainImagesInfo.swapChain = app->schain.swapChain;
+  swapChainImagesInfo.imageCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
+  swapChainImagesInfo.imageViewflags = 0;
+  swapChainImagesInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+  swapChainImagesInfo.imageViewFormat = sformat->format;
+  swapChainImagesInfo.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+  swapChainImagesInfo.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  swapChainImagesInfo.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+  swapChainImagesInfo.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+  swapChainImagesInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+  swapChainImagesInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+  swapChainImagesInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
+  swapChainImagesInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
+  swapChainImagesInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
   /* Not create images manually so rest of struct members can be safely ignored */
-  vkimage_create_info.physDevice = VK_NULL_HANDLE;
-  vkimage_create_info.memPropertyFlags = 0;
-  vkimage_create_info.imageflags = 0;
-  vkimage_create_info.imageType = 0;
-  vkimage_create_info.imageExtent3D = (VkExtent3D) { 0, 0, 0 };
-  vkimage_create_info.imageMipLevels = 0;
-  vkimage_create_info.imageArrayLayers = 0;
-  vkimage_create_info.imageSamples = 0;
-  vkimage_create_info.imageTiling = 0;
-  vkimage_create_info.imageUsage = 0;
-  vkimage_create_info.imageSharingMode = 0;
-  vkimage_create_info.imageQueueFamilyIndexCount = 0;
-  vkimage_create_info.imageQueueFamilyIndices = NULL;
-  vkimage_create_info.imageInitialLayout = 0;
+  swapChainImagesInfo.physDevice = VK_NULL_HANDLE;
+  swapChainImagesInfo.memPropertyFlags = 0;
+  swapChainImagesInfo.imageflags = 0;
+  swapChainImagesInfo.imageType = 0;
+  swapChainImagesInfo.imageExtent3D = (VkExtent3D) { 0, 0, 0 };
+  swapChainImagesInfo.imageMipLevels = 0;
+  swapChainImagesInfo.imageArrayLayers = 0;
+  swapChainImagesInfo.imageSamples = 0;
+  swapChainImagesInfo.imageTiling = 0;
+  swapChainImagesInfo.imageUsage = 0;
+  swapChainImagesInfo.imageSharingMode = 0;
+  swapChainImagesInfo.imageQueueFamilyIndexCount = 0;
+  swapChainImagesInfo.imageQueueFamilyIndices = NULL;
+  swapChainImagesInfo.imageInitialLayout = 0;
 
-  app->vkimages[0] = uvr_vk_image_create(&vkimage_create_info);
+  app->vkimages[0] = uvr_vk_image_create(&swapChainImagesInfo);
   if (!app->vkimages[0].imageViewHandles[0].view)
+    return -1;
+
+  return 0;
+}
+
+
+VkFormat choose_depth_image_format(struct uvr_vk *app, VkImageTiling imageTiling, VkFormatFeatureFlags formatFeatureFlags) {
+  VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
+  VkFormat format = VK_FORMAT_UNDEFINED;
+
+  struct uvr_vk_phdev_format_prop physDeviceFormatProps = uvr_vk_get_phdev_format_properties(app->phdev.physDevice, formats, ARRAY_LEN(formats));
+  for (uint32_t fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
+    if (imageTiling == VK_IMAGE_TILING_OPTIMAL && (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags) {
+      format = formats[fp];
+      goto exit_choose_depth_image_format;
+    } else if (imageTiling == VK_IMAGE_TILING_LINEAR && (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags) {
+      format = formats[fp];
+      goto exit_choose_depth_image_format;
+    }
+  }
+
+exit_choose_depth_image_format:
+  free(physDeviceFormatProps.formatProperties);
+  return format;
+}
+
+
+int create_vk_depth_image(struct uvr_vk *app) {
+  VkImageTiling imageTiling = VK_IMAGE_TILING_OPTIMAL;
+
+  VkFormat imageFormat = choose_depth_image_format(app, imageTiling, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+  if (imageFormat == VK_FORMAT_UNDEFINED)
+    return -1;
+
+  struct uvr_vk_image_create_info imageCreateInfo;
+  imageCreateInfo.logicalDevice = app->lgdev.logicalDevice;
+  imageCreateInfo.swapChain = VK_NULL_HANDLE;
+  imageCreateInfo.imageCount = 1;
+  imageCreateInfo.imageViewflags = 0;
+  imageCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+  imageCreateInfo.imageViewFormat = imageFormat;
+  imageCreateInfo.imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
+  imageCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  imageCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;
+  imageCreateInfo.imageViewSubresourceRange.levelCount = 1;
+  imageCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;
+  imageCreateInfo.imageViewSubresourceRange.layerCount = 1;
+  imageCreateInfo.physDevice = app->phdev.physDevice;
+  imageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  imageCreateInfo.imageflags = 0;
+  imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageCreateInfo.imageExtent3D = (VkExtent3D) { .width = WIDTH, .height = HEIGHT, .depth = 1 }; // depth describes how deep the image goes (1 because no 3D aspect)
+  imageCreateInfo.imageMipLevels = 1;
+  imageCreateInfo.imageArrayLayers = 1;
+  imageCreateInfo.imageSamples = VK_SAMPLE_COUNT_1_BIT;
+  imageCreateInfo.imageTiling = imageTiling;
+  imageCreateInfo.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  imageCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  imageCreateInfo.imageQueueFamilyIndexCount = 0;
+  imageCreateInfo.imageQueueFamilyIndices = NULL;
+  imageCreateInfo.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+  app->vkimages[1] = uvr_vk_image_create(&imageCreateInfo);
+  if (!app->vkimages[1].imageHandles[0].image && !app->vkimages[1].imageViewHandles[0].view)
     return -1;
 
   return 0;
@@ -548,7 +622,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     "#extension GL_ARB_separate_shader_objects : enable\n\n"
     "layout(location = 0) out vec3 outColor;\n"
     "layout(location = 1) out vec2 outTexCoord;\n\n"
-    "layout(location = 0) in vec2 inPosition;\n"
+    "layout(location = 0) in vec3 inPosition;\n"
     "layout(location = 1) in vec3 inColor;\n"
     "layout(location = 2) in vec2 inTexCoord;\n\n"
     "layout(set = 0, binding = 0) uniform uniform_buffer {\n"
@@ -559,7 +633,7 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     "  mat4 model;\n"
     "} uboModel;\n\n"
     "void main() {\n"
-    "  gl_Position = uboViewProjection.proj * uboViewProjection.view * uboModel.model * vec4(inPosition, 0.0, 1.0);\n"
+    "  gl_Position = uboViewProjection.proj * uboViewProjection.view * uboModel.model * vec4(inPosition, 1.0);\n"
     "  outColor = inColor;\n"
     "  outTexCoord = inTexCoord;\n"
     "}";
@@ -645,7 +719,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
   void *data = NULL;
 
-  size_t singleMeshSize = sizeof(vertices_pos_color[0]);
+  size_t singleMeshSize = sizeof(meshData[0]);
   size_t singleIndexBufferSize = sizeof(indices);
 
   // Create CPU visible vertex + index buffer
@@ -653,7 +727,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkVertexBufferCreateInfo.logicalDevice = app->lgdev.logicalDevice;
   vkVertexBufferCreateInfo.physDevice = app->phdev.physDevice;
   vkVertexBufferCreateInfo.bufferFlags = 0;
-  vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(vertices_pos_color);
+  vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(meshData);
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
                                           VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -674,7 +748,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   // Copy vertex data into CPU visible vertex buffer
   for (uint32_t vbuff = 0; vbuff < 2; vbuff++) {
     vkMapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory, singleIndexBufferSize + (singleMeshSize * vbuff), singleMeshSize, 0, &data);
-    memcpy(data, vertices_pos_color[vbuff], singleMeshSize);
+    memcpy(data, meshData[vbuff], singleMeshSize);
     vkUnmapMemory(app->lgdev.logicalDevice, app->vkbuffers[cpuVisibleBuffer].deviceMemory);
     data = NULL;
   }
@@ -750,7 +824,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 
 
 int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
-  int textureWidth, textureHeight, textureChannels;
+  int textureWidth, textureHeight, textureChannels, textureImageIndex = 2;
   stbi_uc *pixels = stbi_load(TEXTURE_IMAGE, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
   if (!pixels) {
     uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", TEXTURE_IMAGE);
@@ -815,8 +889,8 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   vkimage_create_info.imageQueueFamilyIndices = NULL;
   vkimage_create_info.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-  app->vkimages[1] = uvr_vk_image_create(&vkimage_create_info);
-  if (!app->vkimages[1].imageHandles[imageTransferIndex].image && !app->vkimages[1].imageViewHandles[imageTransferIndex].view)
+  app->vkimages[textureImageIndex] = uvr_vk_image_create(&vkimage_create_info);
+  if (!app->vkimages[textureImageIndex].imageHandles[imageTransferIndex].image && !app->vkimages[textureImageIndex].imageViewHandles[imageTransferIndex].view)
     return -1;
 
   VkImageMemoryBarrier imageMemoryBarrier = {};
@@ -828,7 +902,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  imageMemoryBarrier.image = app->vkimages[1].imageHandles[imageTransferIndex].image;
+  imageMemoryBarrier.image = app->vkimages[textureImageIndex].imageHandles[imageTransferIndex].image;
   imageMemoryBarrier.subresourceRange.aspectMask = vkimage_create_info.imageViewSubresourceRange.aspectMask;
   imageMemoryBarrier.subresourceRange.baseMipLevel = vkimage_create_info.imageViewSubresourceRange.baseMipLevel;
   imageMemoryBarrier.subresourceRange.levelCount = vkimage_create_info.imageViewSubresourceRange.levelCount;
@@ -866,7 +940,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *sformat) {
   bufferCopyInfo.commandBuffer = app->vkcbuffs.commandBuffers[0].commandBuffer;
   bufferCopyInfo.queue = app->graphics_queue.queue;
   bufferCopyInfo.srcResource = app->vkbuffers[cpuVisibleImageBuffer].buffer;
-  bufferCopyInfo.dstResource = app->vkimages[1].imageHandles[imageTransferIndex].image;
+  bufferCopyInfo.dstResource = app->vkimages[textureImageIndex].imageHandles[imageTransferIndex].image;
   bufferCopyInfo.bufferCopyInfo = NULL;
   bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
   bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -989,8 +1063,8 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView = app->vkimages[1].imageViewHandles[0].view;      // created in create_vk_texture_image
-  imageInfo.sampler = app->texture_sampler.sampler;               // created in create_vk_image_sampler
+  imageInfo.imageView = app->vkimages[2].imageViewHandles[0].view;   // created in create_vk_texture_image
+  imageInfo.sampler = app->texture_sampler.sampler;                  // created in create_vk_image_sampler
 
   /* Binds multiple descriptors and their objects to the same set */
   VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
@@ -1041,8 +1115,8 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   vertexAttributeDescriptions[0].location = 0;
   vertexAttributeDescriptions[0].binding = 0;
   // defines the byte size of attribute data
-  vertexAttributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // vec2 - RG color channels match size of vec2
-  // specifies the byte where struct uvr_vertex_data member vec2 pos is located
+  vertexAttributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // vec3 - RGB color channels match size of vec3
+  // specifies the byte where struct uvr_vertex_data member vec3 pos is located
   vertexAttributeDescriptions[0].offset = offsetof(struct uvr_vertex_data, pos);
 
   // color attribute
@@ -1143,6 +1217,23 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   dynamicState.dynamicStateCount = ARRAY_LEN(dynamicStates);
   dynamicState.pDynamicStates = dynamicStates;
 
+  VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+  depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depthStencilInfo.pNext = NULL;
+  depthStencilInfo.flags = 0;
+  depthStencilInfo.depthTestEnable = VK_TRUE;            // Enable checking depth to determine fragment write
+  depthStencilInfo.depthWriteEnable = VK_TRUE;           // Enable depth buffer writes inorder to replace old values
+  depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;  // Comparison operation that allows an overwrite (if is in front)
+  depthStencilInfo.depthBoundsTestEnable = VK_FALSE;     // Enable if depth test should be enabled between @minDepthBounds & @maxDepthBounds
+  // There isn't any depth stencil in this example
+  depthStencilInfo.stencilTestEnable = VK_FALSE;
+  depthStencilInfo.front = (VkStencilOpState) { .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP,
+                                                .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 };
+  depthStencilInfo.back = (VkStencilOpState) { .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP,
+                                               .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 };
+  depthStencilInfo.minDepthBounds = 0.0f;
+  depthStencilInfo.maxDepthBounds = 0.0f;
+
   /*
   VkPushConstantRange pushConstantRange;
   pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -1163,65 +1254,94 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
   if (!app->gplayout.pipelineLayout)
     return -1;
 
-  VkAttachmentDescription colorAttachment = {};
-  colorAttachment.format = sformat->format;
-  colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-  colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  /*
+   * Attachments
+   * 0. Color Attachment
+   * 1. Depth Attachment
+   */
+  VkAttachmentDescription attachmentDescriptions[2];
+  attachmentDescriptions[0].flags = 0;
+  attachmentDescriptions[0].format = sformat->format;
+  attachmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;               // Load data into attachment be sure to clear first
+  attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-  VkAttachmentReference colorAttachmentRef = {};
-  colorAttachmentRef.attachment = 0;
-  colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  attachmentDescriptions[1].flags = 0;
+  attachmentDescriptions[1].format = choose_depth_image_format(app, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+  attachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+  /*
+   * Attachments
+   * 0. Color Attachment Reference
+   * 1. Depth Attachment Reference
+   */
+  VkAttachmentReference attachmentReferences[2] = {};
+  attachmentReferences[0].attachment = 0;
+  attachmentReferences[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  attachmentReferences[1].attachment = 1;
+  attachmentReferences[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
   VkSubpassDescription subpass = {};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.inputAttachmentCount = 0;
+  subpass.pInputAttachments = NULL;
   subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachments = &colorAttachmentRef;
+  subpass.pColorAttachments = &attachmentReferences[0];
+  subpass.pResolveAttachments = NULL;
+  subpass.pDepthStencilAttachment = &attachmentReferences[1];
+  subpass.preserveAttachmentCount = 0;
+  subpass.pPreserveAttachments = NULL;
 
-  VkSubpassDependency subPassDependency;
-  subPassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-  subPassDependency.dstSubpass = 0;
-  subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  subPassDependency.srcAccessMask = 0;
-  subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-  subPassDependency.dependencyFlags = 0;
+  VkSubpassDependency subpassDependency;
+  subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  subpassDependency.dstSubpass = 0;
+  subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  subpassDependency.srcAccessMask = 0;
+  subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+  subpassDependency.dependencyFlags = 0;
 
-  struct uvr_vk_render_pass_create_info renderpass_info;
-  renderpass_info.logicalDevice = app->lgdev.logicalDevice;
-  renderpass_info.attachmentDescriptionCount = 1;
-  renderpass_info.attachmentDescriptions = &colorAttachment;
-  renderpass_info.subpassDescriptionCount = 1;
-  renderpass_info.subpassDescriptions = &subpass;
-  renderpass_info.subpassDependencyCount = 1;
-  renderpass_info.subpassDependencies = &subPassDependency;
+  struct uvr_vk_render_pass_create_info renderPassInfo;
+  renderPassInfo.logicalDevice = app->lgdev.logicalDevice;
+  renderPassInfo.attachmentDescriptionCount = ARRAY_LEN(attachmentDescriptions);
+  renderPassInfo.attachmentDescriptions = attachmentDescriptions;
+  renderPassInfo.subpassDescriptionCount = 1;
+  renderPassInfo.subpassDescriptions = &subpass;
+  renderPassInfo.subpassDependencyCount = 1;
+  renderPassInfo.subpassDependencies = &subpassDependency;
 
-  app->rpass = uvr_vk_render_pass_create(&renderpass_info);
+  app->rpass = uvr_vk_render_pass_create(&renderPassInfo);
   if (!app->rpass.renderPass)
     return -1;
 
-  struct uvr_vk_graphics_pipeline_create_info gpipeline_info;
-  gpipeline_info.logicalDevice = app->lgdev.logicalDevice;
-  gpipeline_info.shaderStageCount = ARRAY_LEN(shaderStages);
-  gpipeline_info.shaderStages = shaderStages;
-  gpipeline_info.vertexInputState = &vertexInputInfo;
-  gpipeline_info.inputAssemblyState = &inputAssembly;
-  gpipeline_info.tessellationState = NULL;
-  gpipeline_info.viewportState = &viewportState;
-  gpipeline_info.rasterizationState = &rasterizer;
-  gpipeline_info.multisampleState = &multisampling;
-  gpipeline_info.depthStencilState = NULL;
-  gpipeline_info.colorBlendState = &colorBlending;
-  gpipeline_info.dynamicState = &dynamicState;
-  gpipeline_info.pipelineLayout = app->gplayout.pipelineLayout;
-  gpipeline_info.renderPass = app->rpass.renderPass;
-  gpipeline_info.subpass = 0;
+  struct uvr_vk_graphics_pipeline_create_info graphicsPipelineInfo;
+  graphicsPipelineInfo.logicalDevice = app->lgdev.logicalDevice;
+  graphicsPipelineInfo.shaderStageCount = ARRAY_LEN(shaderStages);
+  graphicsPipelineInfo.shaderStages = shaderStages;
+  graphicsPipelineInfo.vertexInputState = &vertexInputInfo;
+  graphicsPipelineInfo.inputAssemblyState = &inputAssembly;
+  graphicsPipelineInfo.tessellationState = NULL;
+  graphicsPipelineInfo.viewportState = &viewportState;
+  graphicsPipelineInfo.rasterizationState = &rasterizer;
+  graphicsPipelineInfo.multisampleState = &multisampling;
+  graphicsPipelineInfo.depthStencilState = &depthStencilInfo;
+  graphicsPipelineInfo.colorBlendState = &colorBlending;
+  graphicsPipelineInfo.dynamicState = &dynamicState;
+  graphicsPipelineInfo.pipelineLayout = app->gplayout.pipelineLayout;
+  graphicsPipelineInfo.renderPass = app->rpass.renderPass;
+  graphicsPipelineInfo.subpass = 0;
 
-  app->gpipeline = uvr_vk_graphics_pipeline_create(&gpipeline_info);
+  app->gpipeline = uvr_vk_graphics_pipeline_create(&graphicsPipelineInfo);
   if (!app->gpipeline.graphicsPipeline)
     return -1;
 
@@ -1231,16 +1351,18 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *sformat,
 
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D) {
 
-  struct uvr_vk_framebuffer_create_info vkframebuffer_create_info;
-  vkframebuffer_create_info.logicalDevice = app->lgdev.logicalDevice;
-  vkframebuffer_create_info.frameBufferCount = app->vkimages[0].imageCount;
-  vkframebuffer_create_info.imageViewHandles = app->vkimages[0].imageViewHandles;
-  vkframebuffer_create_info.renderPass = app->rpass.renderPass;
-  vkframebuffer_create_info.width = extent2D.width;
-  vkframebuffer_create_info.height = extent2D.height;
-  vkframebuffer_create_info.layers = 1;
+  struct uvr_vk_framebuffer_create_info frameBufferInfo;
+  frameBufferInfo.logicalDevice = app->lgdev.logicalDevice;
+  frameBufferInfo.frameBufferCount = app->vkimages[0].imageCount;           // Amount of images in swapchain
+  frameBufferInfo.imageViewHandles = app->vkimages[0].imageViewHandles;     // swapchain image views
+  frameBufferInfo.miscImageViewHandleCount = 1;                             // Should only be a depth image view
+  frameBufferInfo.miscImageViewHandles = app->vkimages[1].imageViewHandles; // Depth Buffer image
+  frameBufferInfo.renderPass = app->rpass.renderPass;
+  frameBufferInfo.width = extent2D.width;
+  frameBufferInfo.height = extent2D.height;
+  frameBufferInfo.layers = 1;
 
-  app->vkframebuffs = uvr_vk_framebuffer_create(&vkframebuffer_create_info);
+  app->vkframebuffs = uvr_vk_framebuffer_create(&frameBufferInfo);
   if (!app->vkframebuffs.frameBufferHandles[0].frameBuffer)
     return -1;
 
@@ -1294,12 +1416,18 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
   int32_t int32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
   uint32_t uint32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
-  VkClearValue clearColor[1];
-  memcpy(clearColor[0].color.float32, float32, ARRAY_LEN(float32));
-  memcpy(clearColor[0].color.int32, int32, ARRAY_LEN(int32));
-  memcpy(clearColor[0].color.int32, uint32, ARRAY_LEN(uint32));
-  clearColor[0].depthStencil.depth = 0.0f;
-  clearColor[0].depthStencil.stencil = 0;
+  VkClearValue clearColors[2];
+  memcpy(clearColors[0].color.float32, float32, ARRAY_LEN(float32));
+  memcpy(clearColors[0].color.int32, int32, ARRAY_LEN(int32));
+  memcpy(clearColors[0].color.int32, uint32, ARRAY_LEN(uint32));
+  clearColors[0].depthStencil.depth = 0.0f;
+  clearColors[0].depthStencil.stencil = 0;
+
+  memcpy(clearColors[1].color.float32, float32, ARRAY_LEN(float32));
+  memcpy(clearColors[1].color.int32, int32, ARRAY_LEN(int32));
+  memcpy(clearColors[1].color.int32, uint32, ARRAY_LEN(uint32));
+  clearColors[1].depthStencil.depth = 1.0f;
+  clearColors[1].depthStencil.stencil = 0;
 
   VkRenderPassBeginInfo renderPassInfo;
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1307,15 +1435,15 @@ int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer 
   renderPassInfo.renderPass = app->rpass.renderPass;
   renderPassInfo.framebuffer = app->vkframebuffs.frameBufferHandles[vkSwapchainImageIndex].frameBuffer;
   renderPassInfo.renderArea = renderArea;
-  renderPassInfo.clearValueCount = 1;
-  renderPassInfo.pClearValues = clearColor;
+  renderPassInfo.clearValueCount = ARRAY_LEN(clearColors);
+  renderPassInfo.pClearValues = clearColors;
 
   /*
    * 0. CPU visible vertex buffer
    * 1. GPU visible vertex buffer
    */
   VkBuffer vertexBuffer = app->vkbuffers[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].buffer;
-  VkDeviceSize offsets[] = {sizeof(indices), sizeof(indices) + sizeof(vertices_pos_color[0]) };
+  VkDeviceSize offsets[] = {sizeof(indices), sizeof(indices) + sizeof(meshData[0]) };
   uint32_t dynamicUniformBufferOffset = 0;
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
