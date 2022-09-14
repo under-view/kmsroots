@@ -43,6 +43,9 @@
 *.pdb
 *.log
 
+# Archive files
+*.zip
+
 # Kernel Module Compile Results
 *.mod*
 *.cmd
@@ -51,4 +54,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Ignore potential user generated directories
 build/
+data/

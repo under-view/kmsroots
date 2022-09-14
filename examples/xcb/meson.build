@@ -1,6 +1,9 @@
 
 if libxcb.found() and libxcbewmh.found()
-  progs = ['triangle.c', 'triangle-index.c', 'spin-rectangle.c', 'texture-mapping.c']
+  progs = [
+    'triangle.c', 'triangle-index.c', 'spin-rectangle.c',
+    'texture-mapping.c', 'model-load.c'
+  ]
 
   original_args = pargs
   foreach p : progs
@@ -11,6 +14,10 @@ if libxcb.found() and libxcbewmh.found()
     endif
 
     if p == 'texture-mapping.c'
+      pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
+    endif
+
+    if p == 'model-load.c'
       pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
     endif
 

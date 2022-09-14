@@ -1,7 +1,8 @@
 shaders = [
   'triangle-shader.vert'        ,  'triangle-shader.frag'        ,
   'spin-rectangle-shader.vert'  ,  'spin-rectangle-shader.frag'  ,
-  'texture-mapping-shader.vert' ,  'texture-mapping-shader.frag'
+  'texture-mapping-shader.vert' ,  'texture-mapping-shader.frag' ,
+  'model-load-shader.vert'      ,  'model-load-shader.frag'
 ]
 
 foreach shader : shaders
