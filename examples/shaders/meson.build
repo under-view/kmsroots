@@ -19,12 +19,4 @@ foreach shader : shaders
                                   '-o', '@0@'.format(meson.current_build_dir()) + '/' + shader_name + '.spv', check: true)
 endforeach
 
-# Set project args to 'name of shader file - type.spv'
-pargs += [
-  '-DTRIANGLE_VERTEX_SHADER_SPIRV='           + '"@0@'.format(meson.current_build_dir()) + '/triangle-shader-vert.spv"',
-  '-DTRIANGLE_FRAGMENT_SHADER_SPIRV='         + '"@0@'.format(meson.current_build_dir()) + '/triangle-shader-frag.spv"',
-  '-DTRIANGLE_UNIFORM_VERTEX_SHADER_SPIRV='   + '"@0@'.format(meson.current_build_dir()) + '/spin-rectangle-shader-vert.spv"',
-  '-DTRIANGLE_UNIFORM_FRAGMENT_SHADER_SPIRV=' + '"@0@'.format(meson.current_build_dir()) + '/spin-rectangle-shader-frag.spv"',
-  '-DTEXTURE_MAPPING_VERTEX_SHADER_SPIRV='    + '"@0@'.format(meson.current_build_dir()) + '/texture-mapping-shader-vert.spv"',
-  '-DTEXTURE_MAPPING_FRAGMENT_SHADER_SPIRV='  + '"@0@'.format(meson.current_build_dir()) + '/texture-mapping-shader-frag.spv"'
-]
+shader_build_dir = meson.current_build_dir()

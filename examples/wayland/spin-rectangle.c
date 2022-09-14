@@ -643,11 +643,11 @@ int create_vk_shader_modules(struct uvr_vk *app) {
     return -1;
 
 #else
-  app->vertex_shader = uvr_shader_file_load(TRIANGLE_UNIFORM_VERTEX_SHADER_SPIRV);
+  app->vertex_shader = uvr_shader_file_load(VERTEX_SHADER_SPIRV);
   if (!app->vertex_shader.bytes)
     return -1;
 
-  app->fragment_shader = uvr_shader_file_load(TRIANGLE_UNIFORM_FRAGMENT_SHADER_SPIRV);
+  app->fragment_shader = uvr_shader_file_load(FRAGMENT_SHADER_SPIRV);
   if (!app->fragment_shader.bytes)
     return -1;
 #endif
