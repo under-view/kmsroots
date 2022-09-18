@@ -16,6 +16,7 @@ so_version = meson.project_version()
 cc = meson.get_compiler('c')
 inc = include_directories('include')
 
+subdir('include')
 subdir('src')
 
 lib_underview_renderer = library(
