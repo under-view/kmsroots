@@ -22,6 +22,10 @@ option('shaderc',
        type: 'feature', value: 'disabled',
        description: 'Enable/disable google shaderc')
 
+option('examples',
+      type: 'boolean', value: 'true',
+      description: 'Build examples')
+
 option('gpu',
        type: 'combo', value: 'discrete',
        choices: ['integrated', 'discrete', 'cpu'],

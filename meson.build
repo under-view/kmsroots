@@ -28,4 +28,6 @@ lib_underview_renderer = library(
   install: true
 )
 
-subdir('examples')
+if get_option('examples')
+  subdir('examples')
+endif
