@@ -23,7 +23,7 @@ option('shaderc',
        description: 'Enable/disable google shaderc')
 
 option('examples',
-      type: 'boolean', value: 'true',
+      type: 'boolean', value: 'false',
       description: 'Build examples')
 
 option('gpu',

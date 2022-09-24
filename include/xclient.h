@@ -90,20 +90,20 @@ typedef void (*uvr_xcb_renderer_impl)(bool*, uint32_t*, void*);
  * struct uvr_xcb_window_handle_event_info (Underview Renderer XCB Window Handle Event Information)
  *
  * members:
- * @uvrXcbWindow   - Pointer to a struct uvr_xcb_window contains all objects necessary to manage xcb client
- * @renderer       - Function pointer that allows custom external renderers to be executed by the api
- *                   when before registering a frame wl_callback. Renderer before presenting
- * @rendererData   - Pointer to an optional address. This address may be the address of a struct. Reference
- *                   passed depends on external render function.
- * @rendererCbuf   - Pointer to an integer used by the api to update the current displayable buffer
- * @rendererRuning - Pointer to a boolean that determines if a given window/surface is actively running
+ * @xcbWindowObject       - Pointer to a struct uvr_xcb_window contains all objects necessary to manage xcb client
+ * @renderer              - Function pointer that allows custom external renderers to be executed by the api
+ *                          when before registering a frame wl_callback. Renderer before presenting
+ * @rendererData          - Pointer to an optional address. This address may be the address of a struct. Reference
+ *                          passed depends on external render function.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer
+ * @rendererRunning       - Pointer to a boolean that determines if a given window/surface is actively running
  */
 struct uvr_xcb_window_handle_event_info {
-  struct uvr_xcb_window *uvrXcbWindow;
+  struct uvr_xcb_window *xcbWindowObject;
   uvr_xcb_renderer_impl renderer;
   void                  *rendererData;
-  uint32_t              *rendererCbuf;
-  bool                  *rendererRuning;
+  uint32_t              *rendererCurrentBuffer;
+  bool                  *rendererRunning;
 };
 
 

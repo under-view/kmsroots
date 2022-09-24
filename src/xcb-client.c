@@ -6,7 +6,8 @@
 #include "xclient.h"
 
 
-struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb) {
+struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb)
+{
   xcb_connection_t *conn = NULL;
   xcb_window_t window;
 
@@ -101,16 +102,18 @@ error_exit_xcb_window_create:
 }
 
 
-void uvr_xcb_window_make_visible(struct uvr_xcb_window *uvrxcb) {
+void uvr_xcb_window_make_visible(struct uvr_xcb_window *uvrxcb)
+{
   xcb_map_window(uvrxcb->conn, uvrxcb->window);
   xcb_flush(uvrxcb->conn);
 }
 
 
-int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb) {
+int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
+{
   xcb_generic_event_t *event = NULL;
 
-  event = xcb_poll_for_event(uvrxcb->uvrXcbWindow->conn);
+  event = xcb_poll_for_event(uvrxcb->xcbWindowObject->conn);
   if (!event) {
     goto exit_xcb_window_event_loop;
   }
@@ -121,7 +124,7 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
       //uvr_utils_log(UVR_INFO, "uvr_xcb_window_wait_for_event: Key pressed %d", press->detail);
       /* ESCAPE key, Q key */
       if (press->detail == 9 || press->detail == 24) {
-        uvrxcb->rendererRuning = false;
+        uvrxcb->rendererRunning = false;
         goto error_exit_xcb_window_event_loop;
       }
       break;
@@ -129,8 +132,8 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
 
     case XCB_CLIENT_MESSAGE: {
       xcb_client_message_event_t *message = (xcb_client_message_event_t *) event;
-      if (message->data.data32[0] == uvrxcb->uvrXcbWindow->delWindow->atom) {
-        uvrxcb->rendererRuning = false;
+      if (message->data.data32[0] == uvrxcb->xcbWindowObject->delWindow->atom) {
+        uvrxcb->rendererRunning = false;
         goto error_exit_xcb_window_event_loop;
       }
       break;
@@ -141,7 +144,7 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
   }
 
 exit_xcb_window_event_loop:
-  uvrxcb->renderer(uvrxcb->rendererRuning, uvrxcb->rendererCbuf, uvrxcb->rendererData);
+  uvrxcb->renderer(uvrxcb->rendererRunning, uvrxcb->rendererCurrentBuffer, uvrxcb->rendererData);
   free(event);
   return 1;
 
@@ -151,7 +154,8 @@ error_exit_xcb_window_event_loop:
 }
 
 
-void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb) {
+void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb)
+{
   free(uvrxcb->uvr_xcb_window.delWindow);
   if (uvrxcb->uvr_xcb_window.window)
     xcb_destroy_window(uvrxcb->uvr_xcb_window.conn, uvrxcb->uvr_xcb_window.window);

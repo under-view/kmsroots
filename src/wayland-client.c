@@ -15,13 +15,15 @@
 #include "wclient.h"
 
 
-static void noop() {
+static void noop()
+{
   // This space intentionally left blank
 }
 
 
 /* Hint to compositor that client hasn't become deadlocked */
-static void xdg_wm_base_ping(void UNUSED *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
+static void xdg_wm_base_ping(void UNUSED *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial)
+{
   xdg_wm_base_pong(xdg_wm_base, serial);
 }
 
@@ -42,39 +44,38 @@ static void registry_handle_global(void *data,
                                    const char *interface,
                                    uint32_t version)
 {
-
   uvr_utils_log(UVR_INFO, "interface: '%s', version: %d, name: %d", interface, version, name);
 
-  struct uvr_wc_core_interface *core = (struct uvr_wc_core_interface *) data;
+  struct uvr_wc_core_interface *coreInterface = (struct uvr_wc_core_interface *) data;
 
-  if (core->iType & UVR_WC_WL_COMPOSITOR_INTERFACE) {
+  if (coreInterface->iType & UVR_WC_INTERFACE_WL_COMPOSITOR) {
     if (!strcmp(interface, wl_compositor_interface.name)) {
-      core->wlCompositor = wl_registry_bind(registry, name, &wl_compositor_interface, version);
+      coreInterface->wlCompositor = wl_registry_bind(registry, name, &wl_compositor_interface, version);
     }
   }
 
-  if (core->iType & UVR_WC_XDG_WM_BASE_INTERFACE) {
+  if (coreInterface->iType & UVR_WC_INTERFACE_XDG_WM_BASE) {
     if (!strcmp(interface, xdg_wm_base_interface.name)) {
-      core->xdgWmBase = wl_registry_bind(registry, name, &xdg_wm_base_interface, 3);
-      xdg_wm_base_add_listener(core->xdgWmBase, &xdg_wm_base_listener, NULL);
+      coreInterface->xdgWmBase = wl_registry_bind(registry, name, &xdg_wm_base_interface, 3);
+      xdg_wm_base_add_listener(coreInterface->xdgWmBase, &xdg_wm_base_listener, NULL);
     }
   }
 
-  if (core->iType & UVR_WC_WL_SHM_INTERFACE) {
+  if (coreInterface->iType & UVR_WC_INTERFACE_WL_SHM) {
     if (!strcmp(interface, wl_shm_interface.name)) {
-      core->wlShm = wl_registry_bind(registry, name, &wl_shm_interface, version);
+      coreInterface->wlShm = wl_registry_bind(registry, name, &wl_shm_interface, version);
     }
   }
 
-  if (core->iType & UVR_WC_WL_SEAT_INTERFACE) {
+  if (coreInterface->iType & UVR_WC_INTERFACE_WL_SEAT) {
     if (!strcmp(interface, wl_seat_interface.name)) {
-      core->wlSeat = wl_registry_bind(registry, name, &wl_seat_interface, version);
+      coreInterface->wlSeat = wl_registry_bind(registry, name, &wl_seat_interface, version);
     }
   }
 
-  if (core->iType & UVR_WC_ZWP_FULLSCREEN_SHELL_V1) {
+  if (coreInterface->iType & UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1) {
     if (!strcmp(interface, "zwp_fullscreen_shell_v1")) {
-      core->zwpFullscreenShell = wl_registry_bind(registry, name, &zwp_fullscreen_shell_v1_interface, version);
+      coreInterface->zwpFullscreenShell = wl_registry_bind(registry, name, &zwp_fullscreen_shell_v1_interface, version);
     }
   }
 }
@@ -92,16 +93,17 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 
-struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_interface_create_info *uvrwc) {
+struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_interface_create_info *uvrwc)
+{
   struct uvr_wc_core_interface interfaces;
   memset(&interfaces, 0, sizeof(struct uvr_wc_core_interface));
   interfaces.iType = uvrwc->iType;
 
   /* Connect to wayland server */
-  interfaces.wlDisplay = wl_display_connect(uvrwc->wlDisplayName);
+  interfaces.wlDisplay = wl_display_connect(uvrwc->displayName);
   if (!interfaces.wlDisplay) {
     uvr_utils_log(UVR_DANGER, "[x] wl_display_connect: Failed to connect to Wayland display.");
-    goto core_interface_exit;
+    goto error_exit_core_interface_create;
   }
 
   uvr_utils_log(UVR_SUCCESS, "Connection to Wayland display established.");
@@ -112,7 +114,7 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
   interfaces.wlRegistry = wl_display_get_registry(interfaces.wlDisplay);
   if (!interfaces.wlRegistry) {
     uvr_utils_log(UVR_DANGER, "[x] wl_display_get_registry: Failed to set global objects/interfaces");
-    goto core_interface_disconnect_display;
+    goto error_exit_core_interface_create_disconnect_display;
   }
 
    /*
@@ -122,13 +124,14 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
   wl_registry_add_listener(interfaces.wlRegistry, &registry_listener, &interfaces);
 
   /* synchronously wait for the server respondes */
-  if (!wl_display_roundtrip(interfaces.wlDisplay)) goto core_interface_exit_destroy;
+  if (!wl_display_roundtrip(interfaces.wlDisplay))
+    goto error_exit_core_interface_create_destroy_objects;
 
   return (struct uvr_wc_core_interface) { .iType = uvrwc->iType, .wlDisplay = interfaces.wlDisplay, .wlRegistry = interfaces.wlRegistry,
                                           .wlCompositor = interfaces.wlCompositor, .xdgWmBase = interfaces.xdgWmBase, .wlShm = interfaces.wlShm,
                                           .wlSeat = interfaces.wlSeat };
 
-core_interface_exit_destroy:
+error_exit_core_interface_create_destroy_objects:
   if (interfaces.wlSeat)
     wl_seat_destroy(interfaces.wlSeat);
   if (interfaces.wlShm)
@@ -139,101 +142,102 @@ core_interface_exit_destroy:
     wl_compositor_destroy(interfaces.wlCompositor);
   if (interfaces.wlRegistry)
     wl_registry_destroy(interfaces.wlRegistry);
-core_interface_disconnect_display:
+error_exit_core_interface_create_disconnect_display:
   if (interfaces.wlDisplay)
     wl_display_disconnect(interfaces.wlDisplay);
-core_interface_exit:
-  return (struct uvr_wc_core_interface) { .iType = UVR_WC_NULL_INTERFACE, .wlDisplay = NULL, .wlRegistry = NULL, .wlCompositor = NULL,
+error_exit_core_interface_create:
+  return (struct uvr_wc_core_interface) { .iType = UVR_WC_INTERFACE_NULL, .wlDisplay = NULL, .wlRegistry = NULL, .wlCompositor = NULL,
                                           .xdgWmBase = NULL, .wlShm = NULL, .wlSeat = NULL };
 }
 
 
-struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrwc) {
-  struct uvr_wc_shm_buffer *uvrwcshmbufs = NULL;
-  struct uvr_wc_wl_buffer *uvrwcwlbufs = NULL;
+struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrwc)
+{
+  struct uvr_wc_shm_buffer *shmBufferObjects = NULL;
+  struct uvr_wc_wl_buffer_handle *wlBufferHandles = NULL;
 
-  if (!uvrwc->uvrWcCore->wlShm) {
+  if (!uvrwc->coreInterface->wlShm) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_wc_buffer_create(!uvrwc->uvrwccore->shm): Must bind the wl_shm interface");
     goto error_uvr_wc_create_buffer_exit;
   }
 
-  uvrwcshmbufs = (struct uvr_wc_shm_buffer *) calloc(uvrwc->bufferCount, sizeof(struct uvr_wc_shm_buffer));
-  if (!uvrwcshmbufs) {
+  shmBufferObjects = (struct uvr_wc_shm_buffer *) calloc(uvrwc->bufferCount, sizeof(struct uvr_wc_shm_buffer));
+  if (!shmBufferObjects) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     goto error_uvr_wc_create_buffer_exit;
   }
 
-  uvrwcwlbufs = (struct uvr_wc_wl_buffer *) calloc(uvrwc->bufferCount, sizeof(struct uvr_wc_wl_buffer));
-  if (!uvrwcwlbufs) {
+  wlBufferHandles = (struct uvr_wc_wl_buffer_handle *) calloc(uvrwc->bufferCount, sizeof(struct uvr_wc_wl_buffer_handle));
+  if (!wlBufferHandles) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto error_uvr_wc_create_buffer_free_uvrwcshmbufs;
+    goto error_uvr_wc_create_buffer_free_shmBufferObjects;
   }
 
   /*
    * @shm_pool - Object used to encapsulate a piece of memory shared between the compositor and client.
    *             @buffers (wl_buffer) can be created from shm_pool.
    */
-  struct wl_shm_pool *shm_pool = NULL;
+  struct wl_shm_pool *shmPool = NULL;
   int stride = uvrwc->width * uvrwc->bytesPerPixel;
 
   for (int c=0; c < uvrwc->bufferCount; c++) {
-    uvrwcshmbufs[c].shmPoolSize = stride * uvrwc->height;
-    uvrwcshmbufs[c].shmFd = -1;
+    shmBufferObjects[c].shmPoolSize = stride * uvrwc->height;
+    shmBufferObjects[c].shmFd = -1;
 
     /* Create POSIX shared memory file of size shm_pool_size */
-    uvrwcshmbufs[c].shmFd = allocate_shm_file(uvrwcshmbufs[c].shmPoolSize);
-    if (uvrwcshmbufs[c].shmFd == -1) {
+    shmBufferObjects[c].shmFd = allocate_shm_file(shmBufferObjects[c].shmPoolSize);
+    if (shmBufferObjects[c].shmFd == -1) {
       uvr_utils_log(UVR_DANGER, "[x] allocate_shm_file: failed to create file discriptor");
       goto error_uvr_wc_create_buffer_free_objects;
     }
 
     /* associate shared memory address range with open file */
-    uvrwcshmbufs[c].shmPoolData = mmap(NULL, uvrwcshmbufs[c].shmPoolSize, PROT_READ | PROT_WRITE, MAP_SHARED, uvrwcshmbufs[c].shmFd, 0);
-    if (uvrwcshmbufs[c].shmPoolData == (void*)-1) {
+    shmBufferObjects[c].shmPoolData = mmap(NULL, shmBufferObjects[c].shmPoolSize, PROT_READ | PROT_WRITE, MAP_SHARED, shmBufferObjects[c].shmFd, 0);
+    if (shmBufferObjects[c].shmPoolData == (void*)-1) {
       uvr_utils_log(UVR_DANGER, "[x] mmap: %s", strerror(errno));
       goto error_uvr_wc_create_buffer_free_objects;
     }
 
     /* Create pool of memory shared between client and compositor */
-    shm_pool = wl_shm_create_pool(uvrwc->uvrWcCore->wlShm, uvrwcshmbufs[c].shmFd, uvrwcshmbufs[c].shmPoolSize);
-    if (!shm_pool) {
+    shmPool = wl_shm_create_pool(uvrwc->coreInterface->wlShm, shmBufferObjects[c].shmFd, shmBufferObjects[c].shmPoolSize);
+    if (!shmPool) {
       uvr_utils_log(UVR_DANGER, "[x] wl_shm_create_pool: failed to create wl_shm_pool");
       goto error_uvr_wc_create_buffer_free_objects;
     }
 
-    uvrwcwlbufs[c].buffer = wl_shm_pool_create_buffer(shm_pool, 0, uvrwc->width, uvrwc->height, stride, uvrwc->wlBufferPixelFormat);
-    if (!uvrwcwlbufs[c].buffer) {
+    wlBufferHandles[c].buffer = wl_shm_pool_create_buffer(shmPool, 0, uvrwc->width, uvrwc->height, stride, uvrwc->pixelFormat);
+    if (!wlBufferHandles[c].buffer) {
       uvr_utils_log(UVR_DANGER, "[x] wl_shm_pool_create_buffer: failed to create wl_buffer from a wl_shm_pool");
       goto error_uvr_wc_create_buffer_free_objects;
     }
 
     /* Can destroy shm pool after creating buffer */
-    wl_shm_pool_destroy(shm_pool);
-    shm_pool = NULL;
+    wl_shm_pool_destroy(shmPool);
+    shmPool = NULL;
   }
 
-  return (struct uvr_wc_buffer) {  .bufferCount = uvrwc->bufferCount, .uvrWcShmBuffers = uvrwcshmbufs, .uvrWcWlBuffers = uvrwcwlbufs };
+  return (struct uvr_wc_buffer) { .bufferCount = uvrwc->bufferCount, .shmBufferObjects = shmBufferObjects, .wlBufferHandles = wlBufferHandles };
 
 error_uvr_wc_create_buffer_free_objects:
-  if (uvrwcshmbufs && uvrwcwlbufs) {
+  if (shmBufferObjects && wlBufferHandles) {
     for (int c=0; c < uvrwc->bufferCount; c++) {
-      if (uvrwcshmbufs[c].shmFd != -1)
-        close(uvrwcshmbufs[c].shmFd);
-      if (uvrwcshmbufs[c].shmPoolData)
-        munmap(uvrwcshmbufs[c].shmPoolData, uvrwcshmbufs[c].shmPoolSize);
-      if (uvrwcwlbufs[c].buffer)
-        wl_buffer_destroy(uvrwcwlbufs[c].buffer);
+      if (shmBufferObjects[c].shmFd != -1)
+        close(shmBufferObjects[c].shmFd);
+      if (shmBufferObjects[c].shmPoolData)
+        munmap(shmBufferObjects[c].shmPoolData, shmBufferObjects[c].shmPoolSize);
+      if (wlBufferHandles[c].buffer)
+        wl_buffer_destroy(wlBufferHandles[c].buffer);
     }
 
-    if (shm_pool)
-      wl_shm_pool_destroy(shm_pool);
+    if (shmPool)
+      wl_shm_pool_destroy(shmPool);
   }
 //error_uvr_wc_create_buffer_free_uvrwcwlbufs:
-  free(uvrwcwlbufs);
-error_uvr_wc_create_buffer_free_uvrwcshmbufs:
-  free(uvrwcshmbufs);
+  free(wlBufferHandles);
+error_uvr_wc_create_buffer_free_shmBufferObjects:
+  free(shmBufferObjects);
 error_uvr_wc_create_buffer_exit:
-  return (struct uvr_wc_buffer) {  .bufferCount = 0, .uvrWcShmBuffers = NULL, .uvrWcWlBuffers = NULL };
+  return (struct uvr_wc_buffer) { .bufferCount = 0, .shmBufferObjects = NULL, .wlBufferHandles = NULL };
 }
 
 
@@ -241,30 +245,31 @@ error_uvr_wc_create_buffer_exit:
  * struct uvr_wc_renderer_info (Underview Renderer Wayland Client Render Information)
  *
  * members:
- * @wccore       - Pointer to a struct uvr_wc_core_interface contains all client choosen global objects defined in wayland.xml.
- * @wcsurf       - Pointer to a struct uvr_wc_surface used to get wl_surface object and buffers associate with surface.
- * @renderer     - Function pointer that allows custom external renderers to be executed by the api before registering
- *                 a frame wl_callback.
- * @rendererdata - Pointer to an address that can be optional this address is passed to the external render function.
- *                 This address may be the address of a struct. Reference passed depends on external render function.
- * @cbuf         - Pointer to an integer used by the api to update the current displayable buffer
- * @running      - Boolean indicating that surface/window is active
+ * @coreInterface         - Pointer to a struct uvr_wc_core_interface contains all client choosen global objects defined in wayland.xml.
+ * @surfaceObject         - Pointer to a struct uvr_wc_surface used to get wl_surface object and buffers associate with surface.
+ * @renderer              - Function pointer that allows custom external renderers to be executed by the api before registering
+ *                          a frame wl_callback.
+ * @rendererData          - Pointer to an address that can be optional this address is passed to the external render function.
+ *                          This address may be the address of a struct. Reference passed depends on external render function.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer
+ * @rendererRunning       - Pointer to a boolean indicating that surface/window is active
  */
 struct uvr_wc_renderer_info {
-  struct uvr_wc_core_interface *wccore;
-  struct uvr_wc_surface *wcsurf;
+  struct uvr_wc_core_interface *coreInterface;
+  struct uvr_wc_surface *surfaceObject;
   uvr_wc_renderer_impl renderer;
-  void *rendererdata;
-  uint32_t *cbuf;
-  bool *running;
+  void *rendererData;
+  uint32_t *rendererCurrentBuffer;
+  bool *rendererRunning;
 };
 
 
 static void drawframe(void *data, struct wl_callback *callback, uint32_t time);
 
 
-static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
-  struct uvr_wc_renderer_info UNUSED *rinfo = (struct uvr_wc_renderer_info *) data;
+static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial)
+{
+  struct uvr_wc_renderer_info UNUSED *rendererInfo = (struct uvr_wc_renderer_info *) data;
   xdg_surface_ack_configure(xdg_surface, serial);
 }
 
@@ -275,9 +280,10 @@ static const struct xdg_surface_listener xdg_surface_listener = {
 
 
 /* Handles what happens when a window is closed */
-static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel UNUSED *xdg_toplevel) {
-  struct uvr_wc_renderer_info *rinfo = (struct uvr_wc_renderer_info *) data;
-  *rinfo->running = false;
+static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel UNUSED *xdg_toplevel)
+{
+  struct uvr_wc_renderer_info *rendererInfo = (struct uvr_wc_renderer_info *) data;
+  *rendererInfo->rendererRunning = false;
 }
 
 
@@ -290,32 +296,33 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
 static const struct wl_callback_listener frame_listener;
 
 
-static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED time) {
-  struct uvr_wc_renderer_info *rinfo = (struct uvr_wc_renderer_info *) data;
-  struct uvr_wc_surface *wcsurf = rinfo->wcsurf;
+static void drawframe(void *data, struct wl_callback *callback, uint32_t UNUSED time)
+{
+  struct uvr_wc_renderer_info *rendererInfo = (struct uvr_wc_renderer_info *) data;
+  struct uvr_wc_surface *surfaceObject = rendererInfo->surfaceObject;
 
   if (callback)
     wl_callback_destroy(callback);
 
   /* Register a frame callback to know when we need to draw the next frame */
-  wcsurf->wlCallback = wl_surface_frame(wcsurf->wlSurface);
-  wl_callback_add_listener(wcsurf->wlCallback, &frame_listener, rinfo);
+  surfaceObject->wlCallback = wl_surface_frame(surfaceObject->wlSurface);
+  wl_callback_add_listener(surfaceObject->wlCallback, &frame_listener, rendererInfo);
   /* Submit a frame for this event */
-  wl_surface_commit(wcsurf->wlSurface);
+  wl_surface_commit(surfaceObject->wlSurface);
 
-  rinfo->renderer(rinfo->running, rinfo->cbuf, rinfo->rendererdata);
+  rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererData);
 
-  if (wcsurf->uvrWcWlBuffers)
-    wl_surface_attach(wcsurf->wlSurface, wcsurf->uvrWcWlBuffers[*rinfo->cbuf].buffer, 0, 0);
+  if (surfaceObject->wlBufferHandles)
+    wl_surface_attach(surfaceObject->wlSurface, surfaceObject->wlBufferHandles[*rendererInfo->rendererCurrentBuffer].buffer, 0, 0);
 
   /* Indicate that the entire surface as changed and needs to be redrawn */
-  wl_surface_damage_buffer(wcsurf->wlSurface, 0, 0, INT32_MAX, INT32_MAX);
+  wl_surface_damage_buffer(surfaceObject->wlSurface, 0, 0, INT32_MAX, INT32_MAX);
 
   /* Submit a frame for this event */
-  wl_surface_commit(wcsurf->wlSurface);
+  wl_surface_commit(surfaceObject->wlSurface);
 
-  if (wcsurf->bufferCount)
-    *rinfo->cbuf = (*rinfo->cbuf + 1) % wcsurf->bufferCount;
+  if (surfaceObject->bufferCount)
+    *rendererInfo->rendererCurrentBuffer = (*rendererInfo->rendererCurrentBuffer + 1) % surfaceObject->bufferCount;
 }
 
 
@@ -324,104 +331,104 @@ static const struct wl_callback_listener frame_listener = {
 };
 
 
-struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *uvrwc) {
-  static struct uvr_wc_surface uvrwc_surf;
-  memset(&uvrwc_surf, 0, sizeof(uvrwc_surf));
+struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *uvrwc)
+{
+  static struct uvr_wc_surface surfaceObject;
+  memset(&surfaceObject, 0, sizeof(surfaceObject));
 
-  static struct uvr_wc_renderer_info rinfo;
-  memset(&rinfo, 0, sizeof(rinfo));
+  static struct uvr_wc_renderer_info rendererInfo;
+  memset(&rendererInfo, 0, sizeof(rendererInfo));
 
-  if (uvrwc->uvrWcBuffer) {
-    uvrwc_surf.bufferCount = uvrwc->uvrWcBuffer->bufferCount;
-    uvrwc_surf.uvrWcWlBuffers = uvrwc->uvrWcBuffer->uvrWcWlBuffers;
+  if (uvrwc->wcBufferObject) {
+    surfaceObject.bufferCount = uvrwc->wcBufferObject->bufferCount;
+    surfaceObject.wlBufferHandles = uvrwc->wcBufferObject->wlBufferHandles;
   } else if (uvrwc->bufferCount) {
-    uvrwc_surf.bufferCount = uvrwc->bufferCount;
+    surfaceObject.bufferCount = uvrwc->bufferCount;
   } else {
-    uvrwc_surf.bufferCount = 0;
+    surfaceObject.bufferCount = 0;
   }
 
   /* Assign pointer and data that a given client suface needs to watch */
   if (uvrwc->renderer) {
-    rinfo.wccore = uvrwc->uvrWcCore;
-    rinfo.wcsurf = &uvrwc_surf;
-    rinfo.renderer = uvrwc->renderer;
-    rinfo.rendererdata = uvrwc->rendererData;
-    rinfo.cbuf = uvrwc->rendererCbuf;
-    rinfo.running = uvrwc->rendererRuning;
+    rendererInfo.coreInterface = uvrwc->coreInterface;
+    rendererInfo.surfaceObject = &surfaceObject;
+    rendererInfo.renderer = uvrwc->renderer;
+    rendererInfo.rendererData = uvrwc->rendererData;
+    rendererInfo.rendererCurrentBuffer = uvrwc->rendererCurrentBuffer;
+    rendererInfo.rendererRunning = uvrwc->rendererRunning;
   }
 
   /* Use wl_compositor interface to create a wl_surface */
-  uvrwc_surf.wlSurface = wl_compositor_create_surface(uvrwc->uvrWcCore->wlCompositor);
-  if (!uvrwc_surf.wlSurface) {
+  surfaceObject.wlSurface = wl_compositor_create_surface(uvrwc->coreInterface->wlCompositor);
+  if (!surfaceObject.wlSurface) {
     uvr_utils_log(UVR_DANGER, "[x] wl_compositor_create_surface: Can't create wl_surface interface");
-    goto error_create_surf_exit;
+    goto exit_error_wc_surface_create;
   }
 
   /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
-  uvrwc_surf.xdgSurface = xdg_wm_base_get_xdg_surface(uvrwc->uvrWcCore->xdgWmBase, uvrwc_surf.wlSurface);
-  if (!uvrwc_surf.xdgSurface) {
+  surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(uvrwc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
+  if (!surfaceObject.xdgSurface) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_wm_base_get_xdg_surface: Can't create xdg_surface interface");
-    goto error_create_surf_wl_surface_destroy;
+    goto exit_error_wc_surface_create_wl_surface_destroy;
   }
 
   /* Create xdg_toplevel interface from which we manage application window from */
-  uvrwc_surf.xdgToplevel = xdg_surface_get_toplevel(uvrwc_surf.xdgSurface);
-  if (!uvrwc_surf.xdgToplevel) {
+  surfaceObject.xdgToplevel = xdg_surface_get_toplevel(surfaceObject.xdgSurface);
+  if (!surfaceObject.xdgToplevel) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_surface_get_toplevel: Can't create xdg_toplevel interface");
-    goto error_create_surf_xdg_surface_destroy;
+    goto exit_error_wc_surface_create_xdg_surface_destroy;
   }
 
   /*
    * Bind the xdg_surface_listener to a given xdg_surface objects. So that we can implement
    * how we handle events associate with object comming from the wayland server.
    */
-  if (xdg_surface_add_listener(uvrwc_surf.xdgSurface, &xdg_surface_listener, &rinfo)) {
+  if (xdg_surface_add_listener(surfaceObject.xdgSurface, &xdg_surface_listener, &rendererInfo)) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_surface_add_listener: Failed");
-    goto error_create_surf_xdg_toplevel_destroy;
+    goto exit_error_wc_surface_create_xdg_toplevel_destroy;
   }
 
   /*
    * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
    * how we handle events associate with objects comming from the wayland server.
    */
-  if (xdg_toplevel_add_listener(uvrwc_surf.xdgToplevel, &xdg_toplevel_listener, &rinfo)) {
+  if (xdg_toplevel_add_listener(surfaceObject.xdgToplevel, &xdg_toplevel_listener, &rendererInfo)) {
     uvr_utils_log(UVR_DANGER, "[x] xdg_toplevel_add_listener: Failed");
-    goto error_create_surf_xdg_toplevel_destroy;
+    goto exit_error_wc_surface_create_xdg_toplevel_destroy;
   }
 
-  xdg_toplevel_set_title(uvrwc_surf.xdgToplevel, uvrwc->appName);
+  xdg_toplevel_set_title(surfaceObject.xdgToplevel, uvrwc->appName);
 
-  if (uvrwc->fullscreen && uvrwc->uvrWcCore->zwpFullscreenShell) {
-    zwp_fullscreen_shell_v1_present_surface(uvrwc->uvrWcCore->zwpFullscreenShell, uvrwc_surf.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
+  if (uvrwc->fullscreen && uvrwc->coreInterface->zwpFullscreenShell) {
+    zwp_fullscreen_shell_v1_present_surface(uvrwc->coreInterface->zwpFullscreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
   }
 
-  wl_surface_commit(uvrwc_surf.wlSurface);
+  wl_surface_commit(surfaceObject.wlSurface);
 
   // Draw the first frame
   if (uvrwc->renderer) {
-    drawframe(&rinfo, NULL, 0);
+    drawframe(&rendererInfo, NULL, 0);
   }
 
-  return (struct uvr_wc_surface) { .xdgToplevel = uvrwc_surf.xdgToplevel, .xdgSurface = uvrwc_surf.xdgSurface, .wlSurface = uvrwc_surf.wlSurface,
-                                   .bufferCount = uvrwc_surf.bufferCount, .uvrWcWlBuffers = uvrwc_surf.uvrWcWlBuffers };
+  return (struct uvr_wc_surface) { .xdgToplevel = surfaceObject.xdgToplevel, .xdgSurface = surfaceObject.xdgSurface, .wlSurface = surfaceObject.wlSurface,
+                                   .bufferCount = surfaceObject.bufferCount, .wlBufferHandles = surfaceObject.wlBufferHandles };
 
-error_create_surf_xdg_toplevel_destroy:
-  if (uvrwc_surf.xdgToplevel)
-    xdg_toplevel_destroy(uvrwc_surf.xdgToplevel);
-error_create_surf_xdg_surface_destroy:
-  if (uvrwc_surf.xdgSurface)
-    xdg_surface_destroy(uvrwc_surf.xdgSurface);
-error_create_surf_wl_surface_destroy:
-  if (uvrwc_surf.wlSurface)
-    wl_surface_destroy(uvrwc_surf.wlSurface);
-error_create_surf_exit:
-  return (struct uvr_wc_surface) { .xdgToplevel = NULL, .xdgSurface = NULL, .wlSurface = NULL,
-                                   .bufferCount = -1, .uvrWcWlBuffers = NULL };
+exit_error_wc_surface_create_xdg_toplevel_destroy:
+  if (surfaceObject.xdgToplevel)
+    xdg_toplevel_destroy(surfaceObject.xdgToplevel);
+exit_error_wc_surface_create_xdg_surface_destroy:
+  if (surfaceObject.xdgSurface)
+    xdg_surface_destroy(surfaceObject.xdgSurface);
+exit_error_wc_surface_create_wl_surface_destroy:
+  if (surfaceObject.wlSurface)
+    wl_surface_destroy(surfaceObject.wlSurface);
+exit_error_wc_surface_create:
+  return (struct uvr_wc_surface) { .xdgToplevel = NULL, .xdgSurface = NULL, .wlSurface = NULL, .bufferCount = -1, .wlBufferHandles = NULL };
 }
 
 
-void uvr_wc_destroy(struct uvr_wc_destroy *uvrwc) {
-
+void uvr_wc_destroy(struct uvr_wc_destroy *uvrwc)
+{
   /* Destroy all wayland client surface interfaces/objects */
   if (uvrwc->uvr_wc_surface.xdgToplevel)
     xdg_toplevel_destroy(uvrwc->uvr_wc_surface.xdgToplevel);
@@ -431,17 +438,17 @@ void uvr_wc_destroy(struct uvr_wc_destroy *uvrwc) {
     wl_surface_destroy(uvrwc->uvr_wc_surface.wlSurface);
 
   /* Destroy all wayland client buffer interfaces/objects */
-  if (uvrwc->uvr_wc_buffer.uvrWcShmBuffers && uvrwc->uvr_wc_buffer.uvrWcWlBuffers) {
+  if (uvrwc->uvr_wc_buffer.shmBufferObjects && uvrwc->uvr_wc_buffer.wlBufferHandles) {
     for (int b=0; b < uvrwc->uvr_wc_buffer.bufferCount; b++) {
-      if (uvrwc->uvr_wc_buffer.uvrWcShmBuffers[b].shmFd != -1)
-        close(uvrwc->uvr_wc_buffer.uvrWcShmBuffers[b].shmFd);
-      if (uvrwc->uvr_wc_buffer.uvrWcShmBuffers[b].shmPoolData)
-        munmap(uvrwc->uvr_wc_buffer.uvrWcShmBuffers[b].shmPoolData, uvrwc->uvr_wc_buffer.uvrWcShmBuffers[b].shmPoolSize);
-      if (uvrwc->uvr_wc_buffer.uvrWcWlBuffers[b].buffer)
-        wl_buffer_destroy(uvrwc->uvr_wc_buffer.uvrWcWlBuffers[b].buffer);
+      if (uvrwc->uvr_wc_buffer.shmBufferObjects[b].shmFd != -1)
+        close(uvrwc->uvr_wc_buffer.shmBufferObjects[b].shmFd);
+      if (uvrwc->uvr_wc_buffer.shmBufferObjects[b].shmPoolData)
+        munmap(uvrwc->uvr_wc_buffer.shmBufferObjects[b].shmPoolData, uvrwc->uvr_wc_buffer.shmBufferObjects[b].shmPoolSize);
+      if (uvrwc->uvr_wc_buffer.wlBufferHandles[b].buffer)
+        wl_buffer_destroy(uvrwc->uvr_wc_buffer.wlBufferHandles[b].buffer);
     }
-    free(uvrwc->uvr_wc_buffer.uvrWcShmBuffers);
-    free(uvrwc->uvr_wc_buffer.uvrWcWlBuffers);
+    free(uvrwc->uvr_wc_buffer.shmBufferObjects);
+    free(uvrwc->uvr_wc_buffer.wlBufferHandles);
   }
 
   /* Destroy core wayland interfaces if allocated */

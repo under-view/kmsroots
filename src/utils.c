@@ -19,6 +19,47 @@
 #include "utils.h"
 
 
+// https://www.roxlu.com/2014/047/high-resolution-timer-function-in-c-c--
+uint64_t uvr_utils_nanosecond(void)
+{
+  static uint64_t isInit = 0;
+  static struct timespec linux_rate;
+
+  if (isInit == 0) {
+    clock_getres(CLOCKID, &linux_rate);
+    isInit = 1;
+  }
+
+  uint64_t now;
+  struct timespec spec;
+  clock_gettime(CLOCKID, &spec);
+  now = spec.tv_sec * 1.0e9 + spec.tv_nsec;
+  return now;
+}
+
+
+struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils)
+{
+  uint32_t bufferAlignment = 0, alignedBufferSize = 0;
+  void *alignedBufferMemory = NULL;
+
+  int64_t bitMask = ~(uvrutils->bufferAlignment - 1);
+  bufferAlignment = (uvrutils->bytesToAlign + uvrutils->bufferAlignment - 1) & bitMask;
+
+  alignedBufferSize = bufferAlignment * uvrutils->bytesToAlignCount;
+  alignedBufferMemory = aligned_alloc(bufferAlignment, alignedBufferSize);
+  if (!alignedBufferMemory) {
+    uvr_utils_log(UVR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
+    goto exit_error_utils_aligned_buffer;
+  }
+
+  return (struct uvr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
+
+exit_error_utils_aligned_buffer:
+  return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
+}
+
+
 /* ANSI Escape Codes */
 static const char *term_colors[] = {
   [UVR_NONE]    = "",
@@ -30,7 +71,8 @@ static const char *term_colors[] = {
 };
 
 
-void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...) {
+void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...)
+{
   char buffer[26];
   va_list args; /* type that holds variable arguments */
 
@@ -53,7 +95,8 @@ void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt,
 }
 
 /* Modified version of what was in wlroots/util/log.c */
-const char *_uvr_utils_strip_path(const char *filepath) {
+const char *_uvr_utils_strip_path(const char *filepath)
+{
   if (*filepath == '.')
     while (*filepath == '.' || *filepath == '/')
       filepath++;
@@ -62,7 +105,8 @@ const char *_uvr_utils_strip_path(const char *filepath) {
 
 
 /* https://wayland-book.com/surfaces/shared-memory.html */
-static void randname(char *buf) {
+static void randname(char *buf)
+{
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
   long r = ts.tv_nsec;
@@ -73,7 +117,8 @@ static void randname(char *buf) {
 }
 
 
-static int create_shm_file(void) {
+static int create_shm_file(void)
+{
   int retries = 100;
   do {
     char name[] = "/uvr-XXXXXX";
@@ -90,7 +135,8 @@ static int create_shm_file(void) {
 }
 
 
-int allocate_shm_file(size_t size) {
+int allocate_shm_file(size_t size)
+{
   int fd = create_shm_file();
   if (fd < 0)
     return -1;
@@ -106,43 +152,4 @@ int allocate_shm_file(size_t size) {
   }
 
   return fd;
-}
-
-
-// https://www.roxlu.com/2014/047/high-resolution-timer-function-in-c-c--
-uint64_t uvr_utils_nanosecond(void) {
-  static uint64_t is_init = 0;
-  static struct timespec linux_rate;
-
-  if (is_init == 0) {
-    clock_getres(CLOCKID, &linux_rate);
-    is_init = 1;
-  }
-
-  uint64_t now;
-  struct timespec spec;
-  clock_gettime(CLOCKID, &spec);
-  now = spec.tv_sec * 1.0e9 + spec.tv_nsec;
-  return now;
-}
-
-
-struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils) {
-  uint32_t bufferAlignment = 0, alignedBufferSize = 0;
-  void *alignedBufferMemory = NULL;
-
-  int64_t bitMask = ~(uvrutils->bufferAlignment - 1);
-  bufferAlignment = (uvrutils->bytesToAlign + uvrutils->bufferAlignment - 1) & bitMask;
-
-  alignedBufferSize = bufferAlignment * uvrutils->bytesToAlignCount;
-  alignedBufferMemory = aligned_alloc(bufferAlignment, alignedBufferSize);
-  if (!alignedBufferMemory) {
-    uvr_utils_log(UVR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
-    goto exit_utils_aligned_buffer;
-  }
-
-  return (struct uvr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
-
-exit_utils_aligned_buffer:
-  return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
 }

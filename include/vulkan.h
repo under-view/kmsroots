@@ -85,8 +85,8 @@ VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk);
  * to create a VkSurfaceKHR object based upon platform specific information
  */
 typedef enum uvr_vk_surface_type {
-  UVR_WAYLAND_CLIENT_SURFACE,
-  UVR_XCB_CLIENT_SURFACE,
+  UVR_SURFACE_WAYLAND_CLIENT,
+  UVR_SURFACE_XCB_CLIENT,
 } uvr_vk_surface_type;
 
 
@@ -304,11 +304,11 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
  *
  * members:
  * @logicalDevice - VkDevice handle (Logical Device) associated with swapchain
- * @swapChain     - Vulkan handle/object representing the swapchain itself
+ * @swapchain     - Vulkan handle/object representing the swapchain itself
  */
 struct uvr_vk_swapchain {
   VkDevice       logicalDevice;
-  VkSwapchainKHR swapChain;
+  VkSwapchainKHR swapchain;
 };
 
 
@@ -403,7 +403,7 @@ struct uvr_vk_image_view_handle {
  *                     be the amount of images in the given swapchain.
  * @imageHandles     - Pointer to an array of VkImage handles
  * @imageViewHandles - Pointer to an array of VkImageView handles
- * @swapChain        - Member not required, but used for storage purposes. A valid VkSwapchainKHR
+ * @swapchain        - Member not required, but used for storage purposes. A valid VkSwapchainKHR
  *                     reference to the VkSwapchainKHR passed to uvr_vk_image_create. Represents
  *                     the swapchain that created VkImage's.
  */
@@ -412,7 +412,7 @@ struct uvr_vk_image {
   uint32_t                         imageCount;
   struct uvr_vk_image_handle       *imageHandles;
   struct uvr_vk_image_view_handle  *imageViewHandles;
-  VkSwapchainKHR                   swapChain;
+  VkSwapchainKHR                   swapchain;
 };
 
 
@@ -421,16 +421,16 @@ struct uvr_vk_image {
  *
  * members:
  * @logicalDevice              - Must pass a valid VkDevice handle (Logical Device)
- * @swapChain                  - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
+ * @swapchain                  - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
  *                               If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
- * @imageCount                 - Must pass amount of VkImage's/VkImageView's to create. Set to 0 if @swapChain != VK_NULL_HANDLE
+ * @imageCount                 - Must pass amount of VkImage's/VkImageView's to create. Set to 0 if @swapchain != VK_NULL_HANDLE
  *                               else set to number images to create.
  *
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for more info on bellow members
  *
  * @imageViewflags             - Specifies additional prameters associated with VkImageView. Normally set to zero.
  * @imageViewType              - Specifies what the image view type is. Specifies coordinate system utilized by the image when
- *                               being addressed. Image view type must have compatible @imageType when @swapChain == VK_NULL_HANDLE.
+ *                               being addressed. Image view type must have compatible @imageType when @swapchain == VK_NULL_HANDLE.
  * @imageViewFormat            - Image Format (Bits per color channel, the color channel ordering, etc...). Format is utilized by
  *                               both image view and image create info structs.
  * @imageViewComponents        - Makes it so that we can select what value goes to what color channel. Basically if we want to assign
@@ -440,7 +440,7 @@ struct uvr_vk_image {
  *
  * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html for more info on bellow members
  *
- * Bellow only required if @swapChain == VK_NULL_HANDLE
+ * Bellow only required if @swapchain == VK_NULL_HANDLE
  * @physDevice                 - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
  * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
  * @imageflags                 - Bits used to specify additional parameters for a given VkImage.
@@ -459,7 +459,7 @@ struct uvr_vk_image {
  */
 struct uvr_vk_image_create_info {
   VkDevice                 logicalDevice;
-  VkSwapchainKHR           swapChain;
+  VkSwapchainKHR           swapchain;
   uint32_t                 imageCount;
   VkImageViewCreateFlags   imageViewflags;
   VkImageViewType          imageViewType;
@@ -817,16 +817,16 @@ struct uvr_vk_command_buffer_handle {
  * struct uvr_vk_command_buffer (Underview Renderer Vulkan Command Buffer)
  *
  * members:
- * @logicalDevice      - VkDevice handle (Logical Device) associated with VkCommandPool
- * @commandPool        - The command pool which the buffers where allocated from.
- * @commandBufferCount - Amount of VkCommandBuffer's alloocated
- * @commandBuffers     - Pointer to an array of VkCommandBuffer handles
+ * @logicalDevice        - VkDevice handle (Logical Device) associated with VkCommandPool
+ * @commandPool          - The command pool which the buffers where allocated from.
+ * @commandBufferCount   - Amount of VkCommandBuffer's alloocated
+ * @commandBufferHandles - Pointer to an array of VkCommandBuffer handles
  */
 struct uvr_vk_command_buffer {
   VkDevice                            logicalDevice;
   VkCommandPool                       commandPool;
   uint32_t                            commandBufferCount;
-  struct uvr_vk_command_buffer_handle *commandBuffers;
+  struct uvr_vk_command_buffer_handle *commandBufferHandles;
 };
 
 
@@ -866,12 +866,12 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
  *
  * members:
  * @commandBufferCount      - Amount of VkCommandBuffer handles allocated
- * @commandBuffers          - Pointer to an array of struct uvr_vk_command_buffer_handle which contains your actual VkCommandBuffer handles to start writing commands to.
+ * @commandBufferHandles    - Pointer to an array of struct uvr_vk_command_buffer_handle which contains your actual VkCommandBuffer handles to start writing commands to.
  * @commandBufferUsageflags - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
  */
 struct uvr_vk_command_buffer_record_info {
   uint32_t                            commandBufferCount;
-  struct uvr_vk_command_buffer_handle *commandBuffers;
+  struct uvr_vk_command_buffer_handle *commandBufferHandles;
   VkCommandBufferUsageFlagBits        commandBufferUsageflags;
 };
 
@@ -1338,12 +1338,12 @@ int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_inf
  *                                  Queries what a physical device is capable of supporting for any given surface.
  *
  * args:
- * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
  *    populated VkSurfaceCapabilitiesKHR
  */
-VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
 
 /*
@@ -1364,13 +1364,13 @@ struct uvr_vk_surface_format {
  *                             supports for any given surface. Application must free struct uvr_vk_surface_format { member: surfaceFormats }
  *
  * args:
- * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
  *    on success struct uvr_vk_surface_format
  *    on failure struct uvr_vk_surface_format { with member nulled }
  */
-struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
 
 /*
@@ -1393,13 +1393,13 @@ struct uvr_vk_surface_present_mode {
  *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
  *
  * args:
- * @phdev   - Must pass a valid VkPhysicalDevice handle
+ * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
  *    on success struct uvr_vk_surface_present_mode
  *    on failure struct uvr_vk_surface_present_mode { with member nulled }
  */
-struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice phdev, VkSurfaceKHR surface);
+struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
 
 /*
@@ -1420,14 +1420,14 @@ struct uvr_vk_phdev_format_prop {
  *                                     Application must free struct uvr_vk_phdev_format_prop { member: formatProperties }
  *
  * args:
- * @phdev       - Must pass a valid VkPhysicalDevice handle
+ * @physDev     - Must pass a valid VkPhysicalDevice handle
  * @formats     - Must pass a pointer to an array of type VkFormat to get VkFormatProperties from
  * @formatCount - Must pass the amount of elements in @formats array
  * return:
  *    on success struct uvr_vk_phdev_format_prop
  *    on failure struct uvr_vk_phdev_format_prop { with member nulled }
  */
-struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDevice phdev, VkFormat *formats, uint32_t formatCount);
+struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDevice physDev, VkFormat *formats, uint32_t formatCount);
 
 
 /*

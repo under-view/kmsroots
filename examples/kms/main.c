@@ -5,18 +5,18 @@
 
 struct uvr_vk {
   VkInstance instance;
-  struct uvr_vk_phdev phdev;
-  struct uvr_vk_lgdev lgdev;
-  struct uvr_vk_queue graphics_queue;
+  struct uvr_vk_phdev uvr_vk_phdev;
+  struct uvr_vk_lgdev uvr_vk_lgdev;
+  struct uvr_vk_queue uvr_vk_queue;
 };
 
 
 struct uvr_kms {
-  struct uvr_kms_node kmsdev;
-  struct uvr_kms_node_display_output_chain dochain;
-  struct uvr_buffer kmsbuffs;
+  struct uvr_kms_node uvr_kms_node;
+  struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
+  struct uvr_buffer uvr_buffer;
 #ifdef INCLUDE_SDBUS
-  struct uvr_sd_session uvrsd;
+  struct uvr_sd_session uvr_sd_session;
 #endif
 };
 
@@ -30,7 +30,8 @@ int create_vk_device(struct uvr_vk *app, struct uvr_kms *kms);
 /*
  * Example code demonstrating how to use Vulkan with KMS
  */
-int main(void) {
+int main(void)
+{
   struct uvr_vk app;
   struct uvr_vk_destroy appd;
   memset(&app, 0, sizeof(app));
@@ -60,51 +61,52 @@ exit_error:
    * Let the api know of what addresses to free and fd's to close
    */
   kmsbuffsd.uvr_buffer_cnt = 1;
-  kmsbuffsd.uvr_buffer = &kms.kmsbuffs;
+  kmsbuffsd.uvr_buffer = &kms.uvr_buffer;
   uvr_buffer_destory(&kmsbuffsd);
 
-  kmsdevd.uvr_kms_node = kms.kmsdev;
-  kmsdevd.uvr_kms_node_display_output_chain = kms.dochain;
+  kmsdevd.uvr_kms_node = kms.uvr_kms_node;
+  kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
   uvr_kms_node_destroy(&kmsdevd);
 
   appd.instance = app.instance;
   appd.uvr_vk_lgdev_cnt = 1;
-  appd.uvr_vk_lgdev = &app.lgdev;
+  appd.uvr_vk_lgdev = &app.uvr_vk_lgdev;
   uvr_vk_destory(&appd);
 #ifdef INCLUDE_SDBUS
-  uvr_sd_session_destroy(&kms.uvrsd);
+  uvr_sd_session_destroy(&kms.uvr_sd_session);
 #endif
   return 0;
 }
 
 
-int create_vk_instance(struct uvr_vk *app) {
+int create_vk_instance(struct uvr_vk *app)
+{
   /*
    * "VK_LAYER_KHRONOS_validation"
    * All of the useful standard validation is
    * bundled into a layer included in the SDK
    */
-  const char *validation_layers[] = {
+  const char *validationLayers[] = {
     "VK_LAYER_KHRONOS_validation"
   };
 
 
-  const char *instance_extensions[] = {
+  const char *instanceExtensions[] = {
     "VK_KHR_get_physical_device_properties2",
   };
 
   /*
    * Create Vulkan Instance
    */
-  struct uvr_vk_instance_create_info vk_instance_info;
-  vk_instance_info.appName = "Example App";
-  vk_instance_info.engineName = "No Engine";
-  vk_instance_info.enabledLayerCount = ARRAY_LEN(validation_layers);
-  vk_instance_info.enabledLayerNames = validation_layers;
-  vk_instance_info.enabledExtensionCount = ARRAY_LEN(instance_extensions);
-  vk_instance_info.enabledExtensionNames = instance_extensions;
+  struct uvr_vk_instance_create_info instanceCreateInfo;
+  instanceCreateInfo.appName = "Example App";
+  instanceCreateInfo.engineName = "No Engine";
+  instanceCreateInfo.enabledLayerCount = ARRAY_LEN(validationLayers);
+  instanceCreateInfo.enabledLayerNames = validationLayers;
+  instanceCreateInfo.enabledExtensionCount = ARRAY_LEN(instanceExtensions);
+  instanceCreateInfo.enabledExtensionNames = instanceExtensions;
 
-  app->instance = uvr_vk_instance_create(&vk_instance_info);
+  app->instance = uvr_vk_instance_create(&instanceCreateInfo);
   if (!app->instance)
     return -1;
 
@@ -112,61 +114,67 @@ int create_vk_instance(struct uvr_vk *app) {
 }
 
 
-int create_kms_node(struct uvr_kms *kms) {
-  struct uvr_kms_node_create_info kmsnodeinfo;
+int create_kms_node(struct uvr_kms *kms)
+{
+  struct uvr_kms_node_create_info kmsNodeCreateInfo;
 
 #ifdef INCLUDE_SDBUS
-  if (uvr_sd_session_create(&(kms->uvrsd)) == -1)
+  if (uvr_sd_session_create(&(kms->uvr_sd_session)) == -1)
     return -1;
 
-  kmsnodeinfo.uvr_sd_session = &(kms->uvrsd);
-  kmsnodeinfo.useLogind = true;
+  kmsNodeCreateInfo.systemdSession = &(kms->uvr_sd_session);
+  kmsNodeCreateInfo.useLogind = true;
 #endif
 
-  kmsnodeinfo.kmsNode = NULL;
-  kms->kmsdev = uvr_kms_node_create(&kmsnodeinfo);
-  if (kms->kmsdev.kmsFd == -1)
+  kmsNodeCreateInfo.kmsNode = NULL;
+  kms->uvr_kms_node = uvr_kms_node_create(&kmsNodeCreateInfo);
+  if (kms->uvr_kms_node.kmsfd == -1)
     return -1;
 
-  struct uvr_kms_node_display_output_chain_create_info dochain_info;
-  dochain_info.kmsFd = kms->kmsdev.kmsFd;
+  struct uvr_kms_node_display_output_chain_create_info dochainCreateInfo;
+  dochainCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
 
-  kms->dochain = uvr_kms_node_display_output_chain_create(&dochain_info);
-  if (!kms->dochain.connector || !kms->dochain.encoder || !kms->dochain.crtc || !kms->dochain.plane)
+  kms->uvr_kms_node_display_output_chain = uvr_kms_node_display_output_chain_create(&dochainCreateInfo);
+  if (!kms->uvr_kms_node_display_output_chain.connector ||
+      !kms->uvr_kms_node_display_output_chain.encoder   ||
+      !kms->uvr_kms_node_display_output_chain.crtc      ||
+      !kms->uvr_kms_node_display_output_chain.plane)
+  {
     return -1;
+  }
 
-  struct uvr_kms_node_device_capabilites UNUSED kmsnode_devcap;
-  kmsnode_devcap = uvr_kms_node_get_device_capabilities(kms->kmsdev.kmsFd);
+  struct uvr_kms_node_device_capabilites UNUSED kmsNodeDeviceCapabilites;
+  kmsNodeDeviceCapabilites = uvr_kms_node_get_device_capabilities(kms->uvr_kms_node.kmsfd);
 
   return 0;
 }
 
 
-int create_gbm_buffers(struct uvr_kms *kms) {
-  struct uvr_buffer_create_info kms_buffs_info;
-  kms_buffs_info.bType = UINT32_MAX;
-  kms_buffs_info.kmsFd = kms->kmsdev.kmsFd;
-  kms_buffs_info.bufferCount = 2;
-  kms_buffs_info.width = 3840;
-  kms_buffs_info.height = 2160;
-  kms_buffs_info.bitdepth = 24;
-  kms_buffs_info.bpp = 32;
-  kms_buffs_info.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
-  kms_buffs_info.pixformat = GBM_BO_FORMAT_XRGB8888;
-  kms_buffs_info.modifiers = NULL;
-  kms_buffs_info.modifierCount = 0;
-  kms_buffs_info.bType = GBM_BUFFER;
+int create_gbm_buffers(struct uvr_kms *kms)
+{
+  struct uvr_buffer_create_info gbmBufferInfo;
+  gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;
+  gbmBufferInfo.kmsfd = kms->uvr_kms_node.kmsfd;
+  gbmBufferInfo.bufferCount = 2;
+  gbmBufferInfo.width = 3840;
+  gbmBufferInfo.height = 2160;
+  gbmBufferInfo.bitDepth = 24;
+  gbmBufferInfo.bitsPerPixel = 32;
+  gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
+  gbmBufferInfo.pixelFormat = GBM_BO_FORMAT_XRGB8888;
+  gbmBufferInfo.modifiers = NULL;
+  gbmBufferInfo.modifierCount = 0;
 
-  kms->kmsbuffs = uvr_buffer_create(&kms_buffs_info);
-  if (!kms->kmsbuffs.gbmdev)
+  kms->uvr_buffer = uvr_buffer_create(&gbmBufferInfo);
+  if (!kms->uvr_buffer.gbmDevice)
     return -1;
 
   return 0;
 }
 
 
-int create_vk_device(struct uvr_vk *app, struct uvr_kms *kms) {
-
+int create_vk_device(struct uvr_vk *app, struct uvr_kms *kms)
+{
   const char *device_extensions[] = {
     "VK_EXT_image_drm_format_modifier",
     "VK_KHR_image_format_list",
@@ -181,39 +189,39 @@ int create_vk_device(struct uvr_vk *app, struct uvr_kms *kms) {
    * Create Vulkan Physical Device Handle, After buffer creation
    * as it can actually effect VkPhysicalDevice creation
    */
-  struct uvr_vk_phdev_create_info vk_phdev_info;
-  vk_phdev_info.instance = app->instance;
-  vk_phdev_info.deviceType = VK_PHYSICAL_DEVICE_TYPE;
-  vk_phdev_info.kmsfd = kms->kmsdev.kmsFd;
+  struct uvr_vk_phdev_create_info phdevCreateInfo;
+  phdevCreateInfo.instance = app->instance;
+  phdevCreateInfo.deviceType = VK_PHYSICAL_DEVICE_TYPE;
+  phdevCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
 
-  app->phdev = uvr_vk_phdev_create(&vk_phdev_info);
-  if (!app->phdev.physDevice)
+  app->uvr_vk_phdev = uvr_vk_phdev_create(&phdevCreateInfo);
+  if (!app->uvr_vk_phdev.physDevice)
     return -1;
 
-  struct uvr_vk_queue_create_info vk_queue_info;
-  vk_queue_info.physDevice = app->phdev.physDevice;
-  vk_queue_info.queueFlag = VK_QUEUE_GRAPHICS_BIT;
+  struct uvr_vk_queue_create_info queueCreateInfo;
+  queueCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+  queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
-  app->graphics_queue = uvr_vk_queue_create(&vk_queue_info);
-  if (app->graphics_queue.familyIndex == -1)
+  app->uvr_vk_queue = uvr_vk_queue_create(&queueCreateInfo);
+  if (app->uvr_vk_queue.familyIndex == -1)
     return -1;
 
   /*
    * Can Hardset features prior
    * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-   * app->phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
+   * app->uvr_vk_phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
    */
-  struct uvr_vk_lgdev_create_info vk_lgdev_info;
-  vk_lgdev_info.instance = app->instance;
-  vk_lgdev_info.physDevice = app->phdev.physDevice;
-  vk_lgdev_info.enabledFeatures = &app->phdev.physDeviceFeatures;
-  vk_lgdev_info.enabledExtensionCount = ARRAY_LEN(device_extensions);
-  vk_lgdev_info.enabledExtensionNames = device_extensions;
-  vk_lgdev_info.queueCount = 1;
-  vk_lgdev_info.queues = &app->graphics_queue;
+  struct uvr_vk_lgdev_create_info lgdevCreateInfo;
+  lgdevCreateInfo.instance = app->instance;
+  lgdevCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+  lgdevCreateInfo.enabledFeatures = &app->uvr_vk_phdev.physDeviceFeatures;
+  lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
+  lgdevCreateInfo.enabledExtensionNames = device_extensions;
+  lgdevCreateInfo.queueCount = 1;
+  lgdevCreateInfo.queues = &app->uvr_vk_queue;
 
-  app->lgdev = uvr_vk_lgdev_create(&vk_lgdev_info);
-  if (!app->lgdev.logicalDevice)
+  app->uvr_vk_lgdev = uvr_vk_lgdev_create(&lgdevCreateInfo);
+  if (!app->uvr_vk_lgdev.logicalDevice)
     return -1;
 
   return 0;

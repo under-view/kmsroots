@@ -12,13 +12,13 @@
  * struct uvr_ws_core (Underview Renderer Wayland Server Core)
  *
  * members:
- * @display - Represents a connection to the compositor and acts as a proxy to the wl_display singleton object.
- * @backend - Represents a connection to any given backend {DRM/KMS, Wayland, X11, Headless} implementation.
- *            Utilized by wlroots when initializing compositor outputs.
+ * @wlDisplay  - Represents a connection to the compositor and acts as a proxy to the wl_display singleton object.
+ * @wlrBackend - Represents a connection to any given backend {DRM/KMS, Wayland, X11, Headless} implementation.
+ *               Utilized by wlroots when initializing compositor outputs.
  */
 struct uvr_ws_core {
-  struct wl_display  *display;
-  struct wlr_backend *backend;
+  struct wl_display  *wlDisplay;
+  struct wlr_backend *wlrBackend;
 };
 
 
@@ -26,10 +26,10 @@ struct uvr_ws_core {
  * struct uvr_ws_core_create_info (Underview Renderer Wayland Server Core Create Info)
  *
  * members:
- * @incWlrootsDebugLogs - Determines whether or not wlroots DEBUG logs are enabled/disabled
+ * @includeWlrDebugLogs - Determines whether or not wlroots DEBUG logs are enabled/disabled
  */
 struct uvr_ws_core_create_info {
-  bool incWlrootsDebugLogs;
+  bool includeWlrDebugLogs;
 };
 
 

@@ -93,14 +93,18 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
  * struct uvr_shader_destroy (Underview Renderer Shader Destroy)
  *
  * members:
- * @uvr_shader_spirv - Must pass a valid struct uvr_shader_spirv { free'd  members: shaderc_compilation_result_t handle }
- * @uvr_shader_file  - Must pass a valid struct uvr_shader_file  { free'd  members: char *bytes }
+ * @uvr_shader_spirv_cnt - Must pass the amount of elements in struct uvr_shader_spirv array
+ * @uvr_shader_spirv     - Must pass a pointer to an array of valid struct uvr_shader_spirv { free'd  members: shaderc_compilation_result_t handle }
+ * @uvr_shader_file_cnt  - Must pass the amount of elements in struct uvr_shader_file array
+ * @uvr_shader_file      - Must pass a pointer to an array of valid struct uvr_shader_file  { free'd  members: char *bytes }
  */
 struct uvr_shader_destroy {
 #ifdef INCLUDE_SHADERC
-  struct uvr_shader_spirv uvr_shader_spirv;
+  uint32_t                uvr_shader_spirv_cnt;
+  struct uvr_shader_spirv *uvr_shader_spirv;
 #endif
-  struct uvr_shader_file  uvr_shader_file;
+  uint32_t                uvr_shader_file_cnt;
+  struct uvr_shader_file  *uvr_shader_file;
 };
 
 

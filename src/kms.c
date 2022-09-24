@@ -19,27 +19,28 @@
  * if we're running directly from a VT, or failing that tries to find a free
  * one to switch to.
  */
-static int vt_setup(int *kbmode) {
-  const char *tty_num_env = getenv("TTYNO");
-  int tty_num = 0, vtfd = -1;
-  char tty_dev[32];
+static int vt_setup(int *keyBoardMode)
+{
+  const char *ttyNumEnv = getenv("TTYNO");
+  int ttyNum = 0, vtfd = -1;
+  char ttyDevice[32];
 
   /* If $TTYNO is set in the environment, then use that first. */
-  if (tty_num_env) {
+  if (ttyNumEnv) {
     char *endptr = NULL;
 
-    tty_num = strtoul(tty_num_env, &endptr, 10);
-    if (tty_num == 0 || *endptr != '\0') {
+    ttyNum = strtoul(ttyNumEnv, &endptr, 10);
+    if (ttyNum == 0 || *endptr != '\0') {
       uvr_utils_log(UVR_DANGER, "[x] strtoul: invalid $TTYNO environment variable");
       return -1;
     }
 
-    snprintf(tty_dev, sizeof(tty_dev), "/dev/tty%d", tty_num);
+    snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
 
   } else if (ttyname(STDIN_FILENO)) {
     /* Otherwise, if we're running from a VT ourselves, just reuse
     * that. */
-    ttyname_r(STDIN_FILENO, tty_dev, sizeof(tty_dev));
+    ttyname_r(STDIN_FILENO, ttyDevice, sizeof(ttyDevice));
   } else {
     int tty0;
 
@@ -51,7 +52,7 @@ static int vt_setup(int *kbmode) {
       return -1;
     }
 
-    if (ioctl(tty0, VT_OPENQRY, &tty_num) < 0 || tty_num < 0) {
+    if (ioctl(tty0, VT_OPENQRY, &ttyNum) < 0 || ttyNum < 0) {
       uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_OPENQRY): %s", strerror(errno));
       uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_OPENQRY): couldn't get free TTY");
       close(tty0);
@@ -59,53 +60,52 @@ static int vt_setup(int *kbmode) {
     }
 
     close(tty0);
-    snprintf(tty_dev, sizeof(tty_dev), "/dev/tty%d", tty_num);
+    snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
   }
 
-  vtfd = open(tty_dev, O_RDWR | O_NOCTTY);
+  vtfd = open(ttyDevice, O_RDWR | O_NOCTTY);
   if (vtfd < 0) {
-    uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", tty_dev, strerror(errno));
+    uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", ttyDevice, strerror(errno));
     return -1;
   }
 
-  /* If we get our VT from stdin, work painfully backwards to find its
-   * VT number. */
-  if (tty_num == 0) {
-    struct stat buf;
+  /* If we get our VT from stdin, work painfully backwards to find its VT number. */
+  if (ttyNum == 0) {
+    struct stat vtStat;
 
-    if (fstat(vtfd, &buf) == -1 || major(buf.st_rdev) != TTY_MAJOR) {
-      uvr_utils_log(UVR_DANGER, "[x] fstat() || major(): VT file %s is bad", tty_dev);
-      goto error_vt_setup_exit;
+    if (fstat(vtfd, &vtStat) == -1 || major(vtStat.st_rdev) != TTY_MAJOR) {
+      uvr_utils_log(UVR_DANGER, "[x] fstat() || major(): VT file %s is bad", ttyDevice);
+      goto exit_error_vt_setup_exit;
     }
 
-    tty_num = minor(buf.st_rdev);
+    ttyNum = minor(vtStat.st_rdev);
   }
 
-  if (!tty_num)
-    goto error_vt_setup_exit;
+  if (!ttyNum)
+    goto exit_error_vt_setup_exit;
 
-  uvr_utils_log(UVR_INFO, "Using VT %d", tty_num);
+  uvr_utils_log(UVR_INFO, "Using VT %d", ttyNum);
 
   /* Switch to the target VT. */
-  if (ioctl(vtfd, VT_ACTIVATE, tty_num) != 0 || ioctl(vtfd, VT_WAITACTIVE, tty_num) != 0) {
-    uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_ACTIVATE) || ioctl(VT_WAITACTIVE): couldn't switch to VT %d", tty_num);
-    goto error_vt_setup_exit;
+  if (ioctl(vtfd, VT_ACTIVATE, ttyNum) != 0 || ioctl(vtfd, VT_WAITACTIVE, ttyNum) != 0) {
+    uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_ACTIVATE) || ioctl(VT_WAITACTIVE): couldn't switch to VT %d", ttyNum);
+    goto exit_error_vt_setup_exit;
   }
 
-  uvr_utils_log(UVR_INFO, "Switched to VT %d", tty_num);
+  uvr_utils_log(UVR_INFO, "Switched to VT %d", ttyNum);
 
   /* Completely disable kernel keyboard processing: this prevents us
    * from being killed on Ctrl-C. */
-  if (ioctl(vtfd, KDGKBMODE, kbmode) != 0 || ioctl(vtfd, KDSKBMODE, K_OFF) != 0) {
+  if (ioctl(vtfd, KDGKBMODE, keyBoardMode) != 0 || ioctl(vtfd, KDSKBMODE, K_OFF) != 0) {
     uvr_utils_log(UVR_DANGER, "[x] ioctl(KDGKBMODE) || ioctl(KDSKBMODE): failed to disable TTY keyboard processing");
-    goto error_vt_setup_exit;
+    goto exit_error_vt_setup_exit;
   }
 
   /* Change the VT into graphics mode, so the kernel no longer prints
    * text out on top of us. */
   if (ioctl(vtfd, KDSETMODE, KD_GRAPHICS) != 0) {
     uvr_utils_log(UVR_DANGER, "[x] ioctl(KDSETMODE): failed to switch TTY to graphics mode");
-    goto error_vt_setup_exit;
+    goto exit_error_vt_setup_exit;
   }
 
   uvr_utils_log(UVR_SUCCESS, "VT setup complete");
@@ -116,73 +116,75 @@ static int vt_setup(int *kbmode) {
    * signal handling. */
   return vtfd;
 
-error_vt_setup_exit:
+exit_error_vt_setup_exit:
   if (vtfd > 0)
     close(vtfd);
   return -1;
 }
 
 
-static void vt_reset(int vtfd, int saved_kb_mode) {
-  ioctl(vtfd, KDSKBMODE, saved_kb_mode);
+static void vt_reset(int vtfd, int savedKeyBoardMode)
+{
+  ioctl(vtfd, KDSKBMODE, savedKeyBoardMode);
   ioctl(vtfd, KDSETMODE, KD_TEXT);
 }
 
 
-struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms) {
-  int num_devices = 0, err = 0, kmsfd = -1;
-  int kbmode = -1, vtfd = -1;
-  char *knode = NULL;
-  drmDevice *candidate = NULL;
+struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
+{
+  int deviceCount = 0, err = 0, kmsfd = -1;
+  int keyBoardMode = -1, vtfd = -1;
+  char *kmsNode = NULL;
   drmDevice **devices = NULL;
+  drmDevice *device = NULL;
 
   /* If the const char *kmsnode member is defined attempt to open it */
   if (uvrkms->kmsNode) {
 #ifdef INCLUDE_SDBUS
     if (uvrkms->useLogind)
-      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, uvrkms->kmsNode);
+      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->systemdSession, uvrkms->kmsNode);
     else
 #endif
       kmsfd = open(uvrkms->kmsNode, O_RDONLY | O_CLOEXEC, 0);
     if (kmsfd < 0) {
       uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsNode, strerror(errno));
-      goto error_free_kms_dev;
+      goto exit_error_kms_node_create_free_kms_dev;
     }
 
-    vtfd = vt_setup(&kbmode);
+    vtfd = vt_setup(&keyBoardMode);
     if (vtfd == -1)
-      goto error_free_kms_dev;
+      goto exit_error_kms_node_create_free_kms_dev;
 
     uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsNode, kmsfd);
-    return (struct uvr_kms_node) { .kmsFd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
+    return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
 #ifdef INCLUDE_SDBUS
-      , .uvr_sd_session = uvrkms->uvr_sd_session, .useLogind = uvrkms->useLogind
+      , .systemdSession = uvrkms->systemdSession, .useLogind = uvrkms->useLogind
 #endif
     };
   }
 
   /* Query list of available kms nodes (GPU) to get the amount available */
-  num_devices = drmGetDevices2(0, NULL, num_devices);
-  if (num_devices <= 0) {
+  deviceCount = drmGetDevices2(0, NULL, deviceCount);
+  if (deviceCount <= 0) {
     uvr_utils_log(UVR_DANGER, "[x] drmGetDevices2: no KMS devices available");
-    goto error_free_kms_dev;
+    goto exit_error_kms_node_create_free_kms_dev;
   }
 
-  unsigned int dev_alloc_sz = num_devices * sizeof(*devices) + 1;
-  devices = alloca(dev_alloc_sz); devices[num_devices] = 0;
+  unsigned int deviceAllocSize = deviceCount * sizeof(*devices) + 1;
+  devices = alloca(deviceAllocSize); devices[deviceCount] = 0;
 
   /* Query list of available kms nodes (GPU) to get information about it */
-  num_devices = drmGetDevices2(0, devices, num_devices);
-  if (num_devices < 0) {
+  deviceCount = drmGetDevices2(0, devices, deviceCount);
+  if (deviceCount < 0) {
     uvr_utils_log(UVR_DANGER, "[x] no KMS devices available");
-    goto error_free_kms_dev;
+    goto exit_error_kms_node_create_free_kms_dev;
   }
 
-  uvr_utils_log(UVR_INFO, "%d KMS devices available", num_devices);
+  uvr_utils_log(UVR_INFO, "%d KMS devices available", deviceCount);
 
-  for (int i = 0; i < num_devices; i++) {
-    candidate = devices[i];
-    knode = (uvrkms->kmsNode) ? (char*) uvrkms->kmsNode : candidate->nodes[DRM_NODE_PRIMARY];
+  for (int i = 0; i < deviceCount; i++) {
+    device = devices[i];
+    kmsNode = (uvrkms->kmsNode) ? (char*) uvrkms->kmsNode : device->nodes[DRM_NODE_PRIMARY];
 
     /*
      * TAKEN FROM Daniel Stone (gitlab/kms-quads)
@@ -191,23 +193,23 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
      * control nodes are totally useless. Primary nodes are the
      * only ones which let us control KMS.
      */
-    if (!(candidate->available_nodes & (1 << DRM_NODE_PRIMARY)))
+    if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
       continue;
 
 #ifdef INCLUDE_SDBUS
     if (uvrkms->useLogind)
-      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->uvr_sd_session, knode);
+      kmsfd = uvr_sd_session_take_control_of_device(uvrkms->systemdSession, kmsNode);
     else
 #endif
-      kmsfd = open(knode, O_RDONLY | O_CLOEXEC, 0);
+      kmsfd = open(kmsNode, O_RDONLY | O_CLOEXEC, 0);
     if (kmsfd < 0) {
-      uvr_utils_log(UVR_WARNING, "open('%s'): %s", knode, strerror(errno));
+      uvr_utils_log(UVR_WARNING, "open('%s'): %s", kmsNode, strerror(errno));
       continue;
     }
 
-    uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", knode, kmsfd);
+    uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", kmsNode, kmsfd);
 
-    drmFreeDevices(devices, num_devices); devices = NULL;
+    drmFreeDevices(devices, deviceCount); devices = NULL;
 
     /*
      * TAKEN FROM Daniel Stone (gitlab/kms-quads)
@@ -219,8 +221,8 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
      */
     drm_magic_t magic;
     if (drmGetMagic(kmsfd, &magic) || drmAuthMagic(kmsfd, magic)) {
-      uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' is not master", knode);
-      goto error_free_kms_dev;
+      uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' is not master", kmsNode);
+      goto exit_error_kms_node_create_free_kms_dev;
     }
 
     /*
@@ -232,98 +234,102 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
     err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
     err |= drmSetClientCap(kmsfd, DRM_CLIENT_CAP_ATOMIC, 1);
     if (err != 0) {
-      uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' has no support for universal planes or kms atomic", knode);
-      goto error_free_kms_dev;
+      uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' has no support for universal planes or kms atomic", kmsNode);
+      goto exit_error_kms_node_create_free_kms_dev;
     }
 
-    vtfd = vt_setup(&kbmode);
+    vtfd = vt_setup(&keyBoardMode);
     if (vtfd == -1)
-      goto error_free_kms_dev;
+      goto exit_error_kms_node_create_free_kms_dev;
 
-    return (struct uvr_kms_node) { .kmsFd = kmsfd, .vtfd = vtfd, .kbmode = kbmode
+    return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
 #ifdef INCLUDE_SDBUS
-      , .uvr_sd_session = uvrkms->uvr_sd_session, .useLogind = uvrkms->useLogind
+      , .systemdSession = uvrkms->systemdSession, .useLogind = uvrkms->useLogind
 #endif
     };
   }
 
-error_free_kms_dev:
+exit_error_kms_node_create_free_kms_dev:
   if (kmsfd != -1) {
 #ifdef INCLUDE_SDBUS
     if (uvrkms->useLogind)
-      uvr_sd_session_release_device(uvrkms->uvr_sd_session, kmsfd);
+      uvr_sd_session_release_device(uvrkms->systemdSession, kmsfd);
     else
 #endif
       close(kmsfd);
   }
   if (devices)
-    drmFreeDevices(devices, num_devices);
+    drmFreeDevices(devices, deviceCount);
 
-  return (struct uvr_kms_node) { .kmsFd = -1, .vtfd = -1, .kbmode = -1
+  return (struct uvr_kms_node) { .kmsfd = -1, .vtfd = -1, .keyBoardMode = -1
 #ifdef INCLUDE_SDBUS
-      , .uvr_sd_session = NULL, .useLogind = false
+      , .systemdSession = NULL, .useLogind = false
 #endif
   };
 }
 
 
-struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd) {
-  struct uvr_kms_node_device_capabilites kmscap;
-  memset(&kmscap, 0, sizeof(kmscap));
+struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd)
+{
+  struct uvr_kms_node_device_capabilites kmsNodeDeviceCapabilites;
+  memset(&kmsNodeDeviceCapabilites, 0, sizeof(kmsNodeDeviceCapabilites));
 
-  uint64_t cap = 0, err = 0;
-  err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &cap);
-  if (err == 0 && cap != 0) {
-    kmscap.ADDFB2_MODIFIERS = true;
-    uvr_utils_log(UVR_INFO, "device %s framebuffer modifiers", (err == 0 && cap != 0) ? "supports" : "does not support");
+  uint64_t capabilites = 0, err = 0;
+  err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &capabilites);
+  if (err == 0 && capabilites != 0) {
+    kmsNodeDeviceCapabilites.ADDFB2_MODIFIERS = true;
+    uvr_utils_log(UVR_INFO, "device %s framebuffer modifiers", (err == 0 && capabilites != 0) ? "supports" : "does not support");
   }
 
-  cap=0;
-  err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &cap);
-  if (err == 0 && cap != 0) {
-    kmscap.TIMESTAMP_MONOTONIC = true;
-    uvr_utils_log(UVR_INFO, "device %s clock monotonic timestamps", (err == 0 && cap != 0) ? "supports" : "does not support");
+  capabilites=0;
+  err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &capabilites);
+  if (err == 0 && capabilites != 0) {
+    kmsNodeDeviceCapabilites.TIMESTAMP_MONOTONIC = true;
+    uvr_utils_log(UVR_INFO, "device %s clock monotonic timestamps", (err == 0 && capabilites != 0) ? "supports" : "does not support");
   }
 
-  return kmscap;
+  return kmsNodeDeviceCapabilites;
 }
 
 
-struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_create(struct uvr_kms_node_display_output_chain_create_info *uvrkms) {
-  drmModeRes *drmres = NULL;
-  drmModePlaneRes *drmplaneres = NULL;
+struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_create(struct uvr_kms_node_display_output_chain_create_info *uvrkms)
+{
+  drmModeRes *drmResources = NULL;
+  drmModePlaneRes *drmPlaneResources = NULL;
+  unsigned int p;
+  int i;
 
   /* Query connector->encoder->crtc->plane properties */
-  drmres = drmModeGetResources(uvrkms->kmsFd);
-  if (!drmres) {
-    uvr_utils_log(UVR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", uvrkms->kmsFd);
-    goto err_ret_null_chain_output;
+  drmResources = drmModeGetResources(uvrkms->kmsfd);
+  if (!drmResources) {
+    uvr_utils_log(UVR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", uvrkms->kmsfd);
+    goto exit_error_kms_node_doc_create;
   }
 
-  drmplaneres = drmModeGetPlaneResources(uvrkms->kmsFd);
-  if (!drmplaneres) {
-    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no planes", uvrkms->kmsFd);
-    goto err_res;
+  drmPlaneResources = drmModeGetPlaneResources(uvrkms->kmsfd);
+  if (!drmPlaneResources) {
+    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no planes", uvrkms->kmsfd);
+    goto exit_error_kms_node_doc_create_drm_mode_free_resources;
   }
 
   /* Check if some form of a display output chain exist */
-  if (drmres->count_crtcs       <= 0 ||
-      drmres->count_connectors  <= 0 ||
-      drmres->count_encoders    <= 0 ||
-      drmplaneres->count_planes <= 0) {
-    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no display output chain", uvrkms->kmsFd);
-    goto err_plane_res;
+  if (drmResources->count_crtcs       <= 0 ||
+      drmResources->count_connectors  <= 0 ||
+      drmResources->count_encoders    <= 0 ||
+      drmPlaneResources->count_planes <= 0) {
+    uvr_utils_log(UVR_DANGER, "[x] KMS fd '%d' has no display output chain", uvrkms->kmsfd);
+    goto exit_error_kms_node_doc_create_drm_mode_free_plane_resources;
   }
 
   /* Query KMS device plane info */
-  drmModePlane **planes = alloca(drmplaneres->count_planes * sizeof(drmModePlane));
-  memset(planes, 0, drmplaneres->count_planes * sizeof(drmModePlane));
+  drmModePlane **planes = alloca(drmPlaneResources->count_planes * sizeof(drmModePlane));
+  memset(planes, 0, drmPlaneResources->count_planes * sizeof(drmModePlane));
 
-  for (unsigned int i = 0; i < drmplaneres->count_planes; i++) {
-    planes[i] = drmModeGetPlane(uvrkms->kmsFd, drmplaneres->planes[i]);
-    if (!planes[i]) {
+  for (p = 0; p < drmPlaneResources->count_planes; i++) {
+    planes[p] = drmModeGetPlane(uvrkms->kmsfd, drmPlaneResources->planes[p]);
+    if (!planes[p]) {
       uvr_utils_log(UVR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
-      goto err_free_disp_planes;
+      goto exit_error_kms_node_doc_create_drm_mode_free_planes;
     }
   }
 
@@ -336,25 +342,25 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
   drmModeCrtc *crtc = NULL;
   drmModePlane *plane = NULL;
 
-  for (int i = 0; i < drmres->count_connectors; i++) {
-    connector = drmModeGetConnector(uvrkms->kmsFd, drmres->connectors[i]);
+  for (i = 0; i < drmResources->count_connectors; i++) {
+    connector = drmModeGetConnector(uvrkms->kmsfd, drmResources->connectors[i]);
     if (!connector) {
       uvr_utils_log(UVR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
-      goto err_free_disp_planes;
+      goto exit_error_kms_node_doc_create_drm_mode_free_planes;
     }
 
     if (connector->encoder_id == 0) {
       uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no encoder", connector->connector_id);
-      goto free_disp_connector;
+      goto exit_error_kms_node_doc_create_drm_mode_free_connector;
     }
 
     /* Find the encoder (a deprecated KMS object) for this connector. */
-    for (int e = 0; e < drmres->count_encoders; e++) {
-      if (drmres->encoders[e] == connector->encoder_id) {
-        encoder = drmModeGetEncoder(uvrkms->kmsFd, drmres->encoders[e]);
+    for (int e = 0; e < drmResources->count_encoders; e++) {
+      if (drmResources->encoders[e] == connector->encoder_id) {
+        encoder = drmModeGetEncoder(uvrkms->kmsfd, drmResources->encoders[e]);
         if (!encoder) {
           uvr_utils_log(UVR_DANGER, "[x] drmModeGetEncoder: Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
-          goto err_free_disp_connector;
+          goto exit_error_kms_node_doc_create_drm_mode_free_connector;
         }
         break;
       }
@@ -362,15 +368,15 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
     if (encoder->crtc_id == 0) {
       uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no CRTC", connector->connector_id);
-      goto free_disp_encoder;
+      goto exit_error_kms_node_doc_create_drm_mode_free_encoder;
     }
 
-    for (int c = 0; c < drmres->count_crtcs; c++) {
-      if (drmres->crtcs[c] == encoder->crtc_id) {
-        crtc = drmModeGetCrtc(uvrkms->kmsFd, drmres->crtcs[c]);
+    for (int c = 0; c < drmResources->count_crtcs; c++) {
+      if (drmResources->crtcs[c] == encoder->crtc_id) {
+        crtc = drmModeGetCrtc(uvrkms->kmsfd, drmResources->crtcs[c]);
         if (!crtc) {
           uvr_utils_log(UVR_DANGER, "[x] drmModeGetCrtc: Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
-          goto err_free_disp_encoder;
+          goto exit_error_kms_node_doc_create_drm_mode_free_encoder;
         }
         break;
       }
@@ -379,7 +385,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
     /* Ensure the CRTC is active. */
     if (crtc->buffer_id == 0) {
       uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: not active", connector->connector_id);
-      goto free_disp_crtc;
+      goto exit_error_kms_node_doc_create_drm_mode_free_crtc;
     }
 
     /*
@@ -390,7 +396,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
      * by looking for something displaying the same framebuffer ID,
      * since that information is duplicated.
      */
-    for (unsigned int p = 0; p < drmplaneres->count_planes; p++) {
+    for (p = 0; p < drmPlaneResources->count_planes; p++) {
       //uvr_utils_log(UVR_INFO, "[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB %" PRIu32 "", planes[p]->plane_id, planes[p]->crtc_id, planes[p]->fb_id);
       if (planes[p]->crtc_id == crtc->crtc_id && planes[p]->fb_id == crtc->buffer_id) {
         plane = planes[p];
@@ -401,53 +407,42 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
     uvr_utils_log(UVR_SUCCESS, "Successfully created a display output chain");
 
     /* Free all plane resources not in use */
-    for (unsigned int p = 0; p < drmplaneres->count_planes; p++)
+    for (p = 0; p < drmPlaneResources->count_planes; p++)
       if (planes[p]->fb_id != plane->fb_id)
         drmModeFreePlane(planes[p]);
 
-    drmModeFreePlaneResources(drmplaneres);
-    drmModeFreeResources(drmres);
+    drmModeFreePlaneResources(drmPlaneResources);
+    drmModeFreeResources(drmResources);
 
     return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane };
-
-free_disp_crtc:
-    if (crtc) {
-      drmModeFreeCrtc(crtc);
-      crtc = NULL;
-    }
-free_disp_encoder:
-    if (encoder) {
-      drmModeFreeEncoder(encoder);
-      encoder = NULL;
-    }
-free_disp_connector:
-    if (connector) {
-      drmModeFreeConnector(connector);
-      connector = NULL;
-    }
   }
-err_free_disp_encoder:
+
+exit_error_kms_node_doc_create_drm_mode_free_crtc:
+  if (crtc)
+    drmModeFreeCrtc(crtc);
+exit_error_kms_node_doc_create_drm_mode_free_encoder:
   if (encoder)
     drmModeFreeEncoder(encoder);
-err_free_disp_connector:
+exit_error_kms_node_doc_create_drm_mode_free_connector:
   if (connector)
     drmModeFreeConnector(connector);
-err_free_disp_planes:
-  for (unsigned int p = 0; p < drmplaneres->count_planes; p++)
+exit_error_kms_node_doc_create_drm_mode_free_planes:
+  for (p = 0; p < drmPlaneResources->count_planes; p++)
     if (planes[p])
       drmModeFreePlane(planes[p]);
-err_plane_res:
-  if (drmplaneres)
-    drmModeFreePlaneResources(drmplaneres);
-err_res:
-  if (drmres)
-    drmModeFreeResources(drmres);
-err_ret_null_chain_output:
+exit_error_kms_node_doc_create_drm_mode_free_plane_resources:
+  if (drmPlaneResources)
+    drmModeFreePlaneResources(drmPlaneResources);
+exit_error_kms_node_doc_create_drm_mode_free_resources:
+  if (drmResources)
+    drmModeFreeResources(drmResources);
+exit_error_kms_node_doc_create:
   return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0 };
 }
 
 
-void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms) {
+void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
+{
   if (uvrkms->uvr_kms_node_display_output_chain.plane)
     drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
   if (uvrkms->uvr_kms_node_display_output_chain.crtc)
@@ -456,14 +451,14 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms) {
     drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
   if (uvrkms->uvr_kms_node_display_output_chain.connector)
     drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
-  if (uvrkms->uvr_kms_node.kmsFd != -1) {
-    if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.kbmode != -1)
-      vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.kbmode);
+  if (uvrkms->uvr_kms_node.kmsfd != -1) {
+    if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
+      vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.keyBoardMode);
 #ifdef INCLUDE_SDBUS
     if (uvrkms->uvr_kms_node.useLogind)
-      uvr_sd_session_release_device(uvrkms->uvr_kms_node.uvr_sd_session, uvrkms->uvr_kms_node.kmsFd);
+      uvr_sd_session_release_device(uvrkms->uvr_kms_node.systemdSession, uvrkms->uvr_kms_node.kmsfd);
     else
 #endif
-      close(uvrkms->uvr_kms_node.kmsFd);
+      close(uvrkms->uvr_kms_node.kmsfd);
   }
 }

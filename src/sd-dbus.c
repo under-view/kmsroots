@@ -20,7 +20,8 @@
  * Invoking the GetSession systemd-logind D-Bus interface function gets
  * the D-Bus session object path string used in communications
  */
-static char *find_session_path(sd_bus *bus, char *id) {
+static char *find_session_path(sd_bus *bus, char *id)
+{
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
   int ret = 0;
@@ -59,7 +60,8 @@ exit_session_path:
  * Invoking the Activate systemd-logind D-Bus interface function activates
  * a given session via the sd_bus object and session object path string.
  */
-static int session_activate(sd_bus *bus, char *path) {
+static int session_activate(sd_bus *bus, char *path)
+{
   int ret = 0;
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -82,7 +84,8 @@ static int session_activate(sd_bus *bus, char *path) {
  * Invoking TakeControl systemd-logind D-Bus interface function allows
  * process to exclusively manage a device for that session.
  */
-static int take_control(sd_bus *bus, char *path) {
+static int take_control(sd_bus *bus, char *path)
+{
   int ret = 0;
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -106,7 +109,8 @@ static int take_control(sd_bus *bus, char *path) {
  * control over the current active session via the sd_bus object and D-Bus object path string
  * This function also finishes up the free'ing of sd_bus related objects
  */
-static void release_session_control(sd_bus *bus, char *path) {
+static void release_session_control(sd_bus *bus, char *path)
+{
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
 
@@ -122,7 +126,8 @@ static void release_session_control(sd_bus *bus, char *path) {
 
 
 /* Create logind session to access devices without being root */
-int uvr_sd_session_create(struct uvr_sd_session *uvrsd) {
+int uvr_sd_session_create(struct uvr_sd_session *uvrsd)
+{
   int ret = 0;
 
   /* If there's a session active for the current process then just use that */
@@ -202,7 +207,8 @@ start_session:
 }
 
 
-int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const char *devpath) {
+int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const char *devpath)
+{
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
   int fd = -1, ret = 0;
@@ -254,7 +260,8 @@ exit_logind_take_dev:
 }
 
 
-void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd) {
+void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd)
+{
   sd_bus_message *msg = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
 
@@ -275,7 +282,8 @@ void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd) {
 }
 
 
-void uvr_sd_session_destroy(struct uvr_sd_session *uvrsd) {
+void uvr_sd_session_destroy(struct uvr_sd_session *uvrsd)
+{
   if (uvrsd->bus && uvrsd->path)
     release_session_control(uvrsd->bus, uvrsd->path);
   free(uvrsd->id);

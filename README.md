@@ -17,6 +17,7 @@ All features are disabled by default
 
 ```sh
 $ meson setup -Dgpu="discrete" \
+              -Dexamples="true" \
               -Dshaderc="enabled" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \

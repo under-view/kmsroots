@@ -13,13 +13,13 @@
  * Used to select what core wayland interfaces to bind with a given client
  */
 typedef enum _uvr_wc_interface_type {
-  UVR_WC_NULL_INTERFACE          = 0x00000000,
-  UVR_WC_WL_COMPOSITOR_INTERFACE = (1 << 1),
-  UVR_WC_XDG_WM_BASE_INTERFACE   = (1 << 2),
-  UVR_WC_WL_SHM_INTERFACE        = (1 << 4),
-  UVR_WC_WL_SEAT_INTERFACE       = (1 << 8),
-  UVR_WC_ZWP_FULLSCREEN_SHELL_V1 = (1 << 16),
-  UVR_WC_ALL_INTERFACES          = 0XFFFFFFFF,
+  UVR_WC_INTERFACE_NULL                    = 0x00000000,
+  UVR_WC_INTERFACE_WL_COMPOSITOR           = (1 << 1),
+  UVR_WC_INTERFACE_XDG_WM_BASE             = (1 << 2),
+  UVR_WC_INTERFACE_WL_SHM                  = (1 << 4),
+  UVR_WC_INTERFACE_WL_SEAT                 = (1 << 8),
+  UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1 = (1 << 16),
+  UVR_WC_INTERFACE_ALL                     = 0XFFFFFFFF,
 } uvr_wc_interface_type;
 
 
@@ -60,14 +60,14 @@ struct uvr_wc_core_interface {
  * struct uvr_wc_core_interface_create_info (Underview Renderer Wayland Client Core Interface Create Information)
  *
  * args:
- * @iType         - Wayland global objects to include or exclude when the registry emits events
- * @wlDisplayName - Specify the wayland server unix domain socket a client should communicate with. This
- *                  will set the $WAYLAND_DISPLAY variable to the desired display. Passing NULL will
- *                  result in opening unix domain socket /run/user/1000/wayland-0
+ * @iType       - Wayland global objects to include or exclude when the registry emits events
+ * @displayName - Specify the wayland server unix domain socket a client should communicate with. This
+ *                will set the $WAYLAND_DISPLAY variable to the desired display. Passing NULL will
+ *                result in opening unix domain socket /run/user/1000/wayland-0
  */
 struct uvr_wc_core_interface_create_info {
   uvr_wc_interface_type iType;
-  const char            *wlDisplayName;
+  const char            *displayName;
 };
 
 
@@ -105,12 +105,12 @@ struct uvr_wc_shm_buffer {
 
 
 /*
- * struct uvr_wc_wl_buffer (Underview Renderer Wayland Client Wayland Buffer)
+ * struct uvr_wc_wl_buffer_handle (Underview Renderer Wayland Client Wayland Buffer)
  *
  * members:
  * @buffer - Buffer understood by the compositor attached to CPU visible shm bufferp
  */
-struct uvr_wc_wl_buffer {
+struct uvr_wc_wl_buffer_handle {
   struct wl_buffer *buffer;
 };
 
@@ -119,15 +119,15 @@ struct uvr_wc_wl_buffer {
  * struct uvr_wc_buffer (Underview Renderer Wayland Client Buffer)
  *
  * members:
- * @bufferCount     - The amount of wayland buffers allocated from a given wl_shm_pool
- * @uvrWcShmBuffers - Pointer to an array of struct uvrwcshmbuf containing all information required to
- *                    populate/release wayland shared memory pixel buffer.
- * @uvrWcWlBuffers  - Pointer to an array of struct uvrwcwlbuf containing compositor assigned buffer object
+ * @bufferCount      - The amount of wayland buffers allocated from a given wl_shm_pool
+ * @shmBufferObjects - Pointer to an array of struct uvrwcshmbuf containing all information required to
+ *                     populate/release wayland shared memory pixel buffer.
+ * @wlBufferHandles  - Pointer to an array of struct uvrwcwlbuf containing compositor assigned buffer object
  */
 struct uvr_wc_buffer {
   int bufferCount;
-  struct uvr_wc_shm_buffer *uvrWcShmBuffers;
-  struct uvr_wc_wl_buffer *uvrWcWlBuffers;
+  struct uvr_wc_shm_buffer *shmBufferObjects;
+  struct uvr_wc_wl_buffer_handle *wlBufferHandles;
 };
 
 
@@ -135,22 +135,22 @@ struct uvr_wc_buffer {
  * struct uvr_wc_buffer_create_info (Underview Renderer Wayland Client Buffer Create Information)
  *
  * members:
- * @uvrWcCore           - Must pass a valid pointer to all binded/exposed wayland core interfaces
- *                        (important interfaces used: wl_shm)
- * @bufferCount         - The amount of buffers to allocate when storing pixel data
- *                        2 is generally a good option as it allows for double buffering
- * @width               - Amount of pixel horizontally (i.e 3840, 1920, ...)
- * @height              - Amount of pixel vertically (i.e 2160, 1080, ...)
- * @bytesPerPixel       - The amount of bytes per pixel generally going to 4 bytes (32 bits)
- * @wlBufferPixelFormat - Memory layout of an individual pixel
+ * @coreInterface - Must pass a valid pointer to all binded/exposed wayland core interfaces
+ *                  (important interfaces used: wl_shm)
+ * @bufferCount   - The amount of buffers to allocate when storing pixel data
+ *                  2 is generally a good option as it allows for double buffering
+ * @width         - Amount of pixel horizontally (i.e 3840, 1920, ...)
+ * @height        - Amount of pixel vertically (i.e 2160, 1080, ...)
+ * @bytesPerPixel - The amount of bytes per pixel generally going to be 4 bytes (32 bits)
+ * @pixelFormat   - Memory layout of an individual pixel
  */
 struct uvr_wc_buffer_create_info {
-  struct uvr_wc_core_interface *uvrWcCore;
+  struct uvr_wc_core_interface *coreInterface;
   int                          bufferCount;
   int                          width;
   int                          height;
   int                          bytesPerPixel;
-  uint64_t                     wlBufferPixelFormat;
+  uint64_t                     pixelFormat;
 };
 
 
@@ -182,24 +182,24 @@ typedef void (*uvr_wc_renderer_impl)(bool*, uint32_t*, void*);
  * struct uvr_wc_surface (Underview Renderer Wayland Client Surface)
  *
  * members:
- * @xdgToplevel    - An interface with many requests and events to manage application windows
- * @xdgSurface     - Top level surface for the window. Useful if one wants to create
- *                   a tree of surfaces. Provides additional requests for assigning
- *                   roles.
- * @wlSurface      - The image displayed on screen. If wl_shm is binded one must attach
- *                   a wl_buffer (struct uvrwcwlbuf) to display pixels on screen. Depending on
- *                   rendering backend wl_buffer may not need to be allocated.
- * @wlCallback     - The amount of pixel (uint8_t) buffers allocated. The array length of struct uvrwcwlbuf.
- * @bufferCount    -
- * @uvrWcWlBuffers - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
+ * @xdgToplevel     - An interface with many requests and events to manage application windows
+ * @xdgSurface      - Top level surface for the window. Useful if one wants to create
+ *                    a tree of surfaces. Provides additional requests for assigning
+ *                    roles.
+ * @wlSurface       - The image displayed on screen. If wl_shm is binded one must attach
+ *                    a wl_buffer (struct uvrwcwlbuf) to display pixels on screen. Depending on
+ *                    rendering backend wl_buffer may not need to be allocated.
+ * @wlCallback      - The amount of pixel (uint8_t) buffers allocated. The array length of struct uvrwcwlbuf.
+ * @bufferCount     - Amount of elements in pointer to array of @wlBufferHandles
+ * @wlBufferHandles - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
  */
 struct uvr_wc_surface {
-  struct xdg_toplevel     *xdgToplevel;
-  struct xdg_surface      *xdgSurface;
-  struct wl_surface       *wlSurface;
-  struct wl_callback      *wlCallback;
-  int                     bufferCount;
-  struct uvr_wc_wl_buffer *uvrWcWlBuffers;
+  struct xdg_toplevel            *xdgToplevel;
+  struct xdg_surface             *xdgSurface;
+  struct wl_surface              *wlSurface;
+  struct wl_callback             *wlCallback;
+  uint32_t                       bufferCount;
+  struct uvr_wc_wl_buffer_handle *wlBufferHandles;
 };
 
 
@@ -207,33 +207,33 @@ struct uvr_wc_surface {
  * struct uvr_wc_surface_create_info (Underview Renderer Wayland Client Surface Create Information)
  *
  * members:
- * @uvrWcCore      - Pointer to a struct uvr_wc_core_interface contains all objects/interfaces
- *                   necessary for a client to run.
- * @uvrWcBuffer    - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
- *                   to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
- *                   will be displayed. Passing this variable also enables in API swapping between shm buffers.
- *                   Swapping goes up to @bufferCount.
- * @bufferCount    - Unrelated to @uvrWcBuffer. If value assigned not zero and @uvrWcBuffer equals NULL. Then
- *                   this variable will be utilzed to swap between buffers.
- * @appName        - Sets the window name.
- * @fullscreen     - Determines if window should be fullscreen or not
- * @renderer       - Function pointer that allows custom external renderers to be executed by the api
- *                   when before registering a frame wl_callback. Renderer before presenting
- * @rendererData   - Pointer to an optional address. This address may be the address of a struct. Reference
- *                   passed depends on external render function.
- * @rendererCbuf   - Pointer to an integer used by the api to update the current displayable buffer
- * @rendererRuning - Pointer to a boolean that determines if a given window/surface is actively running
+ * @coreInterface         - Pointer to a struct uvr_wc_core_interface contains all objects/interfaces
+ *                          necessary for a client to run.
+ * @wcBufferObject        - Must pass a valid pointer to a struct uvr_wc_buffer need to attach a wl_buffer object
+ *                          to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
+ *                          will be displayed. Passing this variable also enables in API swapping between shm buffers.
+ *                          Swapping goes up to @bufferCount.
+ * @bufferCount           - Unrelated to @wcBufferObject. If value assigned not zero and @wcBufferObject equals NULL. Then
+ *                          this variable will be utilzed to swap between buffers.
+ * @appName               - Sets the window name.
+ * @fullscreen            - Determines if window should be fullscreen or not
+ * @renderer              - Function pointer that allows custom external renderers to be executed by the api
+ *                          when before registering a frame wl_callback. Renderer before presenting
+ * @rendererData          - Pointer to an optional address. This address may be the address of a struct. Reference
+ *                          passed depends on external renderer function.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer
+ * @rendererRunning       - Pointer to a boolean that determines if a given window/surface is actively running
  */
 struct uvr_wc_surface_create_info {
-  struct uvr_wc_core_interface *uvrWcCore;
-  struct uvr_wc_buffer         *uvrWcBuffer;
+  struct uvr_wc_core_interface *coreInterface;
+  struct uvr_wc_buffer         *wcBufferObject;
   uint32_t                     bufferCount;
   const char                   *appName;
   bool                         fullscreen;
   uvr_wc_renderer_impl         renderer;
   void                         *rendererData;
-  uint32_t                     *rendererCbuf;
-  bool                         *rendererRuning;
+  uint32_t                     *rendererCurrentBuffer;
+  bool                         *rendererRunning;
 };
 
 

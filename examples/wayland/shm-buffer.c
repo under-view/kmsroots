@@ -10,14 +10,15 @@
 
 
 struct uvr_wc {
-  struct uvr_wc_core_interface wcinterfaces;
-  struct uvr_wc_surface wcsurf;
-  struct uvr_wc_buffer wcbuffs;
+  struct uvr_wc_core_interface uvr_wc_core_interface;
+  struct uvr_wc_surface uvr_wc_surface;
+  struct uvr_wc_buffer uvr_wc_buffer;
 };
 
 
 /* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L825 */
-static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
+static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
+{
   uint8_t next;
 
   next = cur + (*up ? 1 : -1) * (rand() % mod);
@@ -30,7 +31,8 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod) {
 }
 
 
-void render(bool UNUSED *running, uint32_t *cbuf, void *data) {
+void render(bool UNUSED *running, uint32_t *cbuf, void *data)
+{
   struct uvr_wc *wc = data;
 
   unsigned int bytes_per_pixel = 4, offset = 0;
@@ -45,8 +47,8 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data) {
   for (unsigned int x = 0; x < WIDTH; x++) {
     for (unsigned int y = 0; y < HEIGHT; y++) {
       offset = (x * bytes_per_pixel) + (y * stride);
-      if (wc->wcbuffs.uvrWcShmBuffers[*cbuf].shmPoolSize <= offset) break;
-      *(uint32_t *) &wc->wcbuffs.uvrWcShmBuffers[*cbuf].shmPoolData[offset] = (r << 16) | (g << 8) | b;
+      if (wc->uvr_wc_buffer.shmBufferObjects[*cbuf].shmPoolSize <= offset) break;
+      *(uint32_t *) &wc->uvr_wc_buffer.shmBufferObjects[*cbuf].shmPoolData[offset] = (r << 16) | (g << 8) | b;
     }
   }
 }
@@ -55,59 +57,60 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data) {
 /*
  * Example code demonstrating how to wayland shm buffers
  */
-int main(void) {
+int main(void)
+{
   struct uvr_wc wc;
   struct uvr_wc_destroy wcd;
   memset(&wcd, 0, sizeof(wcd));
   memset(&wc, 0, sizeof(wc));
 
-  struct uvr_wc_core_interface_create_info wc_interfaces_info;
-  wc_interfaces_info.wlDisplayName = NULL;
-  wc_interfaces_info.iType = UVR_WC_WL_COMPOSITOR_INTERFACE | UVR_WC_XDG_WM_BASE_INTERFACE |
-                             UVR_WC_WL_SHM_INTERFACE        | UVR_WC_WL_SEAT_INTERFACE     |
-                             UVR_WC_ZWP_FULLSCREEN_SHELL_V1;
+  struct uvr_wc_core_interface_create_info wcInterfaceCreateInfo;
+  wcInterfaceCreateInfo.displayName = NULL;
+  wcInterfaceCreateInfo.iType = UVR_WC_INTERFACE_WL_COMPOSITOR | UVR_WC_INTERFACE_XDG_WM_BASE |
+                                UVR_WC_INTERFACE_WL_SHM        | UVR_WC_INTERFACE_WL_SEAT     |
+                                UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1;
 
-  wc.wcinterfaces = uvr_wc_core_interface_create(&wc_interfaces_info);
-  if (!wc.wcinterfaces.wlDisplay || !wc.wcinterfaces.wlRegistry || !wc.wcinterfaces.wlCompositor)
+  wc.uvr_wc_core_interface = uvr_wc_core_interface_create(&wcInterfaceCreateInfo);
+  if (!wc.uvr_wc_core_interface.wlDisplay || !wc.uvr_wc_core_interface.wlRegistry || !wc.uvr_wc_core_interface.wlCompositor)
     goto exit_error;
 
-  struct uvr_wc_buffer_create_info wc_buffer_info;
-  wc_buffer_info.uvrWcCore = &wc.wcinterfaces;
-  wc_buffer_info.bufferCount = 2;
-  wc_buffer_info.width = WIDTH;
-  wc_buffer_info.height = HEIGHT;
-  wc_buffer_info.bytesPerPixel = 4;
-  wc_buffer_info.wlBufferPixelFormat = WL_SHM_FORMAT_XRGB8888;
+  struct uvr_wc_buffer_create_info wcBufferCreateInfo;
+  wcBufferCreateInfo.coreInterface = &wc.uvr_wc_core_interface;
+  wcBufferCreateInfo.bufferCount = 2;
+  wcBufferCreateInfo.width = WIDTH;
+  wcBufferCreateInfo.height = HEIGHT;
+  wcBufferCreateInfo.bytesPerPixel = 4;
+  wcBufferCreateInfo.pixelFormat = WL_SHM_FORMAT_XRGB8888;
 
-  wc.wcbuffs = uvr_wc_buffer_create(&wc_buffer_info);
-  if (!wc.wcbuffs.uvrWcShmBuffers || !wc.wcbuffs.uvrWcWlBuffers)
+  wc.uvr_wc_buffer = uvr_wc_buffer_create(&wcBufferCreateInfo);
+  if (!wc.uvr_wc_buffer.shmBufferObjects || !wc.uvr_wc_buffer.wlBufferHandles)
     goto exit_error;
 
   static uint32_t cbuf = 0;
   static bool running = true;
 
-  struct uvr_wc_surface_create_info wc_surface_info;
-  wc_surface_info.uvrWcCore = &wc.wcinterfaces;
-  wc_surface_info.uvrWcBuffer = &wc.wcbuffs;
-  wc_surface_info.appName = "WL SHM Example Window";
-  wc_surface_info.fullscreen = true;
-  wc_surface_info.renderer = &render;
-  wc_surface_info.rendererData = &wc;
-  wc_surface_info.rendererCbuf = &cbuf;
-  wc_surface_info.rendererRuning = &running;
+  struct uvr_wc_surface_create_info wcSurfaceCreateInfo;
+  wcSurfaceCreateInfo.coreInterface = &wc.uvr_wc_core_interface;
+  wcSurfaceCreateInfo.wcBufferObject = &wc.uvr_wc_buffer;
+  wcSurfaceCreateInfo.appName = "WL SHM Example Window";
+  wcSurfaceCreateInfo.fullscreen = true;
+  wcSurfaceCreateInfo.renderer = &render;
+  wcSurfaceCreateInfo.rendererData = &wc;
+  wcSurfaceCreateInfo.rendererCurrentBuffer = &cbuf;
+  wcSurfaceCreateInfo.rendererRunning = &running;
 
-  wc.wcsurf = uvr_wc_surface_create(&wc_surface_info);
-  if (!wc.wcsurf.wlSurface)
+  wc.uvr_wc_surface = uvr_wc_surface_create(&wcSurfaceCreateInfo);
+  if (!wc.uvr_wc_surface.wlSurface)
     goto exit_error;
 
-  while (wl_display_dispatch(wc.wcinterfaces.wlDisplay) != -1 && running) {
+  while (wl_display_dispatch(wc.uvr_wc_core_interface.wlDisplay) != -1 && running) {
     // Leave blank
   }
 
 exit_error:
-  wcd.uvr_wc_core_interface = wc.wcinterfaces;
-  wcd.uvr_wc_buffer = wc.wcbuffs;
-  wcd.uvr_wc_surface = wc.wcsurf;
+  wcd.uvr_wc_core_interface = wc.uvr_wc_core_interface;
+  wcd.uvr_wc_buffer = wc.uvr_wc_buffer;
+  wcd.uvr_wc_surface = wc.uvr_wc_surface;
   uvr_wc_destroy(&wcd);
   return 0;
 }

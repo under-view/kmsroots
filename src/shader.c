@@ -5,7 +5,8 @@
 #include "shader.h"
 
 
-struct uvr_shader_file uvr_shader_file_load(const char *filename) {
+struct uvr_shader_file uvr_shader_file_load(const char *filename)
+{
   FILE *stream = NULL;
   char *bytes = NULL;
   long bsize = 0;
@@ -14,14 +15,14 @@ struct uvr_shader_file uvr_shader_file_load(const char *filename) {
   stream = fopen(filename, "rb");
   if (!stream) {
     uvr_utils_log(UVR_DANGER, "[x] fopen(%s): %s", filename, strerror(errno));
-    goto exit_shader_file_load;
+    goto exit_error_shader_file_load;
   }
 
   /* Go to the end of the file */
   bsize = fseek(stream, 0, SEEK_END);
   if (bsize == -1) {
     uvr_utils_log(UVR_DANGER, "[x] fseek: %s", strerror(errno));
-    goto exit_shader_file_load_fclose;
+    goto exit_error_shader_file_load_fclose;
   }
 
   /*
@@ -33,7 +34,7 @@ struct uvr_shader_file uvr_shader_file_load(const char *filename) {
   bsize = ftell(stream);
   if (bsize == -1) {
     uvr_utils_log(UVR_DANGER, "[x] ftell: %s", strerror(errno));
-    goto exit_shader_file_load_fclose;
+    goto exit_error_shader_file_load_fclose;
   }
 
   /* Jump back to the beginning of the file */
@@ -42,24 +43,24 @@ struct uvr_shader_file uvr_shader_file_load(const char *filename) {
   bytes = (char *) calloc(bsize, sizeof(char));
   if (!bytes) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto exit_shader_file_load_fclose;
+    goto exit_error_shader_file_load_fclose;
   }
 
   /* Read in the entire file */
   if (fread(bytes, bsize, 1, stream) == 0) {
     uvr_utils_log(UVR_DANGER, "[x] fread: %s", strerror(errno));
-    goto exit_shader_file_load_free_bytes;
+    goto exit_error_shader_file_load_free_bytes;
   }
 
   fclose(stream);
 
   return (struct uvr_shader_file) { .bytes = bytes, .byteSize = bsize };
 
-exit_shader_file_load_free_bytes:
+exit_error_shader_file_load_free_bytes:
   free(bytes);
-exit_shader_file_load_fclose:
+exit_error_shader_file_load_fclose:
   fclose(stream);
-exit_shader_file_load:
+exit_error_shader_file_load:
   return (struct uvr_shader_file) { .bytes = NULL, .byteSize = 0 };
 }
 
@@ -82,7 +83,8 @@ static const unsigned int shader_map_table[] = {
 
 
 /* Compiles a shader to a SPIR-V binary */
-struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spirv_create_info *uvrshader) {
+struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spirv_create_info *uvrshader)
+{
   char *bytes = NULL;
   long bsize = 0;
 
@@ -92,19 +94,19 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
 
   if (!uvrshader->source) {
     uvr_utils_log(UVR_DANGER, "[x] uvr_shader_compile_bytes_to_spirv(uvrshader->source): Must pass character buffer with shader code");
-    goto exit_shader_compile_bytes_to_spirv;
+    goto exit_error_shader_compile_bytes_to_spirv;
   }
 
   compiler = shaderc_compiler_initialize();
   if (!compiler) {
     uvr_utils_log(UVR_DANGER, "[x] shaderc_compiler_initialize: Failed initialize shaderc_compiler_t");
-    goto exit_shader_compile_bytes_to_spirv;
+    goto exit_error_shader_compile_bytes_to_spirv;
   }
 
   options = shaderc_compile_options_initialize();
   if (!options) {
     uvr_utils_log(UVR_DANGER, "[x] shaderc_compiler_initialize: Failed initialize shaderc_compile_options_t");
-    goto exit_shader_compile_bytes_to_spirv_compiler_release;
+    goto exit_error_shader_compile_bytes_to_spirv_compiler_release;
   }
 
   shaderc_compile_options_set_optimization_level(options, shaderc_optimization_level_size);
@@ -115,12 +117,12 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
 
   if (!result) {
     uvr_utils_log(UVR_DANGER, "[x] shaderc_compile_into_spv: %s", shaderc_result_get_error_message(result));
-    goto exit_shader_compile_bytes_to_spirv_release_result;
+    goto exit_error_shader_compile_bytes_to_spirv_release_result;
   }
 
   if (shaderc_result_get_compilation_status(result) != shaderc_compilation_status_success) {
     uvr_utils_log(UVR_DANGER, "[x] shaderc_result_get_compilation_status: %s", shaderc_result_get_error_message(result));
-    goto exit_shader_compile_bytes_to_spirv_release_result;
+    goto exit_error_shader_compile_bytes_to_spirv_release_result;
   }
 
   bsize = shaderc_result_get_length(result);
@@ -132,27 +134,31 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
 
   return (struct uvr_shader_spirv) { .result = result, .bytes = bytes, .byteSize = bsize };
 
-exit_shader_compile_bytes_to_spirv_release_result:
+exit_error_shader_compile_bytes_to_spirv_release_result:
   if (result)
     shaderc_result_release(result);
   if (options)
     shaderc_compile_options_release(options);
-exit_shader_compile_bytes_to_spirv_compiler_release:
+exit_error_shader_compile_bytes_to_spirv_compiler_release:
   if (compiler)
     shaderc_compiler_release(compiler);
-exit_shader_compile_bytes_to_spirv:
+exit_error_shader_compile_bytes_to_spirv:
   return (struct uvr_shader_spirv) { .result = NULL, .bytes = NULL, .byteSize = 0 };
 }
 #endif
 
 
-void uvr_shader_destroy(struct uvr_shader_destroy *uvrshader) {
-  if (uvrshader->uvr_shader_file.bytes)
-    free(uvrshader->uvr_shader_file.bytes);
+void uvr_shader_destroy(struct uvr_shader_destroy *uvrshader)
+{
+  uint32_t i;
+  for (i = 0; i < uvrshader->uvr_shader_file_cnt; i++) {
+    if (uvrshader->uvr_shader_file[i].bytes)
+      free(uvrshader->uvr_shader_file[i].bytes);
+  }
 #ifdef INCLUDE_SHADERC
-  if (uvrshader->uvr_shader_spirv.result)
-    shaderc_result_release(uvrshader->uvr_shader_spirv.result);
-  uvrshader->uvr_shader_spirv.result = NULL;
+  for (i = 0; i < uvrshader->uvr_shader_spirv_cnt; i++) {
+    if (uvrshader->uvr_shader_spirv[i].result)
+      shaderc_result_release(uvrshader->uvr_shader_spirv[i].result);
+  }
 #endif
-  uvrshader->uvr_shader_file.bytes = NULL;
 }
