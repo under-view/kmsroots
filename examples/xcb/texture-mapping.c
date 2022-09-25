@@ -99,20 +99,20 @@ struct uvr_uniform_buffer {
 const struct uvr_vertex_data meshData[2][4] = {
   {
     {{-0.1f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
-    {{-0.1f,  0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},   // Vertex 1. Bottom-right - green
+    {{-0.1f,  0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // Vertex 1. Bottom-right - green
     {{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
     //{{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
-    {{-0.9f, -0.5f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}    // Vertex 3. Top-left     - yellow
+    {{-0.9f, -0.5f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}    // Vertex 3. Top-left     - yellow
     //{{-0.1f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}, // Vertex 0. Top-right    - red
   },
   {
     {{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
-    {{0.9f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},   // Vertex 1. Bottom-right - green
+    {{0.9f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // Vertex 1. Bottom-right - green
     {{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
     //{{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
-    {{0.1f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}    // Vertex 3. Top-left     - yellow
-    //{{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}, // Vertex 0. Top-right    - red
-  }
+    {{0.1f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}    // Vertex 3. Top-left     - yellow
+    //{{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}}, // Vertex 0. Top-right    - red
+    }
 };
 
 

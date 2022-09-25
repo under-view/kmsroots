@@ -11,7 +11,7 @@ if libxcb.found() and libxcbewmh.found()
     endif
 
     if p == 'texture-mapping.c'
-      pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/tuxedo-penguin.png"']
+      pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
     endif
 
     pargs += [

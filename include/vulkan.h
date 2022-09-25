@@ -680,6 +680,7 @@ struct uvr_vk_graphics_pipeline {
  * @pStages             - Defines shaders and at what shader stages this GP will utilize them
  * @vertexInputState    - Defines the layout and format of vertex input data. Provides details for loading vertex data.
  * @inputAssemblyState  - Defines how to assemble vertices to primitives (i.e. triangles or lines).
+ *                        https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPrimitiveTopology.html
  * @tessellationState   -
  * @viewportState       - View port defines how to populated image with pixel data (i.e populate only the top half or bottom half). Scissor defines
  *                        how to crop an image. How much of image should be drawn (i.e draw whole image, right half, middle, etc...)
