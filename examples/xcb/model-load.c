@@ -10,6 +10,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define CGLTF_IMPLEMENTATION
+#include <cgltf.h>
+
 #include "xclient.h"
 #include "vulkan.h"
 #include "shader.h"
@@ -137,6 +140,7 @@ int create_vk_command_buffers(struct uvr_vk *app);
 int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
 int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_image_sampler(struct uvr_vk *app);
+int create_vk_model(struct uvr_vk UNUSED *app);
 int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D);
@@ -256,6 +260,9 @@ int main(void)
     goto exit_error;
 
   if (create_vk_image_sampler(&app) == -1)
+    goto exit_error;
+
+  if (create_vk_model(&app) == -1)
     goto exit_error;
 
   if (create_vk_resource_descriptor_sets(&app, &modelTransferSpace) == -1)
@@ -1005,6 +1012,23 @@ int create_vk_image_sampler(struct uvr_vk *app)
     return -1;
 
   return 0;
+}
+
+
+int create_vk_model(struct uvr_vk UNUSED *app)
+{
+  cgltf_options options = {0};
+  cgltf_data *data = NULL;
+  cgltf_result result = cgltf_parse_file(&options, GLTF_MODEL, &data);
+  if (result == cgltf_result_success)
+  {
+    uvr_utils_log(UVR_SUCCESS, "Load GLTF MODEL: %s", GLTF_MODEL);
+    cgltf_free(data);
+    return 0;
+  }
+
+  uvr_utils_log(UVR_DANGER, "Load GLTF MODEL: %s", GLTF_MODEL);
+  return -1;
 }
 
 
