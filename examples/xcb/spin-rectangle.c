@@ -234,6 +234,8 @@ int main(void)
     goto exit_error;
 
   struct uvr_utils_aligned_buffer modelTransferSpace;
+  memset(&modelTransferSpace, 0, sizeof(struct uvr_utils_aligned_buffer));
+
   if (create_vk_buffers(&app, &modelTransferSpace) == -1)
     goto exit_error;
 

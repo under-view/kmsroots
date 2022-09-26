@@ -223,9 +223,12 @@ int main(void)
   if (create_vk_instance(&app) == -1)
     goto exit_error;
 
+  struct uvr_utils_aligned_buffer modelTransferSpace;
+  memset(&modelTransferSpace, 0, sizeof(struct uvr_utils_aligned_buffer));
+
   static uint32_t cbuf = 0;
   static bool running = true;
-  struct uvr_utils_aligned_buffer modelTransferSpace;
+
   if (create_wc_vk_surface(&app, &wc, &cbuf, &running, &modelTransferSpace) == -1)
     goto exit_error;
 
