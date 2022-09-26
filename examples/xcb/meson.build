@@ -18,7 +18,10 @@ if libxcb.found() and libxcbewmh.found()
     endif
 
     if p == 'model-load.c'
-      pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
+      pargs += [
+        '-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"',
+        '-DGLTF_MODEL="' + build_textures_dir + '/data/models/fireplace.gltf"',
+      ]
     endif
 
     pargs += [
