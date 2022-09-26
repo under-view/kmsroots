@@ -57,4 +57,3 @@ dkms.conf
 
 # Ignore potential user generated directories
 build/
-data/

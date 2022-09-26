@@ -12,12 +12,6 @@ going.
 - Ubuntu 22.04
 - Arch Linux ([sway](https://github.com/swaywm/sway))
 
-**Download & Extract Vulkan Assets Pack**
-```sh
-$ wget http://vulkan.gpuinfo.org/downloads/vulkan_asset_pack_gltf.zip
-$ unzip vulkan_asset_pack_gltf.zip
-```
-
 **Building**
 
 All features are disabled by default
