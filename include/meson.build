@@ -1,5 +1,6 @@
 main_headers = [
-  'vulkan.h', 'shader.h', 'utils.h'
+  'vulkan.h', 'shader.h', 'utils.h',
+  'gltf-loader.h'
 ]
 
 # Deprecated interface (Keep for reference)
