@@ -14,7 +14,7 @@ project(
 pargs = []
 so_version = meson.project_version()
 cc = meson.get_compiler('c')
-inc = include_directories('include')
+inc = include_directories('include', 'external/include')
 
 debuging = get_option('debugging')
 shaderc = get_option('shaderc')

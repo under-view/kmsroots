@@ -7,7 +7,7 @@ if libdrm.found() and libgbm.found()
     executable(exec_name, p,
               link_with: lib_underview_renderer,
               dependencies: lib_uvr_deps,
-              include_directories: [inc, examples_inc],
+              include_directories: [inc],
               c_args: pargs,
               install: false)
   endforeach

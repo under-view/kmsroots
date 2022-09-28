@@ -12,7 +12,6 @@ if debuging.enabled()
 endif
 
 examples_dir = meson.current_source_dir()
-examples_inc = include_directories('include')
 
 subdir('textures')
 subdir('shaders')

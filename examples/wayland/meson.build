@@ -33,7 +33,7 @@ if wayland_client.found()
     executable(exec_name, p,
                link_with: lib_underview_renderer,
                dependencies: lib_uvr_deps,
-               include_directories: [inc, examples_inc],
+               include_directories: [inc],
                c_args: pargs,
                install: false)
 
@@ -50,7 +50,7 @@ if wlroots.found() and wayland_server.found()
     executable(exec_name, p,
                link_with: lib_underview_renderer,
                dependencies: lib_uvr_deps,
-               include_directories: [inc, examples_inc],
+               include_directories: [inc],
                c_args: pargs,
                install: false)
   endforeach
