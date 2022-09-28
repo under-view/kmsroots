@@ -10,12 +10,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#define CGLTF_IMPLEMENTATION
-#include <cgltf.h>
-
 #include "wclient.h"
 #include "vulkan.h"
 #include "shader.h"
+#include "gltf-loader.h"
 
 #define WIDTH 1920
 #define HEIGHT 1080
@@ -1019,18 +1017,26 @@ int create_vk_image_sampler(struct uvr_vk *app)
 
 int create_vk_model(struct uvr_vk UNUSED *app)
 {
-  cgltf_options options = {0};
-  cgltf_data *data = NULL;
-  cgltf_result result = cgltf_parse_file(&options, GLTF_MODEL, &data);
-  if (result == cgltf_result_success)
-  {
-    uvr_utils_log(UVR_SUCCESS, "Load GLTF MODEL: %s", GLTF_MODEL);
-    cgltf_free(data);
-    return 0;
-  }
+  int ret = 0;
 
-  uvr_utils_log(UVR_DANGER, "Load GLTF MODEL: %s", GLTF_MODEL);
-  return -1;
+  struct uvr_gltf_loader_destroy gltfDestroy;
+  memset(&gltfDestroy,0,sizeof(struct uvr_gltf_loader_destroy));
+
+  struct uvr_gltf_loader_file gltfFile;
+  memset(&gltfFile,0,sizeof(struct uvr_gltf_loader_file));
+
+  struct uvr_gltf_loader_file_load_info gltfFileLoadInfo;
+  gltfFileLoadInfo.fileName = GLTF_MODEL;
+
+  gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
+  if (!gltfFile.gltfData) { ret = -1 ; goto exit_distroy_gltf; };
+
+exit_distroy_gltf:
+  gltfDestroy.uvr_gltf_loader_file_cnt = 1;
+  gltfDestroy.uvr_gltf_loader_file = &gltfFile;
+  uvr_gltf_loader_destroy(&gltfDestroy);
+
+  return ret;
 }
 
 
