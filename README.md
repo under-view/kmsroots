@@ -43,3 +43,9 @@ $ sudo dmesg -C
 $ dmesg -w > "underview.log" &
 $ ./build/examples/kms/underview-renderer-kms-main
 ```
+
+**Testing**
+
+```sh
+$ meson test -C build/
+```
