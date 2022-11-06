@@ -77,8 +77,8 @@ struct uvr_uniform_buffer_model {
 
 
 struct uvr_uniform_buffer {
-  _Alignas(16) mat4 view;
-  _Alignas(16) mat4 proj;
+  mat4 view;
+  mat4 proj;
 };
 
 
