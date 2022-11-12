@@ -18,6 +18,8 @@ All features are disabled by default
 ```sh
 $ meson setup -Dgpu="discrete" \
               -Dexamples="true" \
+              -Dtests="true" \
+              -Ddebugging="enabled" \
               -Dshaderc="enabled" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \

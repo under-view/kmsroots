@@ -30,6 +30,10 @@ option('tests',
       type: 'boolean', value: 'false',
       description: 'Build tests')
 
+option('debugging',
+      type: 'feature', value: 'disabled',
+      description: 'Enable debuging')
+
 option('gpu',
        type: 'combo', value: 'discrete',
        choices: ['integrated', 'discrete', 'cpu'],

@@ -382,7 +382,9 @@ int create_vk_instance(struct uvr_vk *app)
    * bundled into a layer included in the SDK
    */
   const char *validationLayers[] = {
+#ifdef INCLUDE_VULKAN_VALIDATION_LAYERS
     "VK_LAYER_KHRONOS_validation"
+#endif
   };
 
   const char *instanceExtensions[] = {

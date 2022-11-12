@@ -16,6 +16,8 @@ so_version = meson.project_version()
 cc = meson.get_compiler('c')
 inc = include_directories('include')
 
+debuging = get_option('debugging')
+
 subdir('include')
 subdir('src')
 

@@ -7,6 +7,10 @@ elif gpu == 'cpu'
   pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=4']
 endif
 
+if debuging.enabled()
+  pargs += ['-DINCLUDE_VULKAN_VALIDATION_LAYERS=1']
+endif
+
 examples_dir = meson.current_source_dir()
 examples_inc = include_directories('include')
 
