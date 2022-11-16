@@ -52,7 +52,7 @@ libxcbewmh = dependency('xcb-ewmh', required: get_option('xcb'))
 
 if libxcb.found() and libxcbewmh.found()
   pargs += ['-DINCLUDE_XCB=1']
-  fs += ['xcb-client.c']
+  fs += ['xclient.c']
   lib_uvr_deps += [libxcb, libxcbewmh]
 endif
 
@@ -70,7 +70,7 @@ cglue_code = []
 
 if wlroots.found() and wayland_server.found()
   pargs += ['-DWLR_USE_UNSTABLE=1', '-DINCLUDE_WAYLAND_COMP=1']
-  fs += ['wayland-server.c']
+  fs += ['wserver.c']
   lib_uvr_deps += [wayland_server, wlroots]
 endif
 
@@ -108,7 +108,7 @@ if wayland_client.found()
   endforeach
 
   pargs += ['-DINCLUDE_WAYLAND=1']
-  fs += ['wayland-client.c']
+  fs += ['wclient.c']
   lib_uvr_deps += [wayland_client]
 endif
 
