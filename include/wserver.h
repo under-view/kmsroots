@@ -2,23 +2,26 @@
 #define UVR_WSERVER
 
 #include "utils.h"
-
-#include <wayland-server-core.h>
-#include <wlr/backend.h>
-#include <wlr/util/log.h>
-
+#include <stdbool.h>
 
 /*
  * struct uvr_ws_core (Underview Renderer Wayland Server Core)
  *
  * members:
- * @wlDisplay  - Represents a connection to the compositor and acts as a proxy to the wl_display singleton object.
- * @wlrBackend - Represents a connection to any given backend {DRM/KMS, Wayland, X11, Headless} implementation.
- *               Utilized by wlroots when initializing compositor outputs.
+ * @wlDisplay              - Wayland Display object is managed by libwayland. It handles accepting
+ *                           clients from the Unix socket '$XDG_RUNTIME_DIR/(wayland display unix socket name)',
+ *                           managing Wayland globals, and so on. XDG_RUNTIME_DIR="/run/user/1000"
+ * @wlrBackend             - A backend provides a set of input and output devices. A display output chain suitable
+ *                           for modesetting typically looks like fb (plane)->CRTC->encoder->connector.
+ * @wlrRenderer            - Provides an instance to a renderer Implementation. Renderer implementations
+ *                           contained in wlroots include Pixman, Vulkan, & GLES2.
+ * @wlrRendererAllocator   - Stores create and destroy buffer function pointers, to some provided implemenatation.
  */
 struct uvr_ws_core {
-  struct wl_display  *wlDisplay;
-  struct wlr_backend *wlrBackend;
+  struct wl_display    *wlDisplay;
+  struct wlr_backend   *wlrBackend;
+  struct wlr_renderer  *wlrRenderer;
+  struct wlr_allocator *wlrRendererAllocator;
 };
 
 
