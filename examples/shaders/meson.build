@@ -16,7 +16,7 @@ foreach shader : shaders
   shader_name = shader.substring(0,substring_size) + '-' + shader_extension
 
   run_command('glslangValidator', '-H', '@0@'.format(meson.current_source_dir()) + '/' + shader,
-                                  '-o', '@0@'.format(meson.current_build_dir()) + '/' + shader_name + '.spv', check: true)
+                                  '-o', '@0@'.format(meson.current_build_dir()) + '/' + shader_name + '.spv', check: false)
 endforeach
 
 shader_build_dir = meson.current_build_dir()
