@@ -56,7 +56,7 @@ static void registry_handle_global(void *data,
 
   if (coreInterface->iType & UVR_WC_INTERFACE_XDG_WM_BASE) {
     if (!strcmp(interface, xdg_wm_base_interface.name)) {
-      coreInterface->xdgWmBase = wl_registry_bind(registry, name, &xdg_wm_base_interface, 3);
+      coreInterface->xdgWmBase = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
       xdg_wm_base_add_listener(coreInterface->xdgWmBase, &xdg_wm_base_listener, NULL);
     }
   }
@@ -253,6 +253,8 @@ error_uvr_wc_create_buffer_exit:
  *                          This address may be the address of a struct. Reference passed depends on external render function.
  * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer
  * @rendererRunning       - Pointer to a boolean indicating that surface/window is active
+ * @waitForConfigure      - Boolean to help gate draw frame call. One should not attach buffer to surface before
+ *                          first xdg_surface.configure event it recieved.
  */
 struct uvr_wc_renderer_info {
   struct uvr_wc_core_interface *coreInterface;
@@ -261,6 +263,7 @@ struct uvr_wc_renderer_info {
   void *rendererData;
   uint32_t *rendererCurrentBuffer;
   bool *rendererRunning;
+  bool waitForConfigure;
 };
 
 
@@ -271,6 +274,15 @@ static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_sur
 {
   struct uvr_wc_renderer_info UNUSED *rendererInfo = (struct uvr_wc_renderer_info *) data;
   xdg_surface_ack_configure(xdg_surface, serial);
+
+  /*
+   * The xdg_wm_base protocol requires one waits until the first xdg_surface.configure
+   * event is received before attaching a buffer to a surface.
+   */
+  if (rendererInfo->waitForConfigure) {
+    drawframe(data, NULL, 0);
+    rendererInfo->waitForConfigure = true;
+  }
 }
 
 
@@ -404,11 +416,7 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
   }
 
   wl_surface_commit(surfaceObject.wlSurface);
-
-  // Draw the first frame
-  if (uvrwc->renderer) {
-    drawframe(&rendererInfo, NULL, 0);
-  }
+  rendererInfo.waitForConfigure = true;
 
   return (struct uvr_wc_surface) { .xdgToplevel = surfaceObject.xdgToplevel, .xdgSurface = surfaceObject.xdgSurface, .wlSurface = surfaceObject.wlSurface,
                                    .bufferCount = surfaceObject.bufferCount, .wlBufferHandles = surfaceObject.wlBufferHandles };
