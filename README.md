@@ -10,6 +10,7 @@ going.
 **Tested Distro's**
 - Ubuntu 20.04
 - Ubuntu 22.04
+- Arch Linux ([sway](https://github.com/swaywm/sway))
 
 **Building**
 
