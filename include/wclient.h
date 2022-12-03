@@ -42,7 +42,7 @@ typedef enum _uvr_wc_interface_type {
  *                       a simple way of getting pixels from client to compositor. Pixels are stored in an
  *                       unsigned 8 bit integer the buffer is created with mmap(2).
  * @wlSeat             - A singleton global object used to represent a group of hot-pluggable input devices
- * @zwpFullscreenShell - A singleton global object that has an interface that allow for displaying of fullscreen surfaces.
+ * @fullScreenShell    - A singleton global object that has an interface that allow for displaying of fullscreen surfaces.
  */
 struct uvr_wc_core_interface {
   uvr_wc_interface_type          iType;
@@ -52,7 +52,7 @@ struct uvr_wc_core_interface {
   struct xdg_wm_base             *xdgWmBase;
   struct wl_shm                  *wlShm;
   struct wl_seat                 *wlSeat;
-  struct zwp_fullscreen_shell_v1 *zwpFullscreenShell;
+  struct zwp_fullscreen_shell_v1 *fullScreenShell;
 };
 
 

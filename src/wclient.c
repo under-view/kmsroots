@@ -75,7 +75,7 @@ static void registry_handle_global(void *data,
 
   if (coreInterface->iType & UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1) {
     if (!strcmp(interface, "zwp_fullscreen_shell_v1")) {
-      coreInterface->zwpFullscreenShell = wl_registry_bind(registry, name, &zwp_fullscreen_shell_v1_interface, version);
+      coreInterface->fullScreenShell = wl_registry_bind(registry, name, &zwp_fullscreen_shell_v1_interface, version);
     }
   }
 }
@@ -377,8 +377,8 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
     goto exit_error_wc_surface_create;
   }
 
-  if (uvrwc->fullscreen && uvrwc->coreInterface->zwpFullscreenShell) {
-    zwp_fullscreen_shell_v1_present_surface(uvrwc->coreInterface->zwpFullscreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
+  if (uvrwc->fullscreen && uvrwc->coreInterface->fullScreenShell) {
+    zwp_fullscreen_shell_v1_present_surface(uvrwc->coreInterface->fullScreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
   } else {
     /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
     surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(uvrwc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
@@ -466,8 +466,8 @@ void uvr_wc_destroy(struct uvr_wc_destroy *uvrwc)
     wl_shm_destroy(uvrwc->uvr_wc_core_interface.wlShm);
   if (uvrwc->uvr_wc_core_interface.xdgWmBase)
     xdg_wm_base_destroy(uvrwc->uvr_wc_core_interface.xdgWmBase);
-  if (uvrwc->uvr_wc_core_interface.zwpFullscreenShell)
-    zwp_fullscreen_shell_v1_release(uvrwc->uvr_wc_core_interface.zwpFullscreenShell);
+  if (uvrwc->uvr_wc_core_interface.fullScreenShell)
+    zwp_fullscreen_shell_v1_release(uvrwc->uvr_wc_core_interface.fullScreenShell);
   if (uvrwc->uvr_wc_core_interface.wlCompositor)
     wl_compositor_destroy(uvrwc->uvr_wc_core_interface.wlCompositor);
   if (uvrwc->uvr_wc_core_interface.wlRegistry)
