@@ -14,6 +14,7 @@
 #include "xdg-shell-client-protocol.h"
 #include "wclient.h"
 
+static int xdgWmBaseVersion = 0;
 
 static void noop()
 {
@@ -64,6 +65,7 @@ static void registry_handle_global(void *data,
   if (coreInterface->iType & UVR_WC_INTERFACE_WL_SHM) {
     if (!strcmp(interface, wl_shm_interface.name)) {
       coreInterface->wlShm = wl_registry_bind(registry, name, &wl_shm_interface, version);
+      xdgWmBaseVersion = version;
     }
   }
 
@@ -299,10 +301,7 @@ static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel UNUSED *xd
 }
 
 
-static const struct xdg_toplevel_listener xdg_toplevel_listener = {
-  .configure = noop,
-  .close = xdg_toplevel_handle_close,
-};
+static struct xdg_toplevel_listener xdg_toplevel_listener;
 
 
 static const struct wl_callback_listener frame_listener;
@@ -402,6 +401,18 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
       uvr_utils_log(UVR_DANGER, "[x] xdg_surface_add_listener: Failed");
       goto exit_error_wc_surface_create_xdg_toplevel_destroy;
     }
+
+    /*
+     * xdg_wm_base,xdg_toplevel interfaces are version specific. Adding new members to structs between
+     * version. Which can lead to bugs such as "listener function for opcode 2 of xdg_toplevel is NULL"
+     * Assign unimplemented members to noop so above bug doesn't occur.
+     */
+    xdg_toplevel_listener.configure = noop;
+    xdg_toplevel_listener.close = xdg_toplevel_handle_close;
+    if (xdgWmBaseVersion <= 4)
+      xdg_toplevel_listener.configure_bounds = noop;
+    if (xdgWmBaseVersion <= 5)
+      xdg_toplevel_listener.wm_capabilities = noop;
 
     /*
      * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
