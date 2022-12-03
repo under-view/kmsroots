@@ -377,42 +377,42 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
     goto exit_error_wc_surface_create;
   }
 
-  /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
-  surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(uvrwc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
-  if (!surfaceObject.xdgSurface) {
-    uvr_utils_log(UVR_DANGER, "[x] xdg_wm_base_get_xdg_surface: Can't create xdg_surface interface");
-    goto exit_error_wc_surface_create_wl_surface_destroy;
-  }
-
-  /* Create xdg_toplevel interface from which we manage application window from */
-  surfaceObject.xdgToplevel = xdg_surface_get_toplevel(surfaceObject.xdgSurface);
-  if (!surfaceObject.xdgToplevel) {
-    uvr_utils_log(UVR_DANGER, "[x] xdg_surface_get_toplevel: Can't create xdg_toplevel interface");
-    goto exit_error_wc_surface_create_xdg_surface_destroy;
-  }
-
-  /*
-   * Bind the xdg_surface_listener to a given xdg_surface objects. So that we can implement
-   * how we handle events associate with object comming from the wayland server.
-   */
-  if (xdg_surface_add_listener(surfaceObject.xdgSurface, &xdg_surface_listener, &rendererInfo)) {
-    uvr_utils_log(UVR_DANGER, "[x] xdg_surface_add_listener: Failed");
-    goto exit_error_wc_surface_create_xdg_toplevel_destroy;
-  }
-
-  /*
-   * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
-   * how we handle events associate with objects comming from the wayland server.
-   */
-  if (xdg_toplevel_add_listener(surfaceObject.xdgToplevel, &xdg_toplevel_listener, &rendererInfo)) {
-    uvr_utils_log(UVR_DANGER, "[x] xdg_toplevel_add_listener: Failed");
-    goto exit_error_wc_surface_create_xdg_toplevel_destroy;
-  }
-
-  xdg_toplevel_set_title(surfaceObject.xdgToplevel, uvrwc->appName);
-
   if (uvrwc->fullscreen && uvrwc->coreInterface->zwpFullscreenShell) {
     zwp_fullscreen_shell_v1_present_surface(uvrwc->coreInterface->zwpFullscreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
+  } else {
+    /* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
+    surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(uvrwc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
+    if (!surfaceObject.xdgSurface) {
+      uvr_utils_log(UVR_DANGER, "[x] xdg_wm_base_get_xdg_surface: Can't create xdg_surface interface");
+      goto exit_error_wc_surface_create_wl_surface_destroy;
+    }
+
+    /* Create xdg_toplevel interface from which we manage application window from */
+    surfaceObject.xdgToplevel = xdg_surface_get_toplevel(surfaceObject.xdgSurface);
+    if (!surfaceObject.xdgToplevel) {
+      uvr_utils_log(UVR_DANGER, "[x] xdg_surface_get_toplevel: Can't create xdg_toplevel interface");
+      goto exit_error_wc_surface_create_xdg_surface_destroy;
+    }
+
+    /*
+     * Bind the xdg_surface_listener to a given xdg_surface objects. So that we can implement
+     * how we handle events associate with object comming from the wayland server.
+     */
+    if (xdg_surface_add_listener(surfaceObject.xdgSurface, &xdg_surface_listener, &rendererInfo)) {
+      uvr_utils_log(UVR_DANGER, "[x] xdg_surface_add_listener: Failed");
+      goto exit_error_wc_surface_create_xdg_toplevel_destroy;
+    }
+
+    /*
+     * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
+     * how we handle events associate with objects comming from the wayland server.
+     */
+    if (xdg_toplevel_add_listener(surfaceObject.xdgToplevel, &xdg_toplevel_listener, &rendererInfo)) {
+      uvr_utils_log(UVR_DANGER, "[x] xdg_toplevel_add_listener: Failed");
+      goto exit_error_wc_surface_create_xdg_toplevel_destroy;
+    }
+
+    xdg_toplevel_set_title(surfaceObject.xdgToplevel, uvrwc->appName);
   }
 
   wl_surface_commit(surfaceObject.wlSurface);
