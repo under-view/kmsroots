@@ -65,7 +65,7 @@ static const char *term_colors[] = {
   [UVR_NONE]    = "",
   [UVR_SUCCESS] = "\e[32;1m",
   [UVR_DANGER]  = "\e[31;1m",
-  [UVR_INFO]    = "\e[37;1m",
+  [UVR_INFO]    = "\e[35;1m",
   [UVR_WARNING] = "\e[33;1m",
   [UVR_RESET]   = "\x1b[0m"
 };
