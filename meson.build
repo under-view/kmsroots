@@ -17,6 +17,7 @@ cc = meson.get_compiler('c')
 inc = include_directories('include')
 
 debuging = get_option('debugging')
+shaderc = get_option('shaderc')
 
 subdir('include')
 subdir('src')

@@ -1,4 +1,8 @@
-progs = [ 'shader-file-load.c', 'shader-buffer-load.c' ]
+progs = [ 'shader-file-load.c' ]
+
+if shaderc.enabled()
+  progs += ['shader-buffer-load.c']
+endif
 
 original_args = pargs
 foreach p : progs
