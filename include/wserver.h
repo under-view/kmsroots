@@ -8,12 +8,7 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/allocator.h>
-#include <wlr/types/wlr_compositor.h>
-#include <wlr/types/wlr_subcompositor.h>
-#include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_output.h>
-#include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
 
@@ -29,6 +24,8 @@
  * @wlrRenderer            - Provides an instance to a renderer Implementation. Renderer implementations
  *                           contained in wlroots include Pixman, Vulkan, & GLES2.
  * @wlrRendererAllocator   - Stores create and destroy buffer function pointers, to some provided implemenatation.
+ * @wlrSceneGraph          - Pointer to compositor scene graph. This is a wlroots abstraction that handles all
+ *                           rendering and damage tracking.
  * @wlrOutputLayout        - A wlroots utility for working with an arrangement of screens in a physical layout.
  * @outputList             - Doubly Linked list of display output devices
  * @newOutputListener      - Listener used to notify when a new output is connected
@@ -38,6 +35,7 @@ struct uvr_ws_core {
   struct wlr_backend       *wlrBackend;
   struct wlr_renderer      *wlrRenderer;
   struct wlr_allocator     *wlrRendererAllocator;
+  struct wlr_scene         *wlrSceneGraph;
 
   struct wlr_output_layout *wlrOutputLayout;
   struct wl_list           outputList;

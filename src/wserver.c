@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_output.h>
 #include <wlr/util/log.h>
 #include "wserver.h"
 
@@ -34,8 +38,15 @@ struct uvr_ws_output {
  * generally at the output's refresh rate (e.g. 60Hz).
  */
 static void server_output_device_handle_frame(struct wl_listener *listener, void UNUSED *data) {
-  struct uvr_ws_output UNUSED *output = wl_container_of(listener, output, frameListener);
-  return;
+  struct uvr_ws_output *output = wl_container_of(listener, output, frameListener);
+  struct wlr_scene_output *sceneOutput = wlr_scene_get_scene_output(output->core->wlrSceneGraph, output->wlrOutput);
+
+  /* Render the scene if needed and commit the output */
+  wlr_scene_output_commit(sceneOutput);
+
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  wlr_scene_output_send_frame_done(sceneOutput, &now);
 }
 
 
@@ -172,13 +183,12 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
   }
 
   /*
-   * This creates some hands-off wlroots interfaces. The compositor is
-   * necessary for clients to allocate surfaces, the subcompositor allows to
-   * assign the role of subsurfaces to surfaces and the data device manager
-   * handles the clipboard. Each of these wlroots interfaces has room for you
-   * to dig your fingers in and play with their behavior if you want. Note that
-   * the clients cannot set the selection directly without compositor approval,
-   * see the handling of the request_set_selection event below.
+   * This creates some hands-off wlroots interfaces viewable by the client. The
+   * wl_compositor interface is necessary for clients to allocate surfaces, the
+   * wl_subcompositor interface allows to assign the role of subsurfaces to surfaces,
+   * and the data device manager handles the clipboard. Note: that the clients
+   * cannot set the selection directly without compositor approval, see the
+   * handling of the request_set_selection event below.
    */
   wlr_compositor_create(core.wlDisplay, core.wlrRenderer);
   wlr_subcompositor_create(core.wlDisplay);
@@ -195,8 +205,23 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
   core.newOutputListener.notify = server_output_add_new_device;
   wl_signal_add(&core.wlrBackend->events.new_output, &core.newOutputListener);
 
+  /*
+   * Create a scene graph. This is a wlroots abstraction that handles all
+   * rendering and damage tracking.
+   */
+  core.wlrSceneGraph = wlr_scene_create();
+  if (!core.wlrSceneGraph) {
+    wlr_log(WLR_ERROR, "[X] wlr_scene_create: failed to create wlr_scene");
+    goto exit_ws_core_wlr_output_layout_destroy;
+  }
+
+  wlr_scene_attach_output_layout(core.wlrSceneGraph, core.wlrOutputLayout);
+
   return core;
 
+exit_ws_core_wlr_output_layout_destroy:
+  if (core.wlrOutputLayout)
+    wlr_output_layout_destroy(core.wlrOutputLayout);
 exit_ws_core_wlr_renderer_allocator_destroy:
   if (core.wlrRendererAllocator)
     wlr_allocator_destroy(core.wlrRendererAllocator);
