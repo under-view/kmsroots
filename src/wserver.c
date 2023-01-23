@@ -1,11 +1,134 @@
-#include <string.h>
-#include <wayland-server-core.h>
-#include <wlr/backend.h>
-#include <wlr/render/wlr_renderer.h>
-#include <wlr/render/allocator.h>
-#include <wlr/util/log.h>
+/* NOTE: Most Comments taken from wlroots tinwyl implementation */
 
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <wlr/util/log.h>
 #include "wserver.h"
+
+/*
+ * struct uvr_ws_output (Underview Renderer Wayland Server Output)
+ *
+ * members:
+ * @link                  - Represents the sentinel head of a output device. Essential the head
+ *                          of a doubly-linked list.
+ * @core                  - Pointer to a struct uvr_ws_core
+ * @wlrOutput             -
+ * @frameListener         - Points to function that is called every time an output wants to display a frame.
+ * @requestStateListener  - Points to function that handles request coming from backend
+ * @destroyListener       - Points to function that destroys the output device node in the doubly-linked list
+ *                          and free's any allocated memory for that particular node.
+ */
+struct uvr_ws_output {
+  struct wl_list     link;
+  struct uvr_ws_core *core;
+  struct wlr_output  *wlrOutput;
+  struct wl_listener frameListener;
+  struct wl_listener requestStateListener;
+  struct wl_listener destroyListener;
+};
+
+
+/*
+ * This function is called every time an output is ready to display a frame,
+ * generally at the output's refresh rate (e.g. 60Hz).
+ */
+static void server_output_device_handle_frame(struct wl_listener *listener, void UNUSED *data) {
+  struct uvr_ws_output UNUSED *output = wl_container_of(listener, output, frameListener);
+  return;
+}
+
+
+/*
+ * This function is called when the backend requests a new state for
+ * the output. For example, Wayland and X11 backends request a new mode
+ * when the output window is resized.
+ */
+static void server_output_device_handle_state_request(struct wl_listener *listener, void *data) {
+  struct uvr_ws_output *output = wl_container_of(listener, output, requestStateListener);
+  const struct wlr_output_event_request_state *event = data;
+  wlr_output_commit_state(output->wlrOutput, event->state);
+}
+
+
+static void server_output_device_destroy(struct wl_listener *listener, void UNUSED *data) {
+  struct uvr_ws_output *output = wl_container_of(listener, output, destroyListener);
+
+  wl_list_remove(&output->frameListener.link);
+  wl_list_remove(&output->requestStateListener.link);
+  wl_list_remove(&output->destroyListener.link);
+  wl_list_remove(&output->link);
+  free(output);
+}
+
+
+/*
+ * This event is raised by the backend when a new output
+ * (aka a display or monitor) becomes available.
+ */
+static void server_output_add_new_device(struct wl_listener *listener, void *data) {
+  struct uvr_ws_core *core = wl_container_of(listener, core, newOutputListener);
+  struct wlr_output *wlrOutput = data;
+
+  /*
+   * Configures the output created by the backend to use our allocator
+   * and our renderer. Must be done once, before commiting the output.
+   */
+  wlr_output_init_render(wlrOutput, core->wlrRendererAllocator, core->wlrRenderer);
+
+  /*
+   * Some backends don't have modes. DRM+KMS does, and we need to set a mode
+   * before we can use the output. The mode is a tuple of (width, height,
+   * refresh rate), and each monitor supports only a specific set of modes. We
+   * just pick the monitor's preferred mode, a more sophisticated compositor
+   * would let the user configure it.
+   */
+  if (!wl_list_empty(&wlrOutput->modes)) {
+    struct wlr_output_mode *mode = wlr_output_preferred_mode(wlrOutput);
+    wlr_output_set_mode(wlrOutput, mode);
+    wlr_output_enable(wlrOutput, true);
+    if (!wlr_output_commit(wlrOutput)) {
+      return;
+    }
+  }
+
+  /* Allocates and configures our state for this output */
+  struct uvr_ws_output *output = calloc(1, sizeof(struct uvr_ws_output));
+  if (output) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    return;
+  }
+
+  output->wlrOutput = wlrOutput;
+  output->core = core;
+
+  /* Sets up a listener for the frame event. */
+  output->frameListener.notify = server_output_device_handle_frame;
+  wl_signal_add(&wlrOutput->events.frame, &output->frameListener);
+
+  /* Sets up a listener for the state request event. */
+  output->requestStateListener.notify = server_output_device_handle_state_request;
+  wl_signal_add(&wlrOutput->events.request_state, &output->requestStateListener);
+
+  /* Sets up a listener for the destroy event. */
+  output->destroyListener.notify = server_output_device_destroy;
+  wl_signal_add(&wlrOutput->events.destroy, &output->destroyListener);
+
+  /* Insert new display output to end of list */
+  wl_list_insert(&core->outputList, &output->link);
+
+  /*
+   * Adds this to the output layout. The add_auto function arranges outputs
+   * from left-to-right in the order they appear. A more sophisticated
+   * compositor would let the user configure the arrangement of outputs in the
+   * layout.
+   *
+   * The output layout utility automatically adds a wl_output global to the
+   * display, which Wayland clients can see to find out information about the
+   * output (such as DPI, scale factor, manufacturer, etc).
+   */
+  wlr_output_layout_add_auto(core->wlrOutputLayout, wlrOutput);
+}
 
 
 struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
@@ -45,11 +168,41 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
   core.wlrRendererAllocator = wlr_allocator_autocreate(core.wlrBackend, core.wlrRenderer);
   if (!core.wlrRendererAllocator) {
     wlr_log(WLR_ERROR, "[X] wlr_allocator_autocreate: failed to create wlr_allocator");
-    goto exit_ws_core_wlr_backend_destroy;
+    goto exit_ws_core_wlr_renderer_destroy;
   }
+
+  /*
+   * This creates some hands-off wlroots interfaces. The compositor is
+   * necessary for clients to allocate surfaces, the subcompositor allows to
+   * assign the role of subsurfaces to surfaces and the data device manager
+   * handles the clipboard. Each of these wlroots interfaces has room for you
+   * to dig your fingers in and play with their behavior if you want. Note that
+   * the clients cannot set the selection directly without compositor approval,
+   * see the handling of the request_set_selection event below.
+   */
+  wlr_compositor_create(core.wlDisplay, core.wlrRenderer);
+  wlr_subcompositor_create(core.wlDisplay);
+  wlr_data_device_manager_create(core.wlDisplay);
+
+  core.wlrOutputLayout = wlr_output_layout_create();
+  if (!core.wlrOutputLayout) {
+    wlr_log(WLR_ERROR, "[X] wlr_output_layout_create: failed to create wlr_output_layout");
+    goto exit_ws_core_wlr_renderer_allocator_destroy;
+  }
+
+  /* Configure a listener to be notified when new outputs are available on the backend. */
+  wl_list_init(&core.outputList); // Initailize Linked List
+  core.newOutputListener.notify = server_output_add_new_device;
+  wl_signal_add(&core.wlrBackend->events.new_output, &core.newOutputListener);
 
   return core;
 
+exit_ws_core_wlr_renderer_allocator_destroy:
+  if (core.wlrRendererAllocator)
+    wlr_allocator_destroy(core.wlrRendererAllocator);
+exit_ws_core_wlr_renderer_destroy:
+  if (core.wlrRenderer)
+    wlr_renderer_destroy(core.wlrRenderer);
 exit_ws_core_wlr_backend_destroy:
   if (core.wlrBackend)
     wlr_backend_destroy(core.wlrBackend);
@@ -57,12 +210,19 @@ exit_ws_core_wl_display_destory:
   if (core.wlDisplay)
     wl_display_destroy(core.wlDisplay);
 exit_ws_core:
-  return (struct uvr_ws_core) { .wlDisplay = NULL, .wlrBackend = NULL };
+  return (struct uvr_ws_core) { .wlDisplay = NULL, .wlrBackend = NULL, .wlrRenderer = NULL,
+                                .wlrRendererAllocator = NULL, .wlrOutputLayout = NULL };
 }
 
 
 void uvr_ws_destroy(struct uvr_ws_destroy *uvrws)
 {
+  if (uvrws->uvr_ws_core.wlrOutputLayout)
+    wlr_output_layout_destroy(uvrws->uvr_ws_core.wlrOutputLayout);
+  if (uvrws->uvr_ws_core.wlrRendererAllocator)
+    wlr_allocator_destroy(uvrws->uvr_ws_core.wlrRendererAllocator);
+  if (uvrws->uvr_ws_core.wlrRenderer)
+    wlr_renderer_destroy(uvrws->uvr_ws_core.wlrRenderer);
   if (uvrws->uvr_ws_core.wlDisplay)
     wl_display_destroy_clients(uvrws->uvr_ws_core.wlDisplay);
   if (uvrws->uvr_ws_core.wlrBackend)
