@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_subcompositor.h>
@@ -105,7 +106,7 @@ static void server_output_add_new_device(struct wl_listener *listener, void *dat
 
   /* Allocates and configures our state for this output */
   struct uvr_ws_output *output = calloc(1, sizeof(struct uvr_ws_output));
-  if (output) {
+  if (!output) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     return;
   }
@@ -169,7 +170,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
   // TODO: Implement custom renderer
   core.wlrRenderer = wlr_renderer_autocreate(core.wlrBackend);
   if (!core.wlrRenderer) {
-    wlr_log(WLR_ERROR, "[X] wlr_renderer_autocreate: failed to create wlr_renderer");
+    uvr_utils_log(UVR_DANGER, "[X] wlr_renderer_autocreate: failed to create wlr_renderer");
     goto exit_ws_core_wlr_backend_destroy;
   }
 
@@ -178,7 +179,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
   /* Bridge between the renderer and the backend that handles the buffer creation */
   core.wlrRendererAllocator = wlr_allocator_autocreate(core.wlrBackend, core.wlrRenderer);
   if (!core.wlrRendererAllocator) {
-    wlr_log(WLR_ERROR, "[X] wlr_allocator_autocreate: failed to create wlr_allocator");
+    uvr_utils_log(UVR_DANGER, "[X] wlr_allocator_autocreate: failed to create wlr_allocator");
     goto exit_ws_core_wlr_renderer_destroy;
   }
 
@@ -196,7 +197,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
 
   core.wlrOutputLayout = wlr_output_layout_create();
   if (!core.wlrOutputLayout) {
-    wlr_log(WLR_ERROR, "[X] wlr_output_layout_create: failed to create wlr_output_layout");
+    uvr_utils_log(UVR_DANGER, "[X] wlr_output_layout_create: failed to create wlr_output_layout");
     goto exit_ws_core_wlr_renderer_allocator_destroy;
   }
 
@@ -211,11 +212,52 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
    */
   core.wlrSceneGraph = wlr_scene_create();
   if (!core.wlrSceneGraph) {
-    wlr_log(WLR_ERROR, "[X] wlr_scene_create: failed to create wlr_scene");
+    uvr_utils_log(UVR_DANGER, "[X] wlr_scene_create: failed to create wlr_scene");
     goto exit_ws_core_wlr_output_layout_destroy;
   }
 
   wlr_scene_attach_output_layout(core.wlrSceneGraph, core.wlrOutputLayout);
+
+  /* Add a Unix socket to the Wayland display. */
+  const char *socket = NULL;
+  if (uvrws->unixSockName) {
+    /* If NULL passed function fails */
+    if (wl_display_add_socket(core.wlDisplay, uvrws->unixSockName) == -1) {
+      uvr_utils_log(UVR_DANGER, "[x] wl_display_add_socket: Unable to create unix socket %s for Wayland display.", uvrws->unixSockName);
+      goto exit_ws_core_wlr_output_layout_destroy;
+    }
+  } else {
+    socket = wl_display_add_socket_auto(core.wlDisplay);
+    if (!socket) {
+      uvr_utils_log(UVR_DANGER, "[x] wl_display_add_socket_auto: Unable to create unix socket for Wayland display.");
+      goto exit_ws_core_wlr_output_layout_destroy;
+    }
+  }
+
+  char *xdgRuntimeDir = getenv("XDG_RUNTIME_DIR");
+  int unixSockPathLen = strnlen(xdgRuntimeDir, 64) + strnlen(uvrws->unixSockName ? uvrws->unixSockName : socket, 64) + 1;
+  char *unixSocket = alloca(unixSockPathLen);
+
+  strncpy(unixSocket, xdgRuntimeDir, strnlen(xdgRuntimeDir, unixSockPathLen));
+  strncat(unixSocket, "/", 2);
+  strncat(unixSocket, uvrws->unixSockName ? uvrws->unixSockName : socket,
+          strnlen(uvrws->unixSockName ? uvrws->unixSockName : socket, unixSockPathLen));
+
+  uvr_utils_log(UVR_SUCCESS, "Succefully established socket for wayland clients to connect at %s", unixSocket);
+
+  /*
+   * Start the backend. This will enumerate outputs and inputs, become the DRM master, etc.
+   * see: kms.c for an implementation of how enumeration and becoming DRM master works.
+   */
+  if (!wlr_backend_start(core.wlrBackend)) {
+    uvr_utils_log(UVR_DANGER, "[x] wl_display_add_socket: Unable to add socket %s to Wayland display.", uvrws->unixSockName);
+    goto exit_ws_core_wlr_output_layout_destroy;
+  }
+
+  /*
+   * Set the WAYLAND_DISPLAY environment variable to our socket
+   */
+  setenv("WAYLAND_DISPLAY", uvrws->unixSockName, true);
 
   return core;
 

@@ -48,9 +48,16 @@ struct uvr_ws_core {
  *
  * members:
  * @includeWlrDebugLogs - Determines whether or not wlroots DEBUG logs are enabled/disabled
+ * @unixSockName        - Determines that name of the unix domain socket that'll be created
+ *                        and used to handle communication. If NULL is passed it will look
+ *                        for WAYLAND_DISPLAY env variable for the socket name. The Unix socket
+ *                        will be created in the directory pointed to by environment variable
+ *                        XDG_RUNTIME_DIR. If XDG_RUNTIME_DIR is not set, then this function
+ *                        fails.
  */
 struct uvr_ws_core_create_info {
   bool includeWlrDebugLogs;
+  char *unixSockName;
 };
 
 

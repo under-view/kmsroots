@@ -10,6 +10,7 @@ int main(void)
 
   struct uvr_ws_core_create_info wsCoreCreateInfo;
   wsCoreCreateInfo.includeWlrDebugLogs = true;
+  wsCoreCreateInfo.unixSockName = "underview-comp-0";
 
   uvr_ws_core = uvr_ws_core_create(&wsCoreCreateInfo);
   if (!uvr_ws_core.wlDisplay || !uvr_ws_core.wlrBackend)
