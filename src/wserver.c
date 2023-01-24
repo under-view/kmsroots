@@ -288,14 +288,16 @@ exit_ws_core:
 
 void uvr_ws_destroy(struct uvr_ws_destroy *uvrws)
 {
+  if (uvrws->uvr_ws_core.wlDisplay) {
+    wl_display_terminate(uvrws->uvr_ws_core.wlDisplay);
+    wl_display_destroy_clients(uvrws->uvr_ws_core.wlDisplay);
+  }
   if (uvrws->uvr_ws_core.wlrOutputLayout)
     wlr_output_layout_destroy(uvrws->uvr_ws_core.wlrOutputLayout);
   if (uvrws->uvr_ws_core.wlrRendererAllocator)
     wlr_allocator_destroy(uvrws->uvr_ws_core.wlrRendererAllocator);
   if (uvrws->uvr_ws_core.wlrRenderer)
     wlr_renderer_destroy(uvrws->uvr_ws_core.wlrRenderer);
-  if (uvrws->uvr_ws_core.wlDisplay)
-    wl_display_destroy_clients(uvrws->uvr_ws_core.wlDisplay);
   if (uvrws->uvr_ws_core.wlrBackend)
     wlr_backend_destroy(uvrws->uvr_ws_core.wlrBackend);
   if (uvrws->uvr_ws_core.wlDisplay)
