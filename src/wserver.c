@@ -257,7 +257,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
   /*
    * Set the WAYLAND_DISPLAY environment variable to our socket
    */
-  setenv("WAYLAND_DISPLAY", uvrws->unixSockName, true);
+  setenv("WAYLAND_DISPLAY", uvrws->unixSockName ? uvrws->unixSockName : socket, true);
 
   return core;
 
