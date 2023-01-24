@@ -63,6 +63,7 @@ endif
 wayland_client = dependency('wayland-client', required: get_option('wayland'))
 wayland_server = dependency('wayland-server', required: get_option('wayland-compositor'))
 wlroots = dependency('wlroots', required: get_option('wayland-compositor'))
+wlroots_renderer = get_option('renderer')
 
 # Needed to stored corresponding C glue code
 # from wayland xml protocls extension files
@@ -70,7 +71,12 @@ cglue_code = []
 
 if wlroots.found() and wayland_server.found()
   pargs += ['-DWLR_USE_UNSTABLE=1', '-DINCLUDE_WAYLAND_COMP=1']
+
   fs += ['wserver.c']
+  if wlroots_renderer == 'underview'
+    fs += ['renderers/underview.c']
+  endif
+
   lib_uvr_deps += [wayland_server, wlroots]
 endif
 

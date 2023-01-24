@@ -38,3 +38,8 @@ option('gpu',
        type: 'combo', value: 'discrete',
        choices: ['integrated', 'discrete', 'cpu'],
        description: 'Select VkPhysicalDeviceType to use in examples')
+
+option('renderer',
+      type: 'combo', value: 'wlroots',
+      choices: ['wlroots', 'underview'],
+      description: 'Select which renderer you want to utilize with wlroots backend.')
