@@ -38,7 +38,8 @@ struct uvr_ws_output {
  * This function is called every time an output is ready to display a frame,
  * generally at the output's refresh rate (e.g. 60Hz).
  */
-static void server_output_device_handle_frame(struct wl_listener *listener, void UNUSED *data) {
+static void server_output_device_handle_frame(struct wl_listener *listener, void UNUSED *data)
+{
   struct uvr_ws_output *output = wl_container_of(listener, output, frameListener);
   struct wlr_scene_output *sceneOutput = wlr_scene_get_scene_output(output->core->wlrSceneGraph, output->wlrOutput);
 
@@ -56,14 +57,16 @@ static void server_output_device_handle_frame(struct wl_listener *listener, void
  * the output. For example, Wayland and X11 backends request a new mode
  * when the output window is resized.
  */
-static void server_output_device_handle_state_request(struct wl_listener *listener, void *data) {
+static void server_output_device_handle_state_request(struct wl_listener *listener, void *data)
+{
   struct uvr_ws_output *output = wl_container_of(listener, output, requestStateListener);
   const struct wlr_output_event_request_state *event = data;
   wlr_output_commit_state(output->wlrOutput, event->state);
 }
 
 
-static void server_output_device_destroy(struct wl_listener *listener, void UNUSED *data) {
+static void server_output_device_destroy(struct wl_listener *listener, void UNUSED *data)
+{
   struct uvr_ws_output *output = wl_container_of(listener, output, destroyListener);
 
   wl_list_remove(&output->frameListener.link);
@@ -78,7 +81,8 @@ static void server_output_device_destroy(struct wl_listener *listener, void UNUS
  * This event is raised by the backend when a new output
  * (aka a display or monitor) becomes available.
  */
-static void server_output_add_new_device(struct wl_listener *listener, void *data) {
+static void server_output_add_new_device(struct wl_listener *listener, void *data)
+{
   struct uvr_ws_core *core = wl_container_of(listener, core, newOutputListener);
   struct wlr_output *wlrOutput = data;
 
