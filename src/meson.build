@@ -21,27 +21,27 @@ endif
 
 
 ################################################################################
-# KMS libs, files, & extra compiler args
+# KMS libs, files, & extra compiler args (Deprecated Interface)
 ################################################################################
-libdrm = dependency('libdrm', required: get_option('kms'))
-libsystemd = dependency('libsystemd', required: get_option('sd-bus'))
-libgbm = dependency('gbm', required: get_option('kms'))
-if libdrm.found()
-  pargs += ['-DINCLUDE_KMS=1']
-  lib_uvr_deps += [libdrm]
-  fs += ['kms.c']
-endif
+#libdrm = dependency('libdrm', required: get_option('kms'))
+#libsystemd = dependency('libsystemd', required: get_option('sd-bus'))
+#libgbm = dependency('gbm', required: get_option('kms'))
+#if libdrm.found()
+#  pargs += ['-DINCLUDE_KMS=1']
+#  lib_uvr_deps += [libdrm]
+#  fs += ['kms.c']
+#endif
 
-if libsystemd.found()
-  pargs += ['-DINCLUDE_SDBUS=1']
-  lib_uvr_deps += [libsystemd]
-  fs += ['sd-dbus.c']
-endif
+#if libsystemd.found()
+#  pargs += ['-DINCLUDE_SDBUS=1']
+#  lib_uvr_deps += [libsystemd]
+#  fs += ['sd-dbus.c']
+#endif
 
-if libgbm.found()
-  lib_uvr_deps += [libgbm]
-  fs += ['buffer.c']
-endif
+#if libgbm.found()
+#  lib_uvr_deps += [libgbm]
+#  fs += ['buffer.c']
+#endif
 
 
 ################################################################################

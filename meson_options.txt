@@ -1,10 +1,10 @@
-option('kms',
-       type: 'feature', value: 'disabled',
-       description: 'Build DRM/KMS/GBM backend')
+#option('kms',
+#       type: 'feature', value: 'disabled',
+#       description: 'Build DRM/KMS/GBM backend')
 
-option('sd-bus',
-       type: 'feature', value: 'disabled',
-       description: 'Build with systemd dbus API if option enabled')
+#option('sd-bus',
+#       type: 'feature', value: 'disabled',
+#       description: 'Build with systemd dbus API if option enabled')
 
 option('xcb',
        type: 'feature', value: 'disabled',
