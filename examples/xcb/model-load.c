@@ -350,7 +350,7 @@ int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc)
   struct uvr_xcb_window_create_info xcbWindowCreateInfo;
   xcbWindowCreateInfo.display = NULL;
   xcbWindowCreateInfo.screen = NULL;
-  xcbWindowCreateInfo.appName = "Texture Mapping Example App";
+  xcbWindowCreateInfo.appName = "GLTF Model Loading Example App";
   xcbWindowCreateInfo.width = WIDTH;
   xcbWindowCreateInfo.height = HEIGHT;
   xcbWindowCreateInfo.fullscreen = false;
@@ -398,7 +398,7 @@ int create_vk_instance(struct uvr_vk *app)
   };
 
   struct uvr_vk_instance_create_info instanceCreateInfo;
-  instanceCreateInfo.appName = "Texture Mapping Example App";
+  instanceCreateInfo.appName = "GLTF Model Loading Example App";
   instanceCreateInfo.engineName = "No Engine";
   instanceCreateInfo.enabledLayerCount = ARRAY_LEN(validationLayers);
   instanceCreateInfo.enabledLayerNames = validationLayers;

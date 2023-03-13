@@ -351,7 +351,7 @@ int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, 
   wcSurfaceCreateInfo.coreInterface = &wc->uvr_wc_core_interface;
   wcSurfaceCreateInfo.wcBufferObject = NULL;
   wcSurfaceCreateInfo.bufferCount = 0;
-  wcSurfaceCreateInfo.appName = "Texture Mapping Example App";
+  wcSurfaceCreateInfo.appName = "GLTF Model Loading Example App";
   wcSurfaceCreateInfo.fullscreen = true;
   wcSurfaceCreateInfo.renderer = render;
   wcSurfaceCreateInfo.rendererData = &vkwc;
@@ -400,7 +400,7 @@ int create_vk_instance(struct uvr_vk *app)
   };
 
   struct uvr_vk_instance_create_info instanceCreateInfo;
-  instanceCreateInfo.appName = "Texture Mapping Example App";
+  instanceCreateInfo.appName = "GLTF Model Loading Example App";
   instanceCreateInfo.engineName = "No Engine";
   instanceCreateInfo.enabledLayerCount = ARRAY_LEN(validationLayers);
   instanceCreateInfo.enabledLayerNames = validationLayers;
