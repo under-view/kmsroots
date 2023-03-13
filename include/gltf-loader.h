@@ -30,9 +30,9 @@ struct uvr_gltf_loader_file_load_info {
 
 
 /*
- * uvr_gltf_loader_file_load: This function is largely only used to load gltf files.
- *                            struct uvr_gltf_loader_file member bytes can be
- *                            free'd with a call to uvr_gltf_loader_destroy(3).
+ * uvr_gltf_loader_file_load: This function is used to parse and load gltf files content
+ *                            into memory. struct uvr_gltf_loader_file member bytes can
+ *                            be free'd with a call to uvr_gltf_loader_destroy(3).
  *
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_file_load_info
