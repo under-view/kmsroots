@@ -2,7 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stddef.h>   // For offsetof(3)
-#include <stdalign.h> // _Alignas( )
+#include <libgen.h>   // dirname(3)
 
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
@@ -88,8 +88,8 @@ struct uvr_uniform_buffer_model {
 
 
 struct uvr_uniform_buffer {
-  _Alignas(16) mat4 view;
-  _Alignas(16) mat4 proj;
+  mat4 view;
+  mat4 proj;
 };
 
 
@@ -136,7 +136,7 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_command_buffers(struct uvr_vk *app);
 int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
-int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
+int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, const char *imageFile);
 int create_vk_image_sampler(struct uvr_vk *app);
 int create_vk_model(struct uvr_vk UNUSED *app);
 int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
@@ -254,7 +254,7 @@ int main(void)
   if (create_vk_buffers(&app, &modelTransferSpace) == -1)
     goto exit_error;
 
-  if (create_vk_texture_image(&app, &surfaceFormat) == -1)
+  if (create_vk_texture_image(&app, &surfaceFormat, TEXTURE_IMAGE) == -1)
     goto exit_error;
 
   if (create_vk_image_sampler(&app) == -1)
@@ -385,7 +385,9 @@ int create_vk_instance(struct uvr_vk *app)
    * bundled into a layer included in the SDK
    */
   const char *validationLayers[] = {
+#ifdef INCLUDE_VULKAN_VALIDATION_LAYERS
     "VK_LAYER_KHRONOS_validation"
+#endif
   };
 
   const char *instanceExtensions[] = {
@@ -846,12 +848,12 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 }
 
 
-int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat)
+int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, const char *imageFile)
 {
   int textureWidth, textureHeight, textureChannels, textureImageIndex = 2, imageTransferIndex = 0;
-  stbi_uc *pixels = stbi_load(TEXTURE_IMAGE, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
+  stbi_uc *pixels = stbi_load(imageFile, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
   if (!pixels) {
-    uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", TEXTURE_IMAGE);
+    uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageFile);
     return -1;
   }
 
@@ -1013,6 +1015,23 @@ int create_vk_image_sampler(struct uvr_vk *app)
 }
 
 
+static int load_model_images(struct uvr_gltf_loader_file *gltfFile)
+{
+  uvr_utils_log(UVR_INFO, "GLTF_MODEL path = %s", GLTF_MODEL);
+
+  char *str = strndup(GLTF_MODEL, strnlen(GLTF_MODEL, (1<<8)));
+  const char *mainDirectory = dirname(str);
+
+  for (uint32_t i = 0; i < gltfFile->gltfData->images_count; i++) {
+    uvr_utils_log(UVR_INFO, "image[%d].uri = %s/%s", i, mainDirectory, gltfFile->gltfData->images[i].uri);
+  }
+
+  free(str);
+
+  return 0;
+}
+
+
 int create_vk_model(struct uvr_vk UNUSED *app)
 {
   int ret = 0;
@@ -1028,6 +1047,8 @@ int create_vk_model(struct uvr_vk UNUSED *app)
 
   gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
   if (!gltfFile.gltfData) { ret = -1 ; goto exit_distroy_gltf; };
+
+  if (load_model_images(&gltfFile) == -1) { ret = -1 ; goto exit_distroy_gltf; };
 
 exit_distroy_gltf:
   gltfDestroy.uvr_gltf_loader_file_cnt = 1;
