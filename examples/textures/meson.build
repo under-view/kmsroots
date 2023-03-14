@@ -3,7 +3,7 @@ vulkan_asset_pack = 'vulkan_asset_pack_gltf.zip'
 vulkan_asset_pack_url = 'http://vulkan.gpuinfo.org/downloads'
 vulkan_asset_pack_absolute_path = build_textures_dir + '/' + vulkan_asset_pack
 
-if run_command('[', '-f', vulkan_asset_pack_absolute_path, ']', check: true).returncode() != 0
+if run_command('[', '-f', vulkan_asset_pack_absolute_path, ']', check: false).returncode() != 0
   warning('Running "wget ' + vulkan_asset_pack_url + '/' + vulkan_asset_pack + '"')
 
   run_command('wget',
@@ -13,7 +13,7 @@ if run_command('[', '-f', vulkan_asset_pack_absolute_path, ']', check: true).ret
               check: true)
 endif
 
-if run_command('[', '-d', build_textures_dir + '/data', ']', check: true).returncode() != 0
+if run_command('[', '-d', build_textures_dir + '/data', ']', check: false).returncode() != 0
   warning('Running "unzip ' + vulkan_asset_pack_absolute_path + '"')
 
   run_command('unzip',
