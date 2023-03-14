@@ -520,7 +520,7 @@ exit_vk_swapchain:
 struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk)
 {
   VkResult res = VK_RESULT_MAX_ENUM;
-  uint32_t imageCount = 0, i = 0;
+  uint32_t imageCount = 0, i = 0, curImage = 0;
   VkImage *vkImages = NULL;
   VkDeviceMemory *deviceMemories = NULL;
 
@@ -548,19 +548,6 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk)
     VkImageCreateInfo imageCreateInfo;
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageCreateInfo.pNext = NULL;
-    imageCreateInfo.flags = uvrvk->imageflags;
-    imageCreateInfo.imageType = uvrvk->imageType;
-    imageCreateInfo.format = uvrvk->imageViewFormat;
-    imageCreateInfo.extent = uvrvk->imageExtent3D;
-    imageCreateInfo.mipLevels = uvrvk->imageMipLevels;
-    imageCreateInfo.arrayLayers = uvrvk->imageArrayLayers;
-    imageCreateInfo.samples = uvrvk->imageSamples;
-    imageCreateInfo.tiling = uvrvk->imageTiling;
-    imageCreateInfo.usage = uvrvk->imageUsage;
-    imageCreateInfo.sharingMode = uvrvk->imageSharingMode;
-    imageCreateInfo.queueFamilyIndexCount = uvrvk->imageQueueFamilyIndexCount;
-    imageCreateInfo.pQueueFamilyIndices = uvrvk->imageQueueFamilyIndices;
-    imageCreateInfo.initialLayout = uvrvk->imageInitialLayout;
 
     imageCount = uvrvk->imageCount;
     vkImages = alloca(imageCount * sizeof(VkImage));
@@ -570,6 +557,22 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk)
     memset(deviceMemories, 0, imageCount * sizeof(VkDeviceMemory));
 
     for (i = 0; i < imageCount; i++) {
+      curImage = (uvrvk->imageCount) ? i : 0;
+
+      imageCreateInfo.flags = uvrvk->imageCreateInfos[curImage].imageflags;
+      imageCreateInfo.imageType = uvrvk->imageCreateInfos[curImage].imageType;
+      imageCreateInfo.format = uvrvk->imageCreateInfos[curImage].imageFormat;
+      imageCreateInfo.extent = uvrvk->imageCreateInfos[curImage].imageExtent3D;
+      imageCreateInfo.mipLevels = uvrvk->imageCreateInfos[curImage].imageMipLevels;
+      imageCreateInfo.arrayLayers = uvrvk->imageCreateInfos[curImage].imageArrayLayers;
+      imageCreateInfo.samples = uvrvk->imageCreateInfos[curImage].imageSamples;
+      imageCreateInfo.tiling = uvrvk->imageCreateInfos[curImage].imageTiling;
+      imageCreateInfo.usage = uvrvk->imageCreateInfos[curImage].imageUsage;
+      imageCreateInfo.sharingMode = uvrvk->imageCreateInfos[curImage].imageSharingMode;
+      imageCreateInfo.queueFamilyIndexCount = uvrvk->imageCreateInfos[curImage].imageQueueFamilyIndexCount;
+      imageCreateInfo.pQueueFamilyIndices = uvrvk->imageCreateInfos[curImage].imageQueueFamilyIndices;
+      imageCreateInfo.initialLayout = uvrvk->imageCreateInfos[curImage].imageInitialLayout;
+
       res = vkCreateImage(uvrvk->logicalDevice, &imageCreateInfo, NULL, &vkImages[i]);
       if (res) {
         uvr_utils_log(UVR_DANGER, "[x] vkCreateImage: %s", vkres_msg(res));
@@ -609,13 +612,16 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk)
   VkImageViewCreateInfo imageViewCreateInfo;
   imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   imageViewCreateInfo.pNext = NULL;
-  imageViewCreateInfo.flags = uvrvk->imageViewflags;
-  imageViewCreateInfo.viewType = uvrvk->imageViewType;
-  imageViewCreateInfo.format = uvrvk->imageViewFormat;
-  imageViewCreateInfo.components = uvrvk->imageViewComponents;
-  imageViewCreateInfo.subresourceRange = uvrvk->imageViewSubresourceRange;
 
   for (i = 0; i < imageCount; i++) {
+    curImage = (uvrvk->imageCount) ? i : 0;
+
+    imageViewCreateInfo.flags = uvrvk->imageViewCreateInfos[curImage].imageViewflags;
+    imageViewCreateInfo.viewType = uvrvk->imageViewCreateInfos[curImage].imageViewType;
+    imageViewCreateInfo.format = uvrvk->imageViewCreateInfos[curImage].imageViewFormat;
+    imageViewCreateInfo.components = uvrvk->imageViewCreateInfos[curImage].imageViewComponents;
+    imageViewCreateInfo.subresourceRange = uvrvk->imageViewCreateInfos[curImage].imageViewSubresourceRange;
+
     imageViewCreateInfo.image = imageHandles[i].image = vkImages[i];
     imageHandles[i].deviceMemory = VK_NULL_HANDLE;
 

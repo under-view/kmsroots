@@ -417,34 +417,37 @@ struct uvr_vk_image {
 
 
 /*
- * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
- *
- * members:
- * @logicalDevice              - Must pass a valid VkDevice handle (Logical Device)
- * @swapchain                  - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
- *                               If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
- * @imageCount                 - Must pass amount of VkImage's/VkImageView's to create. Set to 0 if @swapchain != VK_NULL_HANDLE
- *                               else set to number images to create.
+ * struct uvr_vk_image_view_create_info (Underview Renderer Vulkan Image View Create Information)
  *
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html for more info on bellow members
  *
  * @imageViewflags             - Specifies additional prameters associated with VkImageView. Normally set to zero.
  * @imageViewType              - Specifies what the image view type is. Specifies coordinate system utilized by the image when
  *                               being addressed. Image view type must have compatible @imageType when @swapchain == VK_NULL_HANDLE.
- * @imageViewFormat            - Image Format (Bits per color channel, the color channel ordering, etc...). Format is utilized by
- *                               both image view and image create info structs.
+ * @imageViewFormat            - Image Format (Bits per color channel, the color channel ordering, etc...).
  * @imageViewComponents        - Makes it so that we can select what value goes to what color channel. Basically if we want to assign
  *                               red channel value to green channel. Or set all (RGBA) color channel values to the value at B channel
  *                               this is how we achieve that.
  * @imageViewSubresourceRange  - Gates an image so that only a part of an image is allowed to be viewable.
  *
+ */
+struct uvr_vk_image_view_create_info {
+  VkImageViewCreateFlags   imageViewflags;
+  VkImageViewType          imageViewType;
+  VkFormat                 imageViewFormat;
+  VkComponentMapping       imageViewComponents;
+  VkImageSubresourceRange  imageViewSubresourceRange;
+};
+
+
+/*
+ * struct uvr_vk_vimage_create_info (Underview Renderer Vulkan VkImage Create Information)
+ *
  * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html for more info on bellow members
  *
- * Bellow only required if @swapchain == VK_NULL_HANDLE
- * @physDevice                 - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
- * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
  * @imageflags                 - Bits used to specify additional parameters for a given VkImage.
  * @imageType                  - Coordinate system the pixels in the image will use when being addressed.
+ * @imageFormat                - Image Format (Bits per color channel, the color channel ordering, etc...).
  * @imageExtent3D              - Dimension (i.e. width, height, and depth) of the given image(s).
  * @imageMipLevels             - The number of levels of detail available for minified sampling of the image.
  * @imageArrayLayers           - The number of layers in the image
@@ -457,19 +460,10 @@ struct uvr_vk_image {
  * @imageQueueFamilyIndices    - Pointer to an array of queue families to associate/own a given vulkan image.
  * @imageInitialLayout         - Set the inital memory layout of a VkImage
  */
-struct uvr_vk_image_create_info {
-  VkDevice                 logicalDevice;
-  VkSwapchainKHR           swapchain;
-  uint32_t                 imageCount;
-  VkImageViewCreateFlags   imageViewflags;
-  VkImageViewType          imageViewType;
-  VkFormat                 imageViewFormat;
-  VkComponentMapping       imageViewComponents;
-  VkImageSubresourceRange  imageViewSubresourceRange;
-  VkPhysicalDevice         physDevice;
-  VkMemoryPropertyFlagBits memPropertyFlags;
+struct uvr_vk_vimage_create_info {
   VkImageCreateFlags       imageflags;
   VkImageType              imageType;
+  VkFormat                 imageFormat;
   VkExtent3D               imageExtent3D;
   uint32_t                 imageMipLevels;
   uint32_t                 imageArrayLayers;
@@ -480,6 +474,35 @@ struct uvr_vk_image_create_info {
   uint32_t                 imageQueueFamilyIndexCount;
   const uint32_t           *imageQueueFamilyIndices;
   VkImageLayout            imageInitialLayout;
+};
+
+
+/*
+ * struct uvr_vk_image_create_info (Underview Renderer Vulkan Image Create Information)
+ *
+ * members:
+ * @logicalDevice              - Must pass a valid VkDevice handle (Logical Device)
+ * @swapchain                  - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
+ *                               If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
+ * @imageCount                 - Must pass amount of VkImage's/VkImageView's to create. Set to 0 if @swapchain != VK_NULL_HANDLE
+ *                               else set to number images to create.
+ * @imageViewCreateInfos       - Pointer to an array of size @imageCount containing everything required to create an individual VkImageView.
+ *                               If imageCount given array size must be @imageCount. If not given array size must equal 1.
+ *
+ * Bellow only required if @swapchain == VK_NULL_HANDLE
+ * @imageCreateInfos           - Pointer to an array of size @imageCount containing everything required to create an individual VkImage
+ *                               If imageCount given array size must be @imageCount. If not given array size must equal 1.
+ * @physDevice                 - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
+ * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
+ */
+struct uvr_vk_image_create_info {
+  VkDevice                             logicalDevice;
+  VkSwapchainKHR                       swapchain;
+  uint32_t                             imageCount;
+  struct uvr_vk_image_view_create_info *imageViewCreateInfos;
+  struct uvr_vk_vimage_create_info     *imageCreateInfos;
+  VkPhysicalDevice                     physDevice;
+  VkMemoryPropertyFlagBits             memPropertyFlags;
 };
 
 
