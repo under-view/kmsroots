@@ -1290,7 +1290,7 @@ typedef enum uvr_vk_copy_type {
  * @bufferCopyInfo       - Specifies the starting memory address of @srcResource to copy @byteSize data from
  *                         to @dstResource memory address. Memory address is found by specifying an offset.
  * @bufferImageCopyInfo  - Specifies what portion of the image to update or copy to buffer.
- * @imageLayout          - Memory layout of the destination VkImage resource
+ * @imageLayout          - Memory layout of the destination image subresources for the copy
  */
 struct uvr_vk_resource_copy_info {
   uvr_vk_copy_type        resourceCopyType;
