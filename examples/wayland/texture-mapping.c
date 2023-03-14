@@ -895,6 +895,7 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForma
   struct uvr_vk_vimage_create_info vimageCreateInfo;
   vimageCreateInfo.imageflags = 0;
   vimageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  vimageCreateInfo.imageFormat = surfaceFormat->format;
   vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = textureWidth, .height = textureHeight, .depth = 1 };
   vimageCreateInfo.imageMipLevels = 1;
   vimageCreateInfo.imageArrayLayers = 1;
