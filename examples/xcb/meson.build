@@ -19,7 +19,6 @@ if libxcb.found() and libxcbewmh.found()
 
     if p == 'model-load.c'
       pargs += [
-        '-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"',
         '-DGLTF_MODEL="' + build_textures_dir + '/data/models/FlightHelmet/glTF/FlightHelmet.gltf"',
       ]
     endif

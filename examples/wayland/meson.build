@@ -19,7 +19,6 @@ if wayland_client.found()
 
     if p == 'model-load.c'
       pargs += [
-        '-DTEXTURE_IMAGE="' + examples_dir + '/textures/tuxedo-penguin.png"',
         '-DGLTF_MODEL="' + build_textures_dir + '/data/models/FlightHelmet/glTF/FlightHelmet.gltf"',
       ]
     endif
