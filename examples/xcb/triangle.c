@@ -69,7 +69,7 @@ int create_xcb_vk_surface(struct uvr_vk *app, struct uvr_xcb_window *xc);
 int create_vk_instance(struct uvr_vk *uvrvk);
 int create_vk_device(struct uvr_vk *app);
 int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
-int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
+int create_vk_swapchain_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_buffers(struct uvr_vk *app);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -164,7 +164,7 @@ int main(void) {
   if (create_vk_swapchain(&app, &surfaceFormat, extent2D) == -1)
     goto exit_error;
 
-  if (create_vk_images(&app, &surfaceFormat) == -1)
+  if (create_vk_swapchain_images(&app, &surfaceFormat) == -1)
     goto exit_error;
 
   if (create_vk_shader_modules(&app) == -1)
@@ -410,41 +410,33 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 }
 
 
-int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat)
+int create_vk_swapchain_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
-  struct uvr_vk_image_create_info imageCreateInfo;
-  imageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-  imageCreateInfo.swapchain = app->uvr_vk_swapchain.swapchain;
-  imageCreateInfo.imageCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
-  imageCreateInfo.imageViewflags = 0;
-  imageCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-  imageCreateInfo.imageViewFormat = surfaceFormat->format;
-  imageCreateInfo.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  imageCreateInfo.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  imageCreateInfo.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-  imageCreateInfo.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-  imageCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-  imageCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-  imageCreateInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
-  imageCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
-  imageCreateInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
-  /* Not create images manually so rest of struct members can be safely ignored */
-  imageCreateInfo.physDevice = VK_NULL_HANDLE;
-  imageCreateInfo.memPropertyFlags = 0;
-  imageCreateInfo.imageflags = 0;
-  imageCreateInfo.imageType = 0;
-  imageCreateInfo.imageExtent3D = (VkExtent3D) { 0, 0, 0 };
-  imageCreateInfo.imageMipLevels = 0;
-  imageCreateInfo.imageArrayLayers = 0;
-  imageCreateInfo.imageSamples = 0;
-  imageCreateInfo.imageTiling = 0;
-  imageCreateInfo.imageUsage = 0;
-  imageCreateInfo.imageSharingMode = 0;
-  imageCreateInfo.imageQueueFamilyIndexCount = 0;
-  imageCreateInfo.imageQueueFamilyIndices = NULL;
-  imageCreateInfo.imageInitialLayout = 0;
+  struct uvr_vk_image_view_create_info imageViewCreateInfo;
+  imageViewCreateInfo.imageViewflags = 0;
+  imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+  imageViewCreateInfo.imageViewFormat = surfaceFormat->format;
+  imageViewCreateInfo.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+  imageViewCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+  imageViewCreateInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
+  imageViewCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
+  imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
 
-  app->uvr_vk_image = uvr_vk_image_create(&imageCreateInfo);
+  struct uvr_vk_image_create_info swapchainImagesInfo;
+  swapchainImagesInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+  swapchainImagesInfo.swapchain = app->uvr_vk_swapchain.swapchain;
+  swapchainImagesInfo.imageCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
+  swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
+  /* Not create images manually so rest of struct members can be safely ignored */
+  swapchainImagesInfo.physDevice = VK_NULL_HANDLE;
+  swapchainImagesInfo.imageCreateInfos = NULL;
+  swapchainImagesInfo.memPropertyFlags = 0;
+
+  app->uvr_vk_image = uvr_vk_image_create(&swapchainImagesInfo);
   if (!app->uvr_vk_image.imageViewHandles[0].view)
     return -1;
 
