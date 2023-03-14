@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stddef.h>   // For offsetof(3)
 #include <libgen.h>   // dirname(3)
+#include <errno.h>
 
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
@@ -32,7 +33,7 @@ struct uvr_vk {
   /*
    * 0. Swapchain Images
    * 1. Depth Image
-   * 2. Texture Image
+   * 2. Texture Images
    */
   struct uvr_vk_image uvr_vk_image[3];
 
@@ -98,6 +99,16 @@ struct uvr_uniform_buffer {
 };
 
 
+struct app_texture_image_data {
+  char imageFile[1<<8];
+  size_t imageSize;
+  stbi_uc *pixels;
+  int textureWidth;
+  int textureHeight;
+  int textureChannels;
+};
+
+
 /*
  * Comments define how to draw rectangle without index buffer
  * Actual array itself draws triangles utilizing index buffers.
@@ -140,7 +151,9 @@ int create_vk_depth_image(struct uvr_vk *app);
 int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_command_buffers(struct uvr_vk *app);
 int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
-int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, const char *imageFile);
+int create_gltf_loader_file(struct uvr_gltf_loader_file *gltfFile);
+int create_vk_texture_images(struct uvr_vk *app, struct uvr_gltf_loader_file *gltfFile, VkSurfaceFormatKHR *surfaceFormat);
+int create_vk_image_sampler(struct uvr_vk *app);
 int create_vk_image_sampler(struct uvr_vk *app);
 int create_vk_model(struct uvr_vk UNUSED *app);
 int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
@@ -222,6 +235,11 @@ int main(void)
   memset(&wcd, 0, sizeof(wcd));
   memset(&wc, 0, sizeof(wc));
 
+  struct uvr_gltf_loader_file gltfFile;
+  struct uvr_gltf_loader_destroy gltfDestroy;
+  memset(&gltfFile,0,sizeof(struct uvr_gltf_loader_file));
+  memset(&gltfDestroy,0,sizeof(struct uvr_gltf_loader_destroy));
+
   if (create_vk_instance(&app) == -1)
     goto exit_error;
 
@@ -261,8 +279,15 @@ int main(void)
   if (create_vk_buffers(&app, &modelTransferSpace) == -1)
     goto exit_error;
 
-  if (create_vk_texture_image(&app, &surfaceFormat, TEXTURE_IMAGE) == -1)
+  if (create_gltf_loader_file(&gltfFile) == -1)
     goto exit_error;
+
+  if (create_vk_texture_images(&app, &gltfFile, &surfaceFormat) == -1)
+    goto exit_error;
+
+  gltfDestroy.uvr_gltf_loader_file_cnt = 1;
+  gltfDestroy.uvr_gltf_loader_file = &gltfFile;
+  uvr_gltf_loader_destroy(&gltfDestroy);
 
   if (create_vk_image_sampler(&app) == -1)
     goto exit_error;
@@ -288,6 +313,10 @@ int main(void)
 
 exit_error:
   free(modelTransferSpace.alignedBufferMemory);
+
+  gltfDestroy.uvr_gltf_loader_file_cnt = 1;
+  gltfDestroy.uvr_gltf_loader_file = &gltfFile;
+  uvr_gltf_loader_destroy(&gltfDestroy);
 
   /*
    * Let the api know of what addresses to free and fd's to close
@@ -514,37 +543,29 @@ int create_vk_swapchain(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 
 int create_vk_swapchain_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
+  struct uvr_vk_image_view_create_info imageViewCreateInfo;
+  imageViewCreateInfo.imageViewflags = 0;
+  imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+  imageViewCreateInfo.imageViewFormat = surfaceFormat->format;
+  imageViewCreateInfo.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+  imageViewCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+  imageViewCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+  imageViewCreateInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
+  imageViewCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
+  imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+
   struct uvr_vk_image_create_info swapchainImagesInfo;
   swapchainImagesInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   swapchainImagesInfo.swapchain = app->uvr_vk_swapchain.swapchain;
   swapchainImagesInfo.imageCount = 0;                                                // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
-  swapchainImagesInfo.imageViewflags = 0;
-  swapchainImagesInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-  swapchainImagesInfo.imageViewFormat = surfaceFormat->format;
-  swapchainImagesInfo.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  swapchainImagesInfo.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  swapchainImagesInfo.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-  swapchainImagesInfo.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-  swapchainImagesInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-  swapchainImagesInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-  swapchainImagesInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
-  swapchainImagesInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
-  swapchainImagesInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+  swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
   /* Not create images manually so rest of struct members can be safely ignored */
   swapchainImagesInfo.physDevice = VK_NULL_HANDLE;
+  swapchainImagesInfo.imageCreateInfos = NULL;
   swapchainImagesInfo.memPropertyFlags = 0;
-  swapchainImagesInfo.imageflags = 0;
-  swapchainImagesInfo.imageType = 0;
-  swapchainImagesInfo.imageExtent3D = (VkExtent3D) { 0, 0, 0 };
-  swapchainImagesInfo.imageMipLevels = 0;
-  swapchainImagesInfo.imageArrayLayers = 0;
-  swapchainImagesInfo.imageSamples = 0;
-  swapchainImagesInfo.imageTiling = 0;
-  swapchainImagesInfo.imageUsage = 0;
-  swapchainImagesInfo.imageSharingMode = 0;
-  swapchainImagesInfo.imageQueueFamilyIndexCount = 0;
-  swapchainImagesInfo.imageQueueFamilyIndices = NULL;
-  swapchainImagesInfo.imageInitialLayout = 0;
 
   app->uvr_vk_image[0] = uvr_vk_image_create(&swapchainImagesInfo);
   if (!app->uvr_vk_image[0].imageViewHandles[0].view)
@@ -584,33 +605,40 @@ int create_vk_depth_image(struct uvr_vk *app)
   if (imageFormat == VK_FORMAT_UNDEFINED)
     return -1;
 
+  struct uvr_vk_image_view_create_info imageViewCreateInfo;
+  imageViewCreateInfo.imageViewflags = 0;
+  imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+  imageViewCreateInfo.imageViewFormat = imageFormat;
+  imageViewCreateInfo.imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
+  imageViewCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  imageViewCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;
+  imageViewCreateInfo.imageViewSubresourceRange.levelCount = 1;
+  imageViewCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;
+  imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;
+
+  struct uvr_vk_vimage_create_info vimageCreateInfo;
+  vimageCreateInfo.imageflags = 0;
+  vimageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  vimageCreateInfo.imageFormat = imageFormat;
+  vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = WIDTH, .height = HEIGHT, .depth = 1 }; // depth describes how deep the image goes (1 because no 3D aspect)
+  vimageCreateInfo.imageMipLevels = 1;
+  vimageCreateInfo.imageArrayLayers = 1;
+  vimageCreateInfo.imageSamples = VK_SAMPLE_COUNT_1_BIT;
+  vimageCreateInfo.imageTiling = imageTiling;
+  vimageCreateInfo.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  vimageCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  vimageCreateInfo.imageQueueFamilyIndexCount = 0;
+  vimageCreateInfo.imageQueueFamilyIndices = NULL;
+  vimageCreateInfo.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
   struct uvr_vk_image_create_info imageCreateInfo;
   imageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   imageCreateInfo.swapchain = VK_NULL_HANDLE;
   imageCreateInfo.imageCount = 1;
-  imageCreateInfo.imageViewflags = 0;
-  imageCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-  imageCreateInfo.imageViewFormat = imageFormat;
-  imageCreateInfo.imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
-  imageCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-  imageCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;
-  imageCreateInfo.imageViewSubresourceRange.levelCount = 1;
-  imageCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;
-  imageCreateInfo.imageViewSubresourceRange.layerCount = 1;
+  imageCreateInfo.imageViewCreateInfos = &imageViewCreateInfo;
+  imageCreateInfo.imageCreateInfos = &vimageCreateInfo;
   imageCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   imageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  imageCreateInfo.imageflags = 0;
-  imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-  imageCreateInfo.imageExtent3D = (VkExtent3D) { .width = WIDTH, .height = HEIGHT, .depth = 1 }; // depth describes how deep the image goes (1 because no 3D aspect)
-  imageCreateInfo.imageMipLevels = 1;
-  imageCreateInfo.imageArrayLayers = 1;
-  imageCreateInfo.imageSamples = VK_SAMPLE_COUNT_1_BIT;
-  imageCreateInfo.imageTiling = imageTiling;
-  imageCreateInfo.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  imageCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  imageCreateInfo.imageQueueFamilyIndexCount = 0;
-  imageCreateInfo.imageQueueFamilyIndices = NULL;
-  imageCreateInfo.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
   app->uvr_vk_image[1] = uvr_vk_image_create(&imageCreateInfo);
   if (!app->uvr_vk_image[1].imageHandles[0].image && !app->uvr_vk_image[1].imageViewHandles[0].view)
@@ -850,24 +878,75 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 }
 
 
-int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, const char *imageFile)
+static void free_pixel_memory(struct app_texture_image_data *imageData, struct uvr_gltf_loader_file *gltfFile) {
+  uint32_t curImage = 0;
+  /* Free pixels as they are nolonger required */
+  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+    if (imageData[curImage].pixels)
+      stbi_image_free(imageData[curImage].pixels);
+  }
+  free(imageData);
+}
+
+
+struct app_texture_image_data *load_gltf_model_images(struct uvr_gltf_loader_file *gltfFile, uint32_t *totalImageSize)
 {
-  int textureWidth, textureHeight, textureChannels, textureImageIndex = 2, imageTransferIndex = 0;
-  stbi_uc *pixels = stbi_load(imageFile, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
-  if (!pixels) {
-    uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageFile);
-    return -1;
+  struct app_texture_image_data *imageData = NULL;
+  uint32_t curImage = 0;
+
+  imageData = calloc(gltfFile->gltfData->images_count, sizeof(struct app_texture_image_data));
+  if (!imageData) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    return NULL;
   }
 
-  VkDeviceSize imageSize = textureWidth * textureHeight * STBI_rgb_alpha;
-  uint32_t cpuVisibleImageBuffer = 3;
+  /* Load all images associated with GLTF file into memory */
+  int maxStrLen = strnlen(GLTF_MODEL, (1<<8));
+  char *str = strndup(GLTF_MODEL, maxStrLen);
+  const char *mainDirectory = dirname(str);
+
+  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+    strncat(imageData[curImage].imageFile, mainDirectory, maxStrLen);
+    strncat(imageData[curImage].imageFile, "/", 2);
+    strncat(imageData[curImage].imageFile, gltfFile->gltfData->images[curImage].uri, maxStrLen);
+
+    imageData[curImage].pixels = stbi_load(imageData[curImage].imageFile, &imageData[curImage].textureWidth, &imageData[curImage].textureHeight, &imageData[curImage].textureChannels, STBI_rgb_alpha);
+    if (!imageData[curImage].pixels) {
+      uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageData[curImage].imageFile);
+      goto exit_load_gltf_model_images_free_objs;
+    }
+
+    imageData[curImage].imageSize = imageData[curImage].textureWidth * imageData[curImage].textureHeight * STBI_rgb_alpha;
+    *totalImageSize += imageData[curImage].imageSize;
+  }
+
+  free(str);
+
+  return imageData;
+
+exit_load_gltf_model_images_free_objs:
+  free_pixel_memory(imageData, gltfFile);
+  free(str);
+  return NULL;
+}
+
+
+int create_vk_texture_images(struct uvr_vk *app, struct uvr_gltf_loader_file *gltfFile, VkSurfaceFormatKHR *surfaceFormat)
+{
+  uint32_t offset = 0, curImage;
+  uint32_t textureImageIndex = 2, cpuVisibleImageBuffer = 3;
+
+  uint32_t totalImageSize = 0;
+  struct app_texture_image_data *imageData = load_gltf_model_images(gltfFile, &totalImageSize);
+  if (!imageData)
+    return -1;
 
   // Create CPU visible buffer to store pixel data
   struct uvr_vk_buffer_create_info vkTextureBufferCreateInfo;
   vkTextureBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   vkTextureBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkTextureBufferCreateInfo.bufferFlags = 0;
-  vkTextureBufferCreateInfo.bufferSize = imageSize;
+  vkTextureBufferCreateInfo.bufferSize = totalImageSize;
   vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkTextureBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   vkTextureBufferCreateInfo.queueFamilyIndexCount = 0;
@@ -876,47 +955,65 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForma
 
   app->uvr_vk_buffer[cpuVisibleImageBuffer] = uvr_vk_buffer_create(&vkTextureBufferCreateInfo);
   if (!app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory) {
-    stbi_image_free(pixels);
+    free_pixel_memory(imageData, gltfFile);
     return -1;
   }
 
-  void *data = NULL;
-  vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, 0, imageSize, 0, &data);
-  memcpy(data, pixels, imageSize);
-  vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory);
+  /* Map all texture images into CPU Visible buffer memory */
+  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+    void *data = NULL;
+    vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, offset, imageData[curImage].imageSize, 0, &data);
+    memcpy(data, imageData[curImage].pixels, imageData[curImage].imageSize);
+    vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory);
+    offset += imageData[curImage].imageSize;
+  }
 
-  stbi_image_free(pixels);
+  free_pixel_memory(imageData, gltfFile);
 
+  uvr_utils_log(UVR_SUCCESS, "Loaded textures associated with %s into cpu visible buffer", basename(GLTF_MODEL));
+  return -1;
+
+  struct uvr_vk_image_view_create_info imageViewCreateInfos[gltfFile->gltfData->images_count];
+  struct uvr_vk_vimage_create_info vimageCreateInfos[gltfFile->gltfData->images_count];
+  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+    imageViewCreateInfos[curImage].imageViewflags = 0;
+    imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewCreateInfos[curImage].imageViewFormat = surfaceFormat->format;
+    imageViewCreateInfos[curImage].imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
+    imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+    imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+    imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
+    imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
+    imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+
+    vimageCreateInfos[curImage].imageflags = 0;
+    vimageCreateInfos[curImage].imageType = VK_IMAGE_TYPE_2D;
+    vimageCreateInfos[curImage].imageFormat = surfaceFormat->format;
+    vimageCreateInfos[curImage].imageExtent3D = (VkExtent3D) { .width = imageData[curImage].textureWidth, .height = imageData[curImage].textureHeight, .depth = 1 };
+    vimageCreateInfos[curImage].imageMipLevels = 1;
+    vimageCreateInfos[curImage].imageArrayLayers = 1;
+    vimageCreateInfos[curImage].imageSamples = VK_SAMPLE_COUNT_1_BIT;
+    vimageCreateInfos[curImage].imageTiling = VK_IMAGE_TILING_OPTIMAL;
+    vimageCreateInfos[curImage].imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    vimageCreateInfos[curImage].imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    vimageCreateInfos[curImage].imageQueueFamilyIndexCount = 0;
+    vimageCreateInfos[curImage].imageQueueFamilyIndices = NULL;
+    vimageCreateInfos[curImage].imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  }
+
+  /* Create a VkImage/VkImageView for each texture */
   struct uvr_vk_image_create_info vkImageCreateInfo;
   vkImageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-  vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                                     // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
-  vkImageCreateInfo.imageCount = 1;                                                 // Only creating 1 VkImage resource to store pixel data
-  vkImageCreateInfo.imageViewflags = 0;
-  vkImageCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-  vkImageCreateInfo.imageViewFormat = surfaceFormat->format;
-  vkImageCreateInfo.imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
-  vkImageCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-  vkImageCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-  vkImageCreateInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
-  vkImageCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
-  vkImageCreateInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+  vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                      // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
+  vkImageCreateInfo.imageCount = gltfFile->gltfData->images_count;   // Creating X amount of VkImage resource's to store pixel data
+  vkImageCreateInfo.imageViewCreateInfos = imageViewCreateInfos;
+  vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;         // Best to make array size the same size as imageCount
   vkImageCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkImageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  vkImageCreateInfo.imageflags = 0;
-  vkImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-  vkImageCreateInfo.imageExtent3D = (VkExtent3D) { .width = textureWidth, .height = textureHeight, .depth = 1 };
-  vkImageCreateInfo.imageMipLevels = 1;
-  vkImageCreateInfo.imageArrayLayers = 1;
-  vkImageCreateInfo.imageSamples = VK_SAMPLE_COUNT_1_BIT;
-  vkImageCreateInfo.imageTiling = VK_IMAGE_TILING_OPTIMAL;
-  vkImageCreateInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-  vkImageCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  vkImageCreateInfo.imageQueueFamilyIndexCount = 0;
-  vkImageCreateInfo.imageQueueFamilyIndices = NULL;
-  vkImageCreateInfo.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+  uvr_utils_log(UVR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", gltfFile->gltfData->images_count);
   app->uvr_vk_image[textureImageIndex] = uvr_vk_image_create(&vkImageCreateInfo);
-  if (!app->uvr_vk_image[textureImageIndex].imageHandles[imageTransferIndex].image && !app->uvr_vk_image[textureImageIndex].imageViewHandles[imageTransferIndex].view)
+  if (!app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->uvr_vk_image[textureImageIndex].imageViewHandles[curImage].view)
     return -1;
 
   VkImageMemoryBarrier imageMemoryBarrier = {};
@@ -928,12 +1025,6 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForma
   imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  imageMemoryBarrier.image = app->uvr_vk_image[textureImageIndex].imageHandles[imageTransferIndex].image;
-  imageMemoryBarrier.subresourceRange.aspectMask = vkImageCreateInfo.imageViewSubresourceRange.aspectMask;
-  imageMemoryBarrier.subresourceRange.baseMipLevel = vkImageCreateInfo.imageViewSubresourceRange.baseMipLevel;
-  imageMemoryBarrier.subresourceRange.levelCount = vkImageCreateInfo.imageViewSubresourceRange.levelCount;
-  imageMemoryBarrier.subresourceRange.baseArrayLayer = vkImageCreateInfo.imageViewSubresourceRange.baseArrayLayer;
-  imageMemoryBarrier.subresourceRange.layerCount = vkImageCreateInfo.imageViewSubresourceRange.layerCount;
 
   struct uvr_vk_resource_pipeline_barrier_info pipelineBarrierInfo;
   pipelineBarrierInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
@@ -943,48 +1034,80 @@ int create_vk_texture_image(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForma
   pipelineBarrierInfo.dependencyFlags = 0;
   pipelineBarrierInfo.memoryBarrier = NULL;
   pipelineBarrierInfo.bufferMemoryBarrier = NULL;
-  pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 
-  if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1)
-    return -1;
-
-  /* Copy pixel buffer to VkImage Resource */
   VkBufferImageCopy copyRegion;
-  copyRegion.bufferOffset = 0;
   copyRegion.bufferRowLength = 0;
   copyRegion.bufferImageHeight = 0;
-  copyRegion.imageSubresource.aspectMask = vkImageCreateInfo.imageViewSubresourceRange.aspectMask;
-  copyRegion.imageSubresource.mipLevel = vkImageCreateInfo.imageViewSubresourceRange.baseMipLevel;
-  copyRegion.imageSubresource.baseArrayLayer = vkImageCreateInfo.imageViewSubresourceRange.baseArrayLayer;
-  copyRegion.imageSubresource.layerCount = vkImageCreateInfo.imageViewSubresourceRange.layerCount;
-  copyRegion.imageOffset = (VkOffset3D) { .x = 0, .y = 0, .z = 0 };
-  copyRegion.imageExtent = vkImageCreateInfo.imageExtent3D;
 
-  /* Copy VkImage resource to VkBuffer resource */
-  struct uvr_vk_resource_copy_info bufferCopyInfo;
-  bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
-  bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-  bufferCopyInfo.queue = app->uvr_vk_queue.queue;
-  bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer;
-  bufferCopyInfo.dstResource = app->uvr_vk_image[textureImageIndex].imageHandles[imageTransferIndex].image;
-  bufferCopyInfo.bufferCopyInfo = NULL;
-  bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
-  bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  for (curImage = 0, offset = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+    imageMemoryBarrier.image = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
+    imageMemoryBarrier.subresourceRange.aspectMask = imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask;
+    imageMemoryBarrier.subresourceRange.baseMipLevel = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel;
+    imageMemoryBarrier.subresourceRange.levelCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount;
+    imageMemoryBarrier.subresourceRange.baseArrayLayer = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer;
+    imageMemoryBarrier.subresourceRange.layerCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount;
+    pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 
-  if (uvr_vk_resource_copy(&bufferCopyInfo) == -1)
-    return -1;
+    if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1)
+      return -1;
 
-  imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-  imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
-  if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1)
-    return -1;
+    /* Copy pixel buffer to VkImage Resource */
+    copyRegion.imageSubresource.aspectMask = imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask;
+    copyRegion.imageSubresource.mipLevel = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel;
+    copyRegion.imageSubresource.baseArrayLayer = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer;
+    copyRegion.imageSubresource.layerCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount;
+    copyRegion.imageOffset = (VkOffset3D) { .x = 0, .y = 0, .z = 0 };
+    copyRegion.imageExtent = vimageCreateInfos[curImage].imageExtent3D;
+    copyRegion.bufferOffset = offset;
 
-  return 0;
+    /* Copy VkImage resource to VkBuffer resource */
+    struct uvr_vk_resource_copy_info bufferCopyInfo;
+    bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
+    bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+    bufferCopyInfo.queue = app->uvr_vk_queue.queue;
+    bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer;
+    bufferCopyInfo.dstResource = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
+    bufferCopyInfo.bufferCopyInfo = NULL;
+    bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
+    bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+    if (uvr_vk_resource_copy(&bufferCopyInfo) == -1)
+      return -1;
+
+    imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
+    if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1)
+      return -1;
+
+    offset += imageData[curImage].imageSize;
+  }
+
+  /* Free up memory after everything is copied */
+  vkDestroyBuffer(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer, NULL);
+  vkFreeMemory(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, NULL);
+  app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer = VK_NULL_HANDLE;
+  app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory = VK_NULL_HANDLE;
+
+  return -1;
+}
+
+
+int create_gltf_loader_file(struct uvr_gltf_loader_file *gltfFile)
+{
+  int ret = 0;
+
+  struct uvr_gltf_loader_file_load_info gltfFileLoadInfo;
+  gltfFileLoadInfo.fileName = GLTF_MODEL;
+
+  *gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
+  if (!gltfFile->gltfData) return -1;
+
+  return ret;
 }
 
 
