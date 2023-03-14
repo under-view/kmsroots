@@ -882,14 +882,16 @@ static void free_pixel_memory(struct app_texture_image_data *imageData, struct u
   uint32_t curImage = 0;
   /* Free pixels as they are nolonger required */
   for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
-    if (imageData[curImage].pixels)
+    if (imageData[curImage].pixels) {
       stbi_image_free(imageData[curImage].pixels);
+      imageData[curImage].pixels = NULL;
+    }
   }
   free(imageData);
 }
 
 
-struct app_texture_image_data *load_gltf_model_images(struct uvr_gltf_loader_file *gltfFile, uint32_t *totalImageSize)
+static struct app_texture_image_data *load_gltf_model_images(struct uvr_gltf_loader_file *gltfFile, uint32_t *totalImageSize)
 {
   struct app_texture_image_data *imageData = NULL;
   uint32_t curImage = 0;
@@ -968,10 +970,7 @@ int create_vk_texture_images(struct uvr_vk *app, struct uvr_gltf_loader_file *gl
     offset += imageData[curImage].imageSize;
   }
 
-  free_pixel_memory(imageData, gltfFile);
-
-  uvr_utils_log(UVR_SUCCESS, "Loaded textures associated with %s into cpu visible buffer", basename(GLTF_MODEL));
-  return -1;
+  uvr_utils_log(UVR_INFO, "Loaded textures associated with %s into cpu visible buffer", basename(GLTF_MODEL));
 
   struct uvr_vk_image_view_create_info imageViewCreateInfos[gltfFile->gltfData->images_count];
   struct uvr_vk_vimage_create_info vimageCreateInfos[gltfFile->gltfData->images_count];
@@ -1013,43 +1012,56 @@ int create_vk_texture_images(struct uvr_vk *app, struct uvr_gltf_loader_file *gl
 
   uvr_utils_log(UVR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", gltfFile->gltfData->images_count);
   app->uvr_vk_image[textureImageIndex] = uvr_vk_image_create(&vkImageCreateInfo);
-  if (!app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->uvr_vk_image[textureImageIndex].imageViewHandles[curImage].view)
+  if (!app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->uvr_vk_image[textureImageIndex].imageViewHandles[curImage].view) {
+    free_pixel_memory(imageData, gltfFile);
     return -1;
+  }
 
   VkImageMemoryBarrier imageMemoryBarrier = {};
   imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   imageMemoryBarrier.pNext = NULL;
-  imageMemoryBarrier.srcAccessMask = 0;
-  imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
   struct uvr_vk_resource_pipeline_barrier_info pipelineBarrierInfo;
   pipelineBarrierInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
   pipelineBarrierInfo.queue = app->uvr_vk_queue.queue;
-  pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-  pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  pipelineBarrierInfo.dependencyFlags = 0;
-  pipelineBarrierInfo.memoryBarrier = NULL;
-  pipelineBarrierInfo.bufferMemoryBarrier = NULL;
 
   VkBufferImageCopy copyRegion;
   copyRegion.bufferRowLength = 0;
   copyRegion.bufferImageHeight = 0;
 
-  for (curImage = 0, offset = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+  /* Copy VkImage resource to VkBuffer resource */
+  struct uvr_vk_resource_copy_info UNUSED bufferCopyInfo;
+  bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
+  bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+  bufferCopyInfo.queue = app->uvr_vk_queue.queue;
+  bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer;
+
+  offset = 0;
+  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
+    imageMemoryBarrier.srcAccessMask = 0;
+    imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     imageMemoryBarrier.image = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
     imageMemoryBarrier.subresourceRange.aspectMask = imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask;
     imageMemoryBarrier.subresourceRange.baseMipLevel = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel;
     imageMemoryBarrier.subresourceRange.levelCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount;
     imageMemoryBarrier.subresourceRange.baseArrayLayer = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer;
     imageMemoryBarrier.subresourceRange.layerCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount;
+
+    pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    pipelineBarrierInfo.dependencyFlags = 0;
+    pipelineBarrierInfo.memoryBarrier = NULL;
+    pipelineBarrierInfo.bufferMemoryBarrier = NULL;
     pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 
-    if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1)
+    if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
+      free_pixel_memory(imageData, gltfFile);
       return -1;
+    }
 
     /* Copy pixel buffer to VkImage Resource */
     copyRegion.imageSubresource.aspectMask = imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask;
@@ -1060,38 +1072,40 @@ int create_vk_texture_images(struct uvr_vk *app, struct uvr_gltf_loader_file *gl
     copyRegion.imageExtent = vimageCreateInfos[curImage].imageExtent3D;
     copyRegion.bufferOffset = offset;
 
-    /* Copy VkImage resource to VkBuffer resource */
-    struct uvr_vk_resource_copy_info bufferCopyInfo;
-    bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
-    bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-    bufferCopyInfo.queue = app->uvr_vk_queue.queue;
-    bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer;
     bufferCopyInfo.dstResource = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
     bufferCopyInfo.bufferCopyInfo = NULL;
     bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
     bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-    if (uvr_vk_resource_copy(&bufferCopyInfo) == -1)
+    if (uvr_vk_resource_copy(&bufferCopyInfo) == -1) {
+      free_pixel_memory(imageData, gltfFile);
       return -1;
+    }
 
     imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
     pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
-    if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1)
+    if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1){
+      free_pixel_memory(imageData, gltfFile);
       return -1;
+    }
 
     offset += imageData[curImage].imageSize;
   }
 
   /* Free up memory after everything is copied */
+  free_pixel_memory(imageData, gltfFile);
   vkDestroyBuffer(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer, NULL);
   vkFreeMemory(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, NULL);
   app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer = VK_NULL_HANDLE;
   app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory = VK_NULL_HANDLE;
+
+  uvr_utils_log(UVR_SUCCESS, "Successfully created VkImage objects for GLTF texture assets");
 
   return -1;
 }
