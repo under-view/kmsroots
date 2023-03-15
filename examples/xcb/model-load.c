@@ -2,7 +2,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stddef.h>   // For offsetof(3)
-#include <libgen.h>   // dirname(3)
 #include <errno.h>
 
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -96,7 +95,6 @@ struct uvr_uniform_buffer {
 
 
 struct app_texture_image_data {
-  char imageFile[1<<8];
   size_t imageSize;
   stbi_uc *pixels;
   int textureWidth;
@@ -921,33 +919,23 @@ static struct app_texture_image_data *load_gltf_model_images(struct uvr_gltf_loa
   }
 
   /* Load all images associated with GLTF file into memory */
-  int maxStrLen = strnlen(GLTF_MODEL, (1<<8));
-  char *str = strndup(GLTF_MODEL, maxStrLen);
-  const char *mainDirectory = dirname(str);
-
+  char *imageFile = NULL;
   for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
-    strncat(imageData[curImage].imageFile, mainDirectory, maxStrLen);
-    strncat(imageData[curImage].imageFile, "/", 2);
-    strncat(imageData[curImage].imageFile, gltfFile->gltfData->images[curImage].uri, maxStrLen);
+    imageFile = uvr_utils_concat_file_to_dir(GLTF_MODEL, gltfFile->gltfData->images[curImage].uri, (1<<8));
 
-    imageData[curImage].pixels = stbi_load(imageData[curImage].imageFile, &imageData[curImage].textureWidth, &imageData[curImage].textureHeight, &imageData[curImage].textureChannels, STBI_rgb_alpha);
+    imageData[curImage].pixels = stbi_load(imageFile, &imageData[curImage].textureWidth, &imageData[curImage].textureHeight, &imageData[curImage].textureChannels, STBI_rgb_alpha);
     if (!imageData[curImage].pixels) {
-      uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageData[curImage].imageFile);
-      goto exit_load_gltf_model_images_free_objs;
+      uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageFile);
+      free(imageFile); free_pixel_memory(imageData, gltfFile);
+      return NULL;
     }
 
     imageData[curImage].imageSize = imageData[curImage].textureWidth * imageData[curImage].textureHeight * STBI_rgb_alpha;
     *totalImageSize += imageData[curImage].imageSize;
+    free(imageFile); imageFile = NULL;
   }
 
-  free(str);
-
   return imageData;
-
-exit_load_gltf_model_images_free_objs:
-  free_pixel_memory(imageData, gltfFile);
-  free(str);
-  return NULL;
 }
 
 
@@ -987,8 +975,6 @@ int create_vk_texture_images(struct uvr_vk *app, struct uvr_gltf_loader_file *gl
     vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory);
     offset += imageData[curImage].imageSize;
   }
-
-  uvr_utils_log(UVR_INFO, "Loaded textures associated with %s into cpu visible buffer", basename(GLTF_MODEL));
 
   struct uvr_vk_image_view_create_info imageViewCreateInfos[gltfFile->gltfData->images_count];
   struct uvr_vk_vimage_create_info vimageCreateInfos[gltfFile->gltfData->images_count];
