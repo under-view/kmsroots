@@ -83,6 +83,7 @@ struct uvr_vk_wc {
 
 struct uvr_vertex_data {
   vec3 pos;
+  vec3 normal;
   vec3 color;
   vec2 texCoord;
 };
@@ -115,20 +116,20 @@ struct app_texture_image_data {
  */
 const struct uvr_vertex_data meshData[2][4] = {
   {
-    {{-0.1f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
-    {{-0.1f,  0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // Vertex 1. Bottom-right - green
-    {{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
-    //{{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
-    {{-0.9f, -0.5f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}    // Vertex 3. Top-left     - yellow
-    //{{-0.1f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, // Vertex 0. Top-right    - red
+    {{-0.1f, -0.5f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
+    {{-0.1f,  0.5f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // Vertex 1. Bottom-right - green
+    {{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
+    //{{-0.9f,  0.5f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
+    {{-0.9f, -0.5f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}    // Vertex 3. Top-left     - yellow
+    //{{-0.1f, -0.5f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, // Vertex 0. Top-right    - red
   },
   {
-    {{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
-    {{0.9f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // Vertex 1. Bottom-right - green
-    {{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
-    //{{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
-    {{0.1f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}    // Vertex 3. Top-left     - yellow
-    //{{0.9f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, // Vertex 0. Top-right    - red
+    {{0.9f, -0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},   // Vertex 0. Top-right    - red
+    {{0.9f,  0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},   // Vertex 1. Bottom-right - green
+    {{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},   // Vertex 2. Bottom-left  - blue
+    //{{0.1f,  0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Vertex 2. Bottom-left  - blue
+    {{0.1f, -0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}    // Vertex 3. Top-left     - yellow
+    //{{0.9f, -0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, // Vertex 0. Top-right    - red
   }
 };
 
@@ -878,7 +879,8 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 }
 
 
-static void free_pixel_memory(struct app_texture_image_data *imageData, struct uvr_gltf_loader_file *gltfFile) {
+static void free_pixel_memory(struct app_texture_image_data *imageData, struct uvr_gltf_loader_file *gltfFile)
+{
   uint32_t curImage = 0;
   /* Free pixels as they are nolonger required */
   for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
