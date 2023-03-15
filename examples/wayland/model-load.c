@@ -657,35 +657,58 @@ int create_vk_shader_modules(struct uvr_vk *app)
   memset(&shaderd, 0, sizeof(shaderd));
 
 #ifdef INCLUDE_SHADERC
-  const char vertexShader[] =
+  const char vertexShader[] = \
     "#version 450\n" // GLSL 4.5
     "#extension GL_ARB_separate_shader_objects : enable\n\n"
-    "layout(location = 0) out vec3 outColor;\n"
-    "layout(location = 1) out vec2 outTexCoord;\n\n"
-    "layout(location = 0) in vec3 inPosition;\n"
-    "layout(location = 1) in vec3 inColor;\n"
-    "layout(location = 2) in vec2 inTexCoord;\n\n"
-    "layout(set = 0, binding = 0) uniform uniform_buffer {\n"
+    "layout (location = 0) out vec3 outNormal;\n"
+    "layout (location = 1) out vec3 outColor;\n"
+    "layout (location = 2) out vec2 outTexCoord;\n"
+    "layout (location = 3) out vec3 outViewVec;\n"
+    "layout (location = 4) out vec3 outLightVec;\n\n"
+    "layout (location = 0) in vec3 inPosition;\n"
+    "layout (location = 1) in vec3 inNormal;\n"
+    "layout (location = 2) in vec2 inTexCoord;\n"
+    "layout (location = 3) in vec3 inColor;\n\n"
+    "layout (set = 0, binding = 0) uniform uniform_buffer_scene {\n"
+    "  mat4 projection;\n"
     "  mat4 view;\n"
-    "  mat4 proj;\n"
-    "} uboViewProjection;\n"
+    "  vec4 lightPos;\n"
+    "} uboScene;\n\n"
     "layout(set = 0, binding = 1) uniform uniform_buffer_model {\n"
     "  mat4 model;\n"
-    "} uboModel;\n\n"
+    "} uboModel;\n"
     "void main() {\n"
-    "  gl_Position = uboViewProjection.proj * uboViewProjection.view * uboModel.model * vec4(inPosition, 1.0);\n"
+    "  outNormal = inNormal;\n"
     "  outColor = inColor;\n"
     "  outTexCoord = inTexCoord;\n"
-    "}";
+    "  gl_Position = uboScene.projection * uboScene.view * uboModel.model * vec4(inPosition.xyz, 1.0);\n"
+    "  vec4 pos = uboScene.view * vec4(inPosition, 1.0);\n"
+    "  outNormal = mat3(uboScene.view) * inNormal;\n"
+    "  vec3 lPos = mat3(uboScene.view) * uboScene.lightPos.xyz;\n"
+    "  outLightVec = lPos - pos.xyz;\n"
+    "  outViewVec = -pos.xyz;\n"
+    "}\n";
 
-  const char fragmentShader[] =
+  const char fragmentShader[] = \
     "#version 450\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "layout(location = 0) in vec3 inColor;\n"
-    "layout(location = 1) in vec2 inTexCoord;\n\n"
-    "layout(location = 0) out vec4 outColor;\n"
-    "layout(set = 0, binding = 2) uniform sampler2D outTexSampler;\n"
-    "void main() { outColor = vec4(inColor * texture(outTexSampler, inTexCoord).rgb, 1.0); }";
+    "#extension GL_ARB_separate_shader_objects : enable\n\n"
+    "layout (set = 1, binding = 0) uniform sampler2D samplerColorMap;\n\n"
+    "layout (location = 0) in vec3 inNormal;\n"
+    "layout (location = 1) in vec3 inColor;\n"
+    "layout (location = 2) in vec2 inTexCoord;\n"
+    "layout (location = 3) in vec3 inViewVec;\n"
+    "layout (location = 4) in vec3 inLightVec;\n\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "void main() {\n"
+    "  vec4 color = texture(samplerColorMap, inTexCoord) * vec4(inColor, 1.0);\n\n"
+    "  vec3 N = normalize(inNormal);\n"
+    "  vec3 L = normalize(inLightVec);\n"
+    "  vec3 V = normalize(inViewVec);\n"
+    "  vec3 R = reflect(-L, N);\n"
+    "  vec3 diffuse = max(dot(N, L), 0.15) * inColor;\n"
+    "  vec3 specular = pow(max(dot(R, V), 0.0), 16.0) * vec3(0.75);\n"
+    "  outColor = vec4(diffuse * color.rgb + specular, 1.0);\n"
+    "}";
 
   struct uvr_shader_spirv_create_info vertexShaderCreateInfo;
   vertexShaderCreateInfo.kind = VK_SHADER_STAGE_VERTEX_BIT;
