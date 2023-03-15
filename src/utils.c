@@ -17,8 +17,6 @@
 # define CLOCKID CLOCK_REALTIME
 #endif
 
-#define MAX_PATH_TO_FILE_SIZE 1<<8
-
 #include "utils.h"
 
 
@@ -63,13 +61,13 @@ exit_error_utils_aligned_buffer:
 }
 
 
-char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename)
+char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen)
 {
   char *filepath = NULL;
   struct stat s = {0};
 
   /* Load all images associated with GLTF file into memory */
-  filepath = calloc(MAX_PATH_TO_FILE_SIZE, sizeof(char));
+  filepath = calloc(maxStrLen, sizeof(char));
   if (!filepath) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
     return NULL;
@@ -82,16 +80,16 @@ char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename)
   }
 
   if (s.st_mode & S_IFDIR) {
-    strncat(filepath, directory, MAX_PATH_TO_FILE_SIZE);
+    strncat(filepath, directory, maxStrLen);
   } else {
-    char *str = strndup(directory, MAX_PATH_TO_FILE_SIZE);
-    strncat(filepath, dirname(str), MAX_PATH_TO_FILE_SIZE);
+    char *str = strndup(directory, maxStrLen);
+    strncat(filepath, dirname(str), maxStrLen);
     free(str);
   }
 
   if (strcmp(directory, "/"))
     strncat(filepath, "/", 2);
-  strncat(filepath, filename, MAX_PATH_TO_FILE_SIZE);
+  strncat(filepath, filename, maxStrLen);
 
   return filepath;
 }

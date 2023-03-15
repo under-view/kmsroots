@@ -72,11 +72,12 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
  * args:
  * @directory - Directory or absolute path to a file that isn't @filename
  * @filename  - String to append to @directory
+ * @maxStrLen - Allow customer to set maximum string len
  * return:
  *    on success absolute path to file
  *    on failure NULL
  */
-char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename);
+char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen);
 
 
 /* Used to help determine which ANSI Escape Codes to use */
