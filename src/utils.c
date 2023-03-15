@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <stdint.h>
+#include <libgen.h>    // dirname(3)
 #define HAVE_POSIX_TIMER
 #include <time.h>
 #ifdef CLOCK_MONOTONIC
@@ -15,6 +16,8 @@
 #else
 # define CLOCKID CLOCK_REALTIME
 #endif
+
+#define MAX_PATH_TO_FILE_SIZE 1<<8
 
 #include "utils.h"
 
@@ -57,6 +60,40 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
 
 exit_error_utils_aligned_buffer:
   return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
+}
+
+
+char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename)
+{
+  char *filepath = NULL;
+  struct stat s = {0};
+
+  /* Load all images associated with GLTF file into memory */
+  filepath = calloc(MAX_PATH_TO_FILE_SIZE, sizeof(char));
+  if (!filepath) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    return NULL;
+  }
+
+  if (stat(directory, &s) == -1) {
+    uvr_utils_log(UVR_DANGER, "[x] stat: %s", strerror(errno));
+    free(filepath);
+    return NULL;
+  }
+
+  if (s.st_mode & S_IFDIR) {
+    strncat(filepath, directory, MAX_PATH_TO_FILE_SIZE);
+  } else {
+    char *str = strndup(directory, MAX_PATH_TO_FILE_SIZE);
+    strncat(filepath, dirname(str), MAX_PATH_TO_FILE_SIZE);
+    free(str);
+  }
+
+  if (strcmp(directory, "/"))
+    strncat(filepath, "/", 2);
+  strncat(filepath, filename, MAX_PATH_TO_FILE_SIZE);
+
+  return filepath;
 }
 
 

@@ -64,6 +64,21 @@ struct uvr_utils_aligned_buffer_create_info {
 struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils);
 
 
+/*
+ * uvr_utils_concat_file_to_filedir: Function acquires absolute path to a file, Given either the directory the file resides in
+ *                                   or the absolute path to another file that exists in the same directory. Function concatenates
+ *                                   @filename to @directory. Application must call free on returned pointer.
+ *
+ * args:
+ * @directory - Directory or absolute path to a file that isn't @filename
+ * @filename  - String to append to @directory
+ * return:
+ *    on success absolute path to file
+ *    on failure NULL
+ */
+char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename);
+
+
 /* Used to help determine which ANSI Escape Codes to use */
 enum uvr_utils_log_type {
   UVR_NONE         = 0,
