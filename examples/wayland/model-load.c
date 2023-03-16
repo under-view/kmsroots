@@ -1114,7 +1114,7 @@ int create_gltf_loader_file(struct uvr_vk *app)
   if (!app->uvr_gltf_loader_file.gltfData)
     return -1;
 
-  app->uvr_gltf_loader_indices = uvr_gltf_loader_indices_vertex_index_buffers_acquire(&app->uvr_gltf_loader_file);
+  app->uvr_gltf_loader_indices = uvr_gltf_loader_indices_get_vertex_index_buffers(&app->uvr_gltf_loader_file);
   if (!app->uvr_gltf_loader_indices.indicesInfo)
     return -1;
 

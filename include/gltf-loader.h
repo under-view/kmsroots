@@ -75,9 +75,9 @@ struct uvr_gltf_loader_indices {
 
 
 /*
- * uvr_gltf_loader_indices_vertex_index_buffers_acquire: Function acquires location of index buffer data contained in larger
- *                                                       buffer. @indicesInfo member is a pointer to an array of buffer
- *                                                       offset's and buffer byte sizes for the vertex index buffers.
+ * uvr_gltf_loader_indices_get_vertex_index_buffers: Function acquires location of index buffer data contained in larger
+ *                                                   buffer. @indicesInfo member is a pointer to an array of buffer
+ *                                                   offset's and buffer byte sizes for the vertex index buffers.
  *
  *
  * args:
@@ -86,7 +86,7 @@ struct uvr_gltf_loader_indices {
  *    on success struct uvr_gltf_loader_indices { with member being pointer to an array }
  *    on failure struct uvr_gltf_loader_indices { with member nulled }
  */
-struct uvr_gltf_loader_indices uvr_gltf_loader_indices_vertex_index_buffers_acquire(struct uvr_gltf_loader_file *uvrgltf);
+struct uvr_gltf_loader_indices uvr_gltf_loader_indices_get_vertex_index_buffers(struct uvr_gltf_loader_file *uvrgltf);
 
 
 /*
