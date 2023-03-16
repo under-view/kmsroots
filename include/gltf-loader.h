@@ -49,11 +49,12 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
  * Used to determine contents contained at offset of larger buffer
  */
 enum uvr_gltf_loader_vertices_type {
-  UVR_GLTF_LOADER_VERTICES_POSITION = (1 << 0),
-  UVR_GLTF_LOADER_VERTICES_COLOR    = (1 << 1),
-  UVR_GLTF_LOADER_VERTICES_TEXTURE  = (1 << 2),
-  UVR_GLTF_LOADER_VERTICES_NORMAL   = (1 << 3),
-  UVR_GLTF_LOADER_VERTICES_INDEX    = (1 << 4),
+  UVR_GLTF_LOADER_VERTICES_POSITION = 0x00000001,
+  UVR_GLTF_LOADER_VERTICES_COLOR    = 0x00000002,
+  UVR_GLTF_LOADER_VERTICES_TEXTURE  = 0x00000003,
+  UVR_GLTF_LOADER_VERTICES_NORMAL   = 0x00000004,
+  UVR_GLTF_LOADER_VERTICES_TANGENT  = 0x00000005,
+  UVR_GLTF_LOADER_VERTICES_INDEX    = 0x00000006,
 };
 
 
@@ -61,14 +62,18 @@ enum uvr_gltf_loader_vertices_type {
  * struct uvr_gltf_loader_vertices_info (Underview Renderer GLTF Loader Indices Info)
  *
  * members:
- * @bufferType - Stores the type of vertex data contained in buffer at offset of larger buffer
- * @byteOffset - The byte offset of where the vertex indices are located within the larger buffer.
- * @bufferSize - The size in bytes of the vertex indices buffer
+ * @bufferType        - Stores the type of vertex data contained in buffer at offset of larger buffer
+ * @byteOffset        - The byte offset of where the vertex indices are located within the larger buffer.
+ * @bufferSize        - The size in bytes of the vertex indices buffer
+ * @bufferElementSize - The size of each element contained within a buffer
+ * @meshIndex         - Mesh associated with buffer
  */
 struct uvr_gltf_loader_vertices_data {
   enum uvr_gltf_loader_vertices_type bufferType;
   uint32_t                           byteOffset;
   uint32_t                           bufferSize;
+  uint32_t                           bufferElementSize;
+  uint32_t                           meshIndex;
 };
 
 
@@ -89,9 +94,11 @@ struct uvr_gltf_loader_vertices {
 
 
 /*
- * uvr_gltf_loader_vertices_get_buffers: Function acquires location of index buffer data contained in larger
- *                                       buffer. @indicesInfo member is a pointer to an array of buffer
- *                                       offset's and buffer byte sizes for the vertex index buffers.
+ * uvr_gltf_loader_vertices_get_buffers: Function loops through all meshes and finds the associated buffer view
+ *                                       for a given mesh primitive indices and attributes. Then returns in the
+ *                                       member @verticesData and array of byteOffset, total bufferSize, the size
+ *                                       of each element within a buffer, and the associated mesh.
+ *                                       buffer. @verticesData Must be free by the application.
  *
  *
  * args:
