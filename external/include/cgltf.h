@@ -365,6 +365,7 @@ typedef struct cgltf_attribute
 	char* name;
 	cgltf_attribute_type type;
 	cgltf_int index;
+	cgltf_int accessor_index;
 	cgltf_accessor* data;
 } cgltf_attribute;
 
@@ -2741,8 +2742,8 @@ static int cgltf_parse_json_attribute_list(cgltf_options* options, jsmntok_t con
 		}
 
 		cgltf_parse_attribute_type((*out_attributes)[j].name, &(*out_attributes)[j].type, &(*out_attributes)[j].index);
-
-		(*out_attributes)[j].data = CGLTF_PTRINDEX(cgltf_accessor, cgltf_json_to_int(tokens + i, json_chunk));
+		(*out_attributes)[j].accessor_index = cgltf_json_to_int(tokens + i, json_chunk);
+		(*out_attributes)[j].data = CGLTF_PTRINDEX(cgltf_accessor, (*out_attributes)[j].accessor_index);
 		++i;
 	}
 
