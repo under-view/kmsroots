@@ -14,11 +14,11 @@
  */
 typedef enum _uvr_wc_interface_type {
   UVR_WC_INTERFACE_NULL                    = 0x00000000,
-  UVR_WC_INTERFACE_WL_COMPOSITOR           = (1 << 1),
-  UVR_WC_INTERFACE_XDG_WM_BASE             = (1 << 2),
-  UVR_WC_INTERFACE_WL_SHM                  = (1 << 4),
-  UVR_WC_INTERFACE_WL_SEAT                 = (1 << 8),
-  UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1 = (1 << 16),
+  UVR_WC_INTERFACE_WL_COMPOSITOR           = (1 << 0),
+  UVR_WC_INTERFACE_XDG_WM_BASE             = (1 << 1),
+  UVR_WC_INTERFACE_WL_SHM                  = (1 << 2),
+  UVR_WC_INTERFACE_WL_SEAT                 = (1 << 3),
+  UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1 = (1 << 4),
   UVR_WC_INTERFACE_ALL                     = 0XFFFFFFFF,
 } uvr_wc_interface_type;
 
