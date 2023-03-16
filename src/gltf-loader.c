@@ -43,11 +43,11 @@ exit_error_uvr_gltf_loader_file_load:
 }
 
 
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_file *uvrgltf)
+struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_vertex_buffers_get_info *uvrgltf)
 {
   cgltf_size i, j, k, verticesDataCount = 0, bufferViewElementType;
   cgltf_buffer_view *bufferView = NULL;
-  cgltf_data *gltfData = uvrgltf->gltfData;
+  cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
 
   struct uvr_gltf_loader_vertex_data *verticesData = NULL;
 
@@ -124,13 +124,13 @@ exit_error_uvr_gltf_loader_vertex_buffers_get:
 }
 
 
-struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uvr_gltf_loader_file *uvrgltf, const char *directory)
+struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uvr_gltf_loader_texture_image_get_info *uvrgltf)
 {
   struct uvr_gltf_loader_texture_image_data *imageData = NULL;
   uint32_t curImage = 0, totalBufferSize = 0;
   char *imageFile = NULL;
 
-  cgltf_data *gltfData = uvrgltf->gltfData;
+  cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
 
   imageData = calloc(gltfData->images_count, sizeof(struct uvr_gltf_loader_texture_image_data));
   if (!imageData) {
@@ -140,7 +140,7 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uv
 
   /* Load all images associated with GLTF file into memory */
   for (curImage = 0; curImage < gltfData->images_count; curImage++) {
-    imageFile = uvr_utils_concat_file_to_dir(directory, gltfData->images[curImage].uri, (1<<8));
+    imageFile = uvr_utils_concat_file_to_dir(uvrgltf->directory, gltfData->images[curImage].uri, (1<<8));
 
     imageData[curImage].pixels = (void *) stbi_load(imageFile, &imageData[curImage].imageWidth, &imageData[curImage].imageHeight, &imageData[curImage].imageChannels, STBI_rgb_alpha);
     if (!imageData[curImage].pixels) {

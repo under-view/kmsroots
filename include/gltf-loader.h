@@ -86,10 +86,27 @@ struct uvr_gltf_loader_vertex_data {
  *                      given buffer view. The buffer view then contains the index buffer
  *                      byte offset and buffer size.
  * @verticesDataCount - Amount of elements in @indicesInfo array
+ * @bufferName        - If buffer.uri is a file the name of the file is stored else NULL
+ * @bufferIndex       - The index in the "buffers" property array of give GLTF file
  */
 struct uvr_gltf_loader_vertex {
   struct uvr_gltf_loader_vertex_data *verticesData;
-  uint32_t                            verticesDataCount;
+  uint32_t                           verticesDataCount;
+  char                               *bufferName;
+  uint32_t                           bufferIndex;
+};
+
+
+/*
+ * struct uvr_gltf_loader_vertex_buffers_get_info (Underview Renderer GLTF Loader Vertex Buffer Get Information)
+ *
+ * members:
+ * @gltfFile    - Must pass a valid struct uvr_gltf_loader_file for cgltf_data data member
+ * @bufferIndex - Index of buffer in GLTF file buffers array
+ */
+struct uvr_gltf_loader_vertex_buffers_get_info {
+  struct uvr_gltf_loader_file gltfFile;
+  uint32_t                    bufferIndex;
 };
 
 
@@ -97,17 +114,18 @@ struct uvr_gltf_loader_vertex {
  * uvr_gltf_loader_vertex_buffers_get: Function loops through all meshes and finds the associated buffer view
  *                                     for a given mesh primitive indices and attributes. Then returns in the
  *                                     member @verticesData and array of byteOffset, total bufferSize, the size
- *                                     of each element within a buffer, and the associated mesh.
- *                                     buffer. @verticesData Must be free by the application.
+ *                                     of each element within a buffer, and the associated mesh buffer. Function
+ *                                     will only acquires buffer view data associated with a given buffer in GLTF.
+ *                                     @verticesData Must be free by the application.
  *
  *
  * args:
- * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_file
+ * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_vertex_buffers_get_info
  * return:
  *    on success struct uvr_gltf_loader_vertex { with member being pointer to an array }
  *    on failure struct uvr_gltf_loader_vertex { with member nulled }
  */
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_file *uvrgltf);
+struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_vertex_buffers_get_info *uvrgltf);
 
 
 /*
@@ -146,17 +164,30 @@ struct uvr_gltf_loader_texture_image {
 
 
 /*
+ * struct uvr_gltf_loader_texture_image_get_info (Underview Renderer GLTF Loader Texture Image Get Information)
+ *
+ * members:
+ * @gltfFile  - Must pass a valid struct uvr_gltf_loader_file for cgltf_data data member
+ * @directory - Must pass a pointer to a string detailing the directory of where all images are stored.
+ *              Absolute path to a file that resides in the same directory as the image files will work too.
+ */
+struct uvr_gltf_loader_texture_image_get_info {
+  struct uvr_gltf_loader_file gltfFile;
+  const char                  *directory;
+};
+
+
+/*
  * uvr_gltf_loader_texture_image_get: Function Loads all images associated with gltf file into memory.
  *                                    To free @pixels and @imageData call uvr_gltf_loader_destroy(3).
  *
  * args:
- * @uvrgltf   - Must pass a pointer to a struct uvr_gltf_loader_file
- * @directory - Must pass a pointer to a string detailing the directory of where all images are stored.
+ * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_file
  * return:
  *    on success struct uvr_gltf_loader_texture_image { with member being pointer to an array }
  *    on failure struct uvr_gltf_loader_texture_image { with member nulled }
  */
-struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uvr_gltf_loader_file *uvrgltf, const char *directory);
+struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uvr_gltf_loader_texture_image_get_info *uvrgltf);
 
 
 /*
