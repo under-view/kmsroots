@@ -44,22 +44,22 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
 
 
 /*
- * enum uvr_gltf_loader_vertices_type (Underview Renderer GLTF Loader Vertices Type)
+ * enum uvr_gltf_loader_vertex_type (Underview Renderer GLTF Loader Vertices Type)
  *
  * Used to determine contents contained at offset of larger buffer
  */
-enum uvr_gltf_loader_vertices_type {
-  UVR_GLTF_LOADER_VERTICES_POSITION = 0x00000001,
-  UVR_GLTF_LOADER_VERTICES_COLOR    = 0x00000002,
-  UVR_GLTF_LOADER_VERTICES_TEXTURE  = 0x00000003,
-  UVR_GLTF_LOADER_VERTICES_NORMAL   = 0x00000004,
-  UVR_GLTF_LOADER_VERTICES_TANGENT  = 0x00000005,
-  UVR_GLTF_LOADER_VERTICES_INDEX    = 0x00000006,
+enum uvr_gltf_loader_vertex_type {
+  UVR_GLTF_LOADER_VERTEX_POSITION = 0x00000001,
+  UVR_GLTF_LOADER_VERTEX_COLOR    = 0x00000002,
+  UVR_GLTF_LOADER_VERTEX_TEXTURE  = 0x00000003,
+  UVR_GLTF_LOADER_VERTEX_NORMAL   = 0x00000004,
+  UVR_GLTF_LOADER_VERTEX_TANGENT  = 0x00000005,
+  UVR_GLTF_LOADER_VERTEX_INDEX    = 0x00000006,
 };
 
 
 /*
- * struct uvr_gltf_loader_vertices_info (Underview Renderer GLTF Loader Indices Info)
+ * struct uvr_gltf_loader_vertex_data (Underview Renderer GLTF Loader Vertex data)
  *
  * members:
  * @bufferType        - Stores the type of vertex data contained in buffer at offset of larger buffer
@@ -68,17 +68,17 @@ enum uvr_gltf_loader_vertices_type {
  * @bufferElementSize - The size of each element contained within a buffer
  * @meshIndex         - Mesh associated with buffer
  */
-struct uvr_gltf_loader_vertices_data {
-  enum uvr_gltf_loader_vertices_type bufferType;
-  uint32_t                           byteOffset;
-  uint32_t                           bufferSize;
-  uint32_t                           bufferElementSize;
-  uint32_t                           meshIndex;
+struct uvr_gltf_loader_vertex_data {
+  enum uvr_gltf_loader_vertex_type bufferType;
+  uint32_t                         byteOffset;
+  uint32_t                         bufferSize;
+  uint32_t                         bufferElementSize;
+  uint32_t                         meshIndex;
 };
 
 
 /*
- * struct uvr_gltf_loader_vertices (Underview Renderer GLTF Loader Indices)
+ * struct uvr_gltf_loader_vertex (Underview Renderer GLTF Loader Vertex)
  *
  * members:
  * @verticesData      - Pointer to an array of information about a given mesh->primitive->indices.
@@ -87,27 +87,27 @@ struct uvr_gltf_loader_vertices_data {
  *                      byte offset and buffer size.
  * @verticesDataCount - Amount of elements in @indicesInfo array
  */
-struct uvr_gltf_loader_vertices {
-  struct uvr_gltf_loader_vertices_data *verticesData;
-  uint32_t                             verticesDataCount;
+struct uvr_gltf_loader_vertex {
+  struct uvr_gltf_loader_vertex_data *verticesData;
+  uint32_t                            verticesDataCount;
 };
 
 
 /*
- * uvr_gltf_loader_vertices_get_buffers: Function loops through all meshes and finds the associated buffer view
- *                                       for a given mesh primitive indices and attributes. Then returns in the
- *                                       member @verticesData and array of byteOffset, total bufferSize, the size
- *                                       of each element within a buffer, and the associated mesh.
- *                                       buffer. @verticesData Must be free by the application.
+ * uvr_gltf_loader_vertex_buffers_get: Function loops through all meshes and finds the associated buffer view
+ *                                     for a given mesh primitive indices and attributes. Then returns in the
+ *                                     member @verticesData and array of byteOffset, total bufferSize, the size
+ *                                     of each element within a buffer, and the associated mesh.
+ *                                     buffer. @verticesData Must be free by the application.
  *
  *
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_file
  * return:
- *    on success struct uvr_gltf_loader_vertices { with member being pointer to an array }
- *    on failure struct uvr_gltf_loader_vertices { with member nulled }
+ *    on success struct uvr_gltf_loader_vertex { with member being pointer to an array }
+ *    on failure struct uvr_gltf_loader_vertex { with member nulled }
  */
-struct uvr_gltf_loader_vertices uvr_gltf_loader_vertices_get_buffers(struct uvr_gltf_loader_file *uvrgltf);
+struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_file *uvrgltf);
 
 
 /*
@@ -165,16 +165,16 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uv
  * members:
  * @uvr_gltf_loader_file_cnt          - Must pass the amount of elements in struct uvr_gltf_loader_file array
  * @uvr_gltf_loader_file              - Must pass a pointer to an array of valid struct uvr_gltf_loader_file { free'd  members: cgltf_data *gltfData }
- * @uvr_gltf_loader_vertices_cnt      - Must pass the amount of elements in struct uvr_gltf_loader_vertices_cnt array
- * @uvr_gltf_loader_vertices          - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertices { free'd  members: *indicesInfo }
- * @uvr_gltf_loader_texture_image_cnt - Must pass the amount of elements in struct uvr_gltf_loader_vertices_cnt array
- * @uvr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertices { free'd  members: *indicesInfo }
+ * @uvr_gltf_loader_vertex_cnt      - Must pass the amount of elements in struct uvr_gltf_loader_vertex_cnt array
+ * @uvr_gltf_loader_vertex          - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertex { free'd  members: *indicesInfo }
+ * @uvr_gltf_loader_texture_image_cnt - Must pass the amount of elements in struct uvr_gltf_loader_vertex_cnt array
+ * @uvr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertex { free'd  members: *indicesInfo }
  */
 struct uvr_gltf_loader_destroy {
   uint32_t                             uvr_gltf_loader_file_cnt;
   struct uvr_gltf_loader_file          *uvr_gltf_loader_file;
-  uint32_t                             uvr_gltf_loader_vertices_cnt;
-  struct uvr_gltf_loader_vertices      *uvr_gltf_loader_vertices;
+  uint32_t                             uvr_gltf_loader_vertex_cnt;
+  struct uvr_gltf_loader_vertex      *uvr_gltf_loader_vertex;
   uint32_t                             uvr_gltf_loader_texture_image_cnt;
   struct uvr_gltf_loader_texture_image *uvr_gltf_loader_texture_image;
 };
