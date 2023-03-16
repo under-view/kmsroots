@@ -111,19 +111,72 @@ struct uvr_gltf_loader_vertices uvr_gltf_loader_vertices_get_buffers(struct uvr_
 
 
 /*
+ * struct uvr_gltf_loader_texture_image_data (Underview Renderer GLTF Loader Texture Image Data)
+ *
+ * members:
+ * @pixels        - Pointer to actual pixel data
+ * @imageWidth    - Width of image in pixels/texels
+ * @imageHeight   - Height of image in pixels/texels
+ * @imageChannels - Amount of color channels image has { RGB(3), RGBA(4) }
+ * @imageSize     - Byte size of the image (@textureWidth * @textureHeight) * @textureChannels
+ */
+struct uvr_gltf_loader_texture_image_data {
+  void   *pixels;
+  int    imageWidth;
+  int    imageHeight;
+  int    imageChannels;
+  size_t imageSize;
+};
+
+
+/*
+ * struct uvr_gltf_loader_texture_image (Underview Renderer GLTF Loader Texture Image)
+ *
+ * members:
+ * @imageCount      - Amount of images associated with a given GLTF file
+ * @totalBufferSize - Collective size of each image associated with a given GLTF file.
+ *                    Best utilized when creating single VkBuffer.
+ * @imageData       - Pointer to an array of image data.
+ */
+struct uvr_gltf_loader_texture_image {
+  uint32_t                                  imageCount;
+  uint32_t                                  totalBufferSize;
+  struct uvr_gltf_loader_texture_image_data *imageData;
+};
+
+
+/*
+ * uvr_gltf_loader_texture_image_get: Function Loads all images associated with gltf file into memory.
+ *                                    To free @pixels and @imageData call uvr_gltf_loader_destroy(3).
+ *
+ * args:
+ * @uvrgltf   - Must pass a pointer to a struct uvr_gltf_loader_file
+ * @directory - Must pass a pointer to a string detailing the directory of where all images are stored.
+ * return:
+ *    on success struct uvr_gltf_loader_texture_image { with member being pointer to an array }
+ *    on failure struct uvr_gltf_loader_texture_image { with member nulled }
+ */
+struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uvr_gltf_loader_file *uvrgltf, const char *directory);
+
+
+/*
  * struct uvr_gltf_loader_destroy (Underview Renderer Shader Destroy)
  *
  * members:
- * @uvr_gltf_loader_file_cnt     - Must pass the amount of elements in struct uvr_gltf_loader_file array
- * @uvr_gltf_loader_file         - Must pass a pointer to an array of valid struct uvr_gltf_loader_file { free'd  members: cgltf_data *gltfData }
- * @uvr_gltf_loader_vertices_cnt - Must pass the amount of elements in struct uvr_gltf_loader_vertices_cnt array
- * @uvr_gltf_loader_vertices     - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertices { free'd  members: *indicesInfo }
+ * @uvr_gltf_loader_file_cnt          - Must pass the amount of elements in struct uvr_gltf_loader_file array
+ * @uvr_gltf_loader_file              - Must pass a pointer to an array of valid struct uvr_gltf_loader_file { free'd  members: cgltf_data *gltfData }
+ * @uvr_gltf_loader_vertices_cnt      - Must pass the amount of elements in struct uvr_gltf_loader_vertices_cnt array
+ * @uvr_gltf_loader_vertices          - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertices { free'd  members: *indicesInfo }
+ * @uvr_gltf_loader_texture_image_cnt - Must pass the amount of elements in struct uvr_gltf_loader_vertices_cnt array
+ * @uvr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertices { free'd  members: *indicesInfo }
  */
 struct uvr_gltf_loader_destroy {
-  uint32_t                        uvr_gltf_loader_file_cnt;
-  struct uvr_gltf_loader_file     *uvr_gltf_loader_file;
-  uint32_t                        uvr_gltf_loader_vertices_cnt;
-  struct uvr_gltf_loader_vertices *uvr_gltf_loader_vertices;
+  uint32_t                             uvr_gltf_loader_file_cnt;
+  struct uvr_gltf_loader_file          *uvr_gltf_loader_file;
+  uint32_t                             uvr_gltf_loader_vertices_cnt;
+  struct uvr_gltf_loader_vertices      *uvr_gltf_loader_vertices;
+  uint32_t                             uvr_gltf_loader_texture_image_cnt;
+  struct uvr_gltf_loader_texture_image *uvr_gltf_loader_texture_image;
 };
 
 
