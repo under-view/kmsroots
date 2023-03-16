@@ -12,7 +12,7 @@
  */
 struct uvr_shader_file {
   char *bytes;
-  long byteSize;
+  unsigned long byteSize;
 };
 
 
