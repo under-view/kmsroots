@@ -70,7 +70,7 @@ struct uvr_vk {
    * Keep track of data related to FlightHelmet.gltf
    */
   struct uvr_gltf_loader_file uvr_gltf_loader_file;
-  struct uvr_gltf_loader_indices uvr_gltf_loader_indices;
+  struct uvr_gltf_loader_vertices uvr_gltf_loader_vertices;
 };
 
 
@@ -292,8 +292,8 @@ exit_error:
 
   gltfd.uvr_gltf_loader_file_cnt = 1;
   gltfd.uvr_gltf_loader_file = &app.uvr_gltf_loader_file;
-  gltfd.uvr_gltf_loader_indices_cnt = 1;
-  gltfd.uvr_gltf_loader_indices = &app.uvr_gltf_loader_indices;
+  gltfd.uvr_gltf_loader_vertices_cnt = 1;
+  gltfd.uvr_gltf_loader_vertices = &app.uvr_gltf_loader_vertices;
   uvr_gltf_loader_destroy(&gltfd);
 
   /*
@@ -1114,8 +1114,8 @@ int create_gltf_loader_file(struct uvr_vk *app)
   if (!app->uvr_gltf_loader_file.gltfData)
     return -1;
 
-  app->uvr_gltf_loader_indices = uvr_gltf_loader_indices_get_vertex_index_buffers(&app->uvr_gltf_loader_file);
-  if (!app->uvr_gltf_loader_indices.indicesInfo)
+  app->uvr_gltf_loader_vertices = uvr_gltf_loader_vertices_get_buffers(&app->uvr_gltf_loader_file);
+  if (!app->uvr_gltf_loader_vertices.verticesData)
     return -1;
 
   return 0;
