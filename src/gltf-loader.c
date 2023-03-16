@@ -40,7 +40,7 @@ exit_error_uvr_gltf_loader_file_load:
 }
 
 
-struct uvr_gltf_loader_indices uvr_gltf_loader_buffer_view_indices_acquire(struct uvr_gltf_loader_file *uvrgltf)
+struct uvr_gltf_loader_indices uvr_gltf_loader_indices_vertex_index_buffers_acquire(struct uvr_gltf_loader_file *uvrgltf)
 {
   cgltf_size i, j, indicesInfoCount = 0;
   cgltf_buffer_view *bufferView = NULL;
