@@ -269,6 +269,7 @@ typedef struct cgltf_buffer
 {
 	char* name;
 	cgltf_size size;
+	cgltf_int index;
 	char* uri;
 	void* data; /* loaded by cgltf_load_buffers */
 	cgltf_data_free_method data_free_method;
@@ -4884,7 +4885,7 @@ static int cgltf_parse_json_buffer(cgltf_options* options, jsmntok_t const* toke
 	for (int j = 0; j < size; ++j)
 	{
 		CGLTF_CHECK_KEY(tokens[i]);
-
+		out_buffer->index = j;
 		if (cgltf_json_strcmp(tokens + i, json_chunk, "name") == 0)
 		{
 			i = cgltf_parse_json_string(options, tokens, i + 1, json_chunk, &out_buffer->name);
