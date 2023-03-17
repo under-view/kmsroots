@@ -45,7 +45,7 @@ exit_error_uvr_gltf_loader_file_load:
 
 struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_vertex_buffers_get_info *uvrgltf)
 {
-  cgltf_size i, j, k, bufferViewElementType, verticesDataCount = 0;
+  cgltf_size i, j, k, bufferViewElementType, meshCount, verticesDataCount = 0;
   cgltf_buffer *buffer = NULL;
   cgltf_buffer_view *bufferView = NULL;
   cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
@@ -85,19 +85,27 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
   verticesDataCount=0;
 
   // TODO: account for accessor bufferOffset
-  // Mesh->primitive->attribute->accessor->bufferView->buffer
-  // Mesh->primitive->indices->accessor->bufferView->buffer
-  // Normally would want to avoid, but in this case it's fine
+  /*
+   * Mesh->primitive->attribute->accessor->bufferView->buffer
+   * Mesh->primitive->indices->accessor->bufferView->buffer
+   * Normally would want to avoid, but in this case it's fine
+   */
   for (i = 0; i < gltfData->meshes_count; i++) {
     for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
       for (k = 0; k < gltfData->meshes[i].primitives[j].attributes_count; k++) {
+        /*
+         * Store texture, normal, color, position, tangent information
+         * at a given offset in a buffer
+         */
 
         // bufferView associated with accessor which is associated with a mesh->primitive->attribute
         bufferView = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view;
         buffer = bufferView->buffer;
 
-        // Don't populated verticesData array if the current buffer views
-        // buffer not equal to the one we want
+        /*
+         * Don't populated verticesData array if the current bufferViews
+         * buffer not equal to the one we want
+         */
         if (buffer->index != uvrgltf->bufferIndex)
           continue;
 
@@ -105,7 +113,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
 
         verticesData[verticesDataCount].byteOffset = bufferView->offset;
         verticesData[verticesDataCount].bufferSize = bufferView->size;
-        verticesData[verticesDataCount].meshIndex = i;
+        verticesData[verticesDataCount].meshIndex = meshCount = i;
 
         switch (gltfData->meshes[i].primitives[j].attributes[k].type) {
           case cgltf_attribute_type_texcoord:
@@ -135,15 +143,17 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
         verticesDataCount++;
       }
 
+      // Store index buffer data
       if (!gltfData->meshes[i].primitives[j].indices)
         continue;
 
-      // Store index buffer data
       bufferView = gltfData->meshes[i].primitives[j].indices->buffer_view;
       buffer = bufferView->buffer;
 
-      // Don't populated verticesData array if the current bufferViews
-      // buffer does not equal to the one we want
+      /*
+       * Don't populated verticesData array if the current bufferViews
+       * buffer does not equal to the one we want
+       */
       if (buffer->index != uvrgltf->bufferIndex)
         continue;
 
@@ -154,18 +164,26 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
       verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_INDEX;
       verticesData[verticesDataCount].byteOffset = bufferView->offset;
       verticesData[verticesDataCount].bufferSize = bufferView->size;
-      verticesData[verticesDataCount].meshIndex = i;
+      verticesData[verticesDataCount].meshIndex = meshCount = i;
       verticesDataCount++;
     }
   }
 
-  return (struct uvr_gltf_loader_vertex) { .verticesData = verticesData, .verticesDataCount = verticesDataCount,
-                                           .bufferData = bufferData, .bufferSize = bufferSize, .bufferIndex = uvrgltf->bufferIndex };
+  /*
+   * To ensure accuracy with the amount of meshes associated with buffer
+   * @meshCount is assigned when meshIndex is assigned to give buffer
+   * in @verticesData array. Do to loops beginning at 0 add 1 to final
+   * number to get an acurrate count.
+   */
+  meshCount++;
+  return (struct uvr_gltf_loader_vertex) { .verticesData = verticesData, .verticesDataCount = verticesDataCount, .bufferData = bufferData,
+                                           .bufferSize = bufferSize, .bufferIndex = uvrgltf->bufferIndex, .meshCount = meshCount };
 
 exit_error_uvr_gltf_loader_vertex_buffers_get_free_vertices:
   free(verticesData);
 exit_error_uvr_gltf_loader_vertex_buffers_get:
-  return (struct uvr_gltf_loader_vertex) { .verticesData = NULL, .verticesDataCount = 0, .bufferData = NULL, .bufferSize = 0, .bufferIndex = 0 };
+  return (struct uvr_gltf_loader_vertex) { .verticesData = NULL, .verticesDataCount = 0, .bufferData = NULL,
+                                           .bufferSize = 0, .bufferIndex = 0, .meshCount = 0 };
 }
 
 

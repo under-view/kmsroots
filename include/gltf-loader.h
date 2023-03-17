@@ -64,7 +64,7 @@ enum uvr_gltf_loader_vertex_type {
  * members:
  * @bufferType         - Stores the type of vertex data contained in buffer at offset of larger buffer
  * @byteOffset         - The byte offset of where the vertex indices are located within the larger buffer.
- * @bufferSize         - The size in bytes of the vertex indices buffer
+ * @bufferSize         - The size in bytes of buffer managed by buffer view
  * @bufferElementCount - The amount of elements in buffer
  * @bufferElementSize  - The size of each element contained within a buffer
  * @meshIndex          - Mesh associated with buffer
@@ -88,15 +88,17 @@ struct uvr_gltf_loader_vertex_data {
  *                      given buffer view. The buffer view then contains the index buffer
  *                      byte offset and buffer size.
  * @verticesDataCount - Amount of elements in @indicesInfo array
- * @bufferData        - The bytes of data for an individual buffer
+ * @bufferData        - The actual bytes of data for an individual buffer
  * @bufferIndex       - The index in the "buffers" property array of give GLTF file
+ * @meshCount         - Amount of meshes associated with a @bufferIndex buffer in "buffers" array.
  */
 struct uvr_gltf_loader_vertex {
   struct uvr_gltf_loader_vertex_data *verticesData;
   uint32_t                           verticesDataCount;
   unsigned char                      *bufferData;
   uint32_t                           bufferSize;
-  cgltf_int                          bufferIndex;
+  uint32_t                           bufferIndex;
+  uint32_t                           meshCount;
 };
 
 
