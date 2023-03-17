@@ -86,14 +86,15 @@ struct uvr_gltf_loader_vertex_data {
  *                      given buffer view. The buffer view then contains the index buffer
  *                      byte offset and buffer size.
  * @verticesDataCount - Amount of elements in @indicesInfo array
- * @bufferName        - If buffer.uri is a file the name of the file is stored else NULL
+ * @bufferData        - The bytes of data for an individual buffer
  * @bufferIndex       - The index in the "buffers" property array of give GLTF file
  */
 struct uvr_gltf_loader_vertex {
   struct uvr_gltf_loader_vertex_data *verticesData;
   uint32_t                           verticesDataCount;
-  char                               *bufferName;
-  uint32_t                           bufferIndex;
+  void                               *bufferData;
+  uint32_t                           bufferSize;
+  cgltf_int                          bufferIndex;
 };
 
 
@@ -106,7 +107,7 @@ struct uvr_gltf_loader_vertex {
  */
 struct uvr_gltf_loader_vertex_buffers_get_info {
   struct uvr_gltf_loader_file gltfFile;
-  uint32_t                    bufferIndex;
+  cgltf_int                   bufferIndex;
 };
 
 

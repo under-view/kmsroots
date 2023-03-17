@@ -46,6 +46,7 @@ exit_error_uvr_gltf_loader_file_load:
 struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_vertex_buffers_get_info *uvrgltf)
 {
   cgltf_size i, j, k, verticesDataCount = 0, bufferViewElementType;
+  cgltf_buffer *buffer = NULL;
   cgltf_buffer_view *bufferView = NULL;
   cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
 
@@ -53,9 +54,18 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
 
   verticesData = calloc(gltfData->buffer_views_count, sizeof(struct uvr_gltf_loader_vertex_data));
   if (!verticesData) {
-    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    uvr_utils_log(UVR_DANGER, "[x] calloc(verticesData): %s", strerror(errno));
     goto exit_error_uvr_gltf_loader_vertex_buffers_get;
   }
+
+  uint32_t bufferSize = gltfData->buffers[uvrgltf->bufferIndex].size;
+  void *bufferData = calloc(bufferSize, sizeof(void*));
+  if (!bufferData) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc(bufferData): %s", strerror(errno));
+    goto exit_error_uvr_gltf_loader_vertex_buffers_get_free_vertices;
+  }
+
+  memcpy(bufferData, gltfData->buffers[uvrgltf->bufferIndex].data, bufferSize);
 
   // TODO: account for accessor bufferOffset
   // Mesh->primitive->attribute->accessor->bufferView->buffer
@@ -67,6 +77,13 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
 
         // bufferView associated with accessor which is associated with a mesh->primitive->attribute
         bufferView = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view;
+        buffer = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view->buffer;
+
+        // Don't populated verticesData array if the current buffer views
+        // buffer not equal to the one we want
+        if (buffer->index != uvrgltf->bufferIndex)
+          continue;
+
         bufferViewElementType = gltfData->meshes[i].primitives[j].attributes[k].data->type;
 
         verticesData[verticesDataCount].byteOffset = bufferView->offset;
@@ -106,6 +123,13 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
 
       // Store index buffer data
       bufferView = gltfData->meshes[i].primitives[j].indices->buffer_view;
+      buffer = gltfData->meshes[i].primitives[j].indices->buffer_view->buffer;
+
+      // Don't populated verticesData array if the current buffer views
+      // buffer not equal to the one we want
+      if (buffer->index != uvrgltf->bufferIndex)
+        continue;
+
       bufferViewElementType = gltfData->meshes[i].primitives[j].indices->type;
 
       verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
@@ -117,10 +141,13 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
     }
   }
 
-  return (struct uvr_gltf_loader_vertex) { .verticesData = verticesData, .verticesDataCount = verticesDataCount };
+  return (struct uvr_gltf_loader_vertex) { .verticesData = verticesData, .verticesDataCount = verticesDataCount,
+                                           .bufferData = bufferData, .bufferSize = bufferSize, .bufferIndex = uvrgltf->bufferIndex };
 
+exit_error_uvr_gltf_loader_vertex_buffers_get_free_vertices:
+  free(verticesData);
 exit_error_uvr_gltf_loader_vertex_buffers_get:
-  return (struct uvr_gltf_loader_vertex) { .verticesData = NULL, .verticesDataCount = 0 };
+  return (struct uvr_gltf_loader_vertex) { .verticesData = NULL, .verticesDataCount = 0, .bufferData = NULL, .bufferSize = 0, .bufferIndex = 0 };
 }
 
 
@@ -177,8 +204,14 @@ void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
   }
   for (i = 0; i < uvrgltf->uvr_gltf_loader_vertex_cnt; i++) {
     if (uvrgltf->uvr_gltf_loader_vertex[i].verticesData) {
-      free(uvrgltf->uvr_gltf_loader_vertex[i].verticesData);
-      uvrgltf->uvr_gltf_loader_vertex[i].verticesData = NULL;
+      if (uvrgltf->uvr_gltf_loader_vertex[i].verticesData) { // Gating to prevent accident double free'ing
+        free(uvrgltf->uvr_gltf_loader_vertex[i].verticesData);
+        uvrgltf->uvr_gltf_loader_vertex[i].verticesData = NULL;
+      }
+      if (uvrgltf->uvr_gltf_loader_vertex[i].bufferData) { // Gating to prevent accident double free'ing
+        free(uvrgltf->uvr_gltf_loader_vertex[i].bufferData);
+        uvrgltf->uvr_gltf_loader_vertex[i].bufferData = NULL;
+      }
     }
   }
   for (i = 0; i < uvrgltf->uvr_gltf_loader_texture_image_cnt; i++) {
