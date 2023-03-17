@@ -3,36 +3,6 @@
 
 #include "utils.h"
 
-/*
- * struct uvr_shader_file (Underview Renderer Shader File)
- *
- * members:
- * @bytes    - Buffer that stores a given file's content
- * @byteSize - Size of buffer storing a given file's content
- */
-struct uvr_shader_file {
-  char *bytes;
-  unsigned long byteSize;
-};
-
-
-/*
- * uvr_shader_file_load: Takes in a file and loads contents in to a buffer. This function is largely
- *                       only used to load shader files. struct uvr_shader_file member bytes can be
- *                       free'd with a call to uvr_shader_destroy(3).
- *
- * args:
- * @filename - Must pass path to file to load
- * return:
- *    on success struct uvr_shader_file
- *    on failure struct uvr_shader_file { with member nulled }
- */
-struct uvr_shader_file uvr_shader_file_load(const char *filename);
-
-
-#ifdef INCLUDE_SHADERC
-
-
 #include <shaderc/shaderc.h>
 
 
@@ -86,25 +56,16 @@ struct uvr_shader_spirv {
 struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spirv_create_info *uvrshader);
 
 
-#endif
-
-
 /*
  * struct uvr_shader_destroy (Underview Renderer Shader Destroy)
  *
  * members:
  * @uvr_shader_spirv_cnt - Must pass the amount of elements in struct uvr_shader_spirv array
  * @uvr_shader_spirv     - Must pass a pointer to an array of valid struct uvr_shader_spirv { free'd  members: shaderc_compilation_result_t handle }
- * @uvr_shader_file_cnt  - Must pass the amount of elements in struct uvr_shader_file array
- * @uvr_shader_file      - Must pass a pointer to an array of valid struct uvr_shader_file  { free'd  members: char *bytes }
  */
 struct uvr_shader_destroy {
-#ifdef INCLUDE_SHADERC
   uint32_t                uvr_shader_spirv_cnt;
   struct uvr_shader_spirv *uvr_shader_spirv;
-#endif
-  uint32_t                uvr_shader_file_cnt;
-  struct uvr_shader_file  *uvr_shader_file;
 };
 
 

@@ -14,12 +14,12 @@ int main(void)
    * 0. Vertex Shader
    * 1. Fragment Shader
    */
-  struct uvr_shader_file uvr_shader[2];
+  struct uvr_utils_file uvr_shader[2];
 
   uvr_utils_log(UVR_WARNING, "LOADING VERTEX SHADER");
 
-  uvr_shader[0] = uvr_shader_file_load(VERTEX_SHADER_SPIRV);
-  if (!uvr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+  uvr_shader[0] = uvr_utils_file_load(VERTEX_SHADER_SPIRV);
+  if (!uvr_shader[0].bytes) { ret = 1 ; goto exit_distroy_shader ; }
 
   char *shader_code = malloc(uvr_shader[0].byteSize + 1);
   memcpy(shader_code, uvr_shader[0].bytes, uvr_shader[0].byteSize);
@@ -30,13 +30,12 @@ int main(void)
 
   uvr_utils_log(UVR_WARNING, "LOADING FRAGMENT SHADER");
 
-  uvr_shader[1] = uvr_shader_file_load(FRAGMENT_SHADER_SPIRV);
-  if (!uvr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+  uvr_shader[1] = uvr_utils_file_load(FRAGMENT_SHADER_SPIRV);
+  if (!uvr_shader[1].bytes) { ret = 1 ; goto exit_distroy_shader ; }
 
 exit_distroy_shader:
-  shaderd.uvr_shader_file_cnt = ARRAY_LEN(uvr_shader);
-  shaderd.uvr_shader_file = uvr_shader;
-  uvr_shader_destroy(&shaderd);
+  free(uvr_shader[0].bytes);
+  free(uvr_shader[1].bytes);
 
   return ret;
 }

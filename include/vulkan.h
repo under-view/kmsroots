@@ -548,10 +548,10 @@ struct uvr_vk_shader_module {
  * @shaderName    - Name given to shader module can be safely ignored not required by API.
  */
 struct uvr_vk_shader_module_create_info {
-  VkDevice   logicalDevice;
-  size_t     sprivByteSize;
-  const char *sprivBytes;
-  const char *shaderName;
+  VkDevice            logicalDevice;
+  size_t              sprivByteSize;
+  const unsigned char *sprivBytes;
+  const char          *shaderName;
 };
 
 

@@ -6,7 +6,7 @@ libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
 librt = cc.find_library('rt', required: true)
 
-fs = [ 'vulkan.c', 'shader.c', 'utils.c', 'gltf-loader.c' ]
+fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c' ]
 lib_uvr_deps = [vulkan, libmath, librt]
 
 
@@ -15,7 +15,7 @@ lib_uvr_deps = [vulkan, libmath, librt]
 ################################################################################
 libshaderc = dependency('shaderc', required: get_option('shaderc'))
 if libshaderc.found()
-  pargs += ['-DINCLUDE_SHADERC=1']
+  fs += ['shader.c']
   lib_uvr_deps += [libshaderc]
 endif
 

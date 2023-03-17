@@ -9,6 +9,32 @@
 
 
 /*
+ * struct uvr_utils_file (Underview Renderer Utils File)
+ *
+ * members:
+ * @bytes    - Buffer that stores a given file's content
+ * @byteSize - Size of buffer storing a given file's content
+ */
+struct uvr_utils_file {
+  unsigned char *bytes;
+  unsigned long byteSize;
+};
+
+
+/*
+ * uvr_utils_file_load: Takes a file and loads its contents into a memory buffer.
+ *                      Application's  must take up the mantel and call free on @bytes member.
+ *
+ * args:
+ * @filename - Must pass path to file to load
+ * return:
+ *    on success struct uvr_utils_file
+ *    on failure struct uvr_utils_file { with member nulled }
+ */
+struct uvr_utils_file uvr_utils_file_load(const char *filename);
+
+
+/*
  * uvr_utils_nanosecond: Function returns the current time in nanosecond
  *
  * return:

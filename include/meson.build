@@ -1,6 +1,5 @@
 main_headers = [
-  'vulkan.h', 'shader.h', 'utils.h',
-  'gltf-loader.h'
+  'vulkan.h', 'utils.h', 'gltf-loader.h'
 ]
 
 # Deprecated interface (Keep for reference)
@@ -11,6 +10,10 @@ main_headers = [
 #if get_option('sd-bus').enabled()
 #  main_headers += ['sd-dbus.h']
 #endif
+
+if get_option('shaderc').enabled()
+  main_headers += ['shader.h']
+endif
 
 if get_option('xcb').enabled()
   main_headers += ['xclient.h']

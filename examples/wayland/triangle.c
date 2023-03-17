@@ -451,10 +451,10 @@ int create_vk_shader_modules(struct uvr_vk *app)
 {
   int ret = 0;
 
+#ifdef INCLUDE_SHADERC
   struct uvr_shader_destroy shaderd;
   memset(&shaderd, 0, sizeof(shaderd));
 
-#ifdef INCLUDE_SHADERC
   const char vertexShader[] =
     "#version 450\n"  // GLSL 4.5
     "#extension GL_ARB_separate_shader_objects : enable\n"
@@ -502,12 +502,12 @@ int create_vk_shader_modules(struct uvr_vk *app)
    * 0. Vertex Shader
    * 1. Fragment Shader
    */
-  struct uvr_shader_file uvr_shader[2];
+  struct uvr_utils_file uvr_shader[2];
 
-  uvr_shader[0] = uvr_shader_file_load(VERTEX_SHADER_SPIRV);
+  uvr_shader[0] = uvr_utils_file_load(VERTEX_SHADER_SPIRV);
   if (!uvr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
 
-  uvr_shader[1] = uvr_shader_file_load(FRAGMENT_SHADER_SPIRV);
+  uvr_shader[1] = uvr_utils_file_load(FRAGMENT_SHADER_SPIRV);
   if (!uvr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
 
 #endif
@@ -531,12 +531,11 @@ exit_distroy_shader:
 #ifdef INCLUDE_SHADERC
   shaderd.uvr_shader_spirv_cnt = ARRAY_LEN(uvr_shader);
   shaderd.uvr_shader_spirv = uvr_shader;
-#else
-  shaderd.uvr_shader_file_cnt = ARRAY_LEN(uvr_shader);
-  shaderd.uvr_shader_file = uvr_shader;
-#endif
   uvr_shader_destroy(&shaderd);
-
+#else
+  free(uvr_shader[0].bytes);
+  free(uvr_shader[1].bytes);
+#endif
   return ret;
 }
 

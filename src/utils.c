@@ -20,6 +20,66 @@
 #include "utils.h"
 
 
+struct uvr_utils_file uvr_utils_file_load(const char *filename)
+{
+  FILE *stream = NULL;
+  unsigned char *bytes = NULL;
+  long bsize = 0;
+
+  /* Open the file in binary mode */
+  stream = fopen(filename, "rb");
+  if (!stream) {
+    uvr_utils_log(UVR_DANGER, "[x] fopen(%s): %s", filename, strerror(errno));
+    goto exit_error_utils_file_load;
+  }
+
+  /* Go to the end of the file */
+  bsize = fseek(stream, 0, SEEK_END);
+  if (bsize == -1) {
+    uvr_utils_log(UVR_DANGER, "[x] fseek: %s", strerror(errno));
+    goto exit_error_utils_file_load_fclose;
+  }
+
+  /*
+   * Get the current byte offset in the file.
+   * Used to read current position. Thus returns
+   * a number equal to the size of the buffer we
+   * need to allocate
+   */
+  bsize = ftell(stream);
+  if (bsize == -1) {
+    uvr_utils_log(UVR_DANGER, "[x] ftell: %s", strerror(errno));
+    goto exit_error_utils_file_load_fclose;
+  }
+
+  /* Jump back to the beginning of the file */
+  rewind(stream);
+
+  bytes = (unsigned char *) calloc(bsize, sizeof(unsigned char));
+  if (!bytes) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+    goto exit_error_utils_file_load_fclose;
+  }
+
+  /* Read in the entire file */
+  if (fread(bytes, bsize, 1, stream) == 0) {
+    uvr_utils_log(UVR_DANGER, "[x] fread: %s", strerror(errno));
+    goto exit_error_utils_file_load_free_bytes;
+  }
+
+  fclose(stream);
+
+  return (struct uvr_utils_file) { .bytes = bytes, .byteSize = bsize };
+
+exit_error_utils_file_load_free_bytes:
+  free(bytes);
+exit_error_utils_file_load_fclose:
+  fclose(stream);
+exit_error_utils_file_load:
+  return (struct uvr_utils_file) { .bytes = NULL, .byteSize = 0 };
+}
+
+
 // https://www.roxlu.com/2014/047/high-resolution-timer-function-in-c-c--
 uint64_t uvr_utils_nanosecond(void)
 {

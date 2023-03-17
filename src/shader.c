@@ -4,69 +4,6 @@
 
 #include "shader.h"
 
-
-struct uvr_shader_file uvr_shader_file_load(const char *filename)
-{
-  FILE *stream = NULL;
-  char *bytes = NULL;
-  long bsize = 0;
-
-  /* Open the file in binary mode */
-  stream = fopen(filename, "rb");
-  if (!stream) {
-    uvr_utils_log(UVR_DANGER, "[x] fopen(%s): %s", filename, strerror(errno));
-    goto exit_error_shader_file_load;
-  }
-
-  /* Go to the end of the file */
-  bsize = fseek(stream, 0, SEEK_END);
-  if (bsize == -1) {
-    uvr_utils_log(UVR_DANGER, "[x] fseek: %s", strerror(errno));
-    goto exit_error_shader_file_load_fclose;
-  }
-
-  /*
-   * Get the current byte offset in the file.
-   * Used to read current position. Thus returns
-   * a number equal to the size of the buffer we
-   * need to allocate
-   */
-  bsize = ftell(stream);
-  if (bsize == -1) {
-    uvr_utils_log(UVR_DANGER, "[x] ftell: %s", strerror(errno));
-    goto exit_error_shader_file_load_fclose;
-  }
-
-  /* Jump back to the beginning of the file */
-  rewind(stream);
-
-  bytes = (char *) calloc(bsize, sizeof(char));
-  if (!bytes) {
-    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto exit_error_shader_file_load_fclose;
-  }
-
-  /* Read in the entire file */
-  if (fread(bytes, bsize, 1, stream) == 0) {
-    uvr_utils_log(UVR_DANGER, "[x] fread: %s", strerror(errno));
-    goto exit_error_shader_file_load_free_bytes;
-  }
-
-  fclose(stream);
-
-  return (struct uvr_shader_file) { .bytes = bytes, .byteSize = bsize };
-
-exit_error_shader_file_load_free_bytes:
-  free(bytes);
-exit_error_shader_file_load_fclose:
-  fclose(stream);
-exit_error_shader_file_load:
-  return (struct uvr_shader_file) { .bytes = NULL, .byteSize = 0 };
-}
-
-
-#ifdef INCLUDE_SHADERC
-
 /*
  * Allows one to specify what type of shader they with to create SPIR-V bytes from
  * key: VkShaderStageFlagBits, value: shaderc_shader_kind
@@ -145,20 +82,13 @@ exit_error_shader_compile_bytes_to_spirv_compiler_release:
 exit_error_shader_compile_bytes_to_spirv:
   return (struct uvr_shader_spirv) { .result = NULL, .bytes = NULL, .byteSize = 0 };
 }
-#endif
 
 
 void uvr_shader_destroy(struct uvr_shader_destroy *uvrshader)
 {
   uint32_t i;
-  for (i = 0; i < uvrshader->uvr_shader_file_cnt; i++) {
-    if (uvrshader->uvr_shader_file[i].bytes)
-      free(uvrshader->uvr_shader_file[i].bytes);
-  }
-#ifdef INCLUDE_SHADERC
   for (i = 0; i < uvrshader->uvr_shader_spirv_cnt; i++) {
     if (uvrshader->uvr_shader_spirv[i].result)
       shaderc_result_release(uvrshader->uvr_shader_spirv[i].result);
   }
-#endif
 }
