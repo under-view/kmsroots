@@ -59,7 +59,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
   }
 
   uint32_t bufferSize = gltfData->buffers[uvrgltf->bufferIndex].size;
-  void *bufferData = calloc(bufferSize, sizeof(void*));
+  unsigned char *bufferData = calloc(bufferSize, sizeof(unsigned char));
   if (!bufferData) {
     uvr_utils_log(UVR_DANGER, "[x] calloc(bufferData): %s", strerror(errno));
     goto exit_error_uvr_gltf_loader_vertex_buffers_get_free_vertices;

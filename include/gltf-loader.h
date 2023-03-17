@@ -94,7 +94,7 @@ struct uvr_gltf_loader_vertex_data {
 struct uvr_gltf_loader_vertex {
   struct uvr_gltf_loader_vertex_data *verticesData;
   uint32_t                           verticesDataCount;
-  void                               *bufferData;
+  unsigned char                      *bufferData;
   uint32_t                           bufferSize;
   cgltf_int                          bufferIndex;
 };
