@@ -77,7 +77,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
 
         // bufferView associated with accessor which is associated with a mesh->primitive->attribute
         bufferView = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view;
-        buffer = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view->buffer;
+        buffer = bufferView->buffer;
 
         // Don't populated verticesData array if the current buffer views
         // buffer not equal to the one we want
@@ -123,15 +123,16 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
 
       // Store index buffer data
       bufferView = gltfData->meshes[i].primitives[j].indices->buffer_view;
-      buffer = gltfData->meshes[i].primitives[j].indices->buffer_view->buffer;
+      buffer = bufferView->buffer;
 
-      // Don't populated verticesData array if the current buffer views
-      // buffer not equal to the one we want
+      // Don't populated verticesData array if the current bufferViews
+      // buffer does not equal to the one we want
       if (buffer->index != uvrgltf->bufferIndex)
         continue;
 
       bufferViewElementType = gltfData->meshes[i].primitives[j].indices->type;
 
+      verticesData[verticesDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].indices->count;
       verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
       verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_INDEX;
       verticesData[verticesDataCount].byteOffset = bufferView->offset;
