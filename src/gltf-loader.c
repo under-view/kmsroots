@@ -45,14 +45,30 @@ exit_error_uvr_gltf_loader_file_load:
 
 struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_vertex_buffers_get_info *uvrgltf)
 {
-  cgltf_size i, j, k, verticesDataCount = 0, bufferViewElementType;
+  cgltf_size i, j, k, bufferViewElementType, verticesDataCount = 0;
   cgltf_buffer *buffer = NULL;
   cgltf_buffer_view *bufferView = NULL;
   cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
 
   struct uvr_gltf_loader_vertex_data *verticesData = NULL;
 
-  verticesData = calloc(gltfData->buffer_views_count, sizeof(struct uvr_gltf_loader_vertex_data));
+  /* Retrieve amount of buffer views associate with buffers[uvrgltf->bufferIndex].buffer */
+  for (i = 0; i < gltfData->meshes_count; i++) {
+    for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
+      for (k = 0; k < gltfData->meshes[i].primitives[j].attributes_count; k++) { // Normally would want to avoid, but in this case it's fine
+        bufferView = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view;
+        buffer = bufferView->buffer;
+        if (buffer->index != uvrgltf->bufferIndex) continue;
+        verticesDataCount++;
+      }
+      bufferView = gltfData->meshes[i].primitives[j].indices->buffer_view;
+      buffer = bufferView->buffer;
+      if (buffer->index != uvrgltf->bufferIndex) continue;
+      verticesDataCount++;
+    }
+  }
+
+  verticesData = calloc(verticesDataCount, sizeof(struct uvr_gltf_loader_vertex_data));
   if (!verticesData) {
     uvr_utils_log(UVR_DANGER, "[x] calloc(verticesData): %s", strerror(errno));
     goto exit_error_uvr_gltf_loader_vertex_buffers_get;
@@ -66,6 +82,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf
   }
 
   memcpy(bufferData, gltfData->buffers[uvrgltf->bufferIndex].data, bufferSize);
+  verticesDataCount=0;
 
   // TODO: account for accessor bufferOffset
   // Mesh->primitive->attribute->accessor->bufferView->buffer
@@ -177,8 +194,12 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uv
       goto exit_error_uvr_gltf_loader_texture_image_get_free_image_data;
     }
 
+    if (imageData[curImage].imageChannels == 3) {
+      imageData[curImage].imageChannels++;
+    }
+
     free(imageFile); imageFile = NULL;
-    imageData[curImage].imageSize = (imageData[curImage].imageWidth * imageData[curImage].imageHeight) * (imageData[curImage].imageChannels+1);
+    imageData[curImage].imageSize = (imageData[curImage].imageWidth * imageData[curImage].imageHeight) * imageData[curImage].imageChannels;
     totalBufferSize += imageData[curImage].imageSize;
   }
 
