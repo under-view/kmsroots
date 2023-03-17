@@ -8,9 +8,6 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include "wclient.h"
 #include "vulkan.h"
 #include "shader.h"
@@ -70,7 +67,8 @@ struct uvr_vk {
    * Keep track of data related to FlightHelmet.gltf
    */
   struct uvr_gltf_loader_file uvr_gltf_loader_file;
-  struct uvr_gltf_loader_vertices uvr_gltf_loader_vertices;
+  struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex;
+  struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
 };
 
 
@@ -106,24 +104,6 @@ struct uvr_uniform_buffer {
 };
 
 
-struct app_texture_image_data {
-  size_t imageSize;
-  stbi_uc *pixels;
-  int textureWidth;
-  int textureHeight;
-  int textureChannels;
-};
-
-
-/*
- * Defines what vertices in vertex array are reusable
- * inorder to draw a rectangle
- */
-const uint16_t indices[] = {
-  0, 1, 2, 2, 3, 0
-};
-
-
 int create_wc_vk_surface(struct uvr_vk *app, struct uvr_wc *wc, uint32_t *cbuf, bool *running, struct uvr_utils_aligned_buffer *modelTransferSpace);
 int create_vk_instance(struct uvr_vk *uvrvk);
 int create_vk_device(struct uvr_vk *app);
@@ -132,11 +112,10 @@ int create_vk_swapchain_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFo
 int create_vk_depth_image(struct uvr_vk *app);
 int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_command_buffers(struct uvr_vk *app);
-int create_gltf_loader_file(struct uvr_vk *app);
+int create_gltf_load_required_data(struct uvr_vk *app);
 int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
 int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_image_sampler(struct uvr_vk *app);
-int create_vk_model(struct uvr_vk UNUSED *app);
 int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D);
@@ -256,7 +235,7 @@ int main(void)
   if (create_vk_command_buffers(&app) == -1)
     goto exit_error;
 
-  if (create_gltf_loader_file(&app) == -1)
+  if (create_gltf_load_required_data(&app) == -1)
     goto exit_error;
 
   if (create_vk_buffers(&app, &modelTransferSpace) == -1)
@@ -266,9 +245,6 @@ int main(void)
     goto exit_error;
 
   if (create_vk_image_sampler(&app) == -1)
-    goto exit_error;
-
-  if (create_vk_model(&app) == -1)
     goto exit_error;
 
   if (create_vk_resource_descriptor_sets(&app, &modelTransferSpace) == -1)
@@ -290,10 +266,8 @@ int main(void)
 exit_error:
   free(modelTransferSpace.alignedBufferMemory);
 
-  gltfd.uvr_gltf_loader_file_cnt = 1;
-  gltfd.uvr_gltf_loader_file = &app.uvr_gltf_loader_file;
-  gltfd.uvr_gltf_loader_vertices_cnt = 1;
-  gltfd.uvr_gltf_loader_vertices = &app.uvr_gltf_loader_vertices;
+  gltfd.uvr_gltf_loader_vertex_cnt = 1;
+  gltfd.uvr_gltf_loader_vertex = &app.uvr_gltf_loader_vertex;
   uvr_gltf_loader_destroy(&gltfd);
 
   /*
@@ -775,10 +749,6 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
   void *data = NULL;
 
-  char *flightHelmetFile = uvr_utils_concat_file_to_dir(GLTF_MODEL, app->uvr_gltf_loader_file.gltfData->buffers[0].uri, (1<<8));
-  struct uvr_shader_file flightHelmetBin = uvr_shader_file_load(flightHelmetFile); // for now function uvr_shader_file_load will be moved to utils.c later
-  free(flightHelmetFile);
-
   /*
    * If VkPhysicalDeviceType a cpu or integerated
    * Create CPU visible vertex + index buffer
@@ -789,7 +759,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkVertexBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   vkVertexBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkVertexBufferCreateInfo.bufferFlags = 0;
-  vkVertexBufferCreateInfo.bufferSize = flightHelmetBin.byteSize;
+  vkVertexBufferCreateInfo.bufferSize = app->uvr_gltf_loader_vertex.bufferSize;
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
                                           VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -798,18 +768,14 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-  if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory) {
-    uvr_shader_destroy(&(struct uvr_shader_destroy) { .uvr_shader_file_cnt = 1, .uvr_shader_file = &flightHelmetBin });
+  if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
     return -1;
-  }
 
   // Copy GLTF index + vertex buffer into CPU visible buffer memory
   vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory, 0, VK_WHOLE_SIZE, 0, &data);
-  memcpy(data, flightHelmetBin.bytes, flightHelmetBin.byteSize);
+  memcpy(data, app->uvr_gltf_loader_vertex.bufferData, app->uvr_gltf_loader_vertex.bufferSize);
   vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory);
-  data = NULL;
-
-  uvr_shader_destroy(&(struct uvr_shader_destroy) { .uvr_shader_file_cnt = 1, .uvr_shader_file = &flightHelmetBin });
+  data = NULL; free(app->uvr_gltf_loader_vertex.bufferData); app->uvr_gltf_loader_vertex.bufferData = NULL; // Free'ing buffer no longer required
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
@@ -881,70 +847,21 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 }
 
 
-static void free_pixel_memory(struct app_texture_image_data *imageData, struct uvr_gltf_loader_file *gltfFile)
-{
-  uint32_t curImage = 0;
-  /* Free pixels as they are nolonger required */
-  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
-    if (imageData[curImage].pixels) {
-      stbi_image_free(imageData[curImage].pixels);
-      imageData[curImage].pixels = NULL;
-    }
-  }
-  free(imageData);
-}
-
-
-static struct app_texture_image_data *load_gltf_model_images(struct uvr_gltf_loader_file *gltfFile, uint32_t *totalImageSize)
-{
-  struct app_texture_image_data *imageData = NULL;
-  uint32_t curImage = 0;
-
-  imageData = calloc(gltfFile->gltfData->images_count, sizeof(struct app_texture_image_data));
-  if (!imageData) {
-    uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    return NULL;
-  }
-
-  /* Load all images associated with GLTF file into memory */
-  char *imageFile = NULL;
-  for (curImage = 0; curImage < gltfFile->gltfData->images_count; curImage++) {
-    imageFile = uvr_utils_concat_file_to_dir(GLTF_MODEL, gltfFile->gltfData->images[curImage].uri, (1<<8));
-
-    imageData[curImage].pixels = stbi_load(imageFile, &imageData[curImage].textureWidth, &imageData[curImage].textureHeight, &imageData[curImage].textureChannels, STBI_rgb_alpha);
-    if (!imageData[curImage].pixels) {
-      uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageFile);
-      free(imageFile); free_pixel_memory(imageData, gltfFile);
-      return NULL;
-    }
-
-    imageData[curImage].imageSize = imageData[curImage].textureWidth * imageData[curImage].textureHeight * STBI_rgb_alpha;
-    *totalImageSize += imageData[curImage].imageSize;
-    free(imageFile); imageFile = NULL;
-  }
-
-  return imageData;
-}
-
-
 int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
+  struct uvr_gltf_loader_texture_image_data *imageData = NULL;
   uint32_t offset = 0, curImage, imageCount = 0;
   uint32_t textureImageIndex = 2, cpuVisibleImageBuffer = 3;
 
-  uint32_t totalImageSize = 0;
-  struct app_texture_image_data *imageData = load_gltf_model_images(&app->uvr_gltf_loader_file, &totalImageSize);
-  if (!imageData)
-    return -1;
-
-  imageCount = app->uvr_gltf_loader_file.gltfData->images_count;
+  imageCount = app->uvr_gltf_loader_texture_image.imageCount;
+  imageData = app->uvr_gltf_loader_texture_image.imageData;
 
   // Create CPU visible buffer to store pixel data
   struct uvr_vk_buffer_create_info vkTextureBufferCreateInfo;
   vkTextureBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   vkTextureBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkTextureBufferCreateInfo.bufferFlags = 0;
-  vkTextureBufferCreateInfo.bufferSize = totalImageSize;
+  vkTextureBufferCreateInfo.bufferSize = app->uvr_gltf_loader_texture_image.totalBufferSize;
   vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkTextureBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   vkTextureBufferCreateInfo.queueFamilyIndexCount = 0;
@@ -953,7 +870,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
 
   app->uvr_vk_buffer[cpuVisibleImageBuffer] = uvr_vk_buffer_create(&vkTextureBufferCreateInfo);
   if (!app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory) {
-    free_pixel_memory(imageData, &app->uvr_gltf_loader_file);
+    uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
     return -1;
   }
 
@@ -982,7 +899,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
     vimageCreateInfos[curImage].imageflags = 0;
     vimageCreateInfos[curImage].imageType = VK_IMAGE_TYPE_2D;
     vimageCreateInfos[curImage].imageFormat = surfaceFormat->format;
-    vimageCreateInfos[curImage].imageExtent3D = (VkExtent3D) { .width = imageData[curImage].textureWidth, .height = imageData[curImage].textureHeight, .depth = 1 };
+    vimageCreateInfos[curImage].imageExtent3D = (VkExtent3D) { .width = imageData[curImage].imageWidth, .height = imageData[curImage].imageHeight, .depth = 1 };
     vimageCreateInfos[curImage].imageMipLevels = 1;
     vimageCreateInfos[curImage].imageArrayLayers = 1;
     vimageCreateInfos[curImage].imageSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -1007,7 +924,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
   uvr_utils_log(UVR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", imageCount);
   app->uvr_vk_image[textureImageIndex] = uvr_vk_image_create(&vkImageCreateInfo);
   if (!app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->uvr_vk_image[textureImageIndex].imageViewHandles[curImage].view) {
-    free_pixel_memory(imageData, &app->uvr_gltf_loader_file);
+    uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
     return -1;
   }
 
@@ -1053,7 +970,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
     pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 
     if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
-      free_pixel_memory(imageData, &app->uvr_gltf_loader_file);
+      uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
       return -1;
     }
 
@@ -1072,7 +989,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
     bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     if (uvr_vk_resource_copy(&bufferCopyInfo) == -1) {
-      free_pixel_memory(imageData, &app->uvr_gltf_loader_file);
+      uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
       return -1;
     }
 
@@ -1085,7 +1002,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
     pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
     if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1){
-      free_pixel_memory(imageData, &app->uvr_gltf_loader_file);
+      uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
       return -1;
     }
 
@@ -1093,7 +1010,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
   }
 
   /* Free up memory after everything is copied */
-  free_pixel_memory(imageData, &app->uvr_gltf_loader_file);
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
   vkDestroyBuffer(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer, NULL);
   vkFreeMemory(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, NULL);
   app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer = VK_NULL_HANDLE;
@@ -1105,20 +1022,42 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
 }
 
 
-int create_gltf_loader_file(struct uvr_vk *app)
+int create_gltf_load_required_data(struct uvr_vk *app)
 {
+  struct uvr_gltf_loader_file gltfFile;
+
   struct uvr_gltf_loader_file_load_info gltfFileLoadInfo;
   gltfFileLoadInfo.fileName = GLTF_MODEL;
 
-  app->uvr_gltf_loader_file = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
-  if (!app->uvr_gltf_loader_file.gltfData)
+  gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
+  if (!gltfFile.gltfData)
     return -1;
 
-  app->uvr_gltf_loader_vertices = uvr_gltf_loader_vertices_get_buffers(&app->uvr_gltf_loader_file);
-  if (!app->uvr_gltf_loader_vertices.verticesData)
-    return -1;
+  struct uvr_gltf_loader_vertex_buffers_get_info gltfVertexBuffersInfo;
+  gltfVertexBuffersInfo.gltfFile = gltfFile;
+  gltfVertexBuffersInfo.bufferIndex = 0;
 
+  app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffers_get(&gltfVertexBuffersInfo);
+  if (!app->uvr_gltf_loader_vertex.verticesData)
+    goto exit_create_gltf_loader_file_free_gltf_data;
+
+  struct uvr_gltf_loader_texture_image_get_info gltfTextureImagesInfo;
+  gltfTextureImagesInfo.gltfFile = gltfFile;
+  gltfTextureImagesInfo.directory = gltfFileLoadInfo.fileName;
+
+  app->uvr_gltf_loader_texture_image = uvr_gltf_loader_texture_image_get(&gltfTextureImagesInfo);
+  if (!app->uvr_gltf_loader_texture_image.imageData)
+    goto exit_create_gltf_loader_file_free_gltf_data;
+
+  // Have everything we need free resource created by gltf file
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
   return 0;
+
+//exit_create_gltf_loader_file_free_gltf_texture:
+//  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+exit_create_gltf_loader_file_free_gltf_data:
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
+  return -1;
 }
 
 
@@ -1148,50 +1087,6 @@ int create_vk_image_sampler(struct uvr_vk *app)
     return -1;
 
   return 0;
-}
-
-
-static int load_model_images(struct uvr_gltf_loader_file *gltfFile)
-{
-  uvr_utils_log(UVR_INFO, "GLTF_MODEL path = %s", GLTF_MODEL);
-
-  char *str = strndup(GLTF_MODEL, strnlen(GLTF_MODEL, (1<<8)));
-  const char *mainDirectory = dirname(str);
-
-  for (uint32_t i = 0; i < gltfFile->gltfData->images_count; i++) {
-    uvr_utils_log(UVR_INFO, "image[%d].uri = %s/%s", i, mainDirectory, gltfFile->gltfData->images[i].uri);
-  }
-
-  free(str);
-
-  return 0;
-}
-
-
-int create_vk_model(struct uvr_vk UNUSED *app)
-{
-  int ret = 0;
-
-  struct uvr_gltf_loader_destroy gltfDestroy;
-  memset(&gltfDestroy,0,sizeof(struct uvr_gltf_loader_destroy));
-
-  struct uvr_gltf_loader_file gltfFile;
-  memset(&gltfFile,0,sizeof(struct uvr_gltf_loader_file));
-
-  struct uvr_gltf_loader_file_load_info gltfFileLoadInfo;
-  gltfFileLoadInfo.fileName = GLTF_MODEL;
-
-  gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
-  if (!gltfFile.gltfData) { ret = -1 ; goto exit_distroy_gltf; };
-
-  if (load_model_images(&gltfFile) == -1) { ret = -1 ; goto exit_distroy_gltf; };
-
-exit_distroy_gltf:
-  gltfDestroy.uvr_gltf_loader_file_cnt = 1;
-  gltfDestroy.uvr_gltf_loader_file = &gltfFile;
-  uvr_gltf_loader_destroy(&gltfDestroy);
-
-  return ret;
 }
 
 
