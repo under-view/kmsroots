@@ -43,7 +43,7 @@ exit_error_uvr_gltf_loader_file_load:
 }
 
 
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_get(struct uvr_gltf_loader_vertex_buffers_get_info *uvrgltf)
+struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_gltf_loader_vertex_buffers_create_info *uvrgltf)
 {
   cgltf_size i, j, k, bufferViewElementType, meshCount, verticesDataCount = 0;
   cgltf_buffer *buffer = NULL;
@@ -187,7 +187,7 @@ exit_error_uvr_gltf_loader_vertex_buffers_get:
 }
 
 
-struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uvr_gltf_loader_texture_image_get_info *uvrgltf)
+struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_create(struct uvr_gltf_loader_texture_image_create_info *uvrgltf)
 {
   struct uvr_gltf_loader_texture_image_data *imageData = NULL;
   uint32_t curImage = 0, totalBufferSize = 0;
@@ -198,7 +198,7 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uv
   imageData = calloc(gltfData->images_count, sizeof(struct uvr_gltf_loader_texture_image_data));
   if (!imageData) {
     uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-    goto exit_error_uvr_gltf_loader_texture_image_get;
+    goto exit_error_uvr_gltf_loader_texture_image;
   }
 
   /* Load all images associated with GLTF file into memory */
@@ -209,7 +209,7 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uv
     if (!imageData[curImage].pixels) {
       uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageFile);
       free(imageFile); imageFile = NULL;
-      goto exit_error_uvr_gltf_loader_texture_image_get_free_image_data;
+      goto exit_error_uvr_gltf_loader_texture_image_free_image_data;
     }
 
     if (imageData[curImage].imageChannels == 3) {
@@ -223,12 +223,12 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_get(struct uv
 
   return (struct uvr_gltf_loader_texture_image) { .imageCount = gltfData->images_count, .totalBufferSize = totalBufferSize, .imageData = imageData };
 
-exit_error_uvr_gltf_loader_texture_image_get_free_image_data:
+exit_error_uvr_gltf_loader_texture_image_free_image_data:
   for (curImage = 0; curImage < gltfData->images_count; curImage++)
     if (imageData[curImage].pixels)
       stbi_image_free(imageData[curImage].pixels);
   free(imageData);
-exit_error_uvr_gltf_loader_texture_image_get:
+exit_error_uvr_gltf_loader_texture_image:
   return (struct uvr_gltf_loader_texture_image) { .imageCount = 0, .totalBufferSize = 0, .imageData = NULL };
 }
 

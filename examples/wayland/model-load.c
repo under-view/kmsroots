@@ -1032,19 +1032,19 @@ int create_gltf_load_required_data(struct uvr_vk *app)
   if (!gltfFile.gltfData)
     return -1;
 
-  struct uvr_gltf_loader_vertex_buffers_get_info gltfVertexBuffersInfo;
+  struct uvr_gltf_loader_vertex_buffers_create_info gltfVertexBuffersInfo;
   gltfVertexBuffersInfo.gltfFile = gltfFile;
   gltfVertexBuffersInfo.bufferIndex = 0;
 
-  app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffers_get(&gltfVertexBuffersInfo);
+  app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffers_create(&gltfVertexBuffersInfo);
   if (!app->uvr_gltf_loader_vertex.verticesData)
     goto exit_create_gltf_loader_file_free_gltf_data;
 
-  struct uvr_gltf_loader_texture_image_get_info gltfTextureImagesInfo;
+  struct uvr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
   gltfTextureImagesInfo.gltfFile = gltfFile;
   gltfTextureImagesInfo.directory = gltfFileLoadInfo.fileName;
 
-  app->uvr_gltf_loader_texture_image = uvr_gltf_loader_texture_image_get(&gltfTextureImagesInfo);
+  app->uvr_gltf_loader_texture_image = uvr_gltf_loader_texture_image_create(&gltfTextureImagesInfo);
   if (!app->uvr_gltf_loader_texture_image.imageData)
     goto exit_create_gltf_loader_file_free_gltf_data;
 
