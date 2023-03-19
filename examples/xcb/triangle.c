@@ -559,10 +559,13 @@ int create_vk_buffers(struct uvr_vk *app)
     return -1;
 
   // Copy vertex data into CPU visible vertex
-  void *data = NULL;
-  vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory, 0, vkVertexBufferCreateInfo.bufferSize, 0, &data);
-  memcpy(data, meshData, vkVertexBufferCreateInfo.bufferSize);
-  vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory);
+  struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
+  deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+  deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
+  deviceMemoryCopyInfo.deviceMemoryOffset = 0;
+  deviceMemoryCopyInfo.memoryBufferSize = vkVertexBufferCreateInfo.bufferSize;
+  deviceMemoryCopyInfo.bufferData = meshData;
+  uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer

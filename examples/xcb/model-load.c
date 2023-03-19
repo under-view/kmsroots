@@ -750,7 +750,6 @@ int create_vk_command_buffers(struct uvr_vk *app)
 int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace)
 {
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
-  void *data = NULL;
 
   /*
    * If VkPhysicalDeviceType a cpu or integerated
@@ -774,11 +773,16 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
     return -1;
 
-  // Copy GLTF index + vertex buffer into CPU visible buffer memory
-  vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory, 0, VK_WHOLE_SIZE, 0, &data);
-  memcpy(data, app->uvr_gltf_loader_vertex.bufferData, app->uvr_gltf_loader_vertex.bufferSize);
-  vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory);
-  data = NULL; free(app->uvr_gltf_loader_vertex.bufferData); app->uvr_gltf_loader_vertex.bufferData = NULL; // Free'ing buffer no longer required
+  // Copy GLTF buffer into CPU visible buffer memory
+  struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
+  deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+  deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
+  deviceMemoryCopyInfo.deviceMemoryOffset = 0;
+  deviceMemoryCopyInfo.memoryBufferSize = app->uvr_gltf_loader_vertex.bufferSize;
+  deviceMemoryCopyInfo.bufferData = app->uvr_gltf_loader_vertex.bufferData;
+  uvr_vk_map_memory(&deviceMemoryCopyInfo);
+  free(app->uvr_gltf_loader_vertex.bufferData);
+  app->uvr_gltf_loader_vertex.bufferData = NULL; // Free'ing buffer no longer required
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
@@ -877,12 +881,16 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
     return -1;
   }
 
-  /* Map all texture images into CPU Visible buffer memory */
+  /* Map all GLTF texture images into CPU Visible buffer memory */
+  struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
+  deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+  deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
+
   for (curImage = 0; curImage < imageCount; curImage++) {
-    void *data = NULL;
-    vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, offset, imageData[curImage].imageSize, 0, &data);
-    memcpy(data, imageData[curImage].pixels, imageData[curImage].imageSize);
-    vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory);
+    deviceMemoryCopyInfo.deviceMemoryOffset = offset;
+    deviceMemoryCopyInfo.memoryBufferSize = imageData[curImage].imageSize;
+    deviceMemoryCopyInfo.bufferData = imageData[curImage].pixels;
+    uvr_vk_map_memory(&deviceMemoryCopyInfo);
     offset += imageData[curImage].imageSize;
   }
 
@@ -1611,11 +1619,13 @@ void update_uniform_buffer(struct uvr_vk *app,
   ubo.proj[1][1] *= -1;
 
   // Copy VP data
-  void *data = NULL;
-  vkMapMemory(app->uvr_vk_lgdev.logicalDevice, uniformBufferDeviceMemory, swapchainImageIndex * uboSize, uboSize, 0, &data);
-  memcpy(data, &ubo, sizeof(ubo));
-  vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, uniformBufferDeviceMemory);
-  data = NULL;
+  struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
+  deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+  deviceMemoryCopyInfo.deviceMemory = uniformBufferDeviceMemory;
+  deviceMemoryCopyInfo.deviceMemoryOffset = swapchainImageIndex * uboSize;
+  deviceMemoryCopyInfo.memoryBufferSize = uboSize;
+  deviceMemoryCopyInfo.bufferData = &ubo;
+  uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
   static float lastTime = 0;
   float now = (float) (uvr_utils_nanosecond() / 10000000ULL);
@@ -1646,7 +1656,8 @@ void update_uniform_buffer(struct uvr_vk *app,
   }
 
   // Map all Model data
-  vkMapMemory(app->uvr_vk_lgdev.logicalDevice, uniformBufferDeviceMemory, uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE, modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS, 0, &data);
-  memcpy(data, modelTransferSpace->alignedBufferMemory, modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS);
-  vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, uniformBufferDeviceMemory);
+  deviceMemoryCopyInfo.deviceMemoryOffset = uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
+  deviceMemoryCopyInfo.memoryBufferSize = modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS;
+  deviceMemoryCopyInfo.bufferData = modelTransferSpace->alignedBufferMemory;
+  uvr_vk_map_memory(&deviceMemoryCopyInfo);
 }

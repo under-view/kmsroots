@@ -568,7 +568,6 @@ exit_distroy_shader:
 int create_vk_buffers(struct uvr_vk *app)
 {
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
-  void *data = NULL;
 
   size_t singleMeshSize = sizeof(meshData[0]);
   size_t singleIndexBufferSize = sizeof(indices);
@@ -591,17 +590,20 @@ int create_vk_buffers(struct uvr_vk *app)
     return -1;
 
   // Copy index data into CPU visible index buffer
-  vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory, 0, singleIndexBufferSize, 0, &data);
-  memcpy(data, indices, singleIndexBufferSize);
-  vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory);
-  data = NULL;
+  struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
+  deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+  deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
+  deviceMemoryCopyInfo.deviceMemoryOffset = 0;
+  deviceMemoryCopyInfo.memoryBufferSize = singleIndexBufferSize;
+  deviceMemoryCopyInfo.bufferData = indices;
+  uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
   // Copy vertex data into CPU visible vertex buffer
+  deviceMemoryCopyInfo.memoryBufferSize = singleMeshSize;
   for (uint32_t currentVertexData = 0; currentVertexData < 2; currentVertexData++) {
-    vkMapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory, singleIndexBufferSize + (singleMeshSize * currentVertexData), singleMeshSize, 0, &data);
-    memcpy(data, meshData[currentVertexData], singleMeshSize);
-    vkUnmapMemory(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory);
-    data = NULL;
+    deviceMemoryCopyInfo.deviceMemoryOffset = singleIndexBufferSize + (singleMeshSize * currentVertexData);
+    deviceMemoryCopyInfo.bufferData = meshData[currentVertexData];
+    uvr_vk_map_memory(&deviceMemoryCopyInfo);
   }
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {

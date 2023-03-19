@@ -1278,7 +1278,7 @@ struct uvr_vk_map_memory_info {
   VkDeviceMemory deviceMemory;
   VkDeviceSize   deviceMemoryOffset;
   VkDeviceSize   memoryBufferSize;
-  void           *bufferData;
+  const void     *bufferData;
 };
 
 
