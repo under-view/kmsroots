@@ -69,6 +69,7 @@ struct uvr_vk {
    */
   struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex;
   struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
+  struct uvr_gltf_loader_material uvr_gltf_loader_material;
 };
 
 
@@ -277,6 +278,12 @@ int main(void)
 exit_error:
   free(modelTransferSpace.alignedBufferMemory);
 
+  /*
+   * At this point uvr_gltf_loader_texture_image memory free'd after
+   * VkImage creation. So, emmiting from final free operation.
+   */
+  gltfd.uvr_gltf_loader_material_cnt = 1;
+  gltfd.uvr_gltf_loader_material = &app.uvr_gltf_loader_material;
   gltfd.uvr_gltf_loader_vertex_cnt = 1;
   gltfd.uvr_gltf_loader_vertex = &app.uvr_gltf_loader_vertex;
   uvr_gltf_loader_destroy(&gltfd);
@@ -1045,12 +1052,16 @@ int create_gltf_load_required_data(struct uvr_vk *app)
   if (!app->uvr_gltf_loader_texture_image.imageData)
     goto exit_create_gltf_loader_file_free_gltf_data;
 
-  // Have everything we need free resource created by gltf file
+  app->uvr_gltf_loader_material = uvr_gltf_loader_material_create(&(struct uvr_gltf_loader_material_create_info) { .gltfFile = gltfFile });
+  if (!app->uvr_gltf_loader_material.materialData)
+    goto exit_create_gltf_loader_file_free_gltf_texture;
+
+  // Have everything we need free memory created by gltf file
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
   return 0;
 
-//exit_create_gltf_loader_file_free_gltf_texture:
-//  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+exit_create_gltf_loader_file_free_gltf_texture:
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
 exit_create_gltf_loader_file_free_gltf_data:
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
   return -1;
