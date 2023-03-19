@@ -1394,6 +1394,15 @@ exit_get_phdev_format_properties:
 }
 
 
+void uvr_vk_map_memory(struct uvr_vk_map_memory_info *uvrvk)
+{
+  void *data = NULL;
+  vkMapMemory(uvrvk->logicalDevice, uvrvk->deviceMemory, uvrvk->deviceMemoryOffset, uvrvk->memoryBufferSize, 0, &data);
+  memcpy(data, uvrvk->bufferData, uvrvk->memoryBufferSize);
+  vkUnmapMemory(uvrvk->logicalDevice, uvrvk->deviceMemory);
+}
+
+
 void uvr_vk_destory(struct uvr_vk_destroy *uvrvk)
 {
   uint32_t i, j;

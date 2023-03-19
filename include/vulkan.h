@@ -1264,6 +1264,39 @@ struct uvr_vk_sampler uvr_vk_sampler_create(struct uvr_vk_sampler_create_info *u
 
 
 /*
+ * struct uvr_vk_map_memory_info (Underview Renderer Vulkan Map Memory Information)
+ *
+ * members:
+ * @logicalDevice      - Must pass a valid VkDevice handle (Logical Device). The device associated with @deviceMemory.
+ * @deviceMemory       - Pointer to Vulkan API created memory associated with @logicalDevice
+ * @deviceMemoryOffset - Byte offset within @deviceMemory buffer
+ * @memoryBufferSize   - Byte size of the data to copy over.
+ * @bufferData         - Pointer to memory to copy into @deviceMemory at @deviceMemoryOffset
+ */
+struct uvr_vk_map_memory_info {
+  VkDevice       logicalDevice;
+  VkDeviceMemory deviceMemory;
+  VkDeviceSize   deviceMemoryOffset;
+  VkDeviceSize   memoryBufferSize;
+  void           *bufferData;
+};
+
+
+/*
+ * uvr_vk_map_memory: Function maps bytes of buffer data from application generated buffer
+ *                    to Vulkan generated buffer. So, that the Vulkan api can have better
+ *                    understanding and control over data it utilizes.
+ *                    NOTE:
+ *                    Use sparingly as consistently mapping and unmapping memory is very inefficient.
+ *                    Try to avoid utilizing in render loops. Although that's how it's written
+ *                    in multiple examples in this repo.
+ * args:
+ * @uvrvk - pointer to a struct uvr_vk_map_memory_info
+ */
+void uvr_vk_map_memory(struct uvr_vk_map_memory_info *uvrvk);
+
+
+/*
  * enum uvr_vk_copy_info (Underview Renderer Vulkan Copy Type)
  *
  * ENUM Used by uvr_vk_copy_info to specify type of source
