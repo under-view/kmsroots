@@ -396,6 +396,7 @@ typedef struct cgltf_sampler
 typedef struct cgltf_texture
 {
 	char* name;
+	cgltf_int image_index;
 	cgltf_image* image;
 	cgltf_sampler* sampler;
 	cgltf_bool has_basisu;
@@ -4279,7 +4280,8 @@ static int cgltf_parse_json_texture(cgltf_options* options, jsmntok_t const* tok
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "source") == 0) 
 		{
 			++i;
-			out_texture->image = CGLTF_PTRINDEX(cgltf_image, cgltf_json_to_int(tokens + i, json_chunk));
+			out_texture->image_index = cgltf_json_to_int(tokens + i, json_chunk);
+			out_texture->image = CGLTF_PTRINDEX(cgltf_image, out_texture->image_index);
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "extras") == 0)
