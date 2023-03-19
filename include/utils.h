@@ -6,7 +6,8 @@
 
 #define UNUSED __attribute__((unused))
 #define ARRAY_LEN(_arr) (sizeof(_arr) / sizeof(_arr[0]))
-
+/* https://stackoverflow.com/a/3553321 */
+#define STRUCT_MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
 /*
  * struct uvr_utils_file (Underview Renderer Utils File)
