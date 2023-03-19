@@ -233,6 +233,74 @@ exit_error_uvr_gltf_loader_texture_image:
 }
 
 
+struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_loader_material_create_info *uvrgltf) {
+  uint32_t i, j, materialCount = 0;
+  cgltf_material *material = NULL;
+  struct uvr_gltf_loader_material_data *materialData = NULL;
+
+  cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
+
+  for (i = 0; i < gltfData->meshes_count; i++) {
+    for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
+      material = gltfData->meshes[i].primitives[j].material;
+      if (material) materialCount++;
+    }
+  }
+
+  materialData = calloc(materialCount, sizeof(struct uvr_gltf_loader_material_data));
+  if (!materialData) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc(materialData): %s", strerror(errno));
+    goto exit_error_uvr_gltf_loader_material_create;
+  }
+
+  /*
+   * Mesh->primitive->material->pbr_metallic_roughness->base_color_texture
+   * Mesh->primitive->material->pbr_metallic_roughness->metallic_roughness_texture
+   * Mesh->primitive->material->normal_texture
+   * Mesh->primitive->material->occlusion_texture
+   */
+  materialCount=0;
+  for (i = 0; i < gltfData->meshes_count; i++) {
+    for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
+      material = gltfData->meshes[i].primitives[j].material;
+      if (!material) continue;
+
+      memcpy(materialData[materialCount].materialName, material->name,
+             strnlen(material->name, STRUCT_MEMBER_SIZE(struct uvr_gltf_loader_material_data, materialName)));
+
+      /* Physically-Based Rendering Metallic Roughness Model */
+      materialData[materialCount].pbrMetallicRoughness.baseColorTexture.textureIndex = material->pbr_metallic_roughness.base_color_texture.index;
+      materialData[materialCount].pbrMetallicRoughness.baseColorTexture.imageIndex = material->pbr_metallic_roughness.base_color_texture.texture->image_index;
+      materialData[materialCount].pbrMetallicRoughness.baseColorTexture.scale = material->pbr_metallic_roughness.base_color_texture.scale;
+
+      materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = material->pbr_metallic_roughness.metallic_roughness_texture.index;
+      materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = material->pbr_metallic_roughness.metallic_roughness_texture.texture->image_index;
+      materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.scale = material->pbr_metallic_roughness.metallic_roughness_texture.scale;
+
+      materialData[materialCount].pbrMetallicRoughness.metallicFactor = material->pbr_metallic_roughness.metallic_factor;
+      materialData[materialCount].pbrMetallicRoughness.roughnessFactor = material->pbr_metallic_roughness.roughness_factor;
+      memcpy(materialData[materialCount].pbrMetallicRoughness.baseColorFactor, material->pbr_metallic_roughness.base_color_factor,
+             STRUCT_MEMBER_SIZE(struct uvr_gltf_loader_cgltf_pbr_metallic_roughness, baseColorFactor));
+
+      materialData[materialCount].normalTexture.textureIndex = material->normal_texture.index;
+      materialData[materialCount].normalTexture.imageIndex = material->normal_texture.texture->image_index;
+      materialData[materialCount].normalTexture.scale = material->normal_texture.scale;
+
+      materialData[materialCount].occlusionTexture.textureIndex = material->occlusion_texture.index;
+      materialData[materialCount].occlusionTexture.imageIndex = material->occlusion_texture.texture->image_index;
+      materialData[materialCount].occlusionTexture.scale = material->occlusion_texture.scale;
+
+      materialData[materialCount].meshIndex = i;
+      materialCount++;
+    }
+  }
+
+  return (struct uvr_gltf_loader_material) { .materialDataCount = materialCount, .materialData = materialData };
+exit_error_uvr_gltf_loader_material_create:
+  return (struct uvr_gltf_loader_material) { .materialDataCount = 0, .materialData = NULL };
+}
+
+
 void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
 {
   uint32_t i, j;
@@ -264,6 +332,12 @@ void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
     if (uvrgltf->uvr_gltf_loader_texture_image[i].imageData) {
       free(uvrgltf->uvr_gltf_loader_texture_image[i].imageData);
       uvrgltf->uvr_gltf_loader_texture_image[i].imageData = NULL;
+    }
+  }
+  for (i = 0; i < uvrgltf->uvr_gltf_loader_material_cnt; i++) {
+    if (uvrgltf->uvr_gltf_loader_material[i].materialData) {
+      free(uvrgltf->uvr_gltf_loader_material[i].materialData);
+      uvrgltf->uvr_gltf_loader_material[i].materialData = NULL;
     }
   }
 }
