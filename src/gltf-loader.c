@@ -45,7 +45,7 @@ exit_error_uvr_gltf_loader_file_load:
 
 struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_gltf_loader_vertex_buffers_create_info *uvrgltf)
 {
-  cgltf_size i, j, k, bufferViewElementType, meshCount, verticesDataCount = 0;
+  cgltf_size i, j, k, bufferViewElementType, bufferViewComponentType, meshCount, verticesDataCount = 0;
   cgltf_buffer *buffer = NULL;
   cgltf_buffer_view *bufferView = NULL;
   cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
@@ -110,6 +110,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
           continue;
 
         bufferViewElementType = gltfData->meshes[i].primitives[j].attributes[k].data->type;
+        bufferViewComponentType = gltfData->meshes[i].primitives[j].attributes[k].data->component_type;
 
         verticesData[verticesDataCount].byteOffset = bufferView->offset;
         verticesData[verticesDataCount].bufferSize = bufferView->size;
@@ -119,23 +120,23 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
 
         switch (gltfData->meshes[i].primitives[j].attributes[k].type) {
           case cgltf_attribute_type_texcoord:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TEXTURE;
             break;
           case cgltf_attribute_type_normal:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_NORMAL;
             break;
           case cgltf_attribute_type_color:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_COLOR;
             break;
           case cgltf_attribute_type_position:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_POSITION;
             break;
           case cgltf_attribute_type_tangent:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TANGENT;
             break;
           default:
