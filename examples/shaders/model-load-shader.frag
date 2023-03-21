@@ -1,7 +1,7 @@
 #version 450  // GLSL 4.5
 #extension GL_ARB_separate_shader_objects : enable
 
-layout (set = 1, binding = 0) uniform sampler2D samplerColorMap;
+layout (set = 0, binding = 2) uniform sampler2D samplerColorMap;
 
 layout (location = 0) in vec3 inNormal;
 layout (location = 1) in vec3 inColor;

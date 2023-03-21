@@ -650,7 +650,7 @@ int create_vk_shader_modules(struct uvr_vk *app)
   const char fragmentShader[] = \
     "#version 450\n"
     "#extension GL_ARB_separate_shader_objects : enable\n\n"
-    "layout (set = 1, binding = 0) uniform sampler2D samplerColorMap;\n\n"
+    "layout (set = 0, binding = 2) uniform sampler2D samplerColorMap;\n\n"
     "layout (location = 0) in vec3 inNormal;\n"
     "layout (location = 1) in vec3 inColor;\n"
     "layout (location = 2) in vec2 inTexCoord;\n"
