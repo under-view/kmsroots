@@ -273,8 +273,6 @@ exit_error:
    */
   gltfd.uvr_gltf_loader_material_cnt = 1;
   gltfd.uvr_gltf_loader_material = &app.uvr_gltf_loader_material;
-  gltfd.uvr_gltf_loader_vertex_cnt = 1;
-  gltfd.uvr_gltf_loader_vertex = &app.uvr_gltf_loader_vertex;
   uvr_gltf_loader_destroy(&gltfd);
 
   /*
@@ -754,17 +752,97 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 {
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
 
+  // Determine array size of vertex data buffer
+  struct uvr_vertex_data **vertexBufferData = NULL;
+  uint32_t meshIndex, meshCount, vertexDataBufferSize = 0, verticesDataIndex;
+  uint32_t byteOffset, bufferElementSize, bufferElementCount, vertexIndex;
+  uint8_t *bufferData = app->uvr_gltf_loader_vertex.bufferData; // Raw FlightHelmet.bin buffer unmodified
+  void *finalAddress = NULL;
+  vec4 vec4Dest;
+
+  meshCount = app->uvr_gltf_loader_vertex.meshCount;
+
+  /*
+   * Converts FlightHelmet.bin buffer to struct uvr_vertex_data [][] buffer
+   *
+   * Allocate space for
+   * struct uvr_vertex_data [mesh index][Vetices Array Index] { .pos, .normal, .texCoord, .color }
+   *
+   * Finding vertices count for each mesh. Depending upon mesh->primitive->attributes and mesh->primitive->indices
+   * there will be a certain number of accessors->buffer views  associated with said mesh. Each accessor associated with
+   * a given mesh defines the number of elements of a given type at said byte offset within the buffer.
+   *
+   * So we only need bufferElementCount for one accessor associated with mesh.
+   * Add up all accessors to get the final buffer size.
+   * We know that from zero every 5th accessor is a texture coordinates
+   * accessors array (NOTE: @verticesData == accessor array)
+   * accessors[0] == UVR_GLTF_LOADER_VERTEX_TEXTURE
+   * accessors[1] == UVR_GLTF_LOADER_VERTEX_NORMAL
+   * ....
+   * accessors[5] == UVR_GLTF_LOADER_VERTEX_TEXTURE
+   * accessors[6] == UVR_GLTF_LOADER_VERTEX_NORMAL
+   * ....
+   * accessors[20] == UVR_GLTF_LOADER_VERTEX_TEXTURE
+   * accessors[21] == UVR_GLTF_LOADER_VERTEX_NORMAL
+   */
+
+  // Don't gracefully handle if memory isn't allocated here. Just let application segfualt.
+  vertexBufferData = calloc(meshCount, sizeof(struct uvr_vertex_data *));
+  vertexDataBufferSize += meshCount * sizeof(struct uvr_vertex_data *);
+
+  // Add mesh data to vertex buffer
+  for (meshIndex = 0; meshIndex < meshCount; meshIndex++) {
+    bufferElementCount = app->uvr_gltf_loader_vertex.verticesData[meshIndex * meshCount].bufferElementCount;
+    vertexDataBufferSize += bufferElementCount * sizeof(struct uvr_vertex_data);
+    // Don't gracefully handle if memory isn't allocated here. Just let application segfualt.
+    vertexBufferData[meshIndex] = calloc(bufferElementCount, sizeof(struct uvr_vertex_data));
+
+    for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
+      // Texture buffer
+      verticesDataIndex = meshIndex * meshCount;
+      byteOffset = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].byteOffset;
+      bufferElementSize = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementSize;
+      // Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
+      finalAddress = bufferData + byteOffset + (vertexIndex * bufferElementSize);
+      glm_vec2((float*)finalAddress, vertexBufferData[meshIndex][vertexIndex].texCoord);
+
+      // Normal buffer
+      verticesDataIndex = (meshIndex * meshCount) + 1;
+      byteOffset = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].byteOffset;
+      bufferElementSize = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementSize;
+      // Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
+      finalAddress = bufferData + byteOffset + (vertexIndex * bufferElementSize);
+      glm_vec3_normalize_to((float*)finalAddress, vertexBufferData[meshIndex][vertexIndex].normal);
+
+      // position buffer
+      // Not doing anything with TANGENT attribute so skip 2 postion elements should be every 3rd accessor array element.
+      verticesDataIndex = (meshIndex * meshCount) + 3;
+      byteOffset = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].byteOffset;
+      bufferElementSize = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementSize;
+      // Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
+      finalAddress = bufferData + byteOffset + (vertexIndex * bufferElementSize);
+      glm_vec4((float*)finalAddress, 1.0f, vec4Dest);
+      glm_vec3(vec4Dest, vertexBufferData[meshIndex][vertexIndex].pos);
+
+      // color buffer (want values all set to 1.0f)
+      glm_vec3_one(vertexBufferData[meshIndex][vertexIndex].color);
+    }
+  }
+
+  // Free'ing uvr_gltf_loader_vertex no longer required
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
+
   /*
    * If VkPhysicalDeviceType a cpu or integerated
-   * Create CPU visible vertex + index buffer
+   * Create CPU visible buffer
    * else
-   * Create Cou visible transfer buffer
+   * Create CPU visible transfer buffer
    */
   struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
   vkVertexBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   vkVertexBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkVertexBufferCreateInfo.bufferFlags = 0;
-  vkVertexBufferCreateInfo.bufferSize = app->uvr_gltf_loader_vertex.bufferSize;
+  vkVertexBufferCreateInfo.bufferSize = vertexDataBufferSize;
   vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
                                           VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -773,19 +851,27 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-  if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
+  if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory) {
+    for (meshIndex = 0; meshIndex < meshCount; meshIndex++)
+      free(vertexBufferData[meshIndex]);
+    free(vertexBufferData);
     return -1;
+  }
 
   // Copy GLTF buffer into CPU visible buffer memory
   struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
   deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
   deviceMemoryCopyInfo.deviceMemoryOffset = 0;
-  deviceMemoryCopyInfo.memoryBufferSize = app->uvr_gltf_loader_vertex.bufferSize;
-  deviceMemoryCopyInfo.bufferData = app->uvr_gltf_loader_vertex.bufferData;
+  deviceMemoryCopyInfo.memoryBufferSize = vertexDataBufferSize;
+  deviceMemoryCopyInfo.bufferData = vertexBufferData;
   uvr_vk_map_memory(&deviceMemoryCopyInfo);
-  free(app->uvr_gltf_loader_vertex.bufferData);
-  app->uvr_gltf_loader_vertex.bufferData = NULL; // Free'ing buffer no longer required
+
+  // Free mesh data no longer required
+  for (meshIndex = 0; meshIndex < meshCount; meshIndex++)
+    free(vertexBufferData[meshIndex]);
+  free(vertexBufferData);
+  vertexBufferData = NULL;
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
