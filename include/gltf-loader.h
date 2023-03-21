@@ -89,7 +89,7 @@ struct uvr_gltf_loader_vertex_data {
  *                      byte offset and buffer size.
  * @verticesDataCount - Amount of elements in @indicesInfo array
  * @bufferData        - The actual bytes of data for an individual buffer
- * @bufferIndex       - The index in the "buffers" property array of give GLTF file
+ * @bufferIndex       - The index in the "buffers" array of give GLTF file
  * @meshCount         - Amount of meshes associated with a @bufferIndex buffer in "buffers" array.
  */
 struct uvr_gltf_loader_vertex {
@@ -217,7 +217,7 @@ struct uvr_gltf_loader_cgltf_texture_transform {
  *
  * members:
  * @textureIndex     - Index in "textures" GLTF file array
- * @imageIndex       - Index in "images" GTLF file array that belongs to a texture at @textureIndex
+ * @imageIndex       - Index in "images" GTLF file array that belongs to the texture at @textureIndex
  * @scale            - The scalar parameter applied to each vector of the texture.
  * @textureTransform -
  */

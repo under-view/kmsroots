@@ -114,6 +114,8 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
         verticesData[verticesDataCount].byteOffset = bufferView->offset;
         verticesData[verticesDataCount].bufferSize = bufferView->size;
         verticesData[verticesDataCount].meshIndex = meshCount = i;
+        // Acquire accessor count
+        verticesData[verticesDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].attributes[k].data->count;
 
         switch (gltfData->meshes[i].primitives[j].attributes[k].type) {
           case cgltf_attribute_type_texcoord:
