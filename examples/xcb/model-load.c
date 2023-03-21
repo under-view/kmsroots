@@ -80,11 +80,12 @@ struct uvr_vk_xcb {
 };
 
 
+// Order inside FlightHelmet.bin
 struct uvr_vertex_data {
   vec3 pos;
   vec3 normal;
-  vec3 color;
   vec2 texCoord;
+  vec3 color;
 };
 
 
@@ -95,7 +96,8 @@ struct uvr_uniform_buffer_model {
 
 struct uvr_uniform_buffer {
   mat4 view;
-  mat4 proj;
+  mat4 projection;
+  vec4 lightPosition;
 };
 
 
@@ -1224,8 +1226,8 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceF
   VkVertexInputBindingDescription.stride = sizeof(struct uvr_vertex_data); // Number of bytes from one entry to another
   VkVertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Move to next data entry after each vertex
 
-  // Two incomming vertex atributes in the vertex shader.
-  VkVertexInputAttributeDescription vertexAttributeDescriptions[3];
+  // Four incomming vertex atributes for the vertex shader.
+  VkVertexInputAttributeDescription vertexAttributeDescriptions[4];
 
   // position attribute
   vertexAttributeDescriptions[0].location = 0;
@@ -1235,19 +1237,26 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceF
   // specifies the byte where struct uvr_vertex_data member vec3 pos is located
   vertexAttributeDescriptions[0].offset = offsetof(struct uvr_vertex_data, pos);
 
-  // color attribute
+  // normal attribute
   vertexAttributeDescriptions[1].location = 1;
   vertexAttributeDescriptions[1].binding = 0;
-  vertexAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT; // vec2 - RGB color channels match size of vec3
-  // specifies the byte where struct uvr_vertex_data member vec3 color is located
-  vertexAttributeDescriptions[1].offset = offsetof(struct uvr_vertex_data, color);
+  vertexAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT; // vec3 - RGB color channels match size of vec3
+  // specifies the byte where struct uvr_vertex_data member normal color is located
+  vertexAttributeDescriptions[1].offset = offsetof(struct uvr_vertex_data, normal);
 
   // texture attribute
   vertexAttributeDescriptions[2].location = 2;
   vertexAttributeDescriptions[2].binding = 0;
-  vertexAttributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT; // vec2 - RGB color channels match size of vec3
-  // specifies the byte where struct uvr_vertex_data member vec3 color is located
+  vertexAttributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT; // vec2 - RG color channels match size of vec2
+  // specifies the byte where struct uvr_vertex_data member vec2 texCoord is located
   vertexAttributeDescriptions[2].offset = offsetof(struct uvr_vertex_data, texCoord);
+
+  // color attribute
+  vertexAttributeDescriptions[3].location = 2;
+  vertexAttributeDescriptions[3].binding = 0;
+  vertexAttributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT; // vec3 - RGB color channels match size of vec3
+  // specifies the byte where struct uvr_vertex_data member vec3 color is located
+  vertexAttributeDescriptions[3].offset = offsetof(struct uvr_vertex_data, color);
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1613,10 +1622,10 @@ void update_uniform_buffer(struct uvr_vk *app,
   float aspect = (float) extent2D.width / (float) extent2D.height;
   float nearPlane = 0.1f;
   float farPlane = 10.0f;
-  glm_perspective(fovy, aspect, nearPlane, farPlane, ubo.proj);
+  glm_perspective(fovy, aspect, nearPlane, farPlane, ubo.projection);
 
   // invert y - coordinate on projection matrix
-  ubo.proj[1][1] *= -1;
+  ubo.projection[1][1] *= -1;
 
   // Copy VP data
   struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
