@@ -15,8 +15,9 @@ lib_uvr_deps = [vulkan, libmath, librt]
 ################################################################################
 libshaderc = dependency('shaderc', required: get_option('shaderc'))
 if libshaderc.found()
-  fs += ['shader.c']
+  pargs += ['-DINCLUDE_SHADERC=1']
   lib_uvr_deps += [libshaderc]
+  fs += ['shader.c']
 endif
 
 
