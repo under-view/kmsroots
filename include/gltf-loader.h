@@ -83,11 +83,9 @@ struct uvr_gltf_loader_vertex_data {
  * struct uvr_gltf_loader_vertex (Underview Renderer GLTF Loader Vertex)
  *
  * members:
- * @verticesData      - Pointer to an array of information about a given mesh->primitive->indices.
- *                      The "indices" index being the accessors array element associated with a
- *                      given buffer view. The buffer view then contains the index buffer
- *                      byte offset and buffer size.
- * @verticesDataCount - Amount of elements in @indicesInfo array
+ * @verticesData      - Pointer to an array of information about a given mesh->primitive->indices &
+ *                      mesh->primitive->attributes. Accessor + buffer view information.
+ * @verticesDataCount - Amount of elements in @verticesData array
  * @bufferData        - The actual bytes of data for an individual buffer
  * @bufferIndex       - The index in the "buffers" array of give GLTF file
  * @meshCount         - Amount of meshes associated with a @bufferIndex buffer in "buffers" array.

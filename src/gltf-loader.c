@@ -120,23 +120,23 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
 
         switch (gltfData->meshes[i].primitives[j].attributes[k].type) {
           case cgltf_attribute_type_texcoord:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TEXTURE;
             break;
           case cgltf_attribute_type_normal:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_NORMAL;
             break;
           case cgltf_attribute_type_color:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_COLOR;
             break;
           case cgltf_attribute_type_position:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_POSITION;
             break;
           case cgltf_attribute_type_tangent:
-            verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType) * cgltf_component_size(bufferViewComponentType);
+            verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
             verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TANGENT;
             break;
           default:
@@ -161,9 +161,10 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
         continue;
 
       bufferViewElementType = gltfData->meshes[i].primitives[j].indices->type;
+      bufferViewComponentType = gltfData->meshes[i].primitives[j].indices->component_type;
 
       verticesData[verticesDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].indices->count;
-      verticesData[verticesDataCount].bufferElementSize = cgltf_num_components(bufferViewElementType);
+      verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
       verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_INDEX;
       verticesData[verticesDataCount].byteOffset = bufferView->offset;
       verticesData[verticesDataCount].bufferSize = bufferView->size;
