@@ -22,8 +22,8 @@ static const unsigned int shader_map_table[] = {
 /* Compiles a shader to a SPIR-V binary */
 struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spirv_create_info *uvrshader)
 {
-  char *bytes = NULL;
-  long bsize = 0;
+  const unsigned char *bytes = NULL;
+  unsigned long byteSize = 0;
 
   shaderc_compiler_t compiler = NULL;
   shaderc_compile_options_t options = NULL;
@@ -62,14 +62,14 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
     goto exit_error_shader_compile_bytes_to_spirv_release_result;
   }
 
-  bsize = shaderc_result_get_length(result);
-  bytes = (char *) shaderc_result_get_bytes(result);
+  byteSize = shaderc_result_get_length(result);
+  bytes = (const unsigned char *) shaderc_result_get_bytes(result);
 
   // Have to free results later
   shaderc_compile_options_release(options);
   shaderc_compiler_release(compiler);
 
-  return (struct uvr_shader_spirv) { .result = result, .bytes = bytes, .byteSize = bsize };
+  return (struct uvr_shader_spirv) { .result = result, .bytes = bytes, .byteSize = byteSize };
 
 exit_error_shader_compile_bytes_to_spirv_release_result:
   if (result)

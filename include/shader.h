@@ -36,8 +36,8 @@ struct uvr_shader_spirv_create_info {
  */
 struct uvr_shader_spirv {
   shaderc_compilation_result_t result;
-  char                         *bytes;
-  long                         byteSize;
+  const unsigned char          *bytes;
+  unsigned long                byteSize;
 };
 
 
