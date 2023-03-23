@@ -1168,7 +1168,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
 
   uvr_utils_log(UVR_SUCCESS, "Successfully created VkImage objects for GLTF texture assets");
 
-  return -1;
+  return 0;
 }
 
 
@@ -1250,6 +1250,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app)
 {
   VkDescriptorSetLayoutBinding descSetLayoutBindings[3]; // Amount of descriptors in the set
   uint32_t descriptorBindingCount = ARRAY_LEN(descSetLayoutBindings);
+  uint32_t i;
 
   // Uniform descriptor
   descSetLayoutBindings[0].binding = 0;
@@ -1291,9 +1292,9 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app)
    * of descriptor to descriptor set happens in the vkAllocateDescriptorSets function.
    */
   VkDescriptorPoolSize descriptorPoolInfos[descriptorBindingCount];
-  for (uint32_t desc = 0; desc < descriptorBindingCount; desc++) {
-    descriptorPoolInfos[desc].type = descSetLayoutBindings[desc].descriptorType;
-    descriptorPoolInfos[desc].descriptorCount = descSetLayoutBindings[desc].descriptorCount;
+  for (i = 0; i < descriptorBindingCount; i++) {
+    descriptorPoolInfos[i].type = descSetLayoutBindings[i].descriptorType;
+    descriptorPoolInfos[i].descriptorCount = descSetLayoutBindings[i].descriptorCount;
   }
 
   // Should allocate one pool. With one set containing multiple descriptors
@@ -1315,32 +1316,35 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app)
   bufferInfos[0].range = sizeof(struct uvr_uniform_buffer);
 
   bufferInfos[1].buffer = app->uvr_vk_buffer[2].buffer; // CPU visible uniform buffer dynamic buffer
-  bufferInfos[1].offset = sizeof(struct uvr_uniform_buffer) * app->meshCount;
+  bufferInfos[1].offset = sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
   bufferInfos[1].range = app->modelTransferSpace.bufferAlignment;
 
-  VkDescriptorImageInfo imageInfo = {};
-  imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView = app->uvr_vk_image[2].imageViewHandles[0].view; // created in create_vk_texture_image
-  imageInfo.sampler = app->uvr_vk_sampler.sampler;                     // created in create_vk_image_sampler
+  // Texture images from GLTF file
+  VkDescriptorImageInfo imageInfos[app->uvr_vk_image[2].imageCount];
+  for (i = 0; i < app->uvr_vk_image[2].imageCount; i++) {
+    imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfos[i].imageView = app->uvr_vk_image[2].imageViewHandles[i].view; // created in create_vk_texture_image
+    imageInfos[i].sampler = app->uvr_vk_sampler.sampler;                     // created in create_vk_image_sampler
+  }
 
   /* Binds multiple descriptors and their objects to the same set */
   VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
-  for (uint32_t dw = 0; dw < ARRAY_LEN(descriptorWrites); dw++) {
-    descriptorWrites[dw].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[dw].pNext = NULL;
-    descriptorWrites[dw].dstSet = app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet;
-    descriptorWrites[dw].dstBinding = descSetLayoutBindings[dw].binding;
-    descriptorWrites[dw].dstArrayElement = 0;
-    descriptorWrites[dw].descriptorType = descSetLayoutBindings[dw].descriptorType;
-    descriptorWrites[dw].descriptorCount = descSetLayoutBindings[dw].descriptorCount;
-    descriptorWrites[dw].pBufferInfo = (dw < 2) ? &bufferInfos[dw] : NULL;
-    descriptorWrites[dw].pImageInfo = (dw == 2) ? &imageInfo : NULL;
-    descriptorWrites[dw].pTexelBufferView = NULL;
+  for (i = 0; i < ARRAY_LEN(descriptorWrites); i++) {
+    descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[i].pNext = NULL;
+    descriptorWrites[i].dstSet = app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet;
+    descriptorWrites[i].dstBinding = descSetLayoutBindings[i].binding;
+    descriptorWrites[i].dstArrayElement = 0;
+    descriptorWrites[i].descriptorType = descSetLayoutBindings[i].descriptorType;
+    descriptorWrites[i].descriptorCount = descSetLayoutBindings[i].descriptorCount;
+    descriptorWrites[i].pBufferInfo = (i < 2) ? &bufferInfos[i] : NULL;
+    descriptorWrites[i].pImageInfo = (i == 2) ? imageInfos : NULL;
+    descriptorWrites[i].pTexelBufferView = NULL;
   }
 
   vkUpdateDescriptorSets(app->uvr_vk_lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
 
-  return 0;
+  return -1;
 }
 
 
