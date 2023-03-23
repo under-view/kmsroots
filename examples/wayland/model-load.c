@@ -81,6 +81,7 @@ struct uvr_vk {
   struct primitive {
     uint32_t firstIndex;
     uint32_t indexCount;
+    uint32_t bufferOffset; // Offset in VkBuffer. VkBuffer contains struct uvr_vertex_data data.
   } *meshData;
 };
 
@@ -794,6 +795,7 @@ int create_vk_buffers(struct uvr_vk *app)
     bufferType = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferType;
     switch (bufferType) {
       case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Only need to account for one mesh->primitive->attribute bufferElementCount
+        app->meshData[vertexIndex].bufferOffset = curVertexDataIndex * sizeof(struct uvr_vertex_data);
         curVertexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         break;
       case UVR_GLTF_LOADER_VERTEX_INDEX:
@@ -1709,8 +1711,6 @@ int record_vk_draw_commands(struct uvr_vk *app,
    * 1. GPU visible vertex buffer
    */
   VkBuffer vertexBuffer = app->uvr_vk_buffer[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].buffer;
-  VkDeviceSize offsets[] = { 0 };
-  uint32_t dynamicUniformBufferOffset = 0;
 
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1720,12 +1720,15 @@ int record_vk_draw_commands(struct uvr_vk *app,
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
 
-  for (uint32_t i = 0; i < MAX_SCENE_OBJECTS; i++) {
-    dynamicUniformBufferOffset = i * app->modelTransferSpace.bufferAlignment;
+  VkDeviceSize offset;
+  uint32_t dynamicUniformBufferOffset = 0;
+  for (uint32_t mesh = 0; mesh < app->meshCount; mesh++) {
+    offset = app->meshData[mesh].bufferOffset;
+    dynamicUniformBufferOffset = mesh * app->modelTransferSpace.bufferAlignment;
     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_pipeline_layout.pipelineLayout, 0, 1,
                                        &app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offsets[i]);
-    vkCmdDrawIndexed(cmdBuffer, app->meshData[i].indexCount, 1, app->meshData[i].firstIndex, 0, 0);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offset);
+    vkCmdDrawIndexed(cmdBuffer, app->meshData[mesh].indexCount, 1, app->meshData[mesh].firstIndex, 0, 0);
   }
 
   vkCmdEndRenderPass(cmdBuffer);
