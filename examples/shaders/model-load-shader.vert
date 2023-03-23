@@ -16,6 +16,7 @@ layout (set = 0, binding = 0) uniform uniform_buffer_scene {
   mat4 projection;
   mat4 view;
   vec4 lightPos;
+  mat4 viewPos;
 } uboScene;
 
 // Used in conjunction with dynamic uniform buffer

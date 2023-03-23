@@ -107,9 +107,10 @@ struct uvr_uniform_buffer_model {
 
 
 struct uvr_uniform_buffer {
-  mat4 view;
   mat4 projection;
+  mat4 view;
   vec4 lightPosition;
+  mat4 viewPos;
 };
 
 
@@ -636,6 +637,7 @@ int create_vk_shader_modules(struct uvr_vk *app)
     "  mat4 projection;\n"
     "  mat4 view;\n"
     "  vec4 lightPos;\n"
+    "  mat4 viewPos;\n"
     "} uboScene;\n\n"
     "layout(set = 0, binding = 1) uniform uniform_buffer_model {\n"
     "  mat4 model;\n"
@@ -796,10 +798,10 @@ int create_vk_buffers(struct uvr_vk *app)
         curVertexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         break;
       case UVR_GLTF_LOADER_VERTEX_INDEX:
-        bufferElementCount += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-        curIndexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         app->meshData[vertexIndex].indexCount = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         app->meshData[vertexIndex].firstIndex = bufferElementCount; // firstIndex = element at @indexBufferData | indexBufferData[firstIndex]
+        bufferElementCount += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
+        curIndexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         vertexIndex++;
         break;
       default:
@@ -1341,7 +1343,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app)
 
   vkUpdateDescriptorSets(app->uvr_vk_lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
 
-  return -1;
+  return 0;
 }
 
 
@@ -1392,7 +1394,7 @@ int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceF
   vertexAttributeDescriptions[2].offset = offsetof(struct uvr_vertex_data, texCoord);
 
   // color attribute
-  vertexAttributeDescriptions[3].location = 2;
+  vertexAttributeDescriptions[3].location = 3;
   vertexAttributeDescriptions[3].binding = 0;
   vertexAttributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT; // vec3 - RGB color channels match size of vec3
   // specifies the byte where struct uvr_vertex_data member vec3 color is located
@@ -1679,7 +1681,6 @@ int record_vk_draw_commands(struct uvr_vk *app,
 
   /*
    * Values used by VK_ATTACHMENT_LOAD_OP_CLEAR
-   * Black with 100% opacity
    */
   float float32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
   int32_t int32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -1746,9 +1747,15 @@ void update_uniform_buffer(struct uvr_vk *app,
                            VkExtent2D extent2D)
 {
   VkDeviceMemory uniformBufferDeviceMemory = app->uvr_vk_buffer[2].deviceMemory;
+
+  struct uvr_uniform_buffer_model uboModels[app->meshCount];
   struct uvr_uniform_buffer ubo = {};
   uint32_t uboSize = sizeof(ubo);
-  struct uvr_uniform_buffer_model *uboModels = alloca(app->meshCount * sizeof(struct uvr_uniform_buffer_model));
+
+  uint32_t meshItem;
+
+  vec4 lightPosition = {5.0f, 5.0f, -5.0f, 1.0f};
+  glm_vec4_ucopy(lightPosition, ubo.lightPosition);
 
   // Update view matrix
   vec3 eye = {2.0f, 2.0f, 2.0f};
@@ -1757,10 +1764,10 @@ void update_uniform_buffer(struct uvr_vk *app,
   glm_lookat(eye, center, up, ubo.view);
 
   // Update projection matrix
-  float fovy = glm_rad(45.0f); // Field of view
+  float fovy = glm_rad(60.0f); // Field of view
   float aspect = (float) extent2D.width / (float) extent2D.height;
   float nearPlane = 0.1f;
-  float farPlane = 10.0f;
+  float farPlane = 256.0f;
   glm_perspective(fovy, aspect, nearPlane, farPlane, ubo.projection);
 
   // invert y - coordinate on projection matrix
@@ -1775,6 +1782,7 @@ void update_uniform_buffer(struct uvr_vk *app,
   deviceMemoryCopyInfo.bufferData = &ubo;
   uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
+  /*
   static float lastTime = 0;
   float now = (float) (uvr_utils_nanosecond() / 10000000ULL);
   float deltaTime = now - lastTime;
@@ -1796,9 +1804,10 @@ void update_uniform_buffer(struct uvr_vk *app,
   glm_translate(uboModels[1].model, (vec3){ 1.0f, 1.0f, 1.0f });
   glm_rotate(uboModels[0].model, glm_rad(angle), axis);
   glm_rotate(uboModels[1].model, glm_rad(-angle * 4.0f), axis);
+  */
 
   // Copy Model data
-  for (uint32_t meshItem = 0; meshItem < app->meshCount; meshItem++) {
+  for (meshItem = 0; meshItem < app->meshCount; meshItem++) {
     struct uvr_uniform_buffer_model *model = (struct uvr_uniform_buffer_model *) ((uint64_t) app->modelTransferSpace.alignedBufferMemory + (meshItem * app->modelTransferSpace.bufferAlignment));
     memcpy(model, &uboModels[meshItem], app->modelTransferSpace.bufferAlignment);
   }
