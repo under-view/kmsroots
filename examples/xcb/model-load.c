@@ -1048,9 +1048,9 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
   struct uvr_vk_image_create_info vkImageCreateInfo;
   vkImageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
   vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                      // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
-  vkImageCreateInfo.imageCount = imageCount;   // Creating X amount of VkImage resource's to store pixel data
+  vkImageCreateInfo.imageCount = imageCount;                         // Creating X amount of VkImage resource's to store pixel data
   vkImageCreateInfo.imageViewCreateInfos = imageViewCreateInfos;
-  vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;         // Best to make array size the same size as imageCount
+  vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;            // Best to make array size the same size as imageCount
   vkImageCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkImageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
@@ -1180,7 +1180,7 @@ int create_gltf_load_required_data(struct uvr_vk *app)
 
   app->uvr_gltf_loader_texture_image = uvr_gltf_loader_texture_image_create(&gltfTextureImagesInfo);
   if (!app->uvr_gltf_loader_texture_image.imageData)
-    goto exit_create_gltf_loader_file_free_gltf_data;
+    goto exit_create_gltf_loader_file_free_gltf_vertex;
 
   app->uvr_gltf_loader_material = uvr_gltf_loader_material_create(&(struct uvr_gltf_loader_material_create_info) { .gltfFile = gltfFile });
   if (!app->uvr_gltf_loader_material.materialData)
@@ -1192,6 +1192,8 @@ int create_gltf_load_required_data(struct uvr_vk *app)
 
 exit_create_gltf_loader_file_free_gltf_texture:
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+exit_create_gltf_loader_file_free_gltf_vertex:
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
 exit_create_gltf_loader_file_free_gltf_data:
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
   return -1;
