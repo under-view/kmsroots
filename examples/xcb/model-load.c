@@ -71,10 +71,17 @@ struct uvr_vk {
   struct uvr_gltf_loader_material uvr_gltf_loader_material;
 
   /*
-   * Other required passable data
+   * Other required data needed for draw operations
    */
-  uint32_t meshCount;
+  uint32_t indexBufferOffset;
   struct uvr_utils_aligned_buffer modelTransferSpace;
+
+  // A primitive contains the data for a single draw call
+  uint32_t meshCount;
+  struct primitive {
+    uint32_t firstIndex;
+    uint32_t indexCount;
+  } *meshData;
 };
 
 
@@ -278,6 +285,7 @@ int main(void)
 
 exit_error:
   free(app.modelTransferSpace.alignedBufferMemory);
+  free(app.meshData);
 
   /*
    * At this point uvr_gltf_loader_texture_image memory free'd after
@@ -754,7 +762,7 @@ int create_vk_buffers(struct uvr_vk *app)
   struct uvr_vertex_data *vertexBufferData = NULL;
 
   uint32_t vertexDataBufferSize = 0, verticesDataIndex, indexDataBufferSize = 0;
-  uint32_t byteOffset, bufferElementSize, bufferElementCount, bufferType, vertexIndex;
+  uint32_t byteOffset, bufferElementSize, bufferElementCount = 0, bufferType, vertexIndex = 0;
   uint32_t curVertexDataIndex = 0, curIndexDataIndex = 0;
 
   void *finalAddress = NULL;
@@ -764,6 +772,12 @@ int create_vk_buffers(struct uvr_vk *app)
   unsigned char *bufferData = app->uvr_gltf_loader_vertex.bufferData;
   app->meshCount = app->uvr_gltf_loader_vertex.meshCount;
 
+  app->meshData = calloc(app->meshCount, sizeof(struct primitive));
+  if (!app->meshData) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
+    return -1;
+  }
+
   for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_vertex.verticesDataCount; verticesDataIndex++) {
     bufferType = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferType;
     switch (bufferType) {
@@ -771,7 +785,11 @@ int create_vk_buffers(struct uvr_vk *app)
         curVertexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         break;
       case UVR_GLTF_LOADER_VERTEX_INDEX:
+        bufferElementCount += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         curIndexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
+        app->meshData[vertexIndex].indexCount = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
+        app->meshData[vertexIndex].firstIndex = bufferElementCount;
+        vertexIndex++;
         break;
       default:
         continue;
@@ -840,6 +858,8 @@ int create_vk_buffers(struct uvr_vk *app)
     }
   }
 
+  app->indexBufferOffset = vertexDataBufferSize;
+
   // Free'ing uvr_gltf_loader_vertex no longer required
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
 
@@ -877,7 +897,7 @@ int create_vk_buffers(struct uvr_vk *app)
   deviceMemoryCopyInfo.bufferData = vertexBufferData;
   uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
-  deviceMemoryCopyInfo.deviceMemoryOffset = vertexDataBufferSize;
+  deviceMemoryCopyInfo.deviceMemoryOffset = app->indexBufferOffset;
   deviceMemoryCopyInfo.memoryBufferSize = indexDataBufferSize;
   deviceMemoryCopyInfo.bufferData = indexBufferData;
   uvr_vk_map_memory(&deviceMemoryCopyInfo);
@@ -1678,7 +1698,7 @@ int record_vk_draw_commands(struct uvr_vk *app,
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_graphics_pipeline.graphicsPipeline);
-  vkCmdBindIndexBuffer(cmdBuffer, vertexBuffer, 0, VK_INDEX_TYPE_UINT16);
+  vkCmdBindIndexBuffer(cmdBuffer, vertexBuffer, app->indexBufferOffset, VK_INDEX_TYPE_UINT32);
 
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
@@ -1688,7 +1708,7 @@ int record_vk_draw_commands(struct uvr_vk *app,
     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_pipeline_layout.pipelineLayout, 0, 1,
                                        &app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offsets[i]);
-    vkCmdDrawIndexed(cmdBuffer, 0, 1, 0, 0, 0);
+    vkCmdDrawIndexed(cmdBuffer, app->meshData[i].indexCount, 1, app->meshData[i].firstIndex, 0, 0);
   }
 
   vkCmdEndRenderPass(cmdBuffer);
