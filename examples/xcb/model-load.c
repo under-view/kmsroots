@@ -16,7 +16,6 @@
 //#define HEIGHT 2160
 #define WIDTH 1920
 #define HEIGHT 1080
-#define MAX_SCENE_OBJECTS 2
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
 
 struct uvr_vk {
@@ -70,11 +69,16 @@ struct uvr_vk {
   struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex;
   struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
   struct uvr_gltf_loader_material uvr_gltf_loader_material;
+
+  /*
+   * Other required passable data
+   */
+  uint32_t meshCount;
+  struct uvr_utils_aligned_buffer modelTransferSpace;
 };
 
 
 struct uvr_vk_xcb {
-  struct uvr_utils_aligned_buffer *model_transfer_space;
   struct uvr_xcb_window *uvr_xcb_window;
   struct uvr_vk *uvr_vk;
 };
@@ -111,24 +115,23 @@ int create_vk_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct uvr_vk *app);
 int create_vk_command_buffers(struct uvr_vk *app);
 int create_gltf_load_required_data(struct uvr_vk *app);
-int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
+int create_vk_buffers(struct uvr_vk *app);
 int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_image_sampler(struct uvr_vk *app);
-int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace);
+int create_vk_resource_descriptor_sets(struct uvr_vk *app);
 int create_vk_graphics_pipeline(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct uvr_vk *app, VkExtent2D extent2D);
 int create_vk_sync_objs(struct uvr_vk *app);
-int record_vk_draw_commands(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace, uint32_t swapchainImageIndex, VkExtent2D extent2D);
-void update_uniform_buffer(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace, uint32_t swapchainImageIndex, VkExtent2D extent2D);
+int record_vk_draw_commands(struct uvr_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
+void update_uniform_buffer(struct uvr_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
 void render(bool UNUSED *running, uint32_t *imageIndex, void *data)
 {
   VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
   struct uvr_vk_xcb *vkxcb = (struct uvr_vk_xcb *) data;
-  struct uvr_utils_aligned_buffer *modelTransferSpace = vkxcb->model_transfer_space;
-  struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
   struct uvr_vk *app = vkxcb->uvr_vk;
+  struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
 
   if (!app->uvr_vk_sync_obj.fenceHandles || !app->uvr_vk_sync_obj.semaphoreHandles)
     return;
@@ -141,8 +144,8 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data)
 
   vkAcquireNextImageKHR(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
 
-  record_vk_draw_commands(app, modelTransferSpace, *imageIndex, extent2D);
-  update_uniform_buffer(app, modelTransferSpace, *imageIndex, extent2D);
+  record_vk_draw_commands(app, *imageIndex, extent2D);
+  update_uniform_buffer(app, *imageIndex, extent2D);
 
   VkSemaphore waitSemaphores[1] = { imageSemaphore };
   VkSemaphore signalSemaphores[1] = { renderSemaphore };
@@ -196,9 +199,6 @@ int main(void)
   struct uvr_gltf_loader_destroy gltfd;
   memset(&gltfd,0,sizeof(struct uvr_gltf_loader_destroy));
 
-  struct uvr_utils_aligned_buffer modelTransferSpace;
-  memset(&modelTransferSpace, 0, sizeof(struct uvr_utils_aligned_buffer));
-
   VkSurfaceFormatKHR surfaceFormat;
   VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 
@@ -233,7 +233,7 @@ int main(void)
   if (create_gltf_load_required_data(&app) == -1)
     goto exit_error;
 
-  if (create_vk_buffers(&app, &modelTransferSpace) == -1)
+  if (create_vk_buffers(&app) == -1)
     goto exit_error;
 
   if (create_vk_texture_images(&app, &surfaceFormat) == -1)
@@ -242,7 +242,7 @@ int main(void)
   if (create_vk_image_sampler(&app) == -1)
     goto exit_error;
 
-  if (create_vk_resource_descriptor_sets(&app, &modelTransferSpace) == -1)
+  if (create_vk_resource_descriptor_sets(&app) == -1)
     goto exit_error;
 
   if (create_vk_graphics_pipeline(&app, &surfaceFormat, extent2D) == -1)
@@ -263,7 +263,6 @@ int main(void)
   static struct uvr_vk_xcb vkxc;
   vkxc.uvr_xcb_window = &xc;
   vkxc.uvr_vk = &app;
-  vkxc.model_transfer_space = &modelTransferSpace;
 
   struct uvr_xcb_window_handle_event_info eventInfo;
   eventInfo.xcbWindowObject = &xc;
@@ -278,7 +277,7 @@ int main(void)
 
 
 exit_error:
-  free(modelTransferSpace.alignedBufferMemory);
+  free(app.modelTransferSpace.alignedBufferMemory);
 
   /*
    * At this point uvr_gltf_loader_texture_image memory free'd after
@@ -747,7 +746,7 @@ int create_vk_command_buffers(struct uvr_vk *app)
 }
 
 
-int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace)
+int create_vk_buffers(struct uvr_vk *app)
 {
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
 
@@ -763,6 +762,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 
   // Raw FlightHelmet.bin buffer unmodified
   unsigned char *bufferData = app->uvr_gltf_loader_vertex.bufferData;
+  app->meshCount = app->uvr_gltf_loader_vertex.meshCount;
 
   for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_vertex.verticesDataCount; verticesDataIndex++) {
     bufferType = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferType;
@@ -928,11 +928,11 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
 
   struct uvr_utils_aligned_buffer_create_info modelUniformBufferAlignment;
   modelUniformBufferAlignment.bytesToAlign = sizeof(struct uvr_uniform_buffer_model);
-  modelUniformBufferAlignment.bytesToAlignCount = MAX_SCENE_OBJECTS;
+  modelUniformBufferAlignment.bytesToAlignCount = app->meshCount;
   modelUniformBufferAlignment.bufferAlignment = app->uvr_vk_phdev.physDeviceProperties.limits.minUniformBufferOffsetAlignment;
 
-  *modelTransferSpace = uvr_utils_aligned_buffer_create(&modelUniformBufferAlignment);
-  if (!modelTransferSpace->alignedBufferMemory)
+  app->modelTransferSpace = uvr_utils_aligned_buffer_create(&modelUniformBufferAlignment);
+  if (!app->modelTransferSpace.alignedBufferMemory)
     return -1;
 
   // Create CPU visible uniform buffer to store (view projection matrices in first have) (Dynamic uniform buffer (model matrix) in second half)
@@ -941,7 +941,7 @@ int create_vk_buffers(struct uvr_vk *app, struct uvr_utils_aligned_buffer *model
   vkUniformBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
   vkUniformBufferCreateInfo.bufferFlags = 0;
   vkUniformBufferCreateInfo.bufferSize = (sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE) + \
-                                         (modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS);
+                                         (app->modelTransferSpace.bufferAlignment * app->meshCount);
   vkUniformBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
   vkUniformBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   vkUniformBufferCreateInfo.queueFamilyIndexCount = 0;
@@ -1131,7 +1131,7 @@ int create_vk_texture_images(struct uvr_vk *app, VkSurfaceFormatKHR *surfaceForm
 
   uvr_utils_log(UVR_SUCCESS, "Successfully created VkImage objects for GLTF texture assets");
 
-  return -1;
+  return 0;
 }
 
 
@@ -1207,7 +1207,7 @@ int create_vk_image_sampler(struct uvr_vk *app)
 }
 
 
-int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_aligned_buffer *modelTransferSpace)
+int create_vk_resource_descriptor_sets(struct uvr_vk *app)
 {
   VkDescriptorSetLayoutBinding descSetLayoutBindings[3]; // Amount of descriptors in the set
   uint32_t descriptorBindingCount = ARRAY_LEN(descSetLayoutBindings);
@@ -1277,12 +1277,12 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
 
   bufferInfos[1].buffer = app->uvr_vk_buffer[2].buffer; // CPU visible uniform buffer dynamic buffer
   bufferInfos[1].offset = sizeof(struct uvr_uniform_buffer) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
-  bufferInfos[1].range = modelTransferSpace->bufferAlignment;
+  bufferInfos[1].range = app->modelTransferSpace.bufferAlignment;
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView = app->uvr_vk_image[2].imageViewHandles[0].view;   // created in create_vk_texture_image
-  imageInfo.sampler = app->uvr_vk_sampler.sampler;                  // created in create_vk_image_sampler
+  imageInfo.imageView = app->uvr_vk_image[2].imageViewHandles[0].view; // created in create_vk_texture_image
+  imageInfo.sampler = app->uvr_vk_sampler.sampler;                     // created in create_vk_image_sampler
 
   /* Binds multiple descriptors and their objects to the same set */
   VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
@@ -1301,7 +1301,7 @@ int create_vk_resource_descriptor_sets(struct uvr_vk *app, struct uvr_utils_alig
 
   vkUpdateDescriptorSets(app->uvr_vk_lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
 
-  return 0;
+  return -1;
 }
 
 
@@ -1611,7 +1611,6 @@ int create_vk_sync_objs(struct uvr_vk *app)
 
 
 int record_vk_draw_commands(struct uvr_vk *app,
-                            struct uvr_utils_aligned_buffer *modelTransferSpace,
                             uint32_t swapchainImageIndex,
                             VkExtent2D extent2D)
 {
@@ -1684,8 +1683,8 @@ int record_vk_draw_commands(struct uvr_vk *app,
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
 
-  for (uint32_t i = 0; i < MAX_SCENE_OBJECTS; i++) {
-    dynamicUniformBufferOffset = i * modelTransferSpace->bufferAlignment;
+  for (uint32_t i = 0; i < app->meshCount; i++) {
+    dynamicUniformBufferOffset = i * app->modelTransferSpace.bufferAlignment;
     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_pipeline_layout.pipelineLayout, 0, 1,
                                        &app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offsets[i]);
@@ -1702,14 +1701,13 @@ int record_vk_draw_commands(struct uvr_vk *app,
 
 
 void update_uniform_buffer(struct uvr_vk *app,
-                           struct uvr_utils_aligned_buffer *modelTransferSpace,
                            uint32_t swapchainImageIndex,
                            VkExtent2D extent2D)
 {
   VkDeviceMemory uniformBufferDeviceMemory = app->uvr_vk_buffer[2].deviceMemory;
-  uint32_t uboSize = sizeof(struct uvr_uniform_buffer);
   struct uvr_uniform_buffer ubo = {};
-  struct uvr_uniform_buffer_model uboModels[MAX_SCENE_OBJECTS];
+  uint32_t uboSize = sizeof(ubo);
+  struct uvr_uniform_buffer_model *uboModels = alloca(app->meshCount * sizeof(struct uvr_uniform_buffer_model));
 
   // Update view matrix
   vec3 eye = {2.0f, 2.0f, 2.0f};
@@ -1759,14 +1757,14 @@ void update_uniform_buffer(struct uvr_vk *app,
   glm_rotate(uboModels[1].model, glm_rad(-angle * 4.0f), axis);
 
   // Copy Model data
-  for (uint32_t meshItem = 0; meshItem < MAX_SCENE_OBJECTS; meshItem++) {
-    struct uvr_uniform_buffer_model *model = (struct uvr_uniform_buffer_model *) ((uint64_t) modelTransferSpace->alignedBufferMemory + (meshItem * modelTransferSpace->bufferAlignment));
-    memcpy(model, &uboModels[meshItem], modelTransferSpace->bufferAlignment);
+  for (uint32_t meshItem = 0; meshItem < app->meshCount; meshItem++) {
+    struct uvr_uniform_buffer_model *model = (struct uvr_uniform_buffer_model *) ((uint64_t) app->modelTransferSpace.alignedBufferMemory + (meshItem * app->modelTransferSpace.bufferAlignment));
+    memcpy(model, &uboModels[meshItem], app->modelTransferSpace.bufferAlignment);
   }
 
   // Map all Model data
   deviceMemoryCopyInfo.deviceMemoryOffset = uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
-  deviceMemoryCopyInfo.memoryBufferSize = modelTransferSpace->bufferAlignment * MAX_SCENE_OBJECTS;
-  deviceMemoryCopyInfo.bufferData = modelTransferSpace->alignedBufferMemory;
+  deviceMemoryCopyInfo.memoryBufferSize = app->modelTransferSpace.bufferAlignment * app->meshCount;
+  deviceMemoryCopyInfo.bufferData = app->modelTransferSpace.alignedBufferMemory;
   uvr_vk_map_memory(&deviceMemoryCopyInfo);
 }
