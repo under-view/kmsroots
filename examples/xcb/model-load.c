@@ -758,7 +758,7 @@ int create_vk_buffers(struct uvr_vk *app)
 {
   uint32_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
 
-  uint32_t *indexBufferData = NULL;
+  uint16_t *indexBufferData = NULL;
   struct uvr_vertex_data *vertexBufferData = NULL;
 
   uint32_t vertexDataBufferSize = 0, verticesDataIndex, indexDataBufferSize = 0;
@@ -768,27 +768,36 @@ int create_vk_buffers(struct uvr_vk *app)
   void *finalAddress = NULL;
   vec4 vec4Dest;
 
-  // Raw FlightHelmet.bin buffer unmodified
-  unsigned char *bufferData = app->uvr_gltf_loader_vertex.bufferData;
   app->meshCount = app->uvr_gltf_loader_vertex.meshCount;
-
   app->meshData = calloc(app->meshCount, sizeof(struct primitive));
   if (!app->meshData) {
     uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
     return -1;
   }
 
+  /*
+   * @vertexBufferData array size is the collective size of all bufferElementCount's associated with each mesh->primitives->attribute.
+   * Note @curVertexDataIndex is only the amount of elements contained in one mesh->primitives->attribute->accessor->bufferview.
+   * All other primitive->attributes associated with a given mesh will have accessors->buffers with similar element size.
+   * Multiple buffer views can be associated with a given mesh so their array size's (@bufferElementCount) should match.
+   *
+   * Not exactly accurate, but should help explain above
+   * vertexBufferData[0] = { .pos = bufferView[0][0], .normal = bufferView[1][0], .texCoord = bufferView[2][0], .color = bufferView[3][0] }
+   * vertexBufferData[1] = { .pos = bufferView[0][1], .normal = bufferView[1][1], .texCoord = bufferView[2][1], .color = bufferView[3][1] }
+   * vertexBufferData[2] = { .pos = bufferView[0][2], .normal = bufferView[1][2], .texCoord = bufferView[2][2], .color = bufferView[3][2] }
+   * ....
+   */
   for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_vertex.verticesDataCount; verticesDataIndex++) {
     bufferType = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferType;
     switch (bufferType) {
-      case UVR_GLTF_LOADER_VERTEX_TEXTURE:
+      case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Only need to account for one mesh->primitive->attribute bufferElementCount
         curVertexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         break;
       case UVR_GLTF_LOADER_VERTEX_INDEX:
         bufferElementCount += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         curIndexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
         app->meshData[vertexIndex].indexCount = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-        app->meshData[vertexIndex].firstIndex = bufferElementCount;
+        app->meshData[vertexIndex].firstIndex = bufferElementCount; // firstIndex = element at @indexBufferData | indexBufferData[firstIndex]
         vertexIndex++;
         break;
       default:
@@ -796,13 +805,15 @@ int create_vk_buffers(struct uvr_vk *app)
     }
   }
 
+  vertexDataBufferSize += curVertexDataIndex * sizeof(struct uvr_vertex_data);
   vertexBufferData = calloc(curVertexDataIndex, sizeof(struct uvr_vertex_data));
   if (!vertexBufferData) {
     uvr_utils_log(UVR_DANGER, "[x] calloc(vertexBufferData): %s", strerror(errno));
     return -1;
   }
 
-  indexBufferData = calloc(curIndexDataIndex, sizeof(uint32_t));
+  indexDataBufferSize += curIndexDataIndex * sizeof(uint16_t);
+  indexBufferData = calloc(curIndexDataIndex, sizeof(uint16_t));
   if (!indexBufferData) {
     uvr_utils_log(UVR_DANGER, "[x] calloc(indexBufferData): %s", strerror(errno));
     free(vertexBufferData);
@@ -821,40 +832,41 @@ int create_vk_buffers(struct uvr_vk *app)
     bufferElementSize = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementSize;
 
     if (bufferType == UVR_GLTF_LOADER_VERTEX_INDEX) {
-      indexDataBufferSize += bufferElementCount * sizeof(uint32_t);
-      for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
-        // Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
-        finalAddress = bufferData + byteOffset + (vertexIndex * bufferElementSize);
-        memcpy(&indexBufferData[curIndexDataIndex], finalAddress, bufferElementSize);
-        curIndexDataIndex++;
-      }
+      // Base buffer data adress + base byte offset address = address in buffer where data resides
+      finalAddress = app->uvr_gltf_loader_vertex.bufferData + byteOffset;
+      memcpy(indexBufferData + (curIndexDataIndex * bufferElementSize), finalAddress, app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferSize);
+      curVertexDataIndex += bufferElementCount;
     } else {
-      if (bufferType == UVR_GLTF_LOADER_VERTEX_TEXTURE)
-        vertexDataBufferSize += bufferElementCount * sizeof(struct uvr_vertex_data);
-
       for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
         // Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
-        finalAddress = bufferData + byteOffset + (vertexIndex * bufferElementSize);
-
+        finalAddress = app->uvr_gltf_loader_vertex.bufferData + byteOffset + (vertexIndex * bufferElementSize);
         switch (bufferType) {
           case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Texture Coordinate Buffer
-            glm_vec2((float*)finalAddress, vertexBufferData[curVertexDataIndex].texCoord);
+            glm_vec2((float*)finalAddress, vertexBufferData[curVertexDataIndex + vertexIndex].texCoord);
             break;
           case UVR_GLTF_LOADER_VERTEX_NORMAL: // Normal buffer
-            glm_vec3_normalize_to((float*)finalAddress, vertexBufferData[curVertexDataIndex].normal);
+            glm_vec3_normalize_to((float*)finalAddress, vertexBufferData[curVertexDataIndex + vertexIndex].normal);
             break;
           case UVR_GLTF_LOADER_VERTEX_POSITION: // position buffer
             glm_vec4((float*)finalAddress, 1.0f, vec4Dest);
-            glm_vec3(vec4Dest, vertexBufferData[curVertexDataIndex].pos);
-            break;
-          case UVR_GLTF_LOADER_VERTEX_COLOR:   // color buffer (want values all set to 1.0f)
-            glm_vec3_one(vertexBufferData[curVertexDataIndex].color);
-            curVertexDataIndex++;
+            glm_vec3(vec4Dest, vertexBufferData[curVertexDataIndex + vertexIndex].pos);
             break;
           default:
             continue;
         }
+
+        // color buffer (want values all set to 1.0f)
+        glm_vec3_one(vertexBufferData[curVertexDataIndex + vertexIndex].color);
       }
+
+      /*
+       * We know that the last mesh->primitive->atributes is associate with associate with the
+       * position buffer. Update @curVertexDataIndex only if @bufferType at @verticesDataIndex
+       * buffer is UVR_GLTF_LOADER_VERTEX_POSITION becuase with need to populate proper
+       * struct member at @curVertexDataIndex + @vertexIndex buffer element.
+       */
+      if (bufferType == UVR_GLTF_LOADER_VERTEX_POSITION)
+        curVertexDataIndex += bufferElementCount;
     }
   }
 
@@ -1700,7 +1712,7 @@ int record_vk_draw_commands(struct uvr_vk *app,
   vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_graphics_pipeline.graphicsPipeline);
-  vkCmdBindIndexBuffer(cmdBuffer, vertexBuffer, app->indexBufferOffset, VK_INDEX_TYPE_UINT32);
+  vkCmdBindIndexBuffer(cmdBuffer, vertexBuffer, app->indexBufferOffset, VK_INDEX_TYPE_UINT16);
 
   vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
   vkCmdSetScissor(cmdBuffer, 0, 1, &renderArea);
