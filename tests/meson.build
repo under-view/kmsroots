@@ -1,4 +1,4 @@
-progs = [ 'shader-file-load.c' ]
+progs = [ 'shader-file-load.c', 'gltf-file-loading.c' ]
 
 if shaderc.enabled()
   progs += ['shader-buffer-load.c']
@@ -12,6 +12,12 @@ foreach p : progs
     pargs += [
       '-DVERTEX_SHADER_SPIRV='   + '"@0@'.format(shader_build_dir) + '/' + 'triangle-shader-vert.spv"',
       '-DFRAGMENT_SHADER_SPIRV=' + '"@0@'.format(shader_build_dir) + '/' + 'triangle-shader-frag.spv"',
+    ]
+  endif
+
+  if p == 'gltf-file-loading.c'
+    pargs += [
+      '-DGLTF_MODEL="' + build_textures_dir + '/data/models/FlightHelmet/glTF/FlightHelmet.gltf"',
     ]
   endif
 
