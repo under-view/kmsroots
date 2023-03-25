@@ -317,7 +317,7 @@ exit_error_uvr_gltf_loader_material_create:
   return (struct uvr_gltf_loader_material) { .materialDataCount = 0, .materialData = NULL };
 }
 
-static void print_matrix(mat4 matrix, const char *matrixName)
+static void UNUSED print_matrix(mat4 matrix, const char *matrixName)
 {
   uint32_t i, j;
   fprintf(stdout, "Matrix (%s) = {\n", matrixName);
