@@ -4,8 +4,20 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#include <cglm/cglm.h>
 
 #include "gltf-loader.h"
+
+
+/* TODO: move upstream in cglm */
+static inline void glm_mat4_make(float *vec, mat4 dest)
+{
+  dest[0][0] = vec[0];  dest[0][1] = vec[1];   dest[0][2] = vec[2];  dest[0][3] = vec[3];
+  dest[1][0] = vec[4];  dest[1][1] = vec[5];   dest[1][2] = vec[6];  dest[1][3] = vec[7];
+  dest[2][0] = vec[8];  dest[2][1] = vec[9];   dest[2][2] = vec[10]; dest[2][3] = vec[11];
+  dest[3][0] = vec[12]; dest[3][1] = vec[13];  dest[3][2] = vec[14]; dest[3][3] = vec[15];
+}
+
 
 struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_file_load_info *uvrgltf)
 {
@@ -237,7 +249,8 @@ exit_error_uvr_gltf_loader_texture_image:
 }
 
 
-struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_loader_material_create_info *uvrgltf) {
+struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_loader_material_create_info *uvrgltf)
+{
   uint32_t i, j, materialCount = 0;
   cgltf_material *material = NULL;
   struct uvr_gltf_loader_material_data *materialData = NULL;
@@ -305,6 +318,162 @@ exit_error_uvr_gltf_loader_material_create:
 }
 
 
+struct uvr_gltf_loader_node uvr_gltf_loader_node_create(struct uvr_gltf_loader_node_create_info *uvrgltf)
+{
+  uint32_t n, c, nodeDataCount = 0;
+  cgltf_node *parentNode = NULL, *childNode = NULL;
+  struct uvr_gltf_loader_node_data *nodeData = NULL;
+
+  cgltf_data *gltfData = uvrgltf->gltfLoaderFile.gltfData;
+
+  /* Acquire amount of nodes associate with scene */
+  for (n = 0; n < gltfData->scenes[uvrgltf->sceneIndex].nodes_count; n++) {
+    parentNode = gltfData->scenes[uvrgltf->sceneIndex].nodes[n];
+    nodeDataCount += parentNode->children_count;
+  }
+
+  /*
+   * For whatever odd reason some cglm functions don't appear to like heap memory.
+   * Define stack based variables and use memcpy to copy data from
+   * stack->heap & heap->stack.
+   */
+  float matrix[16];
+  vec4 rotation; vec3 translation, scale;
+  mat4 parentNodeMatrix, childNodeMatrix, rotationMatrix;
+
+  nodeData = calloc(nodeDataCount, sizeof(struct uvr_gltf_loader_node_data));
+  if (!nodeData) {
+    uvr_utils_log(UVR_DANGER, "[x] calloc(nodeData): %s", strerror(errno));
+    goto exit_error_uvr_gltf_loader_material_create;
+  }
+
+  nodeDataCount = 0;
+  for (n = 0; n < gltfData->scenes[uvrgltf->sceneIndex].nodes_count; n++) {
+    parentNode = gltfData->scenes[uvrgltf->sceneIndex].nodes[n];
+
+    /* Clear stack array */
+    memset(translation, 0, sizeof(translation));
+    memset(rotation, 0, sizeof(rotation));
+    memset(scale, 0, sizeof(scale));
+    memset(matrix, 0, sizeof(matrix));
+    memset(rotationMatrix, 0, sizeof(rotationMatrix));
+    memset(parentNodeMatrix, 0, sizeof(parentNodeMatrix));
+
+    /* Copy from heap to stack */
+    memcpy(translation, parentNode->translation, sizeof(translation));
+    memcpy(rotation, parentNode->rotation, sizeof(rotation));
+    memcpy(scale, parentNode->scale, sizeof(scale));
+    memcpy(matrix, parentNode->matrix, sizeof(matrix));
+
+    glm_mat4_identity(parentNodeMatrix);
+
+    /*
+     * GLTF: The node's unit quaternion rotation in the order (x, y, z, w), where w is the scalar.
+     * NOTE: cglm stores quaternion as [x, y, z, w] in memory since v0.4.0 it was [w, x, y, z] before v0.4.0 ( v0.3.5 and earlier )
+     */
+    if (parentNode->has_translation)
+      glm_translate(parentNodeMatrix, translation);
+
+    if (parentNode->has_rotation) {
+      glm_quat_mat4(rotation, rotationMatrix);
+      glm_mat4_mul(rotationMatrix, parentNodeMatrix, parentNodeMatrix);
+    }
+
+    if (parentNode->has_scale)
+      glm_scale(parentNodeMatrix, scale);
+
+    if (parentNode->has_matrix)
+      glm_mat4_make(matrix, parentNodeMatrix); // Not CGLM function
+
+    /* Start child node's loop */
+    for (c = 0; c < parentNode->children_count; c++) {
+      childNode = parentNode->children[c];
+
+      /* Clear stack array */
+      memset(translation, 0, sizeof(translation));
+      memset(rotation, 0, sizeof(rotation));
+      memset(scale, 0, sizeof(scale));
+      memset(matrix, 0, sizeof(matrix));
+      memset(childNodeMatrix, 0, sizeof(childNodeMatrix));
+      memset(rotationMatrix, 0, sizeof(rotationMatrix));
+
+      /* Copy from heap to stack */
+      memcpy(translation, childNode->translation, sizeof(translation));
+      memcpy(rotation, childNode->rotation, sizeof(rotation));
+      memcpy(scale, childNode->scale, sizeof(scale));
+      memcpy(matrix, childNode->matrix, sizeof(matrix));
+
+      glm_mat4_identity(childNodeMatrix);
+      if (childNode->has_translation)
+        glm_translate(childNodeMatrix, translation);
+
+      if (childNode->has_rotation) {
+        glm_quat_mat4(rotation, rotationMatrix);
+        glm_mat4_mul(rotationMatrix, childNodeMatrix, childNodeMatrix);
+      }
+
+      if (childNode->has_scale)
+        glm_scale(childNodeMatrix, scale);
+
+      if (childNode->has_matrix)
+        glm_mat4_make(matrix, childNodeMatrix); // Not CGLM function
+
+      /* Multiply the parent matrix by the child */
+      glm_mat4_mul(parentNodeMatrix, childNodeMatrix, childNodeMatrix);
+
+      /* copy final stack matrix into heap memory matrix */
+      memcpy(nodeData[nodeDataCount].matrixTransform, childNodeMatrix, sizeof(childNodeMatrix));
+
+      if (childNode->skin) {
+        nodeData[nodeDataCount].objectIndex = childNode->skin->skin_index;
+        nodeData[nodeDataCount].objectType = UVR_GLTF_LOADER_GLTF_SKIN;
+      } else if (childNode->mesh) {
+        nodeData[nodeDataCount].objectIndex = childNode->mesh->mesh_index;
+        nodeData[nodeDataCount].objectType = UVR_GLTF_LOADER_GLTF_MESH;
+      } else if (childNode->camera) {
+        nodeData[nodeDataCount].objectIndex = childNode->camera->camera_index;
+        nodeData[nodeDataCount].objectType = UVR_GLTF_LOADER_GLTF_CAMERA;
+      } else {
+        nodeData[nodeDataCount].objectIndex = childNode->node_index;
+        nodeData[nodeDataCount].objectType = UVR_GLTF_LOADER_GLTF_NODE;
+      }
+
+      nodeData[nodeDataCount].parentNodeIndex = parentNode->node_index;
+      nodeData[nodeDataCount].nodeIndex = childNode->node_index;
+      nodeDataCount++;
+    }
+  }
+
+  return (struct uvr_gltf_loader_node) { .nodeDataCount = nodeDataCount, .nodeData = nodeData };
+exit_error_uvr_gltf_loader_material_create:
+  return (struct uvr_gltf_loader_node) { .nodeDataCount = 0, .nodeData = NULL };
+}
+
+
+void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *uvrgltf)
+{
+  const char *objectNames[] = {
+    [UVR_GLTF_LOADER_GLTF_NODE] = "nodes",
+    [UVR_GLTF_LOADER_GLTF_MESH] = "meshes",
+    [UVR_GLTF_LOADER_GLTF_SKIN] = "skins",
+    [UVR_GLTF_LOADER_GLTF_CAMERA] = "cameras",
+  };
+
+  fprintf(stdout, "\nGLTF File \"nodes\" Array Matrix Transforms = [\n");
+  for (uint32_t n = 0; n < uvrgltf->nodeDataCount; n++) {
+    fprintf(stdout, "[Parent:Child] [%s[%u]]\n", objectNames[uvrgltf->nodeData[n].objectType], uvrgltf->nodeData[n].objectIndex);
+    fprintf(stdout, "\t[%u:%u] = {\n", uvrgltf->nodeData[n].parentNodeIndex, uvrgltf->nodeData[n].nodeIndex);
+    for (uint32_t k = 0; k < 4; k++) {
+      fprintf(stdout, "\t   %f   %f   %f   %f\n",
+                      uvrgltf->nodeData[n].matrixTransform[k][0], uvrgltf->nodeData[n].matrixTransform[k][1],
+                      uvrgltf->nodeData[n].matrixTransform[k][1], uvrgltf->nodeData[n].matrixTransform[k][2]);
+    }
+    fprintf(stdout, "\t}\n\n");
+  }
+  fprintf(stdout, "]\n\n");
+}
+
+
 void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
 {
   uint32_t i, j;
@@ -342,6 +511,12 @@ void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
     if (uvrgltf->uvr_gltf_loader_material[i].materialData) {
       free(uvrgltf->uvr_gltf_loader_material[i].materialData);
       uvrgltf->uvr_gltf_loader_material[i].materialData = NULL;
+    }
+  }
+  for (i = 0; i < uvrgltf->uvr_gltf_loader_node_cnt; i++) {
+    if (uvrgltf->uvr_gltf_loader_node[i].nodeData) {
+      free(uvrgltf->uvr_gltf_loader_node[i].nodeData);
+      uvrgltf->uvr_gltf_loader_node[i].nodeData = NULL;
     }
   }
 }

@@ -313,18 +313,104 @@ struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_
 
 
 /*
+ * enum uvr_gltf_loader_gltf_object_type (Underview Renderer GLTF Loader GLTF Object Type)
+ */
+enum uvr_gltf_loader_gltf_object_type {
+  UVR_GLTF_LOADER_GLTF_NODE = 0x00000001,
+  UVR_GLTF_LOADER_GLTF_MESH = 0x00000002,
+  UVR_GLTF_LOADER_GLTF_SKIN = 0x00000003,
+  UVR_GLTF_LOADER_GLTF_CAMERA = 0x00000004,
+};
+
+
+/*
+ * struct uvr_gltf_loader_node_data (Underview Renderer GLTF Loader Node Data)
+ *
+ * members:
+ * @objectType      - Type of GLTF object that attached to node
+ * @objectIndex     - The index in GLTF file "Insert Object Name" array. If @objectType is a
+ *                    mesh this index is the index in the GLTF file "meshes" array.
+ * @nodeIndex       - Index in the GLTF file "nodes" array for child node
+ * @parentNodeIndex - Index in the GLTF file "nodes" array for parent node
+ * @matrixTransform - If matrix property not already defined. Value is T * R * S.
+ *                    T - translation
+ *                    R - Rotation
+ *                    S - scale
+ *                    Final matrix transform is (identity matrix * TRS parent matrix) * (identity matrix * TRS child matrix)
+ */
+struct uvr_gltf_loader_node_data {
+  enum uvr_gltf_loader_gltf_object_type objectType;
+  uint32_t                              objectIndex;
+  uint32_t                              nodeIndex;
+  uint32_t                              parentNodeIndex;
+  float                                 matrixTransform[4][4];
+};
+
+
+/*
+ * struct uvr_gltf_loader_node (Underview Renderer GLTF Loader Node)
+ *
+ * members:
+ * @nodeData      - Pointer to an array of struct uvr_gltf_loader_node_data
+ * @nodeDataCount - Amount of elements in @nodeData array
+ */
+struct uvr_gltf_loader_node {
+  struct uvr_gltf_loader_node_data *nodeData;
+  uint32_t                         nodeDataCount;
+};
+
+
+/*
+ * struct uvr_gltf_loader_node_create_info (Underview Renderer GLTF Loader Node Create Information)
+ *
+ * members:
+ * @gltfLoaderFile - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
+ * @sceneIndex     - Index in GLTF file "scenes" array.
+ */
+struct uvr_gltf_loader_node_create_info {
+  struct uvr_gltf_loader_file gltfLoaderFile;
+  uint32_t                    sceneIndex;
+};
+
+
+/*
+ * uvr_gltf_loader_node_create: Calculates final translation * rotatation * scale matrix for all nodes associated with a scene.
+ *                              Along with final matrix transform data function also returns the parent and child index in the
+ *                              GLTF file object "nodes" array, the type of node/object (i.e "mesh,skin,camera,etc..."), and
+ *                              the index of that object in that GLTF file "Insert Object Name" array.
+ *
+ * args:
+ * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_node_create_info
+ * return:
+ *    on success struct uvr_gltf_loader_node { with member being pointer to an array }
+ *    on failure struct uvr_gltf_loader_node { with member nulled }
+ */
+struct uvr_gltf_loader_node uvr_gltf_loader_node_create(struct uvr_gltf_loader_node_create_info *uvrgltf);
+
+
+/*
+ * uvr_gltf_loader_node_create: Prints out matrix transform for each node in struct uvr_gltf_loader_node { @nodeData }
+ *
+ * args:
+ * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_node
+ */
+void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *uvrgltf);
+
+
+/*
  * struct uvr_gltf_loader_destroy (Underview Renderer Shader Destroy)
  *
  * members:
  * @uvr_gltf_loader_file_cnt          - Must pass the amount of elements in struct uvr_gltf_loader_file array
- * @uvr_gltf_loader_file              - Must pass a pointer to an array of valid struct uvr_gltf_loader_file { free'd  members: @gltfData }
+ * @uvr_gltf_loader_file              - Must pass a pointer to an array of valid struct uvr_gltf_loader_file { free'd members: @gltfData }
  * @uvr_gltf_loader_vertex_cnt        - Must pass the amount of elements in struct uvr_gltf_loader_vertex array
- * @uvr_gltf_loader_vertex            - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertex { free'd  members: @indicesInfo }
+ * @uvr_gltf_loader_vertex            - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertex { free'd members: @verticesData }
  * @uvr_gltf_loader_texture_image_cnt - Must pass the amount of elements in struct uvr_gltf_loader_texture_image array
- * @uvr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct uvr_gltf_loader_texture_image { free'd  members: @imageData, @pixels }
+ * @uvr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct uvr_gltf_loader_texture_image { free'd members: @imageData, @pixels }
  * @uvr_gltf_loader_material_cnt      - Must pass the amount of elements in struct uvr_gltf_loader_material array
- * @uvr_gltf_loader_material          - Must pass a pointer to an array of valid struct uvr_gltf_loader_material { free'd  members: @imageData, @pixels }
-
+ * @uvr_gltf_loader_material          - Must pass a pointer to an array of valid struct uvr_gltf_loader_material { free'd members: @materialData }
+ * @uvr_gltf_loader_node_cnt          - Must pass the amount of elements in struct uvr_gltf_loader_node array
+ * @uvr_gltf_loader_node              - Must pass a pointer to an array of valid struct uvr_gltf_loader_node { free'd members: @nodeData }
  */
 struct uvr_gltf_loader_destroy {
   uint32_t                             uvr_gltf_loader_file_cnt;
@@ -335,6 +421,8 @@ struct uvr_gltf_loader_destroy {
   struct uvr_gltf_loader_texture_image *uvr_gltf_loader_texture_image;
   uint32_t                             uvr_gltf_loader_material_cnt;
   struct uvr_gltf_loader_material      *uvr_gltf_loader_material;
+  uint32_t                             uvr_gltf_loader_node_cnt;
+  struct uvr_gltf_loader_node          *uvr_gltf_loader_node;
 };
 
 
