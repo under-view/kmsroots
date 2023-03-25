@@ -604,6 +604,7 @@ typedef struct cgltf_node cgltf_node;
 
 typedef struct cgltf_skin {
 	char* name;
+	cgltf_int skin_index;
 	cgltf_node** joints;
 	cgltf_size joints_count;
 	cgltf_node* skeleton;
@@ -5022,6 +5023,7 @@ static int cgltf_parse_json_skins(cgltf_options* options, jsmntok_t const* token
 
 	for (cgltf_size j = 0; j < out_data->skins_count; ++j)
 	{
+		out_data->skins[j].skin_index = j;
 		i = cgltf_parse_json_skin(options, tokens, i, json_chunk, &out_data->skins[j]);
 		if (i < 0)
 		{
