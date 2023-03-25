@@ -317,6 +317,18 @@ exit_error_uvr_gltf_loader_material_create:
   return (struct uvr_gltf_loader_material) { .materialDataCount = 0, .materialData = NULL };
 }
 
+static void print_matrix(mat4 matrix, const char *matrixName)
+{
+  uint32_t i, j;
+  fprintf(stdout, "Matrix (%s) = {\n", matrixName);
+  for (i = 0; i < ARRAY_LEN(matrix[0]); i++) {
+    fprintf(stdout, "\t");
+    for (j = 0; j < ARRAY_LEN(matrix[0]); j++)
+      fprintf(stdout, "   %f   ", matrix[i][j]);
+    fprintf(stdout, "\n");
+  }
+  fprintf(stdout, "}\n\n");
+}
 
 struct uvr_gltf_loader_node uvr_gltf_loader_node_create(struct uvr_gltf_loader_node_create_info *uvrgltf)
 {
@@ -333,7 +345,7 @@ struct uvr_gltf_loader_node uvr_gltf_loader_node_create(struct uvr_gltf_loader_n
   }
 
   /*
-   * For whatever odd reason some cglm functions don't appear to like heap memory.
+   * For whatever odd reason some cglm functions don't appear to like CGLTF allocated heap memory.
    * Define stack based variables and use memcpy to copy data from
    * stack->heap & heap->stack.
    */
@@ -452,6 +464,9 @@ exit_error_uvr_gltf_loader_material_create:
 
 void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *uvrgltf)
 {
+  uint32_t n, i, j;
+  mat4 matrix;
+
   const char *objectNames[] = {
     [UVR_GLTF_LOADER_GLTF_NODE] = "nodes",
     [UVR_GLTF_LOADER_GLTF_MESH] = "meshes",
@@ -460,13 +475,14 @@ void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *
   };
 
   fprintf(stdout, "\nGLTF File \"nodes\" Array Matrix Transforms = [\n");
-  for (uint32_t n = 0; n < uvrgltf->nodeDataCount; n++) {
+  for (n = 0; n < uvrgltf->nodeDataCount; n++) {
     fprintf(stdout, "[Parent:Child] [%s[%u]]\n", objectNames[uvrgltf->nodeData[n].objectType], uvrgltf->nodeData[n].objectIndex);
     fprintf(stdout, "\t[%u:%u] = {\n", uvrgltf->nodeData[n].parentNodeIndex, uvrgltf->nodeData[n].nodeIndex);
-    for (uint32_t k = 0; k < 4; k++) {
-      fprintf(stdout, "\t   %f   %f   %f   %f\n",
-                      uvrgltf->nodeData[n].matrixTransform[k][0], uvrgltf->nodeData[n].matrixTransform[k][1],
-                      uvrgltf->nodeData[n].matrixTransform[k][1], uvrgltf->nodeData[n].matrixTransform[k][2]);
+    for (i = 0; i < ARRAY_LEN(matrix[0]); i++) {
+      fprintf(stdout, "\t");
+      for (j = 0; j < ARRAY_LEN(matrix[0]); j++)
+        fprintf(stdout, "   %f   ", uvrgltf->nodeData[n].matrixTransform[i][j]);
+      fprintf(stdout, "\n");
     }
     fprintf(stdout, "\t}\n\n");
   }
