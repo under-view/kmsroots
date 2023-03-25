@@ -68,7 +68,7 @@ struct uvr_vk {
    */
   struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex;
   struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
-  struct uvr_gltf_loader_material uvr_gltf_loader_material;
+  struct uvr_gltf_loader_node uvr_gltf_loader_node;
 
   /*
    * Other required data needed for draw operations
@@ -79,6 +79,7 @@ struct uvr_vk {
   // A primitive contains the data for a single draw call
   uint32_t meshCount;
   struct primitive {
+    mat4 matrix;
     uint32_t firstIndex;
     uint32_t indexCount;
     uint32_t bufferOffset; // Offset in VkBuffer. VkBuffer contains struct uvr_vertex_data data.
@@ -116,6 +117,7 @@ struct uvr_uniform_buffer {
   mat4 view;
   mat4 projection;
   vec4 lightPosition;
+  vec4 viewPos;
 };
 
 
@@ -277,14 +279,6 @@ int main(void)
 exit_error:
   free(app.modelTransferSpace.alignedBufferMemory);
   free(app.meshData);
-
-  /*
-   * At this point uvr_gltf_loader_texture_image memory free'd after
-   * VkImage creation. So, emmiting from final free operation.
-   */
-  gltfd.uvr_gltf_loader_material_cnt = 1;
-  gltfd.uvr_gltf_loader_material = &app.uvr_gltf_loader_material;
-  uvr_gltf_loader_destroy(&gltfd);
 
   /*
    * Let the api know of what addresses to free and fd's to close
@@ -639,7 +633,7 @@ int create_vk_shader_modules(struct uvr_vk *app)
     "  mat4 projection;\n"
     "  mat4 view;\n"
     "  vec4 lightPos;\n"
-    "  mat4 viewPos;\n"
+    "  vec4 viewPos;\n"
     "} uboScene;\n\n"
     "layout(set = 0, binding = 1) uniform uniform_buffer_model {\n"
     "  mat4 model;\n"
@@ -651,9 +645,8 @@ int create_vk_shader_modules(struct uvr_vk *app)
     "  gl_Position = uboScene.projection * uboScene.view * uboModel.model * vec4(inPosition.xyz, 1.0);\n"
     "  vec4 pos = uboScene.view * vec4(inPosition, 1.0);\n"
     "  outNormal = mat3(uboScene.view) * inNormal;\n"
-    "  vec3 lPos = mat3(uboScene.view) * uboScene.lightPos.xyz;\n"
-    "  outLightVec = lPos - pos.xyz;\n"
-    "  outViewVec = -pos.xyz;\n"
+    "  outLightVec = uboScene.lightPos.xyz - pos.xyz;\n"
+    "  outViewVec = uboScene.viewPos.xyz - pos.xyz;\n"
     "}\n";
 
   const char fragmentShader[] = \
@@ -671,7 +664,7 @@ int create_vk_shader_modules(struct uvr_vk *app)
     "  vec3 N = normalize(inNormal);\n"
     "  vec3 L = normalize(inLightVec);\n"
     "  vec3 V = normalize(inViewVec);\n"
-    "  vec3 R = reflect(-L, N);\n"
+    "  vec3 R = reflect(L, N);\n"
     "  vec3 diffuse = max(dot(N, L), 0.15) * inColor;\n"
     "  vec3 specular = pow(max(dot(R, V), 0.0), 16.0) * vec3(0.75);\n"
     "  outColor = vec4(diffuse * color.rgb + specular, 1.0);\n"
@@ -694,6 +687,7 @@ int create_vk_shader_modules(struct uvr_vk *app)
    * 1. Fragment Shader
    */
   struct uvr_shader_spirv uvr_shader[2];
+  memset(uvr_shader, 0, sizeof(uvr_shader));
 
   uvr_shader[0] = uvr_shader_compile_buffer_to_spirv(&vertexShaderCreateInfo);
   if (!uvr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
@@ -707,6 +701,7 @@ int create_vk_shader_modules(struct uvr_vk *app)
    * 1. Fragment Shader
    */
   struct uvr_utils_file uvr_shader[2];
+  memset(uvr_shader, 0, sizeof(uvr_shader));
 
   uvr_shader[0] = uvr_utils_file_load(VERTEX_SHADER_SPIRV);
   if (!uvr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
@@ -780,6 +775,13 @@ int create_vk_buffers(struct uvr_vk *app)
     return -1;
   }
 
+  // Copy TRS matrix transform data to the passable buffer used during draw operations
+  for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_node.nodeDataCount; verticesDataIndex++)
+    glm_mat4_copy(app->uvr_gltf_loader_node.nodeData[verticesDataIndex].matrixTransform, app->meshData[app->uvr_gltf_loader_node.nodeData[verticesDataIndex].objectIndex].matrix);
+
+  // Free memory nolonger required
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &app->uvr_gltf_loader_node });
+
   /*
    * @vertexBufferData array size is the collective size of all bufferElementCount's associated with each mesh->primitives->attribute.
    * Note @curVertexDataIndex is only the amount of elements contained in one mesh->primitives->attribute->accessor->bufferview.
@@ -819,12 +821,7 @@ int create_vk_buffers(struct uvr_vk *app)
   }
 
   indexDataBufferSize += curIndexDataIndex * sizeof(uint16_t);
-  indexBufferData = calloc(curIndexDataIndex, sizeof(uint16_t));
-  if (!indexBufferData) {
-    uvr_utils_log(UVR_DANGER, "[x] calloc(indexBufferData): %s", strerror(errno));
-    free(vertexBufferData);
-    return -1;
-  }
+  indexBufferData = alloca(indexDataBufferSize);
 
   curVertexDataIndex = curIndexDataIndex = 0;
 
@@ -880,6 +877,7 @@ int create_vk_buffers(struct uvr_vk *app)
 
   // Free'ing uvr_gltf_loader_vertex no longer required
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
+  uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &app->uvr_gltf_loader_node });
 
   /*
    * If VkPhysicalDeviceType a cpu or integerated
@@ -902,7 +900,6 @@ int create_vk_buffers(struct uvr_vk *app)
   app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
   if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory) {
     free(vertexBufferData);
-    free(indexBufferData);
     return -1;
   }
 
@@ -922,7 +919,6 @@ int create_vk_buffers(struct uvr_vk *app)
 
   // Free mesh data no longer required
   free(vertexBufferData); vertexBufferData = NULL;
-  free(indexBufferData); indexBufferData = NULL;
 
   if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     // Create GPU visible vertex buffer
@@ -1200,15 +1196,19 @@ int create_gltf_load_required_data(struct uvr_vk *app)
   if (!app->uvr_gltf_loader_texture_image.imageData)
     goto exit_create_gltf_loader_file_free_gltf_vertex;
 
-  app->uvr_gltf_loader_material = uvr_gltf_loader_material_create(&(struct uvr_gltf_loader_material_create_info) { .gltfFile = gltfFile });
-  if (!app->uvr_gltf_loader_material.materialData)
-    goto exit_create_gltf_loader_file_free_gltf_texture;
+  struct uvr_gltf_loader_node_create_info gltfFileNodeInfo;
+  gltfFileNodeInfo.gltfLoaderFile = gltfFile;
+  gltfFileNodeInfo.sceneIndex = 0;
+
+  app->uvr_gltf_loader_node = uvr_gltf_loader_node_create(&gltfFileNodeInfo);
+  if (!app->uvr_gltf_loader_node.nodeData)
+    goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
   // Have everything we need free memory created by gltf file
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
   return 0;
 
-exit_create_gltf_loader_file_free_gltf_texture:
+exit_create_gltf_loader_file_free_gltf_texture_image:
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
 exit_create_gltf_loader_file_free_gltf_vertex:
   uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
@@ -1750,14 +1750,13 @@ void update_uniform_buffer(struct uvr_vk *app,
 {
   VkDeviceMemory uniformBufferDeviceMemory = app->uvr_vk_buffer[2].deviceMemory;
 
-  struct uvr_uniform_buffer_model uboModels[app->meshCount];
   struct uvr_uniform_buffer ubo = {};
   uint32_t uboSize = sizeof(ubo);
 
   uint32_t meshItem;
 
   vec4 lightPosition = {5.0f, 5.0f, -5.0f, 1.0f};
-  glm_vec4_ucopy(lightPosition, ubo.lightPosition);
+  glm_vec4_copy(lightPosition, ubo.lightPosition);
 
   // Update view matrix
   vec3 eye = {2.0f, 2.0f, 2.0f};
@@ -1784,34 +1783,10 @@ void update_uniform_buffer(struct uvr_vk *app,
   deviceMemoryCopyInfo.bufferData = &ubo;
   uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
-  /*
-  static float lastTime = 0;
-  float now = (float) (uvr_utils_nanosecond() / 10000000ULL);
-  float deltaTime = now - lastTime;
-  lastTime = now;
-
-  // Update model matrix
-  static float angle = 0.0f;
-
-  angle += deltaTime * glm_rad(10.0f);
-  if (angle > 360.0f) angle -= 360.0f;
-
-  vec3 axis = {0.0f, 0.0f, 1.0f};
-  glm_mat4_identity(uboModels[0].model);
-  glm_mat4_identity(uboModels[1].model);
-
-  glm_rotate(uboModels[0].model, glm_rad(angle), axis);
-  glm_rotate(uboModels[1].model, glm_rad(-angle * 4.0f), axis);
-  glm_translate(uboModels[0].model, (vec3){ 1.0f,  0.0f, 1.0f });
-  glm_translate(uboModels[1].model, (vec3){ 1.0f, 1.0f, 1.0f });
-  glm_rotate(uboModels[0].model, glm_rad(angle), axis);
-  glm_rotate(uboModels[1].model, glm_rad(-angle * 4.0f), axis);
-  */
-
   // Copy Model data
   for (meshItem = 0; meshItem < app->meshCount; meshItem++) {
     struct uvr_uniform_buffer_model *model = (struct uvr_uniform_buffer_model *) ((uint64_t) app->modelTransferSpace.alignedBufferMemory + (meshItem * app->modelTransferSpace.bufferAlignment));
-    memcpy(model, &uboModels[meshItem], app->modelTransferSpace.bufferAlignment);
+    memcpy(model, app->meshData[meshItem].matrix, app->modelTransferSpace.bufferAlignment);
   }
 
   // Map all Model data

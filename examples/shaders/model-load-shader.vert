@@ -16,7 +16,7 @@ layout (set = 0, binding = 0) uniform uniform_buffer_scene {
   mat4 projection;
   mat4 view;
   vec4 lightPos;
-  mat4 viewPos;
+  vec4 viewPos;
 } uboScene;
 
 // Used in conjunction with dynamic uniform buffer
@@ -37,7 +37,6 @@ void main() {
 
   vec4 pos = uboScene.view * vec4(inPosition, 1.0);
   outNormal = mat3(uboScene.view) * inNormal;
-  vec3 lPos = mat3(uboScene.view) * uboScene.lightPos.xyz;
-  outLightVec = lPos - pos.xyz;
-  outViewVec = -pos.xyz;
+  outLightVec = uboScene.lightPos.xyz - pos.xyz;
+  outViewVec = uboScene.viewPos.xyz - pos.xyz;
 }
