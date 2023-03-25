@@ -5,6 +5,8 @@ vulkan = dependency('vulkan', version: '>=1.3.213', required: true)
 libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
 librt = cc.find_library('rt', required: true)
+# Needed by `gltf-loader.c`
+libcglm = dependency('cglm', required: true)
 
 fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c' ]
 lib_uvr_deps = [vulkan, libmath, librt]
