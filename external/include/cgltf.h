@@ -634,6 +634,7 @@ typedef struct cgltf_camera_orthographic {
 
 typedef struct cgltf_camera {
 	char* name;
+	cgltf_int camera_index;
 	cgltf_camera_type type;
 	union {
 		cgltf_camera_perspective perspective;
@@ -5200,6 +5201,7 @@ static int cgltf_parse_json_cameras(cgltf_options* options, jsmntok_t const* tok
 
 	for (cgltf_size j = 0; j < out_data->cameras_count; ++j)
 	{
+		out_data->cameras[j].camera_index = j;
 		i = cgltf_parse_json_camera(options, tokens, i, json_chunk, &out_data->cameras[j]);
 		if (i < 0)
 		{
