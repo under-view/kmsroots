@@ -20,9 +20,9 @@
  * Via token concatenation and String-izing Tokens
  */
 #define UVR_VK_INSTANCE_PROC_ADDR(inst, var, func) \
-  do { \
-    var = (PFN_vk##func) vkGetInstanceProcAddr(inst, "vk" #func); \
-  } while(0);
+	do { \
+		var = (PFN_vk##func) vkGetInstanceProcAddr(inst, "vk" #func); \
+	} while(0);
 
 
 /*
@@ -31,9 +31,9 @@
  * Via token concatenation and String-izing Tokens
  */
 #define UVR_VK_DEVICE_PROC_ADDR(dev, var, func) \
-  do { \
-    var = (PFN_vk##func) vkGetDeviceProcAddr(dev, "vk" #func); \
-  } while(0);
+	do { \
+		var = (PFN_vk##func) vkGetDeviceProcAddr(dev, "vk" #func); \
+	} while(0);
 
 
 /*
@@ -53,12 +53,12 @@
  *                           of strings containing the name of the Vulkan Instance Extensions one wants to enable.
  */
 struct uvr_vk_instance_create_info {
-  const char *appName;
-  const char *engineName;
-  uint32_t   enabledLayerCount;
-  const char **enabledLayerNames;
-  uint32_t   enabledExtensionCount;
-  const char **enabledExtensionNames;
+	const char *appName;
+	const char *engineName;
+	uint32_t   enabledLayerCount;
+	const char **enabledLayerNames;
+	uint32_t   enabledExtensionCount;
+	const char **enabledExtensionNames;
 };
 
 
@@ -72,8 +72,8 @@ struct uvr_vk_instance_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_instance_create_info
  * return:
- *    on success VkInstance handle
- *    on failure VK_NULL_HANDLE
+ *	on success VkInstance handle
+ *	on failure VK_NULL_HANDLE
  */
 VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk);
 
@@ -85,8 +85,8 @@ VkInstance uvr_vk_instance_create(struct uvr_vk_instance_create_info *uvrvk);
  * to create a VkSurfaceKHR object based upon platform specific information
  */
 typedef enum uvr_vk_surface_type {
-  UVR_SURFACE_WAYLAND_CLIENT,
-  UVR_SURFACE_XCB_CLIENT,
+	UVR_SURFACE_WAYLAND_CLIENT,
+	UVR_SURFACE_XCB_CLIENT,
 } uvr_vk_surface_type;
 
 
@@ -102,11 +102,11 @@ typedef enum uvr_vk_surface_type {
  * @window      - Must pass an xcb_window_t window id or an unsigned int representing XID
  */
 struct uvr_vk_surface_create_info {
-  uvr_vk_surface_type surfaceType;
-  VkInstance          instance;
-  void                *surface;
-  void                *display;
-  unsigned int        window;
+	uvr_vk_surface_type surfaceType;
+	VkInstance          instance;
+	void                *surface;
+	void                *display;
+	unsigned int        window;
 };
 
 
@@ -118,8 +118,8 @@ struct uvr_vk_surface_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_surface_create_info
  * return:
- *    on success VkSurfaceKHR handle
- *    on failure VK_NULL_HANDLE
+ *	on success VkSurfaceKHR handle
+ *	on failure VK_NULL_HANDLE
  */
 VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk);
 
@@ -135,10 +135,10 @@ VkSurfaceKHR uvr_vk_surface_create(struct uvr_vk_surface_create_info *uvrvk);
  *               if corresponding DRM properties match.
  */
 struct uvr_vk_phdev_create_info {
-  VkInstance           instance;
-  VkPhysicalDeviceType deviceType;
+	VkInstance           instance;
+	VkPhysicalDeviceType deviceType;
 #ifdef INCLUDE_KMS
-  int                  kmsfd;
+	int                  kmsfd;
 #endif
 };
 
@@ -161,13 +161,13 @@ struct uvr_vk_phdev_create_info {
  *                            after associate a DRM file descriptor with a vulkan physical device.
  */
 struct uvr_vk_phdev {
-  VkInstance                       instance;
-  VkPhysicalDevice                 physDevice;
-  VkPhysicalDeviceProperties       physDeviceProperties;
-  VkPhysicalDeviceFeatures         physDeviceFeatures;
+	VkInstance                       instance;
+	VkPhysicalDevice                 physDevice;
+	VkPhysicalDeviceProperties       physDeviceProperties;
+	VkPhysicalDeviceFeatures         physDeviceFeatures;
 #ifdef INCLUDE_KMS
-  int                              kmsfd;
-  VkPhysicalDeviceDrmPropertiesEXT physDeviceDrmProperties;
+	int                              kmsfd;
+	VkPhysicalDeviceDrmPropertiesEXT physDeviceDrmProperties;
 #endif
 };
 
@@ -180,8 +180,8 @@ struct uvr_vk_phdev {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_phdev_create_info
  * return:
- *    on success struct uvr_vk_phdev
- *    on failure struct uvr_vk_phdev { with members nulled, int's set to -1 }
+ *	on success struct uvr_vk_phdev
+ *	on failure struct uvr_vk_phdev { with members nulled, int's set to -1 }
  */
 struct uvr_vk_phdev uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk);
 
@@ -197,10 +197,10 @@ struct uvr_vk_phdev uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk);
  * @queueCount  - Count of queues in a given VkQueue family
  */
 struct uvr_vk_queue {
-  char    name[20];
-  VkQueue queue;
-  int     familyIndex;
-  int     queueCount;
+	char    name[20];
+	VkQueue queue;
+	int     familyIndex;
+	int     queueCount;
 };
 
 
@@ -213,8 +213,8 @@ struct uvr_vk_queue {
  *               https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html
  */
 struct uvr_vk_queue_create_info {
-  VkPhysicalDevice physDevice;
-  VkQueueFlags     queueFlag;
+	VkPhysicalDevice physDevice;
+	VkQueueFlags     queueFlag;
 };
 
 
@@ -227,8 +227,8 @@ struct uvr_vk_queue_create_info {
  * @uvrvk - pointer to a struct uvr_vk_queue_create_info. Contains information on which queue family
  *          we are trying to find and the physical device that supports said queue family.
  * return:
- *    on success struct uvr_vk_queue
- *    on failure struct uvr_vk_queue { with members nulled, int's set to -1 }
+ *	on success struct uvr_vk_queue
+ *	on failure struct uvr_vk_queue { with members nulled, int's set to -1 }
  */
 struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
 
@@ -246,9 +246,9 @@ struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk);
  *                  @queueCount & @queues are strictly for struct uvr_vk_lgdev to have extra information amount VkQueue's
  */
 struct uvr_vk_lgdev {
-  VkDevice            logicalDevice;
-  uint32_t            queueCount;
-  struct uvr_vk_queue *queues;
+	VkDevice            logicalDevice;
+	uint32_t            queueCount;
+	struct uvr_vk_queue *queues;
 };
 
 
@@ -267,13 +267,13 @@ struct uvr_vk_lgdev {
  *                          create along with a given logical device
  */
 struct uvr_vk_lgdev_create_info {
-  VkInstance               instance;
-  VkPhysicalDevice         physDevice;
-  VkPhysicalDeviceFeatures *enabledFeatures;
-  uint32_t                 enabledExtensionCount;
-  const char *const        *enabledExtensionNames;
-  uint32_t                 queueCount;
-  struct uvr_vk_queue      *queues;
+	VkInstance               instance;
+	VkPhysicalDevice         physDevice;
+	VkPhysicalDeviceFeatures *enabledFeatures;
+	uint32_t                 enabledExtensionCount;
+	const char *const        *enabledExtensionNames;
+	uint32_t                 queueCount;
+	struct uvr_vk_queue      *queues;
 };
 
 
@@ -293,8 +293,8 @@ struct uvr_vk_lgdev_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_lgdev_create_info
  * return:
- *    on success struct uvr_vk_lgdev
- *    on failure struct uvr_vk_lgdev { with members nulled, int's set to -1 }
+ *	on success struct uvr_vk_lgdev
+ *	on failure struct uvr_vk_lgdev { with members nulled, int's set to -1 }
  */
 struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
 
@@ -307,8 +307,8 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk);
  * @swapchain     - Vulkan handle/object representing the swapchain itself
  */
 struct uvr_vk_swapchain {
-  VkDevice       logicalDevice;
-  VkSwapchainKHR swapchain;
+	VkDevice       logicalDevice;
+	VkSwapchainKHR swapchain;
 };
 
 
@@ -339,20 +339,20 @@ struct uvr_vk_swapchain {
  *                          no need to recreate them.
  */
 struct uvr_vk_swapchain_create_info {
-  VkDevice                    logicalDevice;
-  VkSurfaceKHR                surface;
-  VkSurfaceCapabilitiesKHR    surfaceCapabilities;
-  VkSurfaceFormatKHR          surfaceFormat;
-  VkExtent2D                  extent2D;
-  uint32_t                    imageArrayLayers;
-  VkImageUsageFlags           imageUsage;
-  VkSharingMode               imageSharingMode;
-  uint32_t                    queueFamilyIndexCount;
-  const uint32_t              *queueFamilyIndices;
-  VkCompositeAlphaFlagBitsKHR compositeAlpha;
-  VkPresentModeKHR            presentMode;
-  VkBool32                    clipped;
-  VkSwapchainKHR              oldSwapChain;
+	VkDevice                    logicalDevice;
+	VkSurfaceKHR                surface;
+	VkSurfaceCapabilitiesKHR    surfaceCapabilities;
+	VkSurfaceFormatKHR          surfaceFormat;
+	VkExtent2D                  extent2D;
+	uint32_t                    imageArrayLayers;
+	VkImageUsageFlags           imageUsage;
+	VkSharingMode               imageSharingMode;
+	uint32_t                    queueFamilyIndexCount;
+	const uint32_t              *queueFamilyIndices;
+	VkCompositeAlphaFlagBitsKHR compositeAlpha;
+	VkPresentModeKHR            presentMode;
+	VkBool32                    clipped;
+	VkSwapchainKHR              oldSwapChain;
 };
 
 
@@ -364,8 +364,8 @@ struct uvr_vk_swapchain_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_swapchain_create_info
  * return:
- *    on success struct uvr_vk_swapchain
- *    on failure struct uvr_vk_swapchain { with member nulled }
+ *	on success struct uvr_vk_swapchain
+ *	on failure struct uvr_vk_swapchain { with member nulled }
  */
 struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_info *uvrvk);
 
@@ -377,8 +377,8 @@ struct uvr_vk_swapchain uvr_vk_swapchain_create(struct uvr_vk_swapchain_create_i
  * @deviceMemory - Actual memory whether CPU or GPU visible associate with VkImage object
  */
 struct uvr_vk_image_handle {
-  VkImage        image;
-  VkDeviceMemory deviceMemory;
+	VkImage        image;
+	VkDeviceMemory deviceMemory;
 };
 
 
@@ -390,7 +390,7 @@ struct uvr_vk_image_handle {
  *         exactly what in the image to read (color channels, etc...)
  */
 struct uvr_vk_image_view_handle {
-  VkImageView view;
+	VkImageView view;
 };
 
 
@@ -408,11 +408,11 @@ struct uvr_vk_image_view_handle {
  *                     the swapchain that created VkImage's.
  */
 struct uvr_vk_image {
-  VkDevice                         logicalDevice;
-  uint32_t                         imageCount;
-  struct uvr_vk_image_handle       *imageHandles;
-  struct uvr_vk_image_view_handle  *imageViewHandles;
-  VkSwapchainKHR                   swapchain;
+	VkDevice                         logicalDevice;
+	uint32_t                         imageCount;
+	struct uvr_vk_image_handle       *imageHandles;
+	struct uvr_vk_image_view_handle  *imageViewHandles;
+	VkSwapchainKHR                   swapchain;
 };
 
 
@@ -432,11 +432,11 @@ struct uvr_vk_image {
  *
  */
 struct uvr_vk_image_view_create_info {
-  VkImageViewCreateFlags   imageViewflags;
-  VkImageViewType          imageViewType;
-  VkFormat                 imageViewFormat;
-  VkComponentMapping       imageViewComponents;
-  VkImageSubresourceRange  imageViewSubresourceRange;
+	VkImageViewCreateFlags   imageViewflags;
+	VkImageViewType          imageViewType;
+	VkFormat                 imageViewFormat;
+	VkComponentMapping       imageViewComponents;
+	VkImageSubresourceRange  imageViewSubresourceRange;
 };
 
 
@@ -461,19 +461,19 @@ struct uvr_vk_image_view_create_info {
  * @imageInitialLayout         - Set the inital memory layout of a VkImage
  */
 struct uvr_vk_vimage_create_info {
-  VkImageCreateFlags       imageflags;
-  VkImageType              imageType;
-  VkFormat                 imageFormat;
-  VkExtent3D               imageExtent3D;
-  uint32_t                 imageMipLevels;
-  uint32_t                 imageArrayLayers;
-  VkSampleCountFlagBits    imageSamples;
-  VkImageTiling            imageTiling;
-  VkImageUsageFlags        imageUsage;
-  VkSharingMode            imageSharingMode;
-  uint32_t                 imageQueueFamilyIndexCount;
-  const uint32_t           *imageQueueFamilyIndices;
-  VkImageLayout            imageInitialLayout;
+	VkImageCreateFlags       imageflags;
+	VkImageType              imageType;
+	VkFormat                 imageFormat;
+	VkExtent3D               imageExtent3D;
+	uint32_t                 imageMipLevels;
+	uint32_t                 imageArrayLayers;
+	VkSampleCountFlagBits    imageSamples;
+	VkImageTiling            imageTiling;
+	VkImageUsageFlags        imageUsage;
+	VkSharingMode            imageSharingMode;
+	uint32_t                 imageQueueFamilyIndexCount;
+	const uint32_t           *imageQueueFamilyIndices;
+	VkImageLayout            imageInitialLayout;
 };
 
 
@@ -496,13 +496,13 @@ struct uvr_vk_vimage_create_info {
  * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
  */
 struct uvr_vk_image_create_info {
-  VkDevice                             logicalDevice;
-  VkSwapchainKHR                       swapchain;
-  uint32_t                             imageCount;
-  struct uvr_vk_image_view_create_info *imageViewCreateInfos;
-  struct uvr_vk_vimage_create_info     *imageCreateInfos;
-  VkPhysicalDevice                     physDevice;
-  VkMemoryPropertyFlagBits             memPropertyFlags;
+	VkDevice                             logicalDevice;
+	VkSwapchainKHR                       swapchain;
+	uint32_t                             imageCount;
+	struct uvr_vk_image_view_create_info *imageViewCreateInfos;
+	struct uvr_vk_vimage_create_info     *imageCreateInfos;
+	VkPhysicalDevice                     physDevice;
+	VkMemoryPropertyFlagBits             memPropertyFlags;
 };
 
 
@@ -517,8 +517,8 @@ struct uvr_vk_image_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_image_create_info
  * return:
- *    on success struct uvr_vk_image
- *    on failure struct uvr_vk_image { with member nulled }
+ *	on success struct uvr_vk_image
+ *	on failure struct uvr_vk_image { with member nulled }
  */
 struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk);
 
@@ -532,9 +532,9 @@ struct uvr_vk_image uvr_vk_image_create(struct uvr_vk_image_create_info *uvrvk);
  * @shaderName    - Name given to shader module can be safely ignored not required by API.
  */
 struct uvr_vk_shader_module {
-  VkDevice       logicalDevice;
-  VkShaderModule shaderModule;
-  const char     *shaderName;
+	VkDevice       logicalDevice;
+	VkShaderModule shaderModule;
+	const char     *shaderName;
 };
 
 
@@ -548,10 +548,10 @@ struct uvr_vk_shader_module {
  * @shaderName    - Name given to shader module can be safely ignored not required by API.
  */
 struct uvr_vk_shader_module_create_info {
-  VkDevice            logicalDevice;
-  size_t              sprivByteSize;
-  const unsigned char *sprivBytes;
-  const char          *shaderName;
+	VkDevice            logicalDevice;
+	size_t              sprivByteSize;
+	const unsigned char *sprivBytes;
+	const char          *shaderName;
 };
 
 
@@ -561,8 +561,8 @@ struct uvr_vk_shader_module_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_shader_module_create_info
  * return:
- *    on success struct uvr_vk_shader_module
- *    on failure struct uvr_vk_shader_module { with member nulled }
+ *	on success struct uvr_vk_shader_module
+ *	on failure struct uvr_vk_shader_module { with member nulled }
  */
 struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_module_create_info *uvrvk);
 
@@ -575,8 +575,8 @@ struct uvr_vk_shader_module uvr_vk_shader_module_create(struct uvr_vk_shader_mod
  * @pipelineLayout - Represents collection of what resources are needed to produce final image
  */
 struct uvr_vk_pipeline_layout {
-  VkDevice         logicalDevice;
-  VkPipelineLayout pipelineLayout;
+	VkDevice         logicalDevice;
+	VkPipelineLayout pipelineLayout;
 };
 
 
@@ -598,11 +598,11 @@ struct uvr_vk_pipeline_layout {
  *                             be more efficiently passed up to the GPU by passing values directly to the shader.
  */
 struct uvr_vk_pipeline_layout_create_info {
-  VkDevice                    logicalDevice;
-  uint32_t                    descriptorSetLayoutCount;
-  const VkDescriptorSetLayout *descriptorSetLayouts;
-  uint32_t                    pushConstantRangeCount;
-  const VkPushConstantRange   *pushConstantRanges;
+	VkDevice                    logicalDevice;
+	uint32_t                    descriptorSetLayoutCount;
+	const VkDescriptorSetLayout *descriptorSetLayouts;
+	uint32_t                    pushConstantRangeCount;
+	const VkPushConstantRange   *pushConstantRanges;
 };
 
 
@@ -614,8 +614,8 @@ struct uvr_vk_pipeline_layout_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_pipeline_layout_create_info
  * return:
- *    on success struct uvr_vk_pipeline_layout
- *    on failure struct uvr_vk_pipeline_layout { with member nulled }
+ *	on success struct uvr_vk_pipeline_layout
+ *	on failure struct uvr_vk_pipeline_layout { with member nulled }
  */
 struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeline_layout_create_info *uvrvk);
 
@@ -628,8 +628,8 @@ struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout_create(struct uvr_vk_pipeli
  * @renderpass    - Represents a collection of attachments, subpasses, and dependencies between the subpasses
  */
 struct uvr_vk_render_pass {
-  VkDevice     logicalDevice;
-  VkRenderPass renderPass;
+	VkDevice     logicalDevice;
+	VkRenderPass renderPass;
 };
 
 
@@ -649,13 +649,13 @@ struct uvr_vk_render_pass {
  * @subpassDependencies        - Pointer to an array of subpass dependencies that define stages in a pipeline where transitions need to occur
  */
 struct uvr_vk_render_pass_create_info {
-  VkDevice                      logicalDevice;
-  uint32_t                      attachmentDescriptionCount;
-  const VkAttachmentDescription *attachmentDescriptions;
-  uint32_t                      subpassDescriptionCount;
-  const VkSubpassDescription    *subpassDescriptions;
-  uint32_t                      subpassDependencyCount;
-  const VkSubpassDependency     *subpassDependencies;
+	VkDevice                      logicalDevice;
+	uint32_t                      attachmentDescriptionCount;
+	const VkAttachmentDescription *attachmentDescriptions;
+	uint32_t                      subpassDescriptionCount;
+	const VkSubpassDescription    *subpassDescriptions;
+	uint32_t                      subpassDependencyCount;
+	const VkSubpassDependency     *subpassDependencies;
 };
 
 
@@ -672,8 +672,8 @@ struct uvr_vk_render_pass_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_render_pass_create_info
  * return:
- *    on success struct uvr_vk_render_pass
- *    on failure struct uvr_vk_render_pass { with member nulled }
+ *	on success struct uvr_vk_render_pass
+ *	on failure struct uvr_vk_render_pass { with member nulled }
  */
 struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_create_info *uvrvk);
 
@@ -686,8 +686,8 @@ struct uvr_vk_render_pass uvr_vk_render_pass_create(struct uvr_vk_render_pass_cr
  * @graphicsPipeline - Handle to a pipeline object
  */
 struct uvr_vk_graphics_pipeline {
-  VkDevice   logicalDevice;
-  VkPipeline graphicsPipeline;
+	VkDevice   logicalDevice;
+	VkPipeline graphicsPipeline;
 };
 
 
@@ -722,21 +722,21 @@ struct uvr_vk_graphics_pipeline {
  * @subpass             - Pass the index of the subpass in the render pass
  */
 struct uvr_vk_graphics_pipeline_create_info {
-  VkDevice                                      logicalDevice;
-  uint32_t                                      shaderStageCount;
-  const VkPipelineShaderStageCreateInfo         *shaderStages;
-  const VkPipelineVertexInputStateCreateInfo    *vertexInputState;
-  const VkPipelineInputAssemblyStateCreateInfo  *inputAssemblyState;
-  const VkPipelineTessellationStateCreateInfo   *tessellationState;
-  const VkPipelineViewportStateCreateInfo       *viewportState;
-  const VkPipelineRasterizationStateCreateInfo  *rasterizationState;
-  const VkPipelineMultisampleStateCreateInfo    *multisampleState;
-  const VkPipelineDepthStencilStateCreateInfo   *depthStencilState;
-  const VkPipelineColorBlendStateCreateInfo     *colorBlendState;
-  const VkPipelineDynamicStateCreateInfo        *dynamicState;
-  VkPipelineLayout                              pipelineLayout;
-  VkRenderPass                                  renderPass;
-  uint32_t                                      subpass;
+	VkDevice                                      logicalDevice;
+	uint32_t                                      shaderStageCount;
+	const VkPipelineShaderStageCreateInfo         *shaderStages;
+	const VkPipelineVertexInputStateCreateInfo    *vertexInputState;
+	const VkPipelineInputAssemblyStateCreateInfo  *inputAssemblyState;
+	const VkPipelineTessellationStateCreateInfo   *tessellationState;
+	const VkPipelineViewportStateCreateInfo       *viewportState;
+	const VkPipelineRasterizationStateCreateInfo  *rasterizationState;
+	const VkPipelineMultisampleStateCreateInfo    *multisampleState;
+	const VkPipelineDepthStencilStateCreateInfo   *depthStencilState;
+	const VkPipelineColorBlendStateCreateInfo     *colorBlendState;
+	const VkPipelineDynamicStateCreateInfo        *dynamicState;
+	VkPipelineLayout                              pipelineLayout;
+	VkRenderPass                                  renderPass;
+	uint32_t                                      subpass;
 };
 
 
@@ -750,8 +750,8 @@ struct uvr_vk_graphics_pipeline_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_graphics_pipeline_create_info
  * return:
- *    on success struct uvr_vk_graphics_pipeline
- *    on failure struct uvr_vk_graphics_pipeline { with member nulled }
+ *	on success struct uvr_vk_graphics_pipeline
+ *	on failure struct uvr_vk_graphics_pipeline { with member nulled }
  */
 struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_graphics_pipeline_create_info *uvrvk);
 
@@ -763,7 +763,7 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
  *                Connection between an image (or images) and the render pass instance.
  */
 struct uvr_vk_framebuffer_handle {
-  VkFramebuffer frameBuffer;
+	VkFramebuffer frameBuffer;
 };
 
 
@@ -776,9 +776,9 @@ struct uvr_vk_framebuffer_handle {
  * @frameBufferHandles - Pointer to an array of VkFramebuffer handles
  */
 struct uvr_vk_framebuffer {
-  VkDevice                          logicalDevice;
-  uint32_t                          frameBufferCount;
-  struct uvr_vk_framebuffer_handle  *frameBufferHandles;
+	VkDevice                          logicalDevice;
+	uint32_t                          frameBufferCount;
+	struct uvr_vk_framebuffer_handle  *frameBufferHandles;
 };
 
 
@@ -800,15 +800,15 @@ struct uvr_vk_framebuffer {
  * @layers
  */
 struct uvr_vk_framebuffer_create_info {
-  VkDevice                         logicalDevice;
-  uint32_t                         frameBufferCount;
-  struct uvr_vk_image_view_handle  *imageViewHandles;
-  uint32_t                         miscImageViewHandleCount;
-  struct uvr_vk_image_view_handle  *miscImageViewHandles;
-  VkRenderPass                     renderPass;
-  uint32_t                         width;
-  uint32_t                         height;
-  uint32_t                         layers;
+	VkDevice                         logicalDevice;
+	uint32_t                         frameBufferCount;
+	struct uvr_vk_image_view_handle  *imageViewHandles;
+	uint32_t                         miscImageViewHandleCount;
+	struct uvr_vk_image_view_handle  *miscImageViewHandles;
+	VkRenderPass                     renderPass;
+	uint32_t                         width;
+	uint32_t                         height;
+	uint32_t                         layers;
 };
 
 
@@ -821,8 +821,8 @@ struct uvr_vk_framebuffer_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_framebuffer_create_info
  * return:
- *    on success struct uvr_vk_framebuffer
- *    on failure struct uvr_vk_framebuffer { with member nulled }
+ *	on success struct uvr_vk_framebuffer
+ *	on failure struct uvr_vk_framebuffer { with member nulled }
  */
 struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_create_info *uvrvk);
 
@@ -833,7 +833,7 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
  * @commandBuffer - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
  */
 struct uvr_vk_command_buffer_handle {
-  VkCommandBuffer commandBuffer;
+	VkCommandBuffer commandBuffer;
 };
 
 
@@ -847,10 +847,10 @@ struct uvr_vk_command_buffer_handle {
  * @commandBufferHandles - Pointer to an array of VkCommandBuffer handles
  */
 struct uvr_vk_command_buffer {
-  VkDevice                            logicalDevice;
-  VkCommandPool                       commandPool;
-  uint32_t                            commandBufferCount;
-  struct uvr_vk_command_buffer_handle *commandBufferHandles;
+	VkDevice                            logicalDevice;
+	VkCommandPool                       commandPool;
+	uint32_t                            commandBufferCount;
+	struct uvr_vk_command_buffer_handle *commandBufferHandles;
 };
 
 
@@ -864,9 +864,9 @@ struct uvr_vk_command_buffer {
  * @commandBufferCount - The amount of command buffers to allocate from a given pool
  */
 struct uvr_vk_command_buffer_create_info {
-  VkDevice logicalDevice;
-  uint32_t queueFamilyIndex;
-  uint32_t commandBufferCount;
+	VkDevice logicalDevice;
+	uint32_t queueFamilyIndex;
+	uint32_t commandBufferCount;
 };
 
 
@@ -879,8 +879,8 @@ struct uvr_vk_command_buffer_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_command_buffer_create_info
  * return:
- *    on success struct uvr_vk_command_buffer
- *    on failure struct uvr_vk_command_buffer { with member nulled }
+ *	on success struct uvr_vk_command_buffer
+ *	on failure struct uvr_vk_command_buffer { with member nulled }
  */
 struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_buffer_create_info *uvrvk);
 
@@ -894,9 +894,9 @@ struct uvr_vk_command_buffer uvr_vk_command_buffer_create(struct uvr_vk_command_
  * @commandBufferUsageflags - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
  */
 struct uvr_vk_command_buffer_record_info {
-  uint32_t                            commandBufferCount;
-  struct uvr_vk_command_buffer_handle *commandBufferHandles;
-  VkCommandBufferUsageFlagBits        commandBufferUsageflags;
+	uint32_t                            commandBufferCount;
+	struct uvr_vk_command_buffer_handle *commandBufferHandles;
+	VkCommandBufferUsageFlagBits        commandBufferUsageflags;
 };
 
 
@@ -908,8 +908,8 @@ struct uvr_vk_command_buffer_record_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_command_buffer_record_info
  * return:
- *    on success 0
- *    on failure -1
+ *	on success 0
+ *	on failure -1
  */
 int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info *uvrvk);
 
@@ -920,8 +920,8 @@ int uvr_vk_command_buffer_record_begin(struct uvr_vk_command_buffer_record_info 
  * args:
  * @uvrvk - pointer to a struct uvr_vk_command_buffer_record_info
  * return:
- *    on success 0
- *    on failure -1
+ *	on success 0
+ *	on failure -1
  */
 int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *uvrvk);
 
@@ -935,7 +935,7 @@ int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *u
  *          available. Host side we wait for that signal then conduct XYZ operations. This is how we block.
  */
 struct uvr_vk_fence_handle {
-  VkFence fence;
+	VkFence fence;
 };
 
 
@@ -948,7 +948,7 @@ struct uvr_vk_fence_handle {
  *              the state of a semphore.
  */
 struct uvr_vk_semaphore_handle {
-  VkSemaphore semaphore;
+	VkSemaphore semaphore;
 };
 
 
@@ -964,11 +964,11 @@ struct uvr_vk_semaphore_handle {
  * @semaphoreHandles - Pointer to an array of VkSemaphore handles
  */
 struct uvr_vk_sync_obj {
-  VkDevice                       logicalDevice;
-  uint32_t                       fenceCount;
-  struct uvr_vk_fence_handle     *fenceHandles;
-  uint32_t                       semaphoreCount;
-  struct uvr_vk_semaphore_handle *semaphoreHandles;
+	VkDevice                       logicalDevice;
+	uint32_t                       fenceCount;
+	struct uvr_vk_fence_handle     *fenceHandles;
+	uint32_t                       semaphoreCount;
+	struct uvr_vk_semaphore_handle *semaphoreHandles;
 };
 
 
@@ -981,9 +981,9 @@ struct uvr_vk_sync_obj {
  * @semaphoreCount - Amount of VkSemaphore objects to allocate.
  */
 struct uvr_vk_sync_obj_create_info {
-  VkDevice logicalDevice;
-  uint32_t fenceCount;
-  uint32_t semaphoreCount;
+	VkDevice logicalDevice;
+	uint32_t fenceCount;
+	uint32_t semaphoreCount;
 };
 
 
@@ -996,8 +996,8 @@ struct uvr_vk_sync_obj_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_sync_obj_create_info
  * return:
- *    on success struct uvr_vk_sync_obj
- *    on failure struct uvr_vk_sync_obj { with member nulled }
+ *	on success struct uvr_vk_sync_obj
+ *	on failure struct uvr_vk_sync_obj { with member nulled }
  */
 struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info *uvrvk);
 
@@ -1011,9 +1011,9 @@ struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info
  * @deviceMemory  - Actual memory whether CPU or GPU visible associate with VkBuffer header object
  */
 struct uvr_vk_buffer {
-  VkDevice       logicalDevice;
-  VkBuffer       buffer;
-  VkDeviceMemory deviceMemory;
+	VkDevice       logicalDevice;
+	VkBuffer       buffer;
+	VkDeviceMemory deviceMemory;
 };
 
 
@@ -1033,15 +1033,15 @@ struct uvr_vk_buffer {
  * @memPropertyFlags      - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
  */
 struct uvr_vk_buffer_create_info {
-  VkDevice                 logicalDevice;
-  VkPhysicalDevice         physDevice;
-  VkBufferCreateFlagBits   bufferFlags;
-  VkDeviceSize             bufferSize;
-  VkBufferUsageFlags       bufferUsage;
-  VkSharingMode            bufferSharingMode;
-  uint32_t                 queueFamilyIndexCount;
-  const uint32_t           *queueFamilyIndices;
-  VkMemoryPropertyFlagBits memPropertyFlags;
+	VkDevice                 logicalDevice;
+	VkPhysicalDevice         physDevice;
+	VkBufferCreateFlagBits   bufferFlags;
+	VkDeviceSize             bufferSize;
+	VkBufferUsageFlags       bufferUsage;
+	VkSharingMode            bufferSharingMode;
+	uint32_t                 queueFamilyIndexCount;
+	const uint32_t           *queueFamilyIndices;
+	VkMemoryPropertyFlagBits memPropertyFlags;
 };
 
 
@@ -1052,8 +1052,8 @@ struct uvr_vk_buffer_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_buffer_create_info
  * return:
- *    on success struct uvr_vk_buffer
- *    on failure struct uvr_vk_buffer { with member nulled }
+ *	on success struct uvr_vk_buffer
+ *	on failure struct uvr_vk_buffer { with member nulled }
  */
 struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrvk);
 
@@ -1069,8 +1069,8 @@ struct uvr_vk_buffer uvr_vk_buffer_create(struct uvr_vk_buffer_create_info *uvrv
  *                        will the shader descriptor need access to a given resource.
  */
 struct uvr_vk_descriptor_set_layout {
-  VkDevice              logicalDevice;
-  VkDescriptorSetLayout descriptorSetLayout;
+	VkDevice              logicalDevice;
+	VkDescriptorSetLayout descriptorSetLayout;
 };
 
 
@@ -1087,10 +1087,10 @@ struct uvr_vk_descriptor_set_layout {
  *                                    VkDescriptorSetLayoutBinding { @binding }.
  */
 struct uvr_vk_descriptor_set_layout_create_info {
-  VkDevice                         logicalDevice;
-  VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateflags;
-  uint32_t                         descriptorSetLayoutBindingCount;
-  VkDescriptorSetLayoutBinding     *descriptorSetLayoutBindings;
+	VkDevice                         logicalDevice;
+	VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateflags;
+	uint32_t                         descriptorSetLayoutBindingCount;
+	VkDescriptorSetLayoutBinding     *descriptorSetLayoutBindings;
 };
 
 
@@ -1104,8 +1104,8 @@ struct uvr_vk_descriptor_set_layout_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_descriptor_set_layout_create_info
  * return:
- *    on success struct uvr_vk_descriptor_set_layout
- *    on failure struct uvr_vk_descriptor_set_layout { with member nulled }
+ *	on success struct uvr_vk_descriptor_set_layout
+ *	on failure struct uvr_vk_descriptor_set_layout { with member nulled }
  */
 struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct uvr_vk_descriptor_set_layout_create_info *uvrvk);
 
@@ -1120,7 +1120,7 @@ struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout_create(struct u
  *                  descriptor set. Types of descriptor sets include Images, Samplers, uniform...
  */
 struct uvr_vk_descriptor_set_handle {
-  VkDescriptorSet descriptorSet;
+	VkDescriptorSet descriptorSet;
 };
 
 
@@ -1134,10 +1134,10 @@ struct uvr_vk_descriptor_set_handle {
  * @descriptorSetHandles - Pointer to an array of descriptor sets
  */
 struct uvr_vk_descriptor_set {
-  VkDevice                            logicalDevice;
-  VkDescriptorPool                    descriptorPool;
-  uint32_t                            descriptorSetsCount;
-  struct uvr_vk_descriptor_set_handle *descriptorSetHandles;
+	VkDevice                            logicalDevice;
+	VkDescriptorPool                    descriptorPool;
+	uint32_t                            descriptorSetsCount;
+	struct uvr_vk_descriptor_set_handle *descriptorSetHandles;
 };
 
 
@@ -1159,12 +1159,12 @@ struct uvr_vk_descriptor_set {
  * @descriptorPoolCreateflags - Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
  */
 struct uvr_vk_descriptor_set_create_info {
-  VkDevice                    logicalDevice;
-  VkDescriptorPoolSize        *descriptorPoolInfos;
-  uint32_t                    descriptorPoolInfoCount;
-  VkDescriptorSetLayout       *descriptorSetLayouts;
-  uint32_t                    descriptorSetLayoutCount;
-  VkDescriptorPoolCreateFlags descriptorPoolCreateflags;
+	VkDevice                    logicalDevice;
+	VkDescriptorPoolSize        *descriptorPoolInfos;
+	uint32_t                    descriptorPoolInfoCount;
+	VkDescriptorSetLayout       *descriptorSetLayouts;
+	uint32_t                    descriptorSetLayoutCount;
+	VkDescriptorPoolCreateFlags descriptorPoolCreateflags;
 };
 
 
@@ -1184,8 +1184,8 @@ struct uvr_vk_descriptor_set_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_descriptor_set_create_info
  * return:
- *    on success struct uvr_vk_descriptor_set
- *    on failure struct uvr_vk_descriptor_set { with member nulled }
+ *	on success struct uvr_vk_descriptor_set
+ *	on failure struct uvr_vk_descriptor_set { with member nulled }
  */
 struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descriptor_set_create_info *uvrvk);
 
@@ -1231,23 +1231,23 @@ struct uvr_vk_sampler {
  * @samplerUnnormalizedCoordinates
  */
 struct uvr_vk_sampler_create_info {
-  VkDevice                logicalDevice;
-  VkSamplerCreateFlags    samplerFlags;
-  VkFilter                samplerMagFilter;
-  VkFilter                samplerMinFilter;
-  VkSamplerMipmapMode     samplerMipmapMode;
-  VkSamplerAddressMode    samplerAddressModeU;
-  VkSamplerAddressMode    samplerAddressModeV;
-  VkSamplerAddressMode    samplerAddressModeW;
-  float                   samplerMipLodBias;
-  VkBool32                samplerAnisotropyEnable;
-  float                   samplerMaxAnisotropy;
-  VkBool32                samplerCompareEnable;
-  VkCompareOp             samplerCompareOp;
-  float                   samplerMinLod;
-  float                   samplerMaxLod;
-  VkBorderColor           samplerBorderColor;
-  VkBool32                samplerUnnormalizedCoordinates;
+	VkDevice                logicalDevice;
+	VkSamplerCreateFlags    samplerFlags;
+	VkFilter                samplerMagFilter;
+	VkFilter                samplerMinFilter;
+	VkSamplerMipmapMode     samplerMipmapMode;
+	VkSamplerAddressMode    samplerAddressModeU;
+	VkSamplerAddressMode    samplerAddressModeV;
+	VkSamplerAddressMode    samplerAddressModeW;
+	float                   samplerMipLodBias;
+	VkBool32                samplerAnisotropyEnable;
+	float                   samplerMaxAnisotropy;
+	VkBool32                samplerCompareEnable;
+	VkCompareOp             samplerCompareOp;
+	float                   samplerMinLod;
+	float                   samplerMaxLod;
+	VkBorderColor           samplerBorderColor;
+	VkBool32                samplerUnnormalizedCoordinates;
 };
 
 
@@ -1257,8 +1257,8 @@ struct uvr_vk_sampler_create_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_sampler_create_info
  * return:
- *    on success struct uvr_vk_sampler
- *    on failure struct uvr_vk_sampler { with member nulled }
+ *	on success struct uvr_vk_sampler
+ *	on failure struct uvr_vk_sampler { with member nulled }
  */
 struct uvr_vk_sampler uvr_vk_sampler_create(struct uvr_vk_sampler_create_info *uvrvk);
 
@@ -1274,11 +1274,11 @@ struct uvr_vk_sampler uvr_vk_sampler_create(struct uvr_vk_sampler_create_info *u
  * @bufferData         - Pointer to memory to copy into @deviceMemory at @deviceMemoryOffset
  */
 struct uvr_vk_map_memory_info {
-  VkDevice       logicalDevice;
-  VkDeviceMemory deviceMemory;
-  VkDeviceSize   deviceMemoryOffset;
-  VkDeviceSize   memoryBufferSize;
-  const void     *bufferData;
+	VkDevice       logicalDevice;
+	VkDeviceMemory deviceMemory;
+	VkDeviceSize   deviceMemoryOffset;
+	VkDeviceSize   memoryBufferSize;
+	const void     *bufferData;
 };
 
 
@@ -1303,9 +1303,9 @@ void uvr_vk_map_memory(struct uvr_vk_map_memory_info *uvrvk);
  * resource to copy over to a given type of destination resource.
  */
 typedef enum uvr_vk_copy_type {
-  UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER,
-  UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE,
-  UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER
+	UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER,
+	UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE,
+	UVR_VK_COPY_VK_IMAGE_TO_VK_BUFFER
 } uvr_vk_copy_type;
 
 
@@ -1326,14 +1326,14 @@ typedef enum uvr_vk_copy_type {
  * @imageLayout          - Memory layout of the destination image subresources for the copy
  */
 struct uvr_vk_resource_copy_info {
-  uvr_vk_copy_type        resourceCopyType;
-  VkCommandBuffer         commandBuffer;
-  VkQueue                 queue;
-  void                    *srcResource;
-  void                    *dstResource;
-  VkBufferCopy            *bufferCopyInfo;      // Only allow 1 for now
-  VkBufferImageCopy       *bufferImageCopyInfo; // Only allow 1 for now
-  VkImageLayout           imageLayout;
+	uvr_vk_copy_type        resourceCopyType;
+	VkCommandBuffer         commandBuffer;
+	VkQueue                 queue;
+	void                    *srcResource;
+	void                    *dstResource;
+	VkBufferCopy            *bufferCopyInfo;      // Only allow 1 for now
+	VkBufferImageCopy       *bufferImageCopyInfo; // Only allow 1 for now
+	VkImageLayout           imageLayout;
 };
 
 
@@ -1345,8 +1345,8 @@ struct uvr_vk_resource_copy_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_resource_copy_info
  * return:
- *    on success 0
- *    on failure -1
+ *	on success 0
+ *	on failure -1
  */
 int uvr_vk_resource_copy(struct uvr_vk_resource_copy_info *uvrvk);
 
@@ -1366,14 +1366,14 @@ int uvr_vk_resource_copy(struct uvr_vk_resource_copy_info *uvrvk);
  * @imageMemoryBarrier  - Specifies pipeline barrier for vulkan image resource
  */
 struct uvr_vk_resource_pipeline_barrier_info {
-  VkCommandBuffer                       commandBuffer;
-  VkQueue                               queue;
-  VkPipelineStageFlags                  srcPipelineStage;
-  VkPipelineStageFlags                  dstPipelineStage;
-  VkDependencyFlags                     dependencyFlags;
-  VkMemoryBarrier                       *memoryBarrier;
-  VkBufferMemoryBarrier                 *bufferMemoryBarrier;
-  VkImageMemoryBarrier                  *imageMemoryBarrier;
+	VkCommandBuffer                       commandBuffer;
+	VkQueue                               queue;
+	VkPipelineStageFlags                  srcPipelineStage;
+	VkPipelineStageFlags                  dstPipelineStage;
+	VkDependencyFlags                     dependencyFlags;
+	VkMemoryBarrier                       *memoryBarrier;
+	VkBufferMemoryBarrier                 *bufferMemoryBarrier;
+	VkImageMemoryBarrier                  *imageMemoryBarrier;
 };
 
 
@@ -1384,8 +1384,8 @@ struct uvr_vk_resource_pipeline_barrier_info {
  * args:
  * @uvrvk - pointer to a struct uvr_vk_resource_pipeline_barrier_info
  * return:
- *    on success 0
- *    on failure -1
+ *	on success 0
+ *	on failure -1
  */
 int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_info *uvrvk);
 
@@ -1398,7 +1398,7 @@ int uvr_vk_resource_pipeline_barrier(struct uvr_vk_resource_pipeline_barrier_inf
  * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
- *    populated VkSurfaceCapabilitiesKHR
+ *	populated VkSurfaceCapabilitiesKHR
  */
 VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
@@ -1411,8 +1411,8 @@ VkSurfaceCapabilitiesKHR uvr_vk_get_surface_capabilities(VkPhysicalDevice physDe
  * @surfaceFormats     - Pointer to a array of VkSurfaceFormatKHR which stores color space and pixel format
  */
 struct uvr_vk_surface_format {
-  uint32_t           surfaceFormatCount;
-  VkSurfaceFormatKHR *surfaceFormats;
+	uint32_t           surfaceFormatCount;
+	VkSurfaceFormatKHR *surfaceFormats;
 };
 
 
@@ -1424,8 +1424,8 @@ struct uvr_vk_surface_format {
  * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
- *    on success struct uvr_vk_surface_format
- *    on failure struct uvr_vk_surface_format { with member nulled }
+ *	on success struct uvr_vk_surface_format
+ *	on failure struct uvr_vk_surface_format { with member nulled }
  */
 struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
@@ -1438,8 +1438,8 @@ struct uvr_vk_surface_format uvr_vk_get_surface_formats(VkPhysicalDevice physDev
  * @presentModes     - Pointer to an array of VkPresentModeKHR which stores values of potential surface present modes
  */
 struct uvr_vk_surface_present_mode {
-  uint32_t         presentModeCount;
-  VkPresentModeKHR *presentModes;
+	uint32_t         presentModeCount;
+	VkPresentModeKHR *presentModes;
 };
 
 
@@ -1453,8 +1453,8 @@ struct uvr_vk_surface_present_mode {
  * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
  * return:
- *    on success struct uvr_vk_surface_present_mode
- *    on failure struct uvr_vk_surface_present_mode { with member nulled }
+ *	on success struct uvr_vk_surface_present_mode
+ *	on failure struct uvr_vk_surface_present_mode { with member nulled }
  */
 struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
@@ -1467,8 +1467,8 @@ struct uvr_vk_surface_present_mode uvr_vk_get_surface_present_modes(VkPhysicalDe
  * @formatPropertyCount - The amount of elements contained in @formatProperties array
  */
 struct uvr_vk_phdev_format_prop {
-  VkFormatProperties *formatProperties;
-  uint32_t           formatPropertyCount;
+	VkFormatProperties *formatProperties;
+	uint32_t           formatPropertyCount;
 };
 
 
@@ -1481,8 +1481,8 @@ struct uvr_vk_phdev_format_prop {
  * @formats     - Must pass a pointer to an array of type VkFormat to get VkFormatProperties from
  * @formatCount - Must pass the amount of elements in @formats array
  * return:
- *    on success struct uvr_vk_phdev_format_prop
- *    on failure struct uvr_vk_phdev_format_prop { with member nulled }
+ *	on success struct uvr_vk_phdev_format_prop
+ *	on failure struct uvr_vk_phdev_format_prop { with member nulled }
  */
 struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDevice physDev, VkFormat *formats, uint32_t formatCount);
 
@@ -1523,50 +1523,50 @@ struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDev
  * @uvr_vk_sampler                   - Must pass a pointer to an array of valid struct uvr_vk_sampler { free'd members: VkSampler handle }
  */
 struct uvr_vk_destroy {
-  VkInstance instance;
-  VkSurfaceKHR surface;
+	VkInstance instance;
+	VkSurfaceKHR surface;
 
-  uint32_t uvr_vk_lgdev_cnt;
-  struct uvr_vk_lgdev *uvr_vk_lgdev;
+	uint32_t uvr_vk_lgdev_cnt;
+	struct uvr_vk_lgdev *uvr_vk_lgdev;
 
-  uint32_t uvr_vk_swapchain_cnt;
-  struct uvr_vk_swapchain *uvr_vk_swapchain;
+	uint32_t uvr_vk_swapchain_cnt;
+	struct uvr_vk_swapchain *uvr_vk_swapchain;
 
-  uint32_t uvr_vk_image_cnt;
-  struct uvr_vk_image *uvr_vk_image;
+	uint32_t uvr_vk_image_cnt;
+	struct uvr_vk_image *uvr_vk_image;
 
-  uint32_t uvr_vk_shader_module_cnt;
-  struct uvr_vk_shader_module *uvr_vk_shader_module;
+	uint32_t uvr_vk_shader_module_cnt;
+	struct uvr_vk_shader_module *uvr_vk_shader_module;
 
-  uint32_t uvr_vk_render_pass_cnt;
-  struct uvr_vk_render_pass *uvr_vk_render_pass;
+	uint32_t uvr_vk_render_pass_cnt;
+	struct uvr_vk_render_pass *uvr_vk_render_pass;
 
-  uint32_t uvr_vk_pipeline_layout_cnt;
-  struct uvr_vk_pipeline_layout *uvr_vk_pipeline_layout;
+	uint32_t uvr_vk_pipeline_layout_cnt;
+	struct uvr_vk_pipeline_layout *uvr_vk_pipeline_layout;
 
-  uint32_t uvr_vk_graphics_pipeline_cnt;
-  struct uvr_vk_graphics_pipeline *uvr_vk_graphics_pipeline;
+	uint32_t uvr_vk_graphics_pipeline_cnt;
+	struct uvr_vk_graphics_pipeline *uvr_vk_graphics_pipeline;
 
-  uint32_t uvr_vk_framebuffer_cnt;
-  struct uvr_vk_framebuffer *uvr_vk_framebuffer;
+	uint32_t uvr_vk_framebuffer_cnt;
+	struct uvr_vk_framebuffer *uvr_vk_framebuffer;
 
-  uint32_t uvr_vk_command_buffer_cnt;
-  struct uvr_vk_command_buffer *uvr_vk_command_buffer;
+	uint32_t uvr_vk_command_buffer_cnt;
+	struct uvr_vk_command_buffer *uvr_vk_command_buffer;
 
-  uint32_t uvr_vk_sync_obj_cnt;
-  struct uvr_vk_sync_obj *uvr_vk_sync_obj;
+	uint32_t uvr_vk_sync_obj_cnt;
+	struct uvr_vk_sync_obj *uvr_vk_sync_obj;
 
-  uint32_t uvr_vk_buffer_cnt;
-  struct uvr_vk_buffer *uvr_vk_buffer;
+	uint32_t uvr_vk_buffer_cnt;
+	struct uvr_vk_buffer *uvr_vk_buffer;
 
-  uint32_t uvr_vk_descriptor_set_layout_cnt;
-  struct uvr_vk_descriptor_set_layout *uvr_vk_descriptor_set_layout;
+	uint32_t uvr_vk_descriptor_set_layout_cnt;
+	struct uvr_vk_descriptor_set_layout *uvr_vk_descriptor_set_layout;
 
-  uint32_t uvr_vk_descriptor_set_cnt;
-  struct uvr_vk_descriptor_set *uvr_vk_descriptor_set;
+	uint32_t uvr_vk_descriptor_set_cnt;
+	struct uvr_vk_descriptor_set *uvr_vk_descriptor_set;
 
-  uint32_t uvr_vk_sampler_cnt;
-  struct uvr_vk_sampler *uvr_vk_sampler;
+	uint32_t uvr_vk_sampler_cnt;
+	struct uvr_vk_sampler *uvr_vk_sampler;
 };
 
 

@@ -18,10 +18,10 @@
  * @entryPoint  - Used to define the function name in the GLSL source that acts as an entry point for the shader
  */
 struct uvr_shader_spirv_create_info {
-  unsigned int kind;
-  const char   *source;
-  const char   *filename;
-  const char   *entryPoint;
+	unsigned int kind;
+	const char   *source;
+	const char   *filename;
+	const char   *entryPoint;
 };
 
 
@@ -35,9 +35,9 @@ struct uvr_shader_spirv_create_info {
  * @byteSize - Size of buffer storing a given file's content
  */
 struct uvr_shader_spirv {
-  shaderc_compilation_result_t result;
-  const unsigned char          *bytes;
-  unsigned long                byteSize;
+	shaderc_compilation_result_t result;
+	const unsigned char          *bytes;
+	unsigned long                byteSize;
 };
 
 
@@ -50,8 +50,8 @@ struct uvr_shader_spirv {
  * args:
  * @uvrshader - Pointer to a struct uvr_shader_spirv_create_info containing infromation about what ops to do
  * return:
- *    on success struct uvr_shader_spirv
- *    on failure struct uvr_shader_spirv { with member nulled }
+ *	on success struct uvr_shader_spirv
+ *	on failure struct uvr_shader_spirv { with member nulled }
  */
 struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spirv_create_info *uvrshader);
 
@@ -64,8 +64,8 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
  * @uvr_shader_spirv     - Must pass a pointer to an array of valid struct uvr_shader_spirv { free'd  members: shaderc_compilation_result_t handle }
  */
 struct uvr_shader_destroy {
-  uint32_t                uvr_shader_spirv_cnt;
-  struct uvr_shader_spirv *uvr_shader_spirv;
+	uint32_t                uvr_shader_spirv_cnt;
+	struct uvr_shader_spirv *uvr_shader_spirv;
 };
 
 

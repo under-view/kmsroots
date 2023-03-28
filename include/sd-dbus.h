@@ -25,9 +25,9 @@
  * @path    - Path to session object
  */
 struct uvr_sd_session {
-  sd_bus *bus;
-  char   *id;
-  char   *path;
+	sd_bus *bus;
+	char   *id;
+	char   *path;
 };
 
 
@@ -38,8 +38,8 @@ struct uvr_sd_session {
  * args:
  * @uvrsd - pointer to a struct uvr_sd_session stores information about the current session
  * return:
- *   on success 0
- *   on failure -1
+ *	on success 0
+ *	on failure -1
  */
 int uvr_sd_session_create(struct uvr_sd_session *uvrsd);
 
@@ -55,8 +55,8 @@ int uvr_sd_session_create(struct uvr_sd_session *uvrsd);
  * @uvrsd   - pointer to a struct uvr_sd_session stores information about the current session
  * @devpath - Path to a given character device associated with a connected device
  * return:
- *    on success an open file descriptor
- *    on failure -1
+ *	on success an open file descriptor
+ *	on failure -1
  */
 int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const char *devpath);
 

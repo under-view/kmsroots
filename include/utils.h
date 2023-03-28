@@ -17,8 +17,8 @@
  * @byteSize - Size of buffer storing a given file's content
  */
 struct uvr_utils_file {
-  unsigned char *bytes;
-  unsigned long byteSize;
+	unsigned char *bytes;
+	unsigned long byteSize;
 };
 
 
@@ -29,8 +29,8 @@ struct uvr_utils_file {
  * args:
  * @filename - Must pass path to file to load
  * return:
- *    on success struct uvr_utils_file
- *    on failure struct uvr_utils_file { with member nulled }
+ *	on success struct uvr_utils_file
+ *	on failure struct uvr_utils_file { with member nulled }
  */
 struct uvr_utils_file uvr_utils_file_load(const char *filename);
 
@@ -39,8 +39,8 @@ struct uvr_utils_file uvr_utils_file_load(const char *filename);
  * uvr_utils_nanosecond: Function returns the current time in nanosecond
  *
  * return:
- *    on success current time in nanosecond
- *    on failure no checks occur
+ *	on success current time in nanosecond
+ *	on failure no checks occur
  */
 uint64_t uvr_utils_nanosecond();
 
@@ -55,9 +55,9 @@ uint64_t uvr_utils_nanosecond();
  * @alignedBufferMemory - Pointer to memory aligned range of addresses
  */
 struct uvr_utils_aligned_buffer {
-  uint32_t bufferAlignment;
-  uint32_t alignedBufferSize;
-  void     *alignedBufferMemory;
+	uint32_t bufferAlignment;
+	uint32_t alignedBufferSize;
+	void     *alignedBufferMemory;
 };
 
 
@@ -70,9 +70,9 @@ struct uvr_utils_aligned_buffer {
  * @bufferAlignment   - Multiple that is used to determine aligned requirments of a given buffer (block of memory).
  */
 struct uvr_utils_aligned_buffer_create_info {
-  size_t   bytesToAlign;
-  uint32_t bytesToAlignCount;
-  uint32_t bufferAlignment;
+	size_t   bytesToAlign;
+	uint32_t bytesToAlignCount;
+	uint32_t bufferAlignment;
 };
 
 
@@ -85,8 +85,8 @@ struct uvr_utils_aligned_buffer_create_info {
  * args:
  * @uvrutils - pointer to a struct uvr_utils_aligned_buffer_create_info
  * return:
- *    on success struct uvr_utils_aligned_buffer
- *    on failure struct uvr_utils_aligned_buffer { with members nulled }
+ *	on success struct uvr_utils_aligned_buffer
+ *	on failure struct uvr_utils_aligned_buffer { with members nulled }
  */
 struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils);
 
@@ -101,21 +101,21 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
  * @filename  - String to append to @directory
  * @maxStrLen - Allow customer to set maximum string len
  * return:
- *    on success absolute path to file
- *    on failure NULL
+ *	on success absolute path to file
+ *	on failure NULL
  */
 char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen);
 
 
 /* Used to help determine which ANSI Escape Codes to use */
 enum uvr_utils_log_type {
-  UVR_NONE         = 0,
-  UVR_SUCCESS      = 1,
-  UVR_DANGER       = 2,
-  UVR_INFO         = 3,
-  UVR_WARNING      = 4,
-  UVR_RESET        = 5,
-  UVR_MAX_LOG_ENUM = 0xFFFFFFFF
+	UVR_NONE         = 0,
+	UVR_SUCCESS      = 1,
+	UVR_DANGER       = 2,
+	UVR_INFO         = 3,
+	UVR_WARNING      = 4,
+	UVR_RESET        = 5,
+	UVR_MAX_LOG_ENUM = 0xFFFFFFFF
 };
 
 
@@ -127,7 +127,7 @@ const char *_uvr_utils_strip_path(const char *filepath);
 
 /* Macros defined to help better structure the message */
 #define uvr_utils_log(log_type, fmt, ...) \
-  _uvr_utils_log(log_type, stdout, "[%s:%d] " fmt, _uvr_utils_strip_path(__FILE__), __LINE__, ##__VA_ARGS__)
+	_uvr_utils_log(log_type, stdout, "[%s:%d] " fmt, _uvr_utils_strip_path(__FILE__), __LINE__, ##__VA_ARGS__)
 
 
 #endif

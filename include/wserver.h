@@ -31,15 +31,15 @@
  * @newOutputListener      - Listener used to notify when a new output is connected
  */
 struct uvr_ws_core {
-  struct wl_display        *wlDisplay;
-  struct wlr_backend       *wlrBackend;
-  struct wlr_renderer      *wlrRenderer;
-  struct wlr_allocator     *wlrRendererAllocator;
-  struct wlr_scene         *wlrSceneGraph;
+	struct wl_display        *wlDisplay;
+	struct wlr_backend       *wlrBackend;
+	struct wlr_renderer      *wlrRenderer;
+	struct wlr_allocator     *wlrRendererAllocator;
+	struct wlr_scene         *wlrSceneGraph;
 
-  struct wlr_output_layout *wlrOutputLayout;
-  struct wl_list           outputList;
-  struct wl_listener       newOutputListener;
+	struct wlr_output_layout *wlrOutputLayout;
+	struct wl_list           outputList;
+	struct wl_listener       newOutputListener;
 };
 
 
@@ -56,8 +56,8 @@ struct uvr_ws_core {
  *                        fails.
  */
 struct uvr_ws_core_create_info {
-  bool includeWlrDebugLogs;
-  char *unixSockName;
+	bool includeWlrDebugLogs;
+	char *unixSockName;
 };
 
 
@@ -70,8 +70,8 @@ struct uvr_ws_core_create_info {
  * @uvrws - pointer to a struct uvr_ws_core_create_info contains members that determine
  *          functions logic
  * return:
- *    on success struct uvr_ws_core
- *    on failure struct uvr_ws_core { with members nulled }
+ *	on success struct uvr_ws_core
+ *	on failure struct uvr_ws_core { with members nulled }
  */
 struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws);
 

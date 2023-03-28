@@ -37,12 +37,12 @@
  * @useLogind      - Stores whether systemd-logind is utilized or not
  */
 struct uvr_kms_node {
-  int                   kmsfd;
-  int                   vtfd;
-  int                   keyBoardMode;
+	int                   kmsfd;
+	int                   vtfd;
+	int                   keyBoardMode;
 #ifdef INCLUDE_SDBUS
-  struct uvr_sd_session *systemdSession;
-  bool                  useLogind;
+	struct uvr_sd_session *systemdSession;
+	bool                  useLogind;
 #endif
 };
 
@@ -65,10 +65,10 @@ struct uvr_kms_node {
  */
 struct uvr_kms_node_create_info {
 #ifdef INCLUDE_SDBUS
-  struct uvr_sd_session *systemdSession;
-  bool                  useLogind;
+	struct uvr_sd_session *systemdSession;
+	bool                  useLogind;
 #endif
-  const char            *kmsNode;
+	const char            *kmsNode;
 };
 
 
@@ -84,8 +84,8 @@ struct uvr_kms_node_create_info {
  * @uvrkms - pointer to a struct uvr_kms_node_create_info used to determine pass DRI device file that we may want to use
  *           and information about the current sytemd-logind session
  * return:
- *    on success struct uvr_kms_node
- *    on failure struct uvr_kms_node { with members nulled, int's set to -1 }
+ *	on success struct uvr_kms_node
+ *	on failure struct uvr_kms_node { with members nulled, int's set to -1 }
  */
 struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms);
 
@@ -100,8 +100,8 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
  * For more info see https://github.com/torvalds/linux/blob/master/include/uapi/drm/drm.h#L627
  */
 struct uvr_kms_node_device_capabilites {
-  bool ADDFB2_MODIFIERS;
-  bool TIMESTAMP_MONOTONIC;
+	bool ADDFB2_MODIFIERS;
+	bool TIMESTAMP_MONOTONIC;
 };
 
 
@@ -112,7 +112,7 @@ struct uvr_kms_node_device_capabilites {
  * args:
  * @kmsfd - Number associated with open KMS device node
  * return:
- *    struct uvr_kms_node_device_capabilites
+ *	struct uvr_kms_node_device_capabilites
  */
 struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd);
 
@@ -133,10 +133,10 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  * For more info see https://manpages.org/drm-kms/7
  */
 struct uvr_kms_node_display_output_chain {
-  drmModeConnector *connector;
-  drmModeEncoder   *encoder;
-  drmModeCrtc      *crtc;
-  drmModePlane     *plane;
+	drmModeConnector *connector;
+	drmModeEncoder   *encoder;
+	drmModeCrtc      *crtc;
+	drmModePlane     *plane;
 };
 
 
@@ -147,7 +147,7 @@ struct uvr_kms_node_display_output_chain {
  * @kmsfd - The file descriptor associated with open KMS device node.
  */
 struct uvr_kms_node_display_output_chain_create_info {
-  int kmsfd;
+	int kmsfd;
 };
 
 
@@ -160,8 +160,8 @@ struct uvr_kms_node_display_output_chain_create_info {
  * args:
  * @uvrkms - pointer to a struct uvr_kms_node_display_output_chain_create_info used to determine what operation will happen in the function
  * return:
- *    on success struct uvr_kms_node_display_output_chain
- *    on failure struct uvr_kms_node_display_output_chain { with members nulled }
+ *	on success struct uvr_kms_node_display_output_chain
+ *	on failure struct uvr_kms_node_display_output_chain { with members nulled }
  */
 struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_create(struct uvr_kms_node_display_output_chain_create_info *uvrkms);
 
@@ -178,8 +178,8 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  *                                      about KMS device node connector->encoder->crtc->plane pair
  */
 struct uvr_kms_node_destroy {
-  struct uvr_kms_node                      uvr_kms_node;
-  struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
+	struct uvr_kms_node                      uvr_kms_node;
+	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
 };
 
 

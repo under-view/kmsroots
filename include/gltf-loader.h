@@ -14,7 +14,7 @@
  * @gltfData - Buffer that stores a given gltf file's content
  */
 struct uvr_gltf_loader_file {
-  cgltf_data *gltfData;
+	cgltf_data *gltfData;
 };
 
 
@@ -25,7 +25,7 @@ struct uvr_gltf_loader_file {
  * @fileName - Must pass the path to the gltf file to load
  */
 struct uvr_gltf_loader_file_load_info {
-  const char *fileName;
+	const char *fileName;
 };
 
 
@@ -37,8 +37,8 @@ struct uvr_gltf_loader_file_load_info {
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_file_load_info
  * return:
- *    on success struct uvr_gltf_loader_file
- *    on failure struct uvr_gltf_loader_file { with member nulled }
+ *	on success struct uvr_gltf_loader_file
+ *	on failure struct uvr_gltf_loader_file { with member nulled }
  */
 struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_file_load_info *uvrgltf);
 
@@ -49,12 +49,12 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
  * Used to determine contents contained at offset of larger buffer
  */
 enum uvr_gltf_loader_vertex_type {
-  UVR_GLTF_LOADER_VERTEX_POSITION = 0x00000001,
-  UVR_GLTF_LOADER_VERTEX_COLOR    = 0x00000002,
-  UVR_GLTF_LOADER_VERTEX_TEXTURE  = 0x00000003,
-  UVR_GLTF_LOADER_VERTEX_NORMAL   = 0x00000004,
-  UVR_GLTF_LOADER_VERTEX_TANGENT  = 0x00000005,
-  UVR_GLTF_LOADER_VERTEX_INDEX    = 0x00000006,
+	UVR_GLTF_LOADER_VERTEX_POSITION = 0x00000001,
+	UVR_GLTF_LOADER_VERTEX_COLOR    = 0x00000002,
+	UVR_GLTF_LOADER_VERTEX_TEXTURE  = 0x00000003,
+	UVR_GLTF_LOADER_VERTEX_NORMAL   = 0x00000004,
+	UVR_GLTF_LOADER_VERTEX_TANGENT  = 0x00000005,
+	UVR_GLTF_LOADER_VERTEX_INDEX    = 0x00000006,
 };
 
 
@@ -70,12 +70,12 @@ enum uvr_gltf_loader_vertex_type {
  * @meshIndex          - Mesh associated with buffer
  */
 struct uvr_gltf_loader_vertex_data {
-  enum uvr_gltf_loader_vertex_type bufferType;
-  uint32_t                         byteOffset;
-  uint32_t                         bufferSize;
-  uint32_t                         bufferElementCount;
-  uint32_t                         bufferElementSize;
-  uint32_t                         meshIndex;
+	enum uvr_gltf_loader_vertex_type bufferType;
+	uint32_t                         byteOffset;
+	uint32_t                         bufferSize;
+	uint32_t                         bufferElementCount;
+	uint32_t                         bufferElementSize;
+	uint32_t                         meshIndex;
 };
 
 
@@ -91,12 +91,12 @@ struct uvr_gltf_loader_vertex_data {
  * @meshCount         - Amount of meshes associated with a @bufferIndex buffer in "buffers" array.
  */
 struct uvr_gltf_loader_vertex {
-  struct uvr_gltf_loader_vertex_data *verticesData;
-  uint32_t                           verticesDataCount;
-  unsigned char                      *bufferData;
-  uint32_t                           bufferSize;
-  uint32_t                           bufferIndex;
-  uint32_t                           meshCount;
+	struct uvr_gltf_loader_vertex_data *verticesData;
+	uint32_t                           verticesDataCount;
+	unsigned char                      *bufferData;
+	uint32_t                           bufferSize;
+	uint32_t                           bufferIndex;
+	uint32_t                           meshCount;
 };
 
 
@@ -108,8 +108,8 @@ struct uvr_gltf_loader_vertex {
  * @bufferIndex - Index of buffer in GLTF file buffers array
  */
 struct uvr_gltf_loader_vertex_buffers_create_info {
-  struct uvr_gltf_loader_file gltfFile;
-  cgltf_int                   bufferIndex;
+	struct uvr_gltf_loader_file gltfFile;
+	cgltf_int                   bufferIndex;
 };
 
 
@@ -127,8 +127,8 @@ struct uvr_gltf_loader_vertex_buffers_create_info {
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_vertex_buffers_create_info
  * return:
- *    on success struct uvr_gltf_loader_vertex { with member being pointer to an array }
- *    on failure struct uvr_gltf_loader_vertex { with member nulled }
+ *	on success struct uvr_gltf_loader_vertex { with member being pointer to an array }
+ *	on failure struct uvr_gltf_loader_vertex { with member nulled }
  */
 struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_gltf_loader_vertex_buffers_create_info *uvrgltf);
 
@@ -144,11 +144,11 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
  * @imageSize     - Byte size of the image (@textureWidth * @textureHeight) * @textureChannels
  */
 struct uvr_gltf_loader_texture_image_data {
-  void   *pixels;
-  int    imageWidth;
-  int    imageHeight;
-  int    imageChannels;
-  size_t imageSize;
+	void   *pixels;
+	int    imageWidth;
+	int    imageHeight;
+	int    imageChannels;
+	size_t imageSize;
 };
 
 
@@ -162,9 +162,9 @@ struct uvr_gltf_loader_texture_image_data {
  * @imageData       - Pointer to an array of image data.
  */
 struct uvr_gltf_loader_texture_image {
-  uint32_t                                  imageCount;
-  uint32_t                                  totalBufferSize;
-  struct uvr_gltf_loader_texture_image_data *imageData;
+	uint32_t                                  imageCount;
+	uint32_t                                  totalBufferSize;
+	struct uvr_gltf_loader_texture_image_data *imageData;
 };
 
 
@@ -177,8 +177,8 @@ struct uvr_gltf_loader_texture_image {
  *              Absolute path to a file that resides in the same directory as the image files will work too.
  */
 struct uvr_gltf_loader_texture_image_create_info {
-  struct uvr_gltf_loader_file gltfFile;
-  const char                  *directory;
+	struct uvr_gltf_loader_file gltfFile;
+	const char                  *directory;
 };
 
 
@@ -189,8 +189,8 @@ struct uvr_gltf_loader_texture_image_create_info {
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_texture_image_create_info
  * return:
- *    on success struct uvr_gltf_loader_texture_image { with member being pointer to an array }
- *    on failure struct uvr_gltf_loader_texture_image { with member nulled }
+ *	on success struct uvr_gltf_loader_texture_image { with member being pointer to an array }
+ *	on failure struct uvr_gltf_loader_texture_image { with member nulled }
  */
 struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_create(struct uvr_gltf_loader_texture_image_create_info *uvrgltf);
 
@@ -220,10 +220,10 @@ struct uvr_gltf_loader_cgltf_texture_transform {
  * @textureTransform -
  */
 struct uvr_gltf_loader_cgltf_texture_view {
-  uint32_t                                       textureIndex;
-  uint32_t                                       imageIndex;
-  float                                          scale;
-//  struct uvr_gltf_loader_cgltf_texture_transform textureTransform;
+	uint32_t                                       textureIndex;
+	uint32_t                                       imageIndex;
+	float                                          scale;
+	struct uvr_gltf_loader_cgltf_texture_transform textureTransform;
 };
 
 
@@ -267,8 +267,8 @@ struct uvr_gltf_loader_cgltf_pbr_metallic_roughness {
  * @occlusionTexture     -
  */
 struct uvr_gltf_loader_material_data {
-  uint32_t                                             meshIndex;
-  char                                                 materialName[32];
+	uint32_t                                             meshIndex;
+	char                                                 materialName[32];
 	struct uvr_gltf_loader_cgltf_pbr_metallic_roughness  pbrMetallicRoughness;
 	struct uvr_gltf_loader_cgltf_texture_view            normalTexture;
 	struct uvr_gltf_loader_cgltf_texture_view            occlusionTexture;
@@ -283,8 +283,8 @@ struct uvr_gltf_loader_material_data {
  * @materialDataCount - Amount of elements in @materialData array
  */
 struct uvr_gltf_loader_material {
-  struct uvr_gltf_loader_material_data *materialData;
-  uint32_t                             materialDataCount;
+	struct uvr_gltf_loader_material_data *materialData;
+	uint32_t                             materialDataCount;
 };
 
 
@@ -295,7 +295,7 @@ struct uvr_gltf_loader_material {
  * @gltfFile  - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
  */
 struct uvr_gltf_loader_material_create_info {
-  struct uvr_gltf_loader_file gltfFile;
+	struct uvr_gltf_loader_file gltfFile;
 };
 
 
@@ -306,8 +306,8 @@ struct uvr_gltf_loader_material_create_info {
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_material_create_info
  * return:
- *    on success struct uvr_gltf_loader_material { with member being pointer to an array }
- *    on failure struct uvr_gltf_loader_material { with member nulled }
+ *	on success struct uvr_gltf_loader_material { with member being pointer to an array }
+ *	on failure struct uvr_gltf_loader_material { with member nulled }
  */
 struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_loader_material_create_info *uvrgltf);
 
@@ -316,10 +316,10 @@ struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_
  * enum uvr_gltf_loader_gltf_object_type (Underview Renderer GLTF Loader GLTF Object Type)
  */
 enum uvr_gltf_loader_gltf_object_type {
-  UVR_GLTF_LOADER_GLTF_NODE = 0x00000001,
-  UVR_GLTF_LOADER_GLTF_MESH = 0x00000002,
-  UVR_GLTF_LOADER_GLTF_SKIN = 0x00000003,
-  UVR_GLTF_LOADER_GLTF_CAMERA = 0x00000004,
+	UVR_GLTF_LOADER_GLTF_NODE = 0x00000001,
+	UVR_GLTF_LOADER_GLTF_MESH = 0x00000002,
+	UVR_GLTF_LOADER_GLTF_SKIN = 0x00000003,
+	UVR_GLTF_LOADER_GLTF_CAMERA = 0x00000004,
 };
 
 
@@ -339,11 +339,11 @@ enum uvr_gltf_loader_gltf_object_type {
  *                    Final matrix transform is (identity matrix * TRS parent matrix) * (identity matrix * TRS child matrix)
  */
 struct uvr_gltf_loader_node_data {
-  enum uvr_gltf_loader_gltf_object_type objectType;
-  uint32_t                              objectIndex;
-  uint32_t                              nodeIndex;
-  uint32_t                              parentNodeIndex;
-  float                                 matrixTransform[4][4];
+	enum uvr_gltf_loader_gltf_object_type objectType;
+	uint32_t                              objectIndex;
+	uint32_t                              nodeIndex;
+	uint32_t                              parentNodeIndex;
+	float                                 matrixTransform[4][4];
 };
 
 
@@ -355,8 +355,8 @@ struct uvr_gltf_loader_node_data {
  * @nodeDataCount - Amount of elements in @nodeData array
  */
 struct uvr_gltf_loader_node {
-  struct uvr_gltf_loader_node_data *nodeData;
-  uint32_t                         nodeDataCount;
+	struct uvr_gltf_loader_node_data *nodeData;
+	uint32_t                         nodeDataCount;
 };
 
 
@@ -368,8 +368,8 @@ struct uvr_gltf_loader_node {
  * @sceneIndex     - Index in GLTF file "scenes" array.
  */
 struct uvr_gltf_loader_node_create_info {
-  struct uvr_gltf_loader_file gltfLoaderFile;
-  uint32_t                    sceneIndex;
+	struct uvr_gltf_loader_file gltfLoaderFile;
+	uint32_t                    sceneIndex;
 };
 
 
@@ -382,8 +382,8 @@ struct uvr_gltf_loader_node_create_info {
  * args:
  * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_node_create_info
  * return:
- *    on success struct uvr_gltf_loader_node { with member being pointer to an array }
- *    on failure struct uvr_gltf_loader_node { with member nulled }
+ *	on success struct uvr_gltf_loader_node { with member being pointer to an array }
+ *	on failure struct uvr_gltf_loader_node { with member nulled }
  */
 struct uvr_gltf_loader_node uvr_gltf_loader_node_create(struct uvr_gltf_loader_node_create_info *uvrgltf);
 
@@ -413,16 +413,16 @@ void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *
  * @uvr_gltf_loader_node              - Must pass a pointer to an array of valid struct uvr_gltf_loader_node { free'd members: @nodeData }
  */
 struct uvr_gltf_loader_destroy {
-  uint32_t                             uvr_gltf_loader_file_cnt;
-  struct uvr_gltf_loader_file          *uvr_gltf_loader_file;
-  uint32_t                             uvr_gltf_loader_vertex_cnt;
-  struct uvr_gltf_loader_vertex        *uvr_gltf_loader_vertex;
-  uint32_t                             uvr_gltf_loader_texture_image_cnt;
-  struct uvr_gltf_loader_texture_image *uvr_gltf_loader_texture_image;
-  uint32_t                             uvr_gltf_loader_material_cnt;
-  struct uvr_gltf_loader_material      *uvr_gltf_loader_material;
-  uint32_t                             uvr_gltf_loader_node_cnt;
-  struct uvr_gltf_loader_node          *uvr_gltf_loader_node;
+	uint32_t                             uvr_gltf_loader_file_cnt;
+	struct uvr_gltf_loader_file          *uvr_gltf_loader_file;
+	uint32_t                             uvr_gltf_loader_vertex_cnt;
+	struct uvr_gltf_loader_vertex        *uvr_gltf_loader_vertex;
+	uint32_t                             uvr_gltf_loader_texture_image_cnt;
+	struct uvr_gltf_loader_texture_image *uvr_gltf_loader_texture_image;
+	uint32_t                             uvr_gltf_loader_material_cnt;
+	struct uvr_gltf_loader_material      *uvr_gltf_loader_material;
+	uint32_t                             uvr_gltf_loader_node_cnt;
+	struct uvr_gltf_loader_node          *uvr_gltf_loader_node;
 };
 
 

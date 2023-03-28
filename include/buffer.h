@@ -18,9 +18,9 @@
  * Buffer allocation options used by uvr_buffer_create
  */
 enum uvr_buffer_type {
-  UVR_BUFFER_DUMP_BUFFER               = 0,
-  UVR_BUFFER_GBM_BUFFER                = 1,
-  UVR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2
+	UVR_BUFFER_DUMP_BUFFER               = 0,
+	UVR_BUFFER_GBM_BUFFER                = 1,
+	UVR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2
 };
 
 
@@ -47,16 +47,16 @@ enum uvr_buffer_type {
  * @kmsfd        - File descriptor to open DRI device
  */
 struct uvr_buffer_object {
-  struct gbm_bo *bo;
-  unsigned      fbid;
-  unsigned      format;
-  uint64_t      modifier;
-  unsigned      planeCount;
-  unsigned      pitches[4];
-  unsigned      offsets[4];
-  unsigned      gemHandles[4];
-  int           dmaBufferFds[4];
-  int           kmsfd;
+	struct gbm_bo *bo;
+	unsigned      fbid;
+	unsigned      format;
+	uint64_t      modifier;
+	unsigned      planeCount;
+	unsigned      pitches[4];
+	unsigned      offsets[4];
+	unsigned      gemHandles[4];
+	int           dmaBufferFds[4];
+	int           kmsfd;
 };
 
 
@@ -70,9 +70,9 @@ struct uvr_buffer_object {
  *                  about the individual buffer.
  */
 struct uvr_buffer {
-  struct gbm_device        *gbmDevice;
-  unsigned int             bufferCount;
-  struct uvr_buffer_object *bufferObjects;
+	struct gbm_device        *gbmDevice;
+	unsigned int             bufferCount;
+	struct uvr_buffer_object *bufferObjects;
 };
 
 
@@ -99,17 +99,17 @@ struct uvr_buffer {
  * @modifierCount - Number of drm format modifiers passed
  */
 struct uvr_buffer_create_info {
-  enum uvr_buffer_type bufferType;
-  unsigned int         kmsfd;
-  unsigned int         bufferCount;
-  unsigned int         width;
-  unsigned int         height;
-  unsigned int         bitDepth;
-  unsigned int         bitsPerPixel;
-  unsigned int         gbmBoFlags;
-  unsigned int         pixelFormat;
-  uint64_t             *modifiers;
-  unsigned int         modifierCount;
+	enum uvr_buffer_type bufferType;
+	unsigned int         kmsfd;
+	unsigned int         bufferCount;
+	unsigned int         width;
+	unsigned int         height;
+	unsigned int         bitDepth;
+	unsigned int         bitsPerPixel;
+	unsigned int         gbmBoFlags;
+	unsigned int         pixelFormat;
+	uint64_t             *modifiers;
+	unsigned int         modifierCount;
 };
 
 
@@ -119,8 +119,8 @@ struct uvr_buffer_create_info {
  * args:
  * @uvrbuff - Pointer to a struct uvrbuff_create_info
  * return:
- *    on success struct uvr_buffer
- *    on failure struct uvr_buffer { with members nulled }
+ *	on success struct uvr_buffer
+ *	on failure struct uvr_buffer { with members nulled }
  */
 struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff);
 
@@ -141,8 +141,8 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff);
  *                   }
  */
 struct uvr_buffer_destroy {
-  unsigned          uvr_buffer_cnt;
-  struct uvr_buffer *uvr_buffer;
+	unsigned          uvr_buffer_cnt;
+	struct uvr_buffer *uvr_buffer;
 };
 
 

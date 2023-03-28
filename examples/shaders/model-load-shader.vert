@@ -13,30 +13,30 @@ layout (location = 2) in vec2 inTexCoord;
 layout (location = 3) in vec3 inColor;
 
 layout (set = 0, binding = 0) uniform uniform_buffer_scene {
-  mat4 projection;
-  mat4 view;
-  vec4 lightPos;
-  vec4 viewPos;
+	mat4 projection;
+	mat4 view;
+	vec4 lightPosition;
+	vec4 viewPosition;
 } uboScene;
 
 // Used in conjunction with dynamic uniform buffer
-layout(set = 0, binding = 1) uniform uniform_buffer_model {
-  mat4 model;
+layout(set = 0, binding = 1) uniform uniform_buffer_scene_model {
+	mat4 model;
 } uboModel;
 
 // Won't be included when shader is compiled as it's not in use
 layout(push_constant) uniform uniform_push_model {
-  mat4 model;
+	mat4 model;
 } pushModel;
 
 void main() {
-  outNormal = inNormal;
-  outColor = inColor;
-  outTexCoord = inTexCoord;
-  gl_Position = uboScene.projection * uboScene.view * uboModel.model * vec4(inPosition.xyz, 1.0);
+	outNormal = inNormal;
+	outColor = inColor;
+	outTexCoord = inTexCoord;
+	gl_Position = uboScene.projection * uboScene.view * uboModel.model * vec4(inPosition.xyz, 1.0);
 
-  vec4 pos = uboScene.view * vec4(inPosition, 1.0);
-  outNormal = mat3(uboScene.view) * inNormal;
-  outLightVec = uboScene.lightPos.xyz - pos.xyz;
-  outViewVec = uboScene.viewPos.xyz - pos.xyz;
+	vec4 pos = uboScene.view * vec4(inPosition, 1.0);
+	outNormal = mat3(uboScene.view) * inNormal;
+	outLightVec = uboScene.lightPosition.xyz - pos.xyz;
+	outViewVec = uboScene.viewPosition.xyz - pos.xyz;
 }

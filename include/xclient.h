@@ -18,9 +18,9 @@
  *               attempts to destroy the window.
  */
 struct uvr_xcb_window {
-  xcb_connection_t        *conn;
-  xcb_window_t            window;
-  xcb_intern_atom_reply_t *delWindow;
+	xcb_connection_t        *conn;
+	xcb_window_t            window;
+	xcb_intern_atom_reply_t *delWindow;
 };
 
 
@@ -39,13 +39,13 @@ struct uvr_xcb_window {
  * @transparent - Set to true to have fully transparent window. False will display black background.
  */
 struct uvr_xcb_window_create_info {
-  const char *display;
-  int        *screen;
-  const char *appName;
-  uint16_t   width;
-  uint16_t   height;
-  bool       fullscreen;
-  bool       transparent;
+	const char *display;
+	int        *screen;
+	const char *appName;
+	uint16_t   width;
+	uint16_t   height;
+	bool       fullscreen;
+	bool       transparent;
 };
 
 
@@ -56,8 +56,8 @@ struct uvr_xcb_window_create_info {
  * @uvrxcb - pointer to a struct uvr_xcb_window_create_info contains all information
  *           required to created an xcb client and some added window configuration options.
  * return:
- *    on success struct uvr_xcb_window
- *    on failure struct uvr_xcb_window { with members nulled }
+ *	on success struct uvr_xcb_window
+ *	on failure struct uvr_xcb_window { with members nulled }
  */
 struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb);
 
@@ -99,11 +99,11 @@ typedef void (*uvr_xcb_renderer_impl)(bool*, uint32_t*, void*);
  * @rendererRunning       - Pointer to a boolean that determines if a given window/surface is actively running
  */
 struct uvr_xcb_window_handle_event_info {
-  struct uvr_xcb_window *xcbWindowObject;
-  uvr_xcb_renderer_impl renderer;
-  void                  *rendererData;
-  uint32_t              *rendererCurrentBuffer;
-  bool                  *rendererRunning;
+	struct uvr_xcb_window *xcbWindowObject;
+	uvr_xcb_renderer_impl renderer;
+	void                  *rendererData;
+	uint32_t              *rendererCurrentBuffer;
+	bool                  *rendererRunning;
 };
 
 
@@ -120,8 +120,8 @@ struct uvr_xcb_window_handle_event_info {
  * @client - pointer to a struct uvr_xcb_window_wait_for_event_info contains all objects necessary for an
  *           xcb client to run and pointer to custom renderer to execute and the arguments used by said renderer.
  * return:
- *    on success 1
- *    on failure 0
+ *	on success 1
+ *	on failure 0
  */
 int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb);
 
@@ -133,7 +133,7 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
  * @uvr_xcb_window - Must pass a valid struct uvr_xcb_window { free'd members: xcb_connection_t *conn, xcb_window_t window }
  */
 struct uvr_xcb_destroy {
-  struct uvr_xcb_window uvr_xcb_window;
+	struct uvr_xcb_window uvr_xcb_window;
 };
 
 

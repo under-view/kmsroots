@@ -13,13 +13,13 @@
  * Used to select what core wayland interfaces to bind with a given client
  */
 typedef enum _uvr_wc_interface_type {
-  UVR_WC_INTERFACE_NULL                    = 0x00000000,
-  UVR_WC_INTERFACE_WL_COMPOSITOR           = (1 << 0),
-  UVR_WC_INTERFACE_XDG_WM_BASE             = (1 << 1),
-  UVR_WC_INTERFACE_WL_SHM                  = (1 << 2),
-  UVR_WC_INTERFACE_WL_SEAT                 = (1 << 3),
-  UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1 = (1 << 4),
-  UVR_WC_INTERFACE_ALL                     = 0XFFFFFFFF,
+	UVR_WC_INTERFACE_NULL                    = 0x00000000,
+	UVR_WC_INTERFACE_WL_COMPOSITOR           = (1 << 0),
+	UVR_WC_INTERFACE_XDG_WM_BASE             = (1 << 1),
+	UVR_WC_INTERFACE_WL_SHM                  = (1 << 2),
+	UVR_WC_INTERFACE_WL_SEAT                 = (1 << 3),
+	UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1 = (1 << 4),
+	UVR_WC_INTERFACE_ALL                     = 0XFFFFFFFF,
 } uvr_wc_interface_type;
 
 
@@ -45,14 +45,14 @@ typedef enum _uvr_wc_interface_type {
  * @fullScreenShell    - A singleton global object that has an interface that allow for displaying of fullscreen surfaces.
  */
 struct uvr_wc_core_interface {
-  uvr_wc_interface_type          iType;
-  struct wl_display              *wlDisplay;
-  struct wl_registry             *wlRegistry;
-  struct wl_compositor           *wlCompositor;
-  struct xdg_wm_base             *xdgWmBase;
-  struct wl_shm                  *wlShm;
-  struct wl_seat                 *wlSeat;
-  struct zwp_fullscreen_shell_v1 *fullScreenShell;
+	uvr_wc_interface_type          iType;
+	struct wl_display              *wlDisplay;
+	struct wl_registry             *wlRegistry;
+	struct wl_compositor           *wlCompositor;
+	struct xdg_wm_base             *xdgWmBase;
+	struct wl_shm                  *wlShm;
+	struct wl_seat                 *wlSeat;
+	struct zwp_fullscreen_shell_v1 *fullScreenShell;
 };
 
 
@@ -66,8 +66,8 @@ struct uvr_wc_core_interface {
  *                result in opening unix domain socket /run/user/1000/wayland-0
  */
 struct uvr_wc_core_interface_create_info {
-  uvr_wc_interface_type iType;
-  const char            *displayName;
+	uvr_wc_interface_type iType;
+	const char            *displayName;
 };
 
 
@@ -81,8 +81,8 @@ struct uvr_wc_core_interface_create_info {
  *          server supports these globals.
  *
  * return:
- *    on success struct uvr_wc_core_interface
- *    on failure struct uvr_wc_core_interface { with members nulled }
+ *	on success struct uvr_wc_core_interface
+ *	on failure struct uvr_wc_core_interface { with members nulled }
  */
 struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_interface_create_info *uvrwc);
 
@@ -98,9 +98,9 @@ struct uvr_wc_core_interface uvr_wc_core_interface_create(struct uvr_wc_core_int
  *                The buffer itself created via mmap
  */
 struct uvr_wc_shm_buffer {
-  int     shmFd;
-  size_t  shmPoolSize;
-  uint8_t *shmPoolData;
+	int     shmFd;
+	size_t  shmPoolSize;
+	uint8_t *shmPoolData;
 };
 
 
@@ -111,7 +111,7 @@ struct uvr_wc_shm_buffer {
  * @buffer - Buffer understood by the compositor attached to CPU visible shm bufferp
  */
 struct uvr_wc_wl_buffer_handle {
-  struct wl_buffer *buffer;
+	struct wl_buffer *buffer;
 };
 
 
@@ -125,9 +125,9 @@ struct uvr_wc_wl_buffer_handle {
  * @wlBufferHandles  - Pointer to an array of struct uvrwcwlbuf containing compositor assigned buffer object
  */
 struct uvr_wc_buffer {
-  int bufferCount;
-  struct uvr_wc_shm_buffer *shmBufferObjects;
-  struct uvr_wc_wl_buffer_handle *wlBufferHandles;
+	int bufferCount;
+	struct uvr_wc_shm_buffer *shmBufferObjects;
+	struct uvr_wc_wl_buffer_handle *wlBufferHandles;
 };
 
 
@@ -145,12 +145,12 @@ struct uvr_wc_buffer {
  * @pixelFormat   - Memory layout of an individual pixel
  */
 struct uvr_wc_buffer_create_info {
-  struct uvr_wc_core_interface *coreInterface;
-  int                          bufferCount;
-  int                          width;
-  int                          height;
-  int                          bytesPerPixel;
-  uint64_t                     pixelFormat;
+	struct uvr_wc_core_interface *coreInterface;
+	int                          bufferCount;
+	int                          width;
+	int                          height;
+	int                          bytesPerPixel;
+	uint64_t                     pixelFormat;
 };
 
 
@@ -162,8 +162,8 @@ struct uvr_wc_buffer_create_info {
  *          details of how a buffer should be allocated and how many to allocations to make.
  *
  * return:
- *    on success struct uvr_wc_buffer
- *    on failure struct uvr_wc_buffer { with members nulled, integers set to -1 }
+ *	on success struct uvr_wc_buffer
+ *	on failure struct uvr_wc_buffer { with members nulled, integers set to -1 }
  */
 struct uvr_wc_buffer uvr_wc_buffer_create(struct uvr_wc_buffer_create_info *uvrwc);
 
@@ -194,12 +194,12 @@ typedef void (*uvr_wc_renderer_impl)(bool*, uint32_t*, void*);
  * @wlBufferHandles - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
  */
 struct uvr_wc_surface {
-  struct xdg_toplevel            *xdgToplevel;
-  struct xdg_surface             *xdgSurface;
-  struct wl_surface              *wlSurface;
-  struct wl_callback             *wlCallback;
-  uint32_t                       bufferCount;
-  struct uvr_wc_wl_buffer_handle *wlBufferHandles;
+	struct xdg_toplevel            *xdgToplevel;
+	struct xdg_surface             *xdgSurface;
+	struct wl_surface              *wlSurface;
+	struct wl_callback             *wlCallback;
+	uint32_t                       bufferCount;
+	struct uvr_wc_wl_buffer_handle *wlBufferHandles;
 };
 
 
@@ -225,15 +225,15 @@ struct uvr_wc_surface {
  * @rendererRunning       - Pointer to a boolean that determines if a given window/surface is actively running
  */
 struct uvr_wc_surface_create_info {
-  struct uvr_wc_core_interface *coreInterface;
-  struct uvr_wc_buffer         *wcBufferObject;
-  uint32_t                     bufferCount;
-  const char                   *appName;
-  bool                         fullscreen;
-  uvr_wc_renderer_impl         renderer;
-  void                         *rendererData;
-  uint32_t                     *rendererCurrentBuffer;
-  bool                         *rendererRunning;
+	struct uvr_wc_core_interface *coreInterface;
+	struct uvr_wc_buffer         *wcBufferObject;
+	uint32_t                     bufferCount;
+	const char                   *appName;
+	bool                         fullscreen;
+	uvr_wc_renderer_impl         renderer;
+	void                         *rendererData;
+	uint32_t                     *rendererCurrentBuffer;
+	bool                         *rendererRunning;
 };
 
 
@@ -246,8 +246,8 @@ struct uvr_wc_surface_create_info {
  *          window, how the window should be displayed, (more info TBA).
  *
  * return:
- *    on success struct uvr_wc_surface
- *    on failure struct uvr_wc_surface { with members nulled }
+ *	on success struct uvr_wc_surface
+ *	on failure struct uvr_wc_surface { with members nulled }
  */
 struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *uvrwc);
 
@@ -261,9 +261,9 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
  * @uvr_wc_surface        - Must pass a valid struct uvr_wc_surface, to free all allocated memory
  */
 struct uvr_wc_destroy {
-  struct uvr_wc_core_interface uvr_wc_core_interface;
-  struct uvr_wc_buffer         uvr_wc_buffer;
-  struct uvr_wc_surface        uvr_wc_surface;
+	struct uvr_wc_core_interface uvr_wc_core_interface;
+	struct uvr_wc_buffer         uvr_wc_buffer;
+	struct uvr_wc_surface        uvr_wc_surface;
 };
 
 
