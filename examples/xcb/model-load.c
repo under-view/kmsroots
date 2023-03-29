@@ -775,7 +775,7 @@ int create_vk_buffers(struct app_vk *app)
 
 	// Copy TRS matrix transform data to the passable buffer used during draw operations
 	for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_node.nodeDataCount; verticesDataIndex++)
-	glm_mat4_copy(app->uvr_gltf_loader_node.nodeData[verticesDataIndex].matrixTransform, app->meshData[app->uvr_gltf_loader_node.nodeData[verticesDataIndex].objectIndex].matrix);
+		glm_mat4_copy(app->uvr_gltf_loader_node.nodeData[verticesDataIndex].matrixTransform, app->meshData[app->uvr_gltf_loader_node.nodeData[verticesDataIndex].objectIndex].matrix);
 
 	// Free memory nolonger required
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &app->uvr_gltf_loader_node });
@@ -812,11 +812,7 @@ int create_vk_buffers(struct app_vk *app)
 	}
 
 	vertexDataBufferSize += curVertexDataIndex * sizeof(struct app_vertex_data);
-	vertexBufferData = calloc(curVertexDataIndex, sizeof(struct app_vertex_data));
-	if (!vertexBufferData) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc(vertexBufferData): %s", strerror(errno));
-		return -1;
-	}
+	vertexBufferData = alloca(vertexDataBufferSize);
 
 	indexDataBufferSize += curIndexDataIndex * sizeof(uint16_t);
 	indexBufferData = alloca(indexDataBufferSize);
@@ -836,7 +832,7 @@ int create_vk_buffers(struct app_vk *app)
 			// Base buffer data adress + base byte offset address = address in buffer where data resides
 			finalAddress = app->uvr_gltf_loader_vertex.bufferData + byteOffset;
 			memcpy(indexBufferData + (curIndexDataIndex * bufferElementSize), finalAddress, app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferSize);
-			curVertexDataIndex += bufferElementCount;
+			curIndexDataIndex += bufferElementCount;
 		} else {
 			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
 				// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
@@ -894,7 +890,6 @@ int create_vk_buffers(struct app_vk *app)
 
 	app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
 	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory) {
-		free(vertexBufferData);
 		return -1;
 	}
 
@@ -911,9 +906,6 @@ int create_vk_buffers(struct app_vk *app)
 	deviceMemoryCopyInfo.memoryBufferSize = indexDataBufferSize;
 	deviceMemoryCopyInfo.bufferData = indexBufferData;
 	uvr_vk_map_memory(&deviceMemoryCopyInfo);
-
-	// Free mesh data no longer required
-	free(vertexBufferData); vertexBufferData = NULL;
 
 	if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 		// Create GPU visible vertex buffer
