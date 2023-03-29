@@ -67,7 +67,6 @@ struct app_vk {
 	 */
 	struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex;
 	struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
-	struct uvr_gltf_loader_node uvr_gltf_loader_node;
 
 	/*
 	 * Other required data needed for draw operations
@@ -767,20 +766,6 @@ int create_vk_buffers(struct app_vk *app)
 	void *finalAddress = NULL;
 	vec4 vec4Dest;
 
-	app->meshCount = app->uvr_gltf_loader_vertex.meshCount;
-	app->meshData = calloc(app->meshCount, sizeof(struct primitive));
-	if (!app->meshData) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
-		return -1;
-	}
-
-	// Copy TRS matrix transform data to the passable buffer used during draw operations
-	for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_node.nodeDataCount; verticesDataIndex++)
-		glm_mat4_copy(app->uvr_gltf_loader_node.nodeData[verticesDataIndex].matrixTransform, app->meshData[app->uvr_gltf_loader_node.nodeData[verticesDataIndex].objectIndex].matrix);
-
-	// Free memory nolonger required
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &app->uvr_gltf_loader_node });
-
 	/*
 	 * @vertexBufferData array size is the collective size of all bufferElementCount's associated with each mesh->primitives->attribute.
 	 * Note @curVertexDataIndex is only the amount of elements contained in one mesh->primitives->attribute->accessor->bufferview.
@@ -1191,12 +1176,24 @@ int create_gltf_load_required_data(struct app_vk *app)
 	gltfFileNodeInfo.gltfLoaderFile = gltfFile;
 	gltfFileNodeInfo.sceneIndex = 0;
 
-	app->uvr_gltf_loader_node = uvr_gltf_loader_node_create(&gltfFileNodeInfo);
-	if (!app->uvr_gltf_loader_node.nodeData)
+	struct uvr_gltf_loader_node gltfFileNodes = uvr_gltf_loader_node_create(&gltfFileNodeInfo);
+	if (!gltfFileNodes.nodeData)
 		goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
-	// Have everything we need free memory created by gltf file
+	app->meshCount = app->uvr_gltf_loader_vertex.meshCount;
+	app->meshData = calloc(app->meshCount, sizeof(struct primitive));
+	if (!app->meshData) {
+		uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
+		return -1;
+	}
+
+	// Copy TRS matrix transform data to the passable buffer used during draw operations
+	for (uint32_t meshIndex = 0; meshIndex < gltfFileNodes.nodeDataCount; meshIndex++)
+		glm_mat4_copy(gltfFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfFileNodes.nodeData[meshIndex].objectIndex].matrix);
+
+	// Have everything we need free memory created
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfFileNodes });
 	return 0;
 
 exit_create_gltf_loader_file_free_gltf_texture_image:
