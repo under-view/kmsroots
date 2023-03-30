@@ -77,7 +77,7 @@ struct app_vk {
 
 	// A primitive contains the data for a single draw call
 	uint32_t meshCount;
-	struct primitive {
+	struct mesh_data {
 		mat4 matrix;
 		uint32_t firstIndex;
 		uint32_t indexCount;
@@ -755,106 +755,47 @@ int create_vk_buffers(struct app_vk *app)
 {
 	uint8_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
 
+	uint32_t m, v;
 	uint16_t *indexBufferData = NULL;
-	struct app_vertex_data *vertexBufferData = NULL;
+	struct app_vertex_data *vertexBufferData = NULL;	
+	uint32_t vertexBufferDataSize = 0, indexBufferDataSize = 0;
+	uint32_t curVertexBufferIndex = 0, curIndexBufferDataOffset = 0;
 
-	uint32_t vertexDataBufferSize = 0, verticesDataIndex, indexDataBufferSize = 0;
-	uint32_t byteOffset, bufferElementSize, bufferElementCount = 0, bufferType, vertexIndex = 0;
-	uint32_t curVertexDataIndex = 0, curIndexDataIndex = 0;
-
-	void *finalAddress = NULL;
-	vec4 vec4Dest;
-
-
-	/*
-	 * @vertexBufferData array size is the collective size of all bufferElementCount's associated with each mesh->primitives->attribute.
-	 * Note @curVertexDataIndex is only the amount of elements contained in one mesh->primitives->attribute->accessor->bufferview.
-	 * All other primitive->attributes associated with a given mesh will have accessors->buffers with similar element size.
-	 * Multiple buffer views can be associated with a given mesh so their array size's (@bufferElementCount) should match.
-	 *
-	 * Not exactly accurate, but should help explain above
-	 * vertexBufferData[0] = { .pos = bufferView[0][0], .normal = bufferView[1][0], .texCoord = bufferView[2][0], .color = bufferView[3][0] }
-	 * vertexBufferData[1] = { .pos = bufferView[0][1], .normal = bufferView[1][1], .texCoord = bufferView[2][1], .color = bufferView[3][1] }
-	 * vertexBufferData[2] = { .pos = bufferView[0][2], .normal = bufferView[1][2], .texCoord = bufferView[2][2], .color = bufferView[3][2] }
-	 * ....
-	 */
-	for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_vertex.verticesDataCount; verticesDataIndex++) {
-		bufferType = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferType;
-		switch (bufferType) {
-			case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Only need to account for one mesh->primitive->attribute bufferElementCount
-				app->meshData[vertexIndex].bufferOffset = curVertexDataIndex * sizeof(struct app_vertex_data);
-				curVertexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-				break;
-			case UVR_GLTF_LOADER_VERTEX_INDEX:
-				app->meshData[vertexIndex].indexCount = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-				app->meshData[vertexIndex].firstIndex = bufferElementCount; // firstIndex = element at @indexBufferData | indexBufferData[firstIndex]
-				bufferElementCount += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-				curIndexDataIndex += app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-				vertexIndex++;
-				break;
-			default:
-				continue;
-		}
+	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
+		vertexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataSize;
+		indexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataSize;
 	}
 
-	vertexDataBufferSize += curVertexDataIndex * sizeof(struct app_vertex_data);
-	vertexBufferData = alloca(vertexDataBufferSize);
-
-	indexDataBufferSize += curIndexDataIndex * sizeof(uint16_t);
-	indexBufferData = alloca(indexDataBufferSize);
-
-	curVertexDataIndex = curIndexDataIndex = 0;
+	vertexBufferData = alloca(vertexBufferDataSize);		
+	indexBufferData = alloca(indexBufferDataSize);
+	app->indexBufferOffset = vertexBufferDataSize;
 
 	/*
-	 * Converts FlightHelmet.bin buffer to struct app_vertex_data [] { .pos, .normal, .texCoord, .color }
+	 * Application must take vertex + index buffer arrays created in uvr_gltf_loader_vertex_buffer_create(3)
+	 * and populate it's local array.
 	 */
-	for (verticesDataIndex = 0; verticesDataIndex < app->uvr_gltf_loader_vertex.verticesDataCount; verticesDataIndex++) {
-		bufferType = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferType;
-		bufferElementCount = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementCount;
-		byteOffset = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].byteOffset;
-		bufferElementSize = app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferElementSize;
-
-		if (bufferType == UVR_GLTF_LOADER_VERTEX_INDEX) {
-			// Base buffer data adress + base byte offset address = address in buffer where data resides
-			finalAddress = app->uvr_gltf_loader_vertex.bufferData + byteOffset;
-			memcpy(indexBufferData + (curIndexDataIndex * bufferElementSize), finalAddress, app->uvr_gltf_loader_vertex.verticesData[verticesDataIndex].bufferSize);
-			curIndexDataIndex += bufferElementCount;
-		} else {
-			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
-				// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
-				finalAddress = app->uvr_gltf_loader_vertex.bufferData + byteOffset + (vertexIndex * bufferElementSize);
-
-				switch (bufferType) {
-					case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Texture Coordinate Buffer
-						glm_vec2((float*)finalAddress, vertexBufferData[curVertexDataIndex + vertexIndex].texCoord);
-						break;
-					case UVR_GLTF_LOADER_VERTEX_NORMAL: // Normal buffer
-						glm_vec3_normalize_to((float*)finalAddress, vertexBufferData[curVertexDataIndex + vertexIndex].normal);
-						break;
-					case UVR_GLTF_LOADER_VERTEX_POSITION: // position buffer
-						glm_vec4((float*)finalAddress, 1.0f, vec4Dest);
-						glm_vec3(vec4Dest, vertexBufferData[curVertexDataIndex + vertexIndex].pos);
-						break;
-					default:
-						continue;
-				}
-
-				// color buffer (want values all set to 1.0f)
-				glm_vec3_one(vertexBufferData[curVertexDataIndex + vertexIndex].color);
-			}
-
-			/*
-			 * We know that the last mesh->primitive->atributes is associate with associate with the
-			 * position buffer. Update @curVertexDataIndex only if @bufferType at @verticesDataIndex
-			 * buffer is UVR_GLTF_LOADER_VERTEX_POSITION becuase with need to populate proper
-			 * struct member at @curVertexDataIndex + @vertexIndex buffer element.
-			 */
-			if (bufferType == UVR_GLTF_LOADER_VERTEX_POSITION)
-				curVertexDataIndex += bufferElementCount;
+	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
+		for (v = 0; v < app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataCount; v++) {
+			vertexBufferData[curVertexBufferIndex + v].pos[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[0];
+			vertexBufferData[curVertexBufferIndex + v].pos[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[1];
+			vertexBufferData[curVertexBufferIndex + v].pos[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[2];
+			
+			vertexBufferData[curVertexBufferIndex + v].color[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[0];
+			vertexBufferData[curVertexBufferIndex + v].color[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[1];
+			vertexBufferData[curVertexBufferIndex + v].color[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[2];
+			
+			vertexBufferData[curVertexBufferIndex + v].normal[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[0];	
+			vertexBufferData[curVertexBufferIndex + v].normal[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[1];	
+			vertexBufferData[curVertexBufferIndex + v].normal[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[2];	
+			
+			vertexBufferData[curVertexBufferIndex + v].texCoord[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[0];
+			vertexBufferData[curVertexBufferIndex + v].texCoord[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[1];
 		}
+		
+		curVertexBufferIndex += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataCount;
+		memcpy(indexBufferData + curIndexBufferDataOffset, app->uvr_gltf_loader_vertex.meshData[m].indexBufferData, app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataCount);
+		curIndexBufferDataOffset += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataSize;
 	}
-
-	app->indexBufferOffset = vertexDataBufferSize;
 
 	// Free'ing uvr_gltf_loader_vertex no longer required
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
@@ -866,7 +807,7 @@ int create_vk_buffers(struct app_vk *app)
 	vkVertexBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	vkVertexBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
 	vkVertexBufferCreateInfo.bufferFlags = 0;
-	vkVertexBufferCreateInfo.bufferSize = vertexDataBufferSize + indexDataBufferSize;
+	vkVertexBufferCreateInfo.bufferSize = vertexBufferDataSize + indexBufferDataSize;
 	vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
 	                                        VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -875,21 +816,20 @@ int create_vk_buffers(struct app_vk *app)
 	vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 	app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory) {
+	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
 		return -1;
-	}
 
 	// Copy GLTF buffer into Vulkan API created CPU visible buffer memory
 	struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = 0;
-	deviceMemoryCopyInfo.memoryBufferSize = vertexDataBufferSize;
+	deviceMemoryCopyInfo.memoryBufferSize = vertexBufferDataSize;
 	deviceMemoryCopyInfo.bufferData = vertexBufferData;
 	uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
 	deviceMemoryCopyInfo.deviceMemoryOffset = app->indexBufferOffset;
-	deviceMemoryCopyInfo.memoryBufferSize = indexDataBufferSize;
+	deviceMemoryCopyInfo.memoryBufferSize = indexBufferDataSize;
 	deviceMemoryCopyInfo.bufferData = indexBufferData;
 	uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
@@ -1153,12 +1093,12 @@ int create_gltf_load_required_data(struct app_vk *app)
 	if (!gltfFile.gltfData)
 		return -1;
 
-	struct uvr_gltf_loader_vertex_buffers_create_info gltfVertexBuffersInfo;
+	struct uvr_gltf_loader_vertex_buffer_create_info gltfVertexBuffersInfo;
 	gltfVertexBuffersInfo.gltfFile = gltfFile;
 	gltfVertexBuffersInfo.bufferIndex = 0;
 
-	app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffers_create(&gltfVertexBuffersInfo);
-	if (!app->uvr_gltf_loader_vertex.verticesData)
+	app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
+	if (!app->uvr_gltf_loader_vertex.meshData)
 		goto exit_create_gltf_loader_file_free_gltf_data;
 
 	struct uvr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
@@ -1177,16 +1117,20 @@ int create_gltf_load_required_data(struct app_vk *app)
 	if (!gltfFileNodes.nodeData)
 		goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
-	app->meshCount = app->uvr_gltf_loader_vertex.meshCount;
-	app->meshData = calloc(app->meshCount, sizeof(struct primitive));
+	app->meshCount = app->uvr_gltf_loader_vertex.meshDataCount;
+	app->meshData = calloc(app->meshCount, sizeof(struct mesh_data));
 	if (!app->meshData) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
 		return -1;
 	}
 
 	// Copy TRS matrix transform data to the passable buffer used during draw operations
-	for (uint32_t meshIndex = 0; meshIndex < gltfFileNodes.nodeDataCount; meshIndex++)
+	for (uint32_t meshIndex = 0; meshIndex < gltfFileNodes.nodeDataCount; meshIndex++) {
 		glm_mat4_copy(gltfFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfFileNodes.nodeData[meshIndex].objectIndex].matrix);
+		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_vertex.meshData[meshIndex].firstIndex;
+		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_vertex.meshData[meshIndex].indexBufferDataCount;
+		app->meshData[meshIndex].bufferOffset += app->uvr_gltf_loader_vertex.meshData[meshIndex].vertexBufferDataSize;
+	}
 
 	// Have everything we need free memory created
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
