@@ -13,8 +13,8 @@
 #include "shader.h"
 #include "gltf-loader.h"
 
-#define WIDTH 1920
-#define HEIGHT 1080
+#define WIDTH 1280
+#define HEIGHT 720
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
 
 struct app_vk {

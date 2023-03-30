@@ -11,8 +11,8 @@
 #include "vulkan.h"
 #include "shader.h"
 
-#define WIDTH 1920
-#define HEIGHT 1080
+#define WIDTH 1280
+#define HEIGHT 720
 #define MAX_SCENE_OBJECTS 2
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
 
