@@ -215,6 +215,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 			gltfBufferDataCount++;
 		}
 	}
+
 	/*
 	 * To ensure accuracy with the amount of meshes associated with buffer
 	 * @meshCount is assigned when meshIndex is assigned to give buffer
@@ -255,12 +256,12 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 	}
 
 	prevMeshIndex = gltfBufferData[0].meshIndex;
-	j=0; // Represents the current index in meshes array.
+	j=0; // Represents the current index in @meshData array.
 
 	/*
 	 * Converts GLTF buffer to
 	 * 	- struct uvr_gltf_loader_vertex_data [] { .pos, .normal, .texCoord, .color }
-	 * 	- struct uvr_gltf_loader_index_data [] { .indices }
+	 * 	- uint16_t []
 	 */
 	for (i = 0; i < gltfBufferDataCount; i++) {
 		bufferType = gltfBufferData[i].bufferType;
@@ -282,7 +283,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 			finalAddress = uvrgltf->gltfFile.gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset;
 			memcpy(meshData[j].indexBufferData, finalAddress, bufferSize);
 
-			meshData[j].firstIndex = firstIndex; // firstIndex = element in @indexBufferData | indexBufferData[firstIndex]
+			meshData[j].firstIndex = firstIndex;
 			firstIndex += bufferElementCount;
 		} else {
 			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {

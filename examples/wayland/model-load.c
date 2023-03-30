@@ -760,7 +760,7 @@ int create_vk_buffers(struct app_vk *app)
 	uint16_t *indexBufferData = NULL;
 	struct app_vertex_data *vertexBufferData = NULL;	
 	uint32_t vertexBufferDataSize = 0, indexBufferDataSize = 0;
-	uint32_t curVertexBufferIndex = 0, curIndexBufferDataOffset = 0;
+	uint32_t curVertexBufferIndex = 0, curIndexBufferIndex = 0, index;
 
 	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
 		vertexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataSize;
@@ -773,29 +773,35 @@ int create_vk_buffers(struct app_vk *app)
 
 	/*
 	 * Application must take vertex + index buffer arrays created in uvr_gltf_loader_vertex_buffer_create(3)
-	 * and populate it's local array.
+	 * and populate it's local array before creating and copying buffer into VkBuffer
 	 */
 	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
+		// uvr_utils_log(UVR_INFO, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
 		for (v = 0; v < app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataCount; v++) {
-			vertexBufferData[curVertexBufferIndex + v].pos[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[0];
-			vertexBufferData[curVertexBufferIndex + v].pos[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[1];
-			vertexBufferData[curVertexBufferIndex + v].pos[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[2];
+			index = curVertexBufferIndex + v;
+			vertexBufferData[index].pos[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[0];
+			vertexBufferData[index].pos[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[1];
+			vertexBufferData[index].pos[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[2];
 			
-			vertexBufferData[curVertexBufferIndex + v].color[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[0];
-			vertexBufferData[curVertexBufferIndex + v].color[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[1];
-			vertexBufferData[curVertexBufferIndex + v].color[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[2];
+			vertexBufferData[index].color[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[0];
+			vertexBufferData[index].color[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[1];
+			vertexBufferData[index].color[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[2];
 			
-			vertexBufferData[curVertexBufferIndex + v].normal[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[0];	
-			vertexBufferData[curVertexBufferIndex + v].normal[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[1];	
-			vertexBufferData[curVertexBufferIndex + v].normal[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[2];	
+			vertexBufferData[index].normal[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[0];
+			vertexBufferData[index].normal[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[1];
+			vertexBufferData[index].normal[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[2];
 			
-			vertexBufferData[curVertexBufferIndex + v].texCoord[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[0];
-			vertexBufferData[curVertexBufferIndex + v].texCoord[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[1];
+			vertexBufferData[index].texCoord[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[0];
+			vertexBufferData[index].texCoord[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[1];
 		}
-		
+
+		for (v = 0; v < app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataCount; v++) {
+			indexBufferData[curIndexBufferIndex + v] = app->uvr_gltf_loader_vertex.meshData[m].indexBufferData[v];
+		}
+
+		curIndexBufferIndex += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataCount;
 		curVertexBufferIndex += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataCount;
-		memcpy(indexBufferData + curIndexBufferDataOffset, app->uvr_gltf_loader_vertex.meshData[m].indexBufferData, app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataCount);
-		curIndexBufferDataOffset += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataSize;
+		// uvr_utils_log(UVR_WARNING, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
 	}
 
 	// Free'ing uvr_gltf_loader_vertex no longer required
