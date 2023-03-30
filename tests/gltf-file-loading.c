@@ -19,12 +19,12 @@ int main(void)
 	if (!gltfFile.gltfData)
 		return 1;
 
-	struct uvr_gltf_loader_vertex_buffers_create_info gltfVertexBuffersInfo;
+	struct uvr_gltf_loader_vertex_buffer_create_info gltfVertexBuffersInfo;
 	gltfVertexBuffersInfo.gltfFile = gltfFile;
 	gltfVertexBuffersInfo.bufferIndex = 0;
 
-	gltfFileVertex = uvr_gltf_loader_vertex_buffers_create(&gltfVertexBuffersInfo);
-	if (!gltfFileVertex.verticesData)
+	gltfFileVertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
+	if (!gltfFileVertex.meshData)
 		goto exit_gltf_loader_file_free_cgltf_data;
 
 	struct uvr_gltf_loader_node_create_info gltfFileNodeInfo;
