@@ -112,8 +112,8 @@ struct app_uniform_buffer_scene_model {
 
 
 struct app_uniform_buffer_scene {
-	mat4 view;
 	mat4 projection;
+	mat4 view;
 	vec4 lightPosition;
 	vec4 viewPos;
 };
@@ -141,7 +141,7 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 
 void render(bool UNUSED *running, uint32_t *imageIndex, void *data)
 {
-	VkExtent2D extent2D = {WIDTH, HEIGHT};
+	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_wc *vkwc = data;
 	struct app_wc UNUSED *wc = vkwc->app_wc;
 	struct app_vk *app = vkwc->app_vk;
@@ -630,7 +630,7 @@ int create_vk_shader_modules(struct app_vk *app)
 		"	mat4 projection;\n"
 		"	mat4 view;\n"
 		"	vec4 lightPosition;\n"
-		"	vec4 viewPos;\n"
+		"	vec4 viewPosition;\n"
 		"} uboScene;\n\n"
 		"layout(set = 0, binding = 1) uniform uniform_buffer_scene_model {\n"
 		"	mat4 model;\n"
@@ -643,7 +643,7 @@ int create_vk_shader_modules(struct app_vk *app)
 		"	vec4 pos = uboScene.view * vec4(inPosition, 1.0);\n"
 		"	outNormal = mat3(uboScene.view) * inNormal;\n"
 		"	outLightVec = uboScene.lightPosition.xyz - pos.xyz;\n"
-		"	outViewVec = uboScene.viewPos.xyz - pos.xyz;\n"
+		"	outViewVec = uboScene.viewPosition.xyz - pos.xyz;\n"
 		"}\n";
 
 	const char fragmentShader[] = \
@@ -705,6 +705,7 @@ int create_vk_shader_modules(struct app_vk *app)
 
 	uvr_shader[1] = uvr_utils_file_load(FRAGMENT_SHADER_SPIRV);
 	if (!uvr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+
 #endif
 
 	const char *shaderModuleNames[] = {
@@ -808,10 +809,7 @@ int create_vk_buffers(struct app_vk *app)
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
 
 	/*
-	 * If VkPhysicalDeviceType a cpu or integerated
-	 * Create CPU visible vertex buffer
-	 * else
-	 * Create CPU visible transfer buffer
+	 * Create CPU visible buffer [vertex + index]
 	 */
 	struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
 	vkVertexBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
@@ -826,11 +824,10 @@ int create_vk_buffers(struct app_vk *app)
 	vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 	app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory) {
+	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
 		return -1;
-	}
 
-	// Copy GLTF converted vertex buffer into Vulkan API created CPU visible buffer memory
+	// Copy GLTF buffer into Vulkan API created CPU visible buffer memory
 	struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
@@ -985,8 +982,8 @@ int create_vk_texture_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceForm
 	/* Create a VkImage/VkImageView for each texture */
 	struct uvr_vk_image_create_info vkImageCreateInfo;
 	vkImageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                        // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
-	vkImageCreateInfo.imageCount = imageCount;                           // Creating @imageCount amount of VkImage(VkDeviceMemory)/VkImageView resource's to store pixel data
+	vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                      // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
+	vkImageCreateInfo.imageCount = imageCount;                         // Creating @imageCount amount of VkImage(VkDeviceMemory)/VkImageView resource's to store pixel data
 	vkImageCreateInfo.imageViewCreateInfos = imageViewCreateInfos;
 	vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;
 	vkImageCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
@@ -1430,10 +1427,10 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencilInfo.pNext = NULL;
 	depthStencilInfo.flags = 0;
-	depthStencilInfo.depthTestEnable = VK_TRUE;            // Enable checking depth to determine fragment write
-	depthStencilInfo.depthWriteEnable = VK_TRUE;           // Enable depth buffer writes inorder to replace old values
-	depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;  // Comparison operation that allows an overwrite (if is in front)
-	depthStencilInfo.depthBoundsTestEnable = VK_FALSE;     // Enable if depth test should be enabled between @minDepthBounds & @maxDepthBounds
+	depthStencilInfo.depthTestEnable = VK_TRUE;           // Enable checking depth to determine fragment write
+	depthStencilInfo.depthWriteEnable = VK_TRUE;          // Enable depth buffer writes inorder to replace old values
+	depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS; // Comparison operation that allows an overwrite (if is in front)
+	depthStencilInfo.depthBoundsTestEnable = VK_FALSE;    // Enable if depth test should be enabled between @minDepthBounds & @maxDepthBounds
 	// There isn't any depth stencil in this example
 	depthStencilInfo.stencilTestEnable = VK_FALSE;
 	depthStencilInfo.front = (VkStencilOpState) { .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP,
@@ -1490,7 +1487,7 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	/*
-	 * Attachments
+	 * Attachment References
 	 * 0. Color Attachment Reference
 	 * 1. Depth Attachment Reference
 	 */
@@ -1668,7 +1665,7 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 		offset = app->meshData[mesh].bufferOffset;
 		dynamicUniformBufferOffset = mesh * app->modelTransferSpace.bufferAlignment;
 		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_pipeline_layout.pipelineLayout, 0, 1,
-		                                   &app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
+		                        &app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
 		vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offset);
 		vkCmdDrawIndexed(cmdBuffer, app->meshData[mesh].indexCount, 1, app->meshData[mesh].firstIndex, 0, 0);
 	}
