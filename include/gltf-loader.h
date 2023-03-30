@@ -6,6 +6,8 @@
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
+#include <cglm/cglm.h>
+
 
 /*
  * struct uvr_gltf_loader_file (Underview Renderer GLTF File)
@@ -44,38 +46,45 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
 
 
 /*
- * enum uvr_gltf_loader_vertex_type (Underview Renderer GLTF Loader Vertex Type)
+ * struct uvr_gltf_loader_vertex_data (Underview Renderer GLTF Loader Vertex Data)
  *
- * Used to determine contents contained at offset of larger buffer
+ * Struct member order is arbitrary. SHOULD NOT BE USED DIRECTLY. Advise to create second stack buffer
+ * and copy data over to it. Members populated with vertices from GLTF file buffer.
+ *
+ * @position - Vertex position coordinates
+ * @normal   - Vertex normal (direction vertex points)
+ * @texCoord - Texture Coordinate
+ * @color    - Color
  */
-enum uvr_gltf_loader_vertex_type {
-	UVR_GLTF_LOADER_VERTEX_POSITION = 0x00000001,
-	UVR_GLTF_LOADER_VERTEX_COLOR    = 0x00000002,
-	UVR_GLTF_LOADER_VERTEX_TEXTURE  = 0x00000003,
-	UVR_GLTF_LOADER_VERTEX_NORMAL   = 0x00000004,
-	UVR_GLTF_LOADER_VERTEX_TANGENT  = 0x00000005,
-	UVR_GLTF_LOADER_VERTEX_INDEX    = 0x00000006,
+struct uvr_gltf_loader_vertex_data {
+	vec3     position;
+	vec3     normal;
+	vec2     texCoord;
+	vec3     color;
 };
 
 
 /*
- * struct uvr_gltf_loader_vertex_data (Underview Renderer GLTF Loader Vertex data)
+ * struct uvr_gltf_loader_vertex_mesh_data (Underview Renderer GLTF Loader Vertex Mesh Data)
  *
- * members:
- * @bufferType         - Stores the type of vertex data contained in buffer at offset of larger buffer
- * @byteOffset         - The byte offset of where the vertex indices are located within the larger buffer.
- * @bufferSize         - The size in bytes of buffer managed by buffer view
- * @bufferElementCount - The amount of elements in buffer
- * @bufferElementSize  - The size of each element contained within a buffer
- * @meshIndex          - Mesh associated with buffer
+ * @firstIndex            - Base index within the index buffer. Calculated in uvr_gltf_loader_vertex_buffer_create(3)
+ *                          firstIndex = firstIndex + bufferElementCount (GLTF file accessor[index].count)
+ *                          Can be used by the application to fill in vkCmdDrawIndexed(3) function.
+ * @indexBufferData       - Buffer of index data belonging to mesh populated from GLTF file buffer at @bufferIndex.
+ * @indexBufferDataCount  - Amount of elements in @indexBufferData.
+ * @indexBufferDataSize   - The total size in bytes of the @indexBufferData array.
+ * @vertexBufferData      - Arbitrary structure to an array of vertices populated from GLTF file buffer at @bufferIndex.
+ * @vertexBufferDataCount - Amount of elements in @vertexBufferData array.
+ * @vertexBufferDataSize  - The total size in bytes of the @vertexBufferData array.
  */
-struct uvr_gltf_loader_vertex_data {
-	enum uvr_gltf_loader_vertex_type bufferType;
-	uint32_t                         byteOffset;
-	uint32_t                         bufferSize;
-	uint32_t                         bufferElementCount;
-	uint32_t                         bufferElementSize;
-	uint32_t                         meshIndex;
+struct uvr_gltf_loader_vertex_mesh_data {
+	uint32_t                           firstIndex;
+	uint16_t                           *indexBufferData;
+	uint32_t                           indexBufferDataCount;
+	uint32_t                           indexBufferDataSize;
+	struct uvr_gltf_loader_vertex_data *vertexBufferData;
+	uint32_t                           vertexBufferDataCount;
+	uint32_t                           vertexBufferDataSize;
 };
 
 
@@ -83,54 +92,48 @@ struct uvr_gltf_loader_vertex_data {
  * struct uvr_gltf_loader_vertex (Underview Renderer GLTF Loader Vertex)
  *
  * members:
- * @verticesData      - Pointer to an array of information about a given mesh->primitive->indices &
- *                      mesh->primitive->attributes. Accessor + buffer view information.
- * @verticesDataCount - Amount of elements in @verticesData array
- * @bufferData        - The actual bytes of data for an individual buffer
- * @bufferIndex       - The index in the "buffers" array of give GLTF file
- * @meshCount         - Amount of meshes associated with a @bufferIndex buffer in "buffers" array.
+ * @bufferIndex   - The index in the "buffers" array of give GLTF file.
+ * @meshDataCount - Amount of meshes associated with a @bufferIndex GLTF buffer. The array size of @meshData array.
+ * @meshData      - Pointer to an array of struct uvr_gltf_loader_vertex_mesh_data storing all important data
+ *                  related to each mesh.
  */
 struct uvr_gltf_loader_vertex {
-	struct uvr_gltf_loader_vertex_data *verticesData;
-	uint32_t                           verticesDataCount;
-	unsigned char                      *bufferData;
-	uint32_t                           bufferSize;
-	uint32_t                           bufferIndex;
-	uint32_t                           meshCount;
+	uint16_t                                bufferIndex;
+	uint16_t                                meshDataCount;
+	struct uvr_gltf_loader_vertex_mesh_data *meshData;
 };
 
 
 /*
- * struct uvr_gltf_loader_vertex_buffers_create_info (Underview Renderer GLTF Loader Vertex Buffers Create Information)
+ * struct uvr_gltf_loader_vertex_buffer_create_info (Underview Renderer GLTF Loader Vertex Buffer Create Information)
  *
  * members:
  * @gltfFile    - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
  * @bufferIndex - Index of buffer in GLTF file buffers array
  */
-struct uvr_gltf_loader_vertex_buffers_create_info {
+struct uvr_gltf_loader_vertex_buffer_create_info {
 	struct uvr_gltf_loader_file gltfFile;
-	cgltf_int                   bufferIndex;
+	uint16_t                    bufferIndex;
 };
 
 
 /*
- * uvr_gltf_loader_vertex_buffers_create: Function loops through all meshes and finds the associated buffer view
- *                                        for a given mesh primitive indices and attributes. Then returns in the
- *                                        member @verticesData an array of byteOffset, total bufferSize at that offset,
- *                                        the size of each element within the buffer at a given offset, the type of data
- *                                        at said offset within the larger buffer, and the associated mesh index. Function
- *                                        will only acquire buffer view data associated with @bufferIndex in the "buffers"
- *                                        array of a GLTF file. @verticesData Must be free by the application with
- *                                        uvr_gltf_loader_destroy(3).
- *
+ * uvr_gltf_loader_vertex_buffer_create: Function loops through all meshes and finds the associated accessor->buffer view
+ *                                       for a given buffer at @bufferIndex. After retrieves all information required to
+ *                                       understand the contents of a buffer. The function then creates multiple meshes
+ *                                       with appropriate data (struct uvr_gltf_loader_vertex_data) so the application
+ *                                       only need to call function and create their vertex buffer + index buffer array
+ *                                       based upon what's already populated. Converts GLTF buffer to a buffer that Vulkan
+ *                                       can understand seperating each buffer, by their mesh index in GLTF file "meshes"
+ *                                       array. @meshData must be free'd by the application with call to uvr_gltf_loader_destroy(3).
  *
  * args:
- * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_vertex_buffers_create_info
+ * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_vertex_buffer_create_info
  * return:
  *	on success struct uvr_gltf_loader_vertex { with member being pointer to an array }
  *	on failure struct uvr_gltf_loader_vertex { with member nulled }
  */
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_gltf_loader_vertex_buffers_create_info *uvrgltf);
+struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gltf_loader_vertex_buffer_create_info *uvrgltf);
 
 
 /*

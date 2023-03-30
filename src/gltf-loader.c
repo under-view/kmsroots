@@ -4,7 +4,6 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include <cglm/cglm.h>
 
 #include "gltf-loader.h"
 
@@ -55,49 +54,78 @@ exit_error_uvr_gltf_loader_file_load:
 }
 
 
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_gltf_loader_vertex_buffers_create_info *uvrgltf)
+/*
+ * enum uvr_gltf_loader_vertex_type (Underview Renderer GLTF Loader Vertex Type)
+ *
+ * Used to determine contents contained at offset of larger buffer
+ */
+enum uvr_gltf_loader_vertex_type {
+	UVR_GLTF_LOADER_VERTEX_POSITION = 0x00000001,
+	UVR_GLTF_LOADER_VERTEX_COLOR    = 0x00000002,
+	UVR_GLTF_LOADER_VERTEX_TEXTURE  = 0x00000003,
+	UVR_GLTF_LOADER_VERTEX_NORMAL   = 0x00000004,
+	UVR_GLTF_LOADER_VERTEX_TANGENT  = 0x00000005,
+	UVR_GLTF_LOADER_VERTEX_INDEX    = 0x00000006,
+};
+
+
+/*
+ * struct uvr_gltf_loader_gltf_buffer_data (Underview Renderer GLTF Loader GLTF Buffer data)
+ *
+ * members:
+ * @bufferType         - Stores the type of vertex data contained in buffer at offset of larger buffer
+ * @byteOffset         - The byte offset of where the vertex indices are located within the larger buffer.
+ * @bufferSize         - The size in bytes of buffer managed by buffer view
+ * @bufferElementCount - The amount of elements in buffer
+ * @bufferElementSize  - The size of each element contained within a buffer
+ * @meshIndex          - Mesh associated with buffer
+ */
+struct uvr_gltf_loader_gltf_buffer_data {
+	enum uvr_gltf_loader_vertex_type bufferType;
+	uint32_t                         byteOffset;
+	uint32_t                         bufferSize;
+	uint32_t                         bufferElementCount;
+	uint32_t                         bufferElementSize;
+	uint16_t                         meshIndex;
+};
+
+
+struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gltf_loader_vertex_buffer_create_info *uvrgltf)
 {
-	cgltf_size i, j, k, bufferViewElementType, bufferViewComponentType, meshCount, verticesDataCount = 0;
+	cgltf_size i, j, k, bufferViewElementType, bufferViewComponentType, meshCount, gltfBufferDataCount = 0;
 	cgltf_buffer *buffer = NULL;
 	cgltf_buffer_view *bufferView = NULL;
 	cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
 
-	struct uvr_gltf_loader_vertex_data *verticesData = NULL;
+	uint32_t vertexBufferElementCounts[8], indexBufferElementCounts[8];
+	struct uvr_gltf_loader_gltf_buffer_data *gltfBufferData = NULL;
 
 	/* Retrieve amount of buffer views associate with buffers[uvrgltf->bufferIndex].buffer */
 	for (i = 0; i < gltfData->meshes_count; i++) {
 		for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
-			for (k = 0; k < gltfData->meshes[i].primitives[j].attributes_count; k++) { // Normally would want to avoid, but in this case it's fine
+			for (k = 0; k < gltfData->meshes[i].primitives[j].attributes_count; k++) {
 				bufferView = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view;
 				buffer = bufferView->buffer;
 				if (buffer->index != uvrgltf->bufferIndex) continue;
-				verticesDataCount++;
+				gltfBufferDataCount++;
 			}
 			bufferView = gltfData->meshes[i].primitives[j].indices->buffer_view;
 			buffer = bufferView->buffer;
 			if (buffer->index != uvrgltf->bufferIndex) continue;
-			verticesDataCount++;
+			gltfBufferDataCount++;
 		}
 	}
 
-	verticesData = calloc(verticesDataCount, sizeof(struct uvr_gltf_loader_vertex_data));
-	if (!verticesData) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc(verticesData): %s", strerror(errno));
-		goto exit_error_uvr_gltf_loader_vertex_buffers_create;
-	}
-
-	uint32_t bufferSize = gltfData->buffers[uvrgltf->bufferIndex].size;
-	unsigned char *bufferData = calloc(bufferSize, sizeof(unsigned char));
-	if (!bufferData) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc(bufferData): %s", strerror(errno));
-		goto exit_error_uvr_gltf_loader_vertex_buffers_create_free_vertices;
-	}
-
-	memcpy(bufferData, gltfData->buffers[uvrgltf->bufferIndex].data, bufferSize);
-	verticesDataCount=0;
+	gltfBufferData = alloca(gltfBufferDataCount * sizeof(struct uvr_gltf_loader_gltf_buffer_data));
+	memset(gltfBufferData, 0, gltfBufferDataCount * sizeof(struct uvr_gltf_loader_gltf_buffer_data));
+	memset(indexBufferElementCounts, 0, sizeof(indexBufferElementCounts));
+	memset(vertexBufferElementCounts, 0, sizeof(vertexBufferElementCounts));
+	gltfBufferDataCount=0;
 
 	// TODO: account for accessor bufferOffset
 	/*
+	 * Retrieve important elements from buffer views/accessors associated with
+	 * each GLTF mesh that's associated with buffers[uvrgltf->bufferIndex].buffer.
 	 * Mesh->primitive->attribute->accessor->bufferView->buffer
 	 * Mesh->primitive->indices->accessor->bufferView->buffer
 	 * Normally would want to avoid, but in this case it's fine
@@ -115,7 +143,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
 				buffer = bufferView->buffer;
 
 				/*
-				 * Don't populated verticesData array if the current bufferViews
+				 * Don't populated gltfBufferData array if the current bufferViews
 				 * buffer not equal to the one we want
 				 */
 				if (buffer->index != uvrgltf->bufferIndex)
@@ -124,39 +152,40 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
 				bufferViewElementType = gltfData->meshes[i].primitives[j].attributes[k].data->type;
 				bufferViewComponentType = gltfData->meshes[i].primitives[j].attributes[k].data->component_type;
 
-				verticesData[verticesDataCount].byteOffset = bufferView->offset;
-				verticesData[verticesDataCount].bufferSize = bufferView->size;
-				verticesData[verticesDataCount].meshIndex = meshCount = i;
+				gltfBufferData[gltfBufferDataCount].byteOffset = bufferView->offset;
+				gltfBufferData[gltfBufferDataCount].bufferSize = bufferView->size;
+				gltfBufferData[gltfBufferDataCount].meshIndex = meshCount = i;
 
 				// Acquire accessor count
-				verticesData[verticesDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].attributes[k].data->count;
+				gltfBufferData[gltfBufferDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].attributes[k].data->count;
+				vertexBufferElementCounts[i] = gltfBufferData[gltfBufferDataCount].bufferElementCount;
 
 				switch (gltfData->meshes[i].primitives[j].attributes[k].type) {
 					case cgltf_attribute_type_texcoord:
-						verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-						verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TEXTURE;
+						gltfBufferData[gltfBufferDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
+						gltfBufferData[gltfBufferDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TEXTURE;
 						break;
 					case cgltf_attribute_type_normal:
-						verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-						verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_NORMAL;
+						gltfBufferData[gltfBufferDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
+						gltfBufferData[gltfBufferDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_NORMAL;
 						break;
 					case cgltf_attribute_type_color:
-						verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-						verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_COLOR;
+						gltfBufferData[gltfBufferDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
+						gltfBufferData[gltfBufferDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_COLOR;
 						break;
 					case cgltf_attribute_type_position:
-						verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-						verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_POSITION;
+						gltfBufferData[gltfBufferDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
+						gltfBufferData[gltfBufferDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_POSITION;
 						break;
 					case cgltf_attribute_type_tangent:
-						verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-						verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TANGENT;
+						gltfBufferData[gltfBufferDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
+						gltfBufferData[gltfBufferDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_TANGENT;
 						break;
 					default:
 						continue;
 				}
 
-				verticesDataCount++;
+				gltfBufferDataCount++;
 			}
 
 			// Store index buffer data
@@ -167,7 +196,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
 			buffer = bufferView->buffer;
 
 			/*
-			 * Don't populated verticesData array if the current bufferViews
+			 * Don't populated gltfBufferData array if the current bufferViews
 			 * buffer does not equal to the one we want
 			 */
 			if (buffer->index != uvrgltf->bufferIndex)
@@ -176,31 +205,121 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffers_create(struct uvr_g
 			bufferViewElementType = gltfData->meshes[i].primitives[j].indices->type;
 			bufferViewComponentType = gltfData->meshes[i].primitives[j].indices->component_type;
 
-			verticesData[verticesDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].indices->count;
-			verticesData[verticesDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-			verticesData[verticesDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_INDEX;
-			verticesData[verticesDataCount].byteOffset = bufferView->offset;
-			verticesData[verticesDataCount].bufferSize = bufferView->size;
-			verticesData[verticesDataCount].meshIndex = meshCount = i;
-			verticesDataCount++;
+			gltfBufferData[gltfBufferDataCount].bufferElementCount = gltfData->meshes[i].primitives[j].indices->count;
+			gltfBufferData[gltfBufferDataCount].bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
+			gltfBufferData[gltfBufferDataCount].bufferType = UVR_GLTF_LOADER_VERTEX_INDEX;
+			gltfBufferData[gltfBufferDataCount].byteOffset = bufferView->offset;
+			gltfBufferData[gltfBufferDataCount].bufferSize = bufferView->size;
+			gltfBufferData[gltfBufferDataCount].meshIndex = meshCount = i;
+			indexBufferElementCounts[i] = gltfBufferData[gltfBufferDataCount].bufferElementCount;
+			gltfBufferDataCount++;
 		}
 	}
-
 	/*
 	 * To ensure accuracy with the amount of meshes associated with buffer
 	 * @meshCount is assigned when meshIndex is assigned to give buffer
-	 * in @verticesData array. Do to loops beginning at 0 add 1 to final
+	 * in @gltfBufferData array. Do to loops beginning at 0 add 1 to final
 	 * number to get an acurrate count.
 	 */
 	meshCount++;
-	return (struct uvr_gltf_loader_vertex) { .verticesData = verticesData, .verticesDataCount = verticesDataCount, .bufferData = bufferData,
-	                                         .bufferSize = bufferSize, .bufferIndex = uvrgltf->bufferIndex, .meshCount = meshCount };
 
-exit_error_uvr_gltf_loader_vertex_buffers_create_free_vertices:
-	free(verticesData);
-exit_error_uvr_gltf_loader_vertex_buffers_create:
-	return (struct uvr_gltf_loader_vertex) { .verticesData = NULL, .verticesDataCount = 0, .bufferData = NULL,
-	                                         .bufferSize = 0, .bufferIndex = 0, .meshCount = 0 };
+	struct uvr_gltf_loader_vertex_mesh_data *meshData = NULL;
+	uint32_t byteOffset, bufferElementSize, bufferElementCount, bufferType, bufferSize, vertexIndex;
+	uint32_t prevMeshIndex = 0, firstIndex = 0;
+	void *finalAddress = NULL;
+	vec4 vec4Dest;
+
+	meshData = calloc(meshCount, sizeof(struct uvr_gltf_loader_vertex_mesh_data));
+	if (!meshData) {
+		uvr_utils_log(UVR_DANGER, "[x] calloc(meshData): %s", strerror(errno));
+		goto exit_error_uvr_gltf_loader_vertex_buffer_create;
+	}
+
+
+	for (j = 0; j < meshCount; j++) {
+		meshData[j].vertexBufferDataCount = vertexBufferElementCounts[j];
+		meshData[j].vertexBufferDataSize = vertexBufferElementCounts[j] * sizeof(struct uvr_gltf_loader_vertex_data);
+		meshData[j].vertexBufferData = calloc(vertexBufferElementCounts[j], sizeof(struct uvr_gltf_loader_vertex_data));
+		if (!meshData[j].vertexBufferData) {
+			uvr_utils_log(UVR_DANGER, "[x] calloc(meshData[%u].vertexBufferData): %s", j, strerror(errno));
+			goto exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData;
+		}
+
+		meshData[j].indexBufferDataCount = indexBufferElementCounts[j];
+		meshData[j].indexBufferDataSize = indexBufferElementCounts[j] * sizeof(uint16_t);
+		meshData[j].indexBufferData = calloc(indexBufferElementCounts[j], sizeof(uint16_t));
+		if (!meshData[j].indexBufferData) {
+			uvr_utils_log(UVR_DANGER, "[x] calloc(meshData[%u].indexBufferData): %s", j, strerror(errno));
+			goto exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData;
+		}
+	}
+
+	prevMeshIndex = gltfBufferData[0].meshIndex;
+	j=0; // Represents the current index in meshes array.
+
+	/*
+	 * Converts GLTF buffer to
+	 * 	- struct uvr_gltf_loader_vertex_data [] { .pos, .normal, .texCoord, .color }
+	 * 	- struct uvr_gltf_loader_index_data [] { .indices }
+	 */
+	for (i = 0; i < gltfBufferDataCount; i++) {
+		bufferType = gltfBufferData[i].bufferType;
+		bufferElementCount = gltfBufferData[i].bufferElementCount;
+		byteOffset = gltfBufferData[i].byteOffset;
+		bufferElementSize = gltfBufferData[i].bufferElementSize;
+		bufferSize = gltfBufferData[i].bufferSize;
+
+		/*
+		 * Update @curVertexDataIndex if @meshIndex changes
+		 */
+		if (prevMeshIndex != gltfBufferData[i].meshIndex) {
+			prevMeshIndex = gltfBufferData[i].meshIndex;
+			j++;
+		}
+
+		if (bufferType == UVR_GLTF_LOADER_VERTEX_INDEX) {
+			// Base buffer data adress + base byte offset address = address in buffer where data resides
+			finalAddress = uvrgltf->gltfFile.gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset;
+			memcpy(meshData[j].indexBufferData, finalAddress, bufferSize);
+
+			meshData[j].firstIndex = firstIndex; // firstIndex = element in @indexBufferData | indexBufferData[firstIndex]
+			firstIndex += bufferElementCount;
+		} else {
+			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
+				// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
+				finalAddress = uvrgltf->gltfFile.gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset + (vertexIndex * bufferElementSize);
+
+				switch (bufferType) {
+					case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Texture Coordinate Buffer
+						glm_vec2((float*)finalAddress, meshData[j].vertexBufferData[vertexIndex].texCoord);
+						break;
+					case UVR_GLTF_LOADER_VERTEX_NORMAL: // Normal buffer
+						glm_vec3_normalize_to((float*)finalAddress, meshData[j].vertexBufferData[vertexIndex].normal);
+						break;
+					case UVR_GLTF_LOADER_VERTEX_POSITION: // position buffer
+						glm_vec4((float*)finalAddress, 1.0f, vec4Dest);
+						glm_vec3(vec4Dest, meshData[j].vertexBufferData[vertexIndex].position);
+						break;
+					default:
+						continue;
+				}
+
+				// color buffer (want values all set to 1.0f)
+				glm_vec3_one(meshData[j].vertexBufferData[vertexIndex].color);
+			}
+		}
+	}
+
+	return (struct uvr_gltf_loader_vertex) { .bufferIndex = uvrgltf->bufferIndex, .meshDataCount = meshCount, .meshData = meshData };
+
+exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData:
+	for (j = 0; j < meshCount; j++) {
+		free(meshData[j].vertexBufferData);
+		free(meshData[j].indexBufferData);
+	}
+	free(meshData);
+exit_error_uvr_gltf_loader_vertex_buffer_create:
+	return (struct uvr_gltf_loader_vertex) { .bufferIndex = 0, .meshDataCount = 0, .meshData = NULL };
 }
 
 
@@ -502,13 +621,19 @@ void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
 		}
 	}
 	for (i = 0; i < uvrgltf->uvr_gltf_loader_vertex_cnt; i++) {
-		if (uvrgltf->uvr_gltf_loader_vertex[i].verticesData) { // Gating to prevent accident double free'ing
-			free(uvrgltf->uvr_gltf_loader_vertex[i].verticesData);
-			uvrgltf->uvr_gltf_loader_vertex[i].verticesData = NULL;
+		for (j = 0; j < uvrgltf->uvr_gltf_loader_vertex[i].meshDataCount; j++) {
+			if (uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].vertexBufferData) { // Gating to prevent accident double free'ing
+				free(uvrgltf->uvr_gltf_loader_vertex[i].meshData[i].vertexBufferData);
+				uvrgltf->uvr_gltf_loader_vertex[i].meshData[i].vertexBufferData = NULL;
+			}
+			if (uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].indexBufferData) { // Gating to prevent accident double free'ing
+				free(uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].indexBufferData);
+				uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].indexBufferData = NULL;
+			}
 		}
-		if (uvrgltf->uvr_gltf_loader_vertex[i].bufferData) { // Gating to prevent accident double free'ing
-			free(uvrgltf->uvr_gltf_loader_vertex[i].bufferData);
-			uvrgltf->uvr_gltf_loader_vertex[i].bufferData = NULL;
+		if (uvrgltf->uvr_gltf_loader_vertex[i].meshData) {
+			free(uvrgltf->uvr_gltf_loader_vertex[i].meshData);
+			uvrgltf->uvr_gltf_loader_vertex[i].meshData = NULL;
 		}
 	}
 	for (i = 0; i < uvrgltf->uvr_gltf_loader_texture_image_cnt; i++) {
