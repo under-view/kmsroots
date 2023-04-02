@@ -9,41 +9,6 @@
 /* https://stackoverflow.com/a/3553321 */
 #define STRUCT_MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
-/*
- * struct uvr_utils_file (Underview Renderer Utils File)
- *
- * members:
- * @bytes    - Buffer that stores a given file's content
- * @byteSize - Size of buffer storing a given file's content
- */
-struct uvr_utils_file {
-	unsigned char *bytes;
-	unsigned long byteSize;
-};
-
-
-/*
- * uvr_utils_file_load: Takes a file and loads its contents into a memory buffer.
- *                      Application's  must take up the mantel and call free on @bytes member.
- *
- * args:
- * @filename - Must pass path to file to load
- * return:
- *	on success struct uvr_utils_file
- *	on failure struct uvr_utils_file { with member nulled }
- */
-struct uvr_utils_file uvr_utils_file_load(const char *filename);
-
-
-/*
- * uvr_utils_nanosecond: Function returns the current time in nanosecond
- *
- * return:
- *	on success current time in nanosecond
- *	on failure no checks occur
- */
-uint64_t uvr_utils_nanosecond();
-
 
 /*
  * struct uvr_utils_aligned_buffer (Underview Utils Aligned Buffer)
@@ -92,9 +57,45 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
 
 
 /*
- * uvr_utils_concat_file_to_filedir: Function acquires absolute path to a file, Given either the directory the file resides in
- *                                   or the absolute path to another file that exists in the same directory. Function concatenates
- *                                   @filename to @directory. Application must call free on returned pointer.
+ * struct uvr_utils_file (Underview Renderer Utils File)
+ *
+ * members:
+ * @bytes    - Buffer that stores a given file's content
+ * @byteSize - Size of buffer storing a given file's content
+ */
+struct uvr_utils_file {
+	unsigned char *bytes;
+	unsigned long byteSize;
+};
+
+
+/*
+ * uvr_utils_file_load: Takes a file and loads its contents into a memory buffer.
+ *                      Application's  must take up the mantel and call free on @bytes member.
+ *
+ * args:
+ * @filename - Must pass path to file to load
+ * return:
+ *	on success struct uvr_utils_file
+ *	on failure struct uvr_utils_file { with member nulled }
+ */
+struct uvr_utils_file uvr_utils_file_load(const char *filename);
+
+
+/*
+ * uvr_utils_nanosecond: Function returns the current time in nanosecond
+ *
+ * return:
+ *	on success current time in nanosecond
+ *	on failure no checks occur
+ */
+uint64_t uvr_utils_nanosecond();
+
+
+/*
+ * uvr_utils_concat_file_to_dir: Function acquires absolute path to a file, Given either the directory the file resides in
+ *                               or the absolute path to another file that exists in the same directory. Function concatenates
+ *                               @filename to @directory. Application must call free on returned pointer.
  *
  * args:
  * @directory - Directory or absolute path to a file that isn't @filename
@@ -105,6 +106,9 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
  *	on failure NULL
  */
 char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen);
+
+
+int allocate_shm_file(size_t size);
 
 
 /* Used to help determine which ANSI Escape Codes to use */
@@ -119,8 +123,6 @@ enum uvr_utils_log_type {
 };
 
 
-/* in api function calls */
-int allocate_shm_file(size_t size);
 void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...);
 const char *_uvr_utils_strip_path(const char *filepath);
 
@@ -128,6 +130,5 @@ const char *_uvr_utils_strip_path(const char *filepath);
 /* Macros defined to help better structure the message */
 #define uvr_utils_log(log_type, fmt, ...) \
 	_uvr_utils_log(log_type, stdout, "[%s:%d] " fmt, _uvr_utils_strip_path(__FILE__), __LINE__, ##__VA_ARGS__)
-
 
 #endif

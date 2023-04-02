@@ -20,6 +20,28 @@
 #include "utils.h"
 
 
+struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils)
+{
+	uint32_t bufferAlignment = 0, alignedBufferSize = 0;
+	void *alignedBufferMemory = NULL;
+
+	int64_t bitMask = ~(uvrutils->bufferAlignment - 1);
+	bufferAlignment = (uvrutils->bytesToAlign + uvrutils->bufferAlignment - 1) & bitMask;
+
+	alignedBufferSize = bufferAlignment * uvrutils->bytesToAlignCount;
+	alignedBufferMemory = aligned_alloc(bufferAlignment, alignedBufferSize);
+	if (!alignedBufferMemory) {
+		uvr_utils_log(UVR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
+		goto exit_error_utils_aligned_buffer;
+	}
+
+	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
+
+exit_error_utils_aligned_buffer:
+	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
+}
+
+
 struct uvr_utils_file uvr_utils_file_load(const char *filename)
 {
 	FILE *stream = NULL;
@@ -99,28 +121,6 @@ uint64_t uvr_utils_nanosecond(void)
 }
 
 
-struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils)
-{
-	uint32_t bufferAlignment = 0, alignedBufferSize = 0;
-	void *alignedBufferMemory = NULL;
-
-	int64_t bitMask = ~(uvrutils->bufferAlignment - 1);
-	bufferAlignment = (uvrutils->bytesToAlign + uvrutils->bufferAlignment - 1) & bitMask;
-
-	alignedBufferSize = bufferAlignment * uvrutils->bytesToAlignCount;
-	alignedBufferMemory = aligned_alloc(bufferAlignment, alignedBufferSize);
-	if (!alignedBufferMemory) {
-		uvr_utils_log(UVR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
-		goto exit_error_utils_aligned_buffer;
-	}
-
-	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
-
-exit_error_utils_aligned_buffer:
-	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
-}
-
-
 char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen)
 {
 	char *filepath = NULL;
@@ -151,51 +151,6 @@ char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, 
 		strncat(filepath, "/", 2);
 	strncat(filepath, filename, maxStrLen);
 
-	return filepath;
-}
-
-
-/* ANSI Escape Codes */
-static const char *term_colors[] = {
-	[UVR_NONE]    = "",
-	[UVR_SUCCESS] = "\e[32;1m",
-	[UVR_DANGER]  = "\e[31;1m",
-	[UVR_INFO]    = "\e[35;1m",
-	[UVR_WARNING] = "\e[33;1m",
-	[UVR_RESET]   = "\x1b[0m"
-};
-
-
-void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...)
-{
-	char buffer[26];
-	va_list args; /* type that holds variable arguments */
-
-	/* create message time stamp */
-	time_t rawtime = time(NULL);
-
-	/* generate time */
-	strftime(buffer, sizeof(buffer), "%F %T - ", localtime_r(&rawtime, &(struct tm){}));
-	fprintf(stream, "%s", buffer);
-
-	/* Set terminal color */
-	fprintf(stream, "%s", term_colors[type]);
-	va_start(args, fmt);
-	vfprintf(stream, fmt, args);
-	va_end(args); /* Reset terminal color */
-	fprintf(stream, "%s", term_colors[UVR_RESET]);
-
-	/* Flush buffer */
-	fprintf(stream, "\n");
-}
-
-
-/* Modified version of what was in wlroots/util/log.c */
-const char *_uvr_utils_strip_path(const char *filepath)
-{
-	if (*filepath == '.')
-		while (*filepath == '.' || *filepath == '/')
-			filepath++;
 	return filepath;
 }
 
@@ -248,4 +203,49 @@ int allocate_shm_file(size_t size)
 	}
 
 	return fd;
+}
+
+
+/* ANSI Escape Codes */
+static const char *term_colors[] = {
+	[UVR_NONE]    = "",
+	[UVR_SUCCESS] = "\e[32;1m",
+	[UVR_DANGER]  = "\e[31;1m",
+	[UVR_INFO]    = "\e[35;1m",
+	[UVR_WARNING] = "\e[33;1m",
+	[UVR_RESET]   = "\x1b[0m"
+};
+
+
+/* Modified version of what was in wlroots/util/log.c */
+const char *_uvr_utils_strip_path(const char *filepath)
+{
+	if (*filepath == '.')
+		while (*filepath == '.' || *filepath == '/')
+			filepath++;
+	return filepath;
+}
+
+
+void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...)
+{
+	char buffer[26];
+	va_list args; /* type that holds variable arguments */
+
+	/* create message time stamp */
+	time_t rawtime = time(NULL);
+
+	/* generate time */
+	strftime(buffer, sizeof(buffer), "%F %T - ", localtime_r(&rawtime, &(struct tm){}));
+	fprintf(stream, "%s", buffer);
+
+	/* Set terminal color */
+	fprintf(stream, "%s", term_colors[type]);
+	va_start(args, fmt);
+	vfprintf(stream, fmt, args);
+	va_end(args); /* Reset terminal color */
+	fprintf(stream, "%s", term_colors[UVR_RESET]);
+
+	/* Flush buffer */
+	fprintf(stream, "\n");
 }
