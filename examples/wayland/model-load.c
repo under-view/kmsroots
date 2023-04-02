@@ -115,7 +115,7 @@ struct app_uniform_buffer_scene {
 	mat4 projection;
 	mat4 view;
 	vec4 lightPosition;
-	vec4 viewPos;
+	vec4 viewPosition;
 };
 
 
@@ -764,6 +764,7 @@ int create_vk_buffers(struct app_vk *app)
 	uint32_t curVertexBufferIndex = 0, curIndexBufferIndex = 0, index;
 
 	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
+		app->meshData[m].bufferOffset += vertexBufferDataSize;
 		vertexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataSize;
 		indexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataSize;
 	}
@@ -1137,7 +1138,6 @@ int create_gltf_load_required_data(struct app_vk *app)
 		glm_mat4_copy(gltfFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfFileNodes.nodeData[meshIndex].objectIndex].matrix);
 		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_vertex.meshData[meshIndex].firstIndex;
 		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_vertex.meshData[meshIndex].indexBufferDataCount;
-		app->meshData[meshIndex].bufferOffset += app->uvr_gltf_loader_vertex.meshData[meshIndex].vertexBufferDataSize;
 	}
 
 	// Have everything we need free memory created
@@ -1685,6 +1685,13 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 
 	struct app_uniform_buffer_scene ubo = {};
 	uint32_t uboSize = sizeof(ubo);
+
+	vec4 positionVec4;
+	vec3 position = { 0.0f, -0.1f, -1.0f };
+	vec4 multiplyVec = { -1.0f, 1.0f, -1.0f, 1.0f };
+
+	glm_vec4(position, 0.0f, positionVec4);
+	glm_vec4_mul(positionVec4, multiplyVec, ubo.viewPosition);
 
 	vec4 lightPosition = {5.0f, 5.0f, -5.0f, 1.0f};
 	glm_vec4_copy(lightPosition, ubo.lightPosition);
