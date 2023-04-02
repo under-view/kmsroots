@@ -912,7 +912,7 @@ int create_vk_buffers(struct app_vk *app)
 
 int create_vk_texture_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
-	struct uvr_gltf_loader_texture_image_data *imageData = NULL;
+	struct uvr_utils_image_buffer *imageData = NULL;
 	uint32_t offset = 0, curImage, imageCount = 0;
 	uint8_t textureImageIndex = 2, cpuVisibleImageBuffer = 3;
 
