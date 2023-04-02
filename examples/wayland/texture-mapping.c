@@ -140,7 +140,7 @@ int create_vk_depth_image(struct app_vk *app);
 int create_vk_shader_modules(struct app_vk *app);
 int create_vk_command_buffers(struct app_vk *app);
 int create_vk_buffers(struct app_vk *app);
-int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
+int create_vk_texture_image(struct app_vk *app);
 int create_vk_image_sampler(struct app_vk *app);
 int create_vk_resource_descriptor_sets(struct app_vk *app);
 int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -256,7 +256,7 @@ int main(void)
 	if (create_vk_buffers(&app) == -1)
 		goto exit_error;
 
-	if (create_vk_texture_image(&app, &surfaceFormat) == -1)
+	if (create_vk_texture_image(&app) == -1)
 		goto exit_error;
 
 	if (create_vk_image_sampler(&app) == -1)
@@ -645,7 +645,7 @@ int create_vk_shader_modules(struct app_vk *app)
 		"layout(location = 1) in vec2 inTexCoord;\n\n"
 		"layout(location = 0) out vec4 outColor;\n"
 		"layout(set = 0, binding = 2) uniform sampler2D outTexSampler;\n"
-		"void main() { outColor = vec4(inColor * texture(outTexSampler, inTexCoord).rgb, 1.0); }";
+		"void main() { outColor = vec4(texture(outTexSampler, inTexCoord).rgb, 1.0); }";
 
 	struct uvr_shader_spirv_create_info vertexShaderCreateInfo;
 	vertexShaderCreateInfo.kind = VK_SHADER_STAGE_VERTEX_BIT;
@@ -843,7 +843,7 @@ int create_vk_buffers(struct app_vk *app)
 }
 
 
-int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
+int create_vk_texture_image(struct app_vk *app)
 {
 	struct uvr_utils_image_buffer imageData;
 	uint8_t cpuVisibleImageBuffer = 3, textureImageIndex = 2, imageTransferIndex = 0;
@@ -887,7 +887,7 @@ int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceForma
 	struct uvr_vk_image_view_create_info imageViewCreateInfo;
 	imageViewCreateInfo.imageViewflags = 0;
 	imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-	imageViewCreateInfo.imageViewFormat = surfaceFormat->format;
+	imageViewCreateInfo.imageViewFormat = VK_FORMAT_R8G8B8A8_SRGB;
 	imageViewCreateInfo.imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
 	imageViewCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
 	imageViewCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
@@ -898,7 +898,7 @@ int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceForma
 	struct uvr_vk_vimage_create_info vimageCreateInfo;
 	vimageCreateInfo.imageflags = 0;
 	vimageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	vimageCreateInfo.imageFormat = surfaceFormat->format;
+	vimageCreateInfo.imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 	vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = imageData.imageWidth, .height = imageData.imageHeight, .depth = 1 };
 	vimageCreateInfo.imageMipLevels = 1;
 	vimageCreateInfo.imageArrayLayers = 1;

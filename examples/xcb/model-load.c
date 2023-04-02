@@ -125,7 +125,7 @@ int create_vk_shader_modules(struct app_vk *app);
 int create_vk_command_buffers(struct app_vk *app);
 int create_gltf_load_required_data(struct app_vk *app);
 int create_vk_buffers(struct app_vk *app);
-int create_vk_texture_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
+int create_vk_texture_images(struct app_vk *app);
 int create_vk_image_sampler(struct app_vk *app);
 int create_vk_resource_descriptor_sets(struct app_vk *app);
 int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -245,7 +245,7 @@ int main(void)
 	if (create_vk_buffers(&app) == -1)
 		goto exit_error;
 
-	if (create_vk_texture_images(&app, &surfaceFormat) == -1)
+	if (create_vk_texture_images(&app) == -1)
 		goto exit_error;
 
 	if (create_vk_image_sampler(&app) == -1)
@@ -910,7 +910,7 @@ int create_vk_buffers(struct app_vk *app)
 }
 
 
-int create_vk_texture_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
+int create_vk_texture_images(struct app_vk *app)
 {
 	struct uvr_utils_image_buffer *imageData = NULL;
 	uint32_t offset = 0, curImage, imageCount = 0;
@@ -955,7 +955,7 @@ int create_vk_texture_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceForm
 	for (curImage = 0; curImage < imageCount; curImage++) {
 		imageViewCreateInfos[curImage].imageViewflags = 0;
 		imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-		imageViewCreateInfos[curImage].imageViewFormat = surfaceFormat->format;
+		imageViewCreateInfos[curImage].imageViewFormat = VK_FORMAT_R8G8B8A8_SRGB;
 		imageViewCreateInfos[curImage].imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
 		imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
 		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel = 0;                       // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
@@ -965,7 +965,7 @@ int create_vk_texture_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceForm
 
 		vimageCreateInfos[curImage].imageflags = 0;
 		vimageCreateInfos[curImage].imageType = VK_IMAGE_TYPE_2D;
-		vimageCreateInfos[curImage].imageFormat = surfaceFormat->format;
+		vimageCreateInfos[curImage].imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 		vimageCreateInfos[curImage].imageExtent3D = (VkExtent3D) { .width = imageData[curImage].imageWidth, .height = imageData[curImage].imageHeight, .depth = 1 };
 		vimageCreateInfos[curImage].imageMipLevels = 1;
 		vimageCreateInfos[curImage].imageArrayLayers = 1;
