@@ -7,9 +7,6 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include "wclient.h"
 #include "vulkan.h"
 #include "shader.h"
@@ -848,22 +845,23 @@ int create_vk_buffers(struct app_vk *app)
 
 int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
-	int textureWidth, textureHeight, textureChannels, textureImageIndex = 2, imageTransferIndex = 0;
-	stbi_uc *pixels = stbi_load(TEXTURE_IMAGE, &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
-	if (!pixels) {
-		uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", TEXTURE_IMAGE);
-		return -1;
-	}
+	struct uvr_utils_image_buffer imageData;
+	uint8_t cpuVisibleImageBuffer = 3, textureImageIndex = 2, imageTransferIndex = 0;
 
-	VkDeviceSize imageSize = textureWidth * textureHeight * STBI_rgb_alpha;
-	uint8_t cpuVisibleImageBuffer = 3;
+	struct uvr_utils_image_buffer_create_info imageDataCreateInfo;
+	imageDataCreateInfo.directory = TEXTURE_IMAGE;
+	imageDataCreateInfo.filename = NULL;
+	imageDataCreateInfo.maxStrLen = (1<<8);
+	imageData = uvr_utils_image_buffer_create(&imageDataCreateInfo);
+	if (!imageData.pixels)
+		return -1;
 
 	// Create CPU visible buffer to store pixel data
 	struct uvr_vk_buffer_create_info vkTextureBufferCreateInfo;
 	vkTextureBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	vkTextureBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
 	vkTextureBufferCreateInfo.bufferFlags = 0;
-	vkTextureBufferCreateInfo.bufferSize = imageSize;
+	vkTextureBufferCreateInfo.bufferSize = imageData.imageSize;
 	vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	vkTextureBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	vkTextureBufferCreateInfo.queueFamilyIndexCount = 0;
@@ -872,7 +870,7 @@ int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceForma
 
 	app->uvr_vk_buffer[cpuVisibleImageBuffer] = uvr_vk_buffer_create(&vkTextureBufferCreateInfo);
 	if (!app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory) {
-		stbi_image_free(pixels);
+		free(imageData.pixels);
 		return -1;
 	}
 
@@ -880,11 +878,11 @@ int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceForma
 	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = 0;
-	deviceMemoryCopyInfo.memoryBufferSize = imageSize;
-	deviceMemoryCopyInfo.bufferData = pixels;
+	deviceMemoryCopyInfo.memoryBufferSize = imageData.imageSize;
+	deviceMemoryCopyInfo.bufferData = imageData.pixels;
 	uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
-	stbi_image_free(pixels);
+	free(imageData.pixels);
 
 	struct uvr_vk_image_view_create_info imageViewCreateInfo;
 	imageViewCreateInfo.imageViewflags = 0;
@@ -901,7 +899,7 @@ int create_vk_texture_image(struct app_vk *app, VkSurfaceFormatKHR *surfaceForma
 	vimageCreateInfo.imageflags = 0;
 	vimageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 	vimageCreateInfo.imageFormat = surfaceFormat->format;
-	vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = textureWidth, .height = textureHeight, .depth = 1 };
+	vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = imageData.imageWidth, .height = imageData.imageHeight, .depth = 1 };
 	vimageCreateInfo.imageMipLevels = 1;
 	vimageCreateInfo.imageArrayLayers = 1;
 	vimageCreateInfo.imageSamples = VK_SAMPLE_COUNT_1_BIT;
