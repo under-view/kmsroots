@@ -57,6 +57,58 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
 
 
 /*
+ * struct uvr_utils_image_buffer (Underview Renderer Utils Image Buffer)
+ *
+ * members:
+ * @pixels        - Pointer to actual pixel data
+ * @bitsPerPixel  - Stores information about amount of bits per pixel
+ * @imageWidth    - Width of image in pixels/texels
+ * @imageHeight   - Height of image in pixels/texels
+ * @imageChannels - Amount of color channels image has { RGBA(4): all images get converted to RGBA }
+ * @imageSize     - Byte size of the image (@textureWidth * @textureHeight) * @textureChannels
+ */
+struct uvr_utils_image_buffer {
+	uint8_t  *pixels;
+	uint8_t  bitsPerPixel;
+	uint32_t imageWidth;
+	uint32_t imageHeight;
+	uint32_t imageChannels;
+	size_t   imageSize;
+};
+
+
+/*
+ * struct uvr_utils_image_buffer_create_info (Underview Renderer Utils Image Buffer Create Information)
+ *
+ * members:
+ * @directory - Directory or absolute path to a file that isn't @filename
+ * @filename  - String containing file name to append to @directory.
+ *              If NULL @directory needs to contain absolute path to file.
+ * @maxStrLen - Allow customer to set maximum string len
+ */
+struct uvr_utils_image_buffer_create_info {
+	char     *directory;
+	char     *filename;
+	uint16_t maxStrLen;
+};
+
+
+/*
+ * uvr_utils_image_buffer_create: Create pixel buffer for any given image and return its size, width, height,
+ *                                color channels will always be 4, actual pixel buffer, and amount of
+ *                                bits per pixel. Function converts RGB-only images to RGBA, as most devices
+ *                                don't support RGB-formats in Vulkan.
+ *
+ * args:
+ * @uvrutils - pointer to a struct uvr_utils_image_buffer_create_info
+ * return:
+ *	on success struct uvr_utils_image_buffer
+ *	on failure struct uvr_utils_image_buffer { with member nulled }
+ */
+struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_image_buffer_create_info *uvrutils);
+
+
+/*
  * struct uvr_utils_file (Underview Renderer Utils File)
  *
  * members:

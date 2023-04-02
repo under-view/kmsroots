@@ -17,6 +17,9 @@
 # define CLOCKID CLOCK_REALTIME
 #endif
 
+// #define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include "utils.h"
 
 
@@ -39,6 +42,84 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
 
 exit_error_utils_aligned_buffer:
 	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
+}
+
+
+struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_image_buffer_create_info *uvrutils)
+{
+	char *imageFile = NULL;
+	uint8_t bitsPerPixel = 8;
+	uint8_t UNUSED *pixels = NULL, *data = NULL;
+	int imageWidth = 0, imageHeight = 0, imageChannels = 0;
+	int imageSize = 0, requestedImageChannels = 0;
+	struct uvr_utils_file loadedImageFile;
+
+	/* Choosing to load image into memory using custom function versus using stbi_load */
+	imageFile = uvr_utils_concat_file_to_dir(uvrutils->directory, uvrutils->filename, uvrutils->maxStrLen);
+	if (!imageFile)
+		goto exit_error_utils_image_buffer;
+
+	loadedImageFile = uvr_utils_file_load(imageFile);
+	if (!loadedImageFile.bytes)
+		goto exit_error_utils_image_buffer_free_imageFile;
+
+	/*
+	 * force 32-bit textures for common Vulkan compatibility. It appears that
+	 * some GPU drivers do not support 24-bit images for Vulkan
+	 */
+	requestedImageChannels = STBI_rgb_alpha;
+
+	/*
+	 * Comment taken from tiny_gltf.h in SaschaWillems/Vulkan
+	 *
+	 * It is possible that the image we want to load is a 16bit per channel image
+	 * We are going to attempt to load it as 16bit per channel, and if it worked,
+	 * set the image data accodingly. We are casting the returned pointer into
+	 * unsigned char, because we are representing "bytes". But we are updating
+	 * the Image metadata to signal that this image uses 2 bytes (16bits) per
+	 * channel.
+	 */
+	if (stbi_is_16_bit_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize)) {
+		data = (uint8_t *) stbi_load_16_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
+		if (data) {
+			bitsPerPixel = 16;
+		}
+	}
+
+	/*
+	 * Comment taken from tiny_gltf.h in SaschaWillems/Vulkan
+	 * at this point, if data is still NULL, it means that the image wasn't
+	 * 16bit per channel, we are going to load it as a normal 8bit per channel
+	 * image as we used to do.
+	 */
+	if (!data)
+		data = (uint8_t *) stbi_load_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
+
+	if (!data) {
+		uvr_utils_log(UVR_DANGER, "[x] stbi_load_from_memory: Unknown image format. STB cannot decode image data for %s", imageFile);
+		goto exit_error_utils_image_buffer_free_loadedImageFileBytes;
+	}
+
+//	uvr_utils_log(UVR_INFO, "imageChannels: %u", imageChannels);
+	if (imageChannels == 3) {
+		imageChannels++;
+	}
+
+	free(imageFile);
+	free(loadedImageFile.bytes);
+
+	imageSize += imageWidth * imageHeight * imageChannels;
+
+	return (struct uvr_utils_image_buffer) { .pixels = data, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight, .imageChannels = imageChannels, .imageSize = imageSize };
+
+//exit_error_utils_image_buffer_free_pixels:
+//	stbi_image_free(pixels);
+exit_error_utils_image_buffer_free_loadedImageFileBytes:
+	free(loadedImageFile.bytes);
+exit_error_utils_image_buffer_free_imageFile:
+	free(imageFile);
+exit_error_utils_image_buffer:
+	return (struct uvr_utils_image_buffer) { .pixels = NULL, .bitsPerPixel = 0, .imageWidth = 0, .imageHeight = 0, .imageChannels = 0, .imageSize = 0 };
 }
 
 
