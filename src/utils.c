@@ -121,35 +121,50 @@ uint64_t uvr_utils_nanosecond(void)
 }
 
 
-char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen)
+char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, uint16_t maxStrLen)
 {
 	char *filepath = NULL;
 	struct stat s = {0};
 
-	/* Load all images associated with GLTF file into memory */
 	filepath = calloc(maxStrLen, sizeof(char));
 	if (!filepath) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
 		return NULL;
 	}
 
-	if (stat(directory, &s) == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] stat: %s", strerror(errno));
-		free(filepath);
-		return NULL;
-	}
+	if (filename) {
+		if (stat(directory, &s) == -1) {
+			uvr_utils_log(UVR_DANGER, "[x] stat: %s", strerror(errno));
+			free(filepath);
+			return NULL;
+		}
+		
+		/*
+		 * if @directory is an actual directory
+		 * 	append directory path to @filepath string
+		 * else
+		 * 	if its a file [/home/user/folder/filename.png] get directory
+		 * 	to file and append that to @filepath string
+		 */
+		if (s.st_mode & S_IFDIR) {
+			strncat(filepath, directory, maxStrLen);
+		} else {
+			char *str = strndup(directory, maxStrLen);
+			strncat(filepath, dirname(str), maxStrLen);
+			free(str);
+		}
 
-	if (s.st_mode & S_IFDIR) {
-		strncat(filepath, directory, maxStrLen);
+		/*
+		 * if @directory not equal "/"
+		 * 	append "/" to @filepath so that when @filename gets appended
+		 * 	to @filepath [/home/user/folder -> /home/user/folder/]
+		 */
+		if (strcmp(directory, "/"))
+			strncat(filepath, "/", 2);
+		strncat(filepath, filename, maxStrLen);
 	} else {
-		char *str = strndup(directory, maxStrLen);
-		strncat(filepath, dirname(str), maxStrLen);
-		free(str);
+		strncat(filepath, directory, maxStrLen);
 	}
-
-	if (strcmp(directory, "/"))
-		strncat(filepath, "/", 2);
-	strncat(filepath, filename, maxStrLen);
 
 	return filepath;
 }

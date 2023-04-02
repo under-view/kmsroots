@@ -99,13 +99,14 @@ uint64_t uvr_utils_nanosecond();
  *
  * args:
  * @directory - Directory or absolute path to a file that isn't @filename
- * @filename  - String to append to @directory
+ * @filename  - String containing file name to append to @directory.
+ *              If NULL @directory needs to contain absolute path to file.
  * @maxStrLen - Allow customer to set maximum string len
  * return:
  *	on success absolute path to file
  *	on failure NULL
  */
-char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, int maxStrLen);
+char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, uint16_t maxStrLen);
 
 
 int allocate_shm_file(size_t size);
