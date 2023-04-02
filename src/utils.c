@@ -17,7 +17,7 @@
 # define CLOCKID CLOCK_REALTIME
 #endif
 
-// #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #include "utils.h"
@@ -100,7 +100,7 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 		goto exit_error_utils_image_buffer_free_loadedImageFileBytes;
 	}
 
-//	uvr_utils_log(UVR_INFO, "imageChannels: %u", imageChannels);
+	// uvr_utils_log(UVR_INFO, "imageChannels: %u", imageChannels);
 	if (imageChannels == 3) {
 		imageChannels++;
 	}
@@ -108,7 +108,7 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 	free(imageFile);
 	free(loadedImageFile.bytes);
 
-	imageSize += imageWidth * imageHeight * imageChannels;
+	imageSize += (imageWidth * imageHeight) * imageChannels;
 
 	return (struct uvr_utils_image_buffer) { .pixels = data, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight, .imageChannels = imageChannels, .imageSize = imageSize };
 

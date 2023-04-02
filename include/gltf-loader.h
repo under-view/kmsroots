@@ -137,37 +137,18 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 
 
 /*
- * struct uvr_gltf_loader_texture_image_data (Underview Renderer GLTF Loader Texture Image Data)
- *
- * members:
- * @pixels        - Pointer to actual pixel data
- * @imageWidth    - Width of image in pixels/texels
- * @imageHeight   - Height of image in pixels/texels
- * @imageChannels - Amount of color channels image has { RGB(3), RGBA(4) }
- * @imageSize     - Byte size of the image (@textureWidth * @textureHeight) * @textureChannels
- */
-struct uvr_gltf_loader_texture_image_data {
-	void   *pixels;
-	int    imageWidth;
-	int    imageHeight;
-	int    imageChannels;
-	size_t imageSize;
-};
-
-
-/*
  * struct uvr_gltf_loader_texture_image (Underview Renderer GLTF Loader Texture Image)
  *
  * members:
  * @imageCount      - Amount of images associated with a given GLTF file
  * @totalBufferSize - Collective size of each image associated with a given GLTF file.
  *                    Best utilized when creating single VkBuffer.
- * @imageData       - Pointer to an array of image data.
+ * @imageData       - Pointer to an array of image meta data and pixel buffer.
  */
 struct uvr_gltf_loader_texture_image {
-	uint32_t                                  imageCount;
-	uint32_t                                  totalBufferSize;
-	struct uvr_gltf_loader_texture_image_data *imageData;
+	uint32_t                      imageCount;
+	uint32_t                      totalBufferSize;
+	struct uvr_utils_image_buffer *imageData;
 };
 
 

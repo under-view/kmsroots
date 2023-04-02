@@ -2,9 +2,6 @@
 #include <string.h>
 #include <errno.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include "gltf-loader.h"
 
 
@@ -326,35 +323,27 @@ exit_error_uvr_gltf_loader_vertex_buffer_create:
 
 struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_create(struct uvr_gltf_loader_texture_image_create_info *uvrgltf)
 {
-	struct uvr_gltf_loader_texture_image_data *imageData = NULL;
+	struct uvr_utils_image_buffer *imageData = NULL;
 	uint32_t curImage = 0, totalBufferSize = 0;
-	char *imageFile = NULL;
 
 	cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
 
-	imageData = calloc(gltfData->images_count, sizeof(struct uvr_gltf_loader_texture_image_data));
+	imageData = calloc(gltfData->images_count, sizeof(struct uvr_utils_image_buffer));
 	if (!imageData) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_uvr_gltf_loader_texture_image_create;
 	}
 
+	struct uvr_utils_image_buffer_create_info imageDataCreateInfo;
+	imageDataCreateInfo.maxStrLen = (1<<8);
+
 	/* Load all images associated with GLTF file into memory */
 	for (curImage = 0; curImage < gltfData->images_count; curImage++) {
-		imageFile = uvr_utils_concat_file_to_dir(uvrgltf->directory, gltfData->images[curImage].uri, (1<<8));
-
-		imageData[curImage].pixels = (void *) stbi_load(imageFile, &imageData[curImage].imageWidth, &imageData[curImage].imageHeight, &imageData[curImage].imageChannels, STBI_rgb_alpha);
-		if (!imageData[curImage].pixels) {
-			uvr_utils_log(UVR_DANGER, "[x] stbi_load: failed to load %s", imageFile);
-			free(imageFile); imageFile = NULL;
+		imageDataCreateInfo.directory = uvrgltf->directory;
+		imageDataCreateInfo.filename = gltfData->images[curImage].uri;
+		imageData[curImage] = uvr_utils_image_buffer_create(&imageDataCreateInfo);
+		if (!imageData[curImage].pixels)
 			goto exit_error_uvr_gltf_loader_texture_image_create_free_image_data;
-		}
-
-		if (imageData[curImage].imageChannels == 3) {
-			imageData[curImage].imageChannels++;
-		}
-
-		free(imageFile); imageFile = NULL;
-		imageData[curImage].imageSize = (imageData[curImage].imageWidth * imageData[curImage].imageHeight) * imageData[curImage].imageChannels;
 		totalBufferSize += imageData[curImage].imageSize;
 	}
 
@@ -363,7 +352,7 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_create(struct
 exit_error_uvr_gltf_loader_texture_image_create_free_image_data:
 	for (curImage = 0; curImage < gltfData->images_count; curImage++)
 		if (imageData[curImage].pixels)
-			stbi_image_free(imageData[curImage].pixels);
+			free(imageData[curImage].pixels);
 	free(imageData);
 exit_error_uvr_gltf_loader_texture_image_create:
 	return (struct uvr_gltf_loader_texture_image) { .imageCount = 0, .totalBufferSize = 0, .imageData = NULL };
@@ -640,7 +629,7 @@ void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
 	for (i = 0; i < uvrgltf->uvr_gltf_loader_texture_image_cnt; i++) {
 		for (j = 0; j < uvrgltf->uvr_gltf_loader_texture_image[i].imageCount; j++) {
 			if (uvrgltf->uvr_gltf_loader_texture_image[i].imageData[j].pixels) {
-				stbi_image_free(uvrgltf->uvr_gltf_loader_texture_image[i].imageData[j].pixels);
+				free(uvrgltf->uvr_gltf_loader_texture_image[i].imageData[j].pixels);
 				uvrgltf->uvr_gltf_loader_texture_image[i].imageData[j].pixels = NULL;
 			}
 		}

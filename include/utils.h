@@ -87,9 +87,9 @@ struct uvr_utils_image_buffer {
  * @maxStrLen - Allow customer to set maximum string len
  */
 struct uvr_utils_image_buffer_create_info {
-	char     *directory;
-	char     *filename;
-	uint16_t maxStrLen;
+	const char *directory;
+	const char *filename;
+	uint16_t   maxStrLen;
 };
 
 
