@@ -913,7 +913,7 @@ int create_vk_buffers(struct app_vk *app)
 int create_vk_texture_images(struct app_vk *app)
 {
 	struct uvr_utils_image_buffer *imageData = NULL;
-	uint32_t offset = 0, curImage, imageCount = 0;
+	uint32_t curImage, imageCount = 0;
 	uint8_t textureImageIndex = 2, cpuVisibleImageBuffer = 3;
 
 	imageCount = app->uvr_gltf_loader_texture_image.imageCount;
@@ -942,17 +942,14 @@ int create_vk_texture_images(struct app_vk *app)
 	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
 
-	for (curImage = 0; curImage < imageCount; curImage++) {
-		deviceMemoryCopyInfo.deviceMemoryOffset = offset;
-		deviceMemoryCopyInfo.memoryBufferSize = imageData[curImage].imageSize;
-		deviceMemoryCopyInfo.bufferData = imageData[curImage].pixels;
-		uvr_vk_map_memory(&deviceMemoryCopyInfo);
-		offset += imageData[curImage].imageSize;
-	}
-
 	struct uvr_vk_image_view_create_info imageViewCreateInfos[imageCount];
 	struct uvr_vk_vimage_create_info vimageCreateInfos[imageCount];
 	for (curImage = 0; curImage < imageCount; curImage++) {
+		deviceMemoryCopyInfo.deviceMemoryOffset = imageData[curImage].imageBufferOffset;
+		deviceMemoryCopyInfo.memoryBufferSize = imageData[curImage].imageSize;
+		deviceMemoryCopyInfo.bufferData = imageData[curImage].pixels;
+		uvr_vk_map_memory(&deviceMemoryCopyInfo);
+
 		imageViewCreateInfos[curImage].imageViewflags = 0;
 		imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageViewCreateInfos[curImage].imageViewFormat = VK_FORMAT_R8G8B8A8_SRGB;
@@ -1014,7 +1011,6 @@ int create_vk_texture_images(struct app_vk *app)
 	bufferCopyInfo.queue = app->uvr_vk_queue.queue;
 	bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer;
 
-	offset = 0;
 	for (curImage = 0; curImage < imageCount; curImage++) {
 		imageMemoryBarrier.srcAccessMask = 0;
 		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -1048,7 +1044,7 @@ int create_vk_texture_images(struct app_vk *app)
 		copyRegion.imageSubresource.layerCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount;
 		copyRegion.imageOffset = (VkOffset3D) { .x = 0, .y = 0, .z = 0 };
 		copyRegion.imageExtent = vimageCreateInfos[curImage].imageExtent3D;
-		copyRegion.bufferOffset = offset;
+		copyRegion.bufferOffset = imageData[curImage].imageBufferOffset;
 
 		bufferCopyInfo.dstResource = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
 		bufferCopyInfo.bufferCopyInfo = NULL;
@@ -1068,12 +1064,10 @@ int create_vk_texture_images(struct app_vk *app)
 		pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
-		if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1){
+		if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
 			uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
 			return -1;
 		}
-
-		offset += imageData[curImage].imageSize;
 	}
 
 	/* Free up memory after everything is copied */
