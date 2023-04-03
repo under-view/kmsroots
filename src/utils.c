@@ -49,7 +49,7 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 {
 	char *imageFile = NULL;
 	uint8_t bitsPerPixel = 8;
-	uint8_t UNUSED *pixels = NULL, *data = NULL;
+	uint8_t *pixels = NULL, *data = NULL;
 	int imageWidth = 0, imageHeight = 0, imageChannels = 0;
 	int imageSize = 0, requestedImageChannels = 0;
 	struct uvr_utils_file loadedImageFile;
@@ -100,26 +100,45 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 		goto exit_error_utils_image_buffer_free_loadedImageFileBytes;
 	}
 
-	// uvr_utils_log(UVR_INFO, "imageChannels: %u", imageChannels);
-	if (imageChannels == 3) {
-		imageChannels++;
-	}
-
 	free(imageFile);
 	free(loadedImageFile.bytes);
 
-	imageSize += (imageWidth * imageHeight) * imageChannels;
+	imageSize += (imageWidth * imageHeight) * requestedImageChannels;
+	pixels = calloc(imageSize, sizeof(uint8_t));
+	if (!pixels) {
+		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_utils_image_buffer_free_stbdata;
+	}
 
-	return (struct uvr_utils_image_buffer) { .pixels = data, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight, .imageChannels = imageChannels, .imageSize = imageSize };
+	if (imageChannels == 3) {
+		uint8_t *rgba = pixels;
+		uint8_t *rgb = data;
 
-//exit_error_utils_image_buffer_free_pixels:
-//	stbi_image_free(pixels);
+		uint8_t colors[4];
+		colors[3] = 1;
+
+		for (int i = 0; i < imageSize; i+=4) {
+			memcpy(colors, rgb, 3);
+			memcpy(rgba, colors, 4);
+			rgba += 4; rgb += 3;
+		}
+	} else {
+		memcpy(pixels, data, imageSize);
+	}
+
+	stbi_image_free(data);
+
+	return (struct uvr_utils_image_buffer) { .pixels = pixels, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight,
+	                                         .imageChannels = requestedImageChannels, .imageSize = imageSize, .imageBufferOffset = 0 };
+
+exit_error_utils_image_buffer_free_stbdata:
+	stbi_image_free(data);
 exit_error_utils_image_buffer_free_loadedImageFileBytes:
 	free(loadedImageFile.bytes);
 exit_error_utils_image_buffer_free_imageFile:
 	free(imageFile);
 exit_error_utils_image_buffer:
-	return (struct uvr_utils_image_buffer) { .pixels = NULL, .bitsPerPixel = 0, .imageWidth = 0, .imageHeight = 0, .imageChannels = 0, .imageSize = 0 };
+	return (struct uvr_utils_image_buffer) { .pixels = NULL, .bitsPerPixel = 0, .imageWidth = 0, .imageHeight = 0, .imageChannels = 0, .imageSize = 0, .imageBufferOffset = 0 };
 }
 
 
