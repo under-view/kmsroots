@@ -5,53 +5,53 @@
 
 int main(void)
 {
-	struct uvr_gltf_loader_destroy gltfFileDestroy;
-	memset(&gltfFileDestroy, 0, sizeof(struct uvr_gltf_loader_destroy));
+	struct uvr_gltf_loader_destroy gltfLoaderFileDestroy;
+	memset(&gltfLoaderFileDestroy, 0, sizeof(struct uvr_gltf_loader_destroy));
 
-	struct uvr_gltf_loader_file gltfFile;
-	struct uvr_gltf_loader_vertex gltfFileVertex;
-	struct uvr_gltf_loader_node gltfFileNode;
+	struct uvr_gltf_loader_file gltfLoaderFile;
+	struct uvr_gltf_loader_vertex gltfLoaderFileVertex;
+	struct uvr_gltf_loader_node gltfLoaderFileNode;
 
-	struct uvr_gltf_loader_file_load_info gltfFileLoadInfo;
-	gltfFileLoadInfo.fileName = GLTF_MODEL;
+	struct uvr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
+	gltfLoaderFileLoadInfo.fileName = GLTF_MODEL;
 
-	gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
-	if (!gltfFile.gltfData)
+	gltfLoaderFile = uvr_gltf_loader_file_load(&gltfLoaderFileLoadInfo);
+	if (!gltfLoaderFile.gltfData)
 		return 1;
 
 	struct uvr_gltf_loader_vertex_buffer_create_info gltfVertexBuffersInfo;
-	gltfVertexBuffersInfo.gltfFile = gltfFile;
+	gltfVertexBuffersInfo.gltfLoaderFile = gltfLoaderFile;
 	gltfVertexBuffersInfo.bufferIndex = 0;
 
-	gltfFileVertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
-	if (!gltfFileVertex.meshData)
+	gltfLoaderFileVertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
+	if (!gltfLoaderFileVertex.meshData)
 		goto exit_gltf_loader_file_free_cgltf_data;
 
-	struct uvr_gltf_loader_node_create_info gltfFileNodeInfo;
-	gltfFileNodeInfo.gltfLoaderFile = gltfFile;
-	gltfFileNodeInfo.sceneIndex = 0;
+	struct uvr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
+	gltfLoaderFileNodeInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfLoaderFileNodeInfo.sceneIndex = 0;
 
-	gltfFileNode = uvr_gltf_loader_node_create(&gltfFileNodeInfo);
-	if (!gltfFileNode.nodeData)
+	gltfLoaderFileNode = uvr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
+	if (!gltfLoaderFileNode.nodeData)
 		goto exit_gltf_loader_file_free_vertex_data;
 
-	uvr_gltf_loader_node_display_matrix_transform(&gltfFileNode);
+	uvr_gltf_loader_node_display_matrix_transform(&gltfLoaderFileNode);
 
-	gltfFileDestroy.uvr_gltf_loader_node_cnt = 1;
-	gltfFileDestroy.uvr_gltf_loader_node = &gltfFileNode;
-	gltfFileDestroy.uvr_gltf_loader_vertex_cnt = 1;
-	gltfFileDestroy.uvr_gltf_loader_vertex = &gltfFileVertex;
-	gltfFileDestroy.uvr_gltf_loader_file_cnt = 1;
-	gltfFileDestroy.uvr_gltf_loader_file = &gltfFile;
-	uvr_gltf_loader_destroy(&gltfFileDestroy);
+	gltfLoaderFileDestroy.uvr_gltf_loader_node_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_node = &gltfLoaderFileNode;
+	gltfLoaderFileDestroy.uvr_gltf_loader_vertex_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_vertex = &gltfLoaderFileVertex;
+	gltfLoaderFileDestroy.uvr_gltf_loader_file_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_file = &gltfLoaderFile;
+	uvr_gltf_loader_destroy(&gltfLoaderFileDestroy);
 	return 0;
 
 exit_gltf_loader_file_free_vertex_data:
-	gltfFileDestroy.uvr_gltf_loader_vertex_cnt = 1;
-	gltfFileDestroy.uvr_gltf_loader_vertex = &gltfFileVertex;
+	gltfLoaderFileDestroy.uvr_gltf_loader_vertex_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_vertex = &gltfLoaderFileVertex;
 exit_gltf_loader_file_free_cgltf_data:
-	gltfFileDestroy.uvr_gltf_loader_file_cnt = 1;
-	gltfFileDestroy.uvr_gltf_loader_file = &gltfFile;
-	uvr_gltf_loader_destroy(&gltfFileDestroy);
+	gltfLoaderFileDestroy.uvr_gltf_loader_file_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_file = &gltfLoaderFile;
+	uvr_gltf_loader_destroy(&gltfLoaderFileDestroy);
 	return 1;
 }

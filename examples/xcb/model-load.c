@@ -1112,17 +1112,17 @@ int create_vk_texture_images(struct app_vk *app)
 
 int create_gltf_load_required_data(struct app_vk *app)
 {
-	struct uvr_gltf_loader_file gltfFile;
+	struct uvr_gltf_loader_file gltfLoaderFile;
 
-	struct uvr_gltf_loader_file_load_info gltfFileLoadInfo;
-	gltfFileLoadInfo.fileName = GLTF_MODEL;
+	struct uvr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
+	gltfLoaderFileLoadInfo.fileName = GLTF_MODEL;
 
-	gltfFile = uvr_gltf_loader_file_load(&gltfFileLoadInfo);
-	if (!gltfFile.gltfData)
+	gltfLoaderFile = uvr_gltf_loader_file_load(&gltfLoaderFileLoadInfo);
+	if (!gltfLoaderFile.gltfData)
 		return -1;
 
 	struct uvr_gltf_loader_vertex_buffer_create_info gltfVertexBuffersInfo;
-	gltfVertexBuffersInfo.gltfFile = gltfFile;
+	gltfVertexBuffersInfo.gltfLoaderFile = gltfLoaderFile;
 	gltfVertexBuffersInfo.bufferIndex = 0;
 
 	app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
@@ -1130,19 +1130,19 @@ int create_gltf_load_required_data(struct app_vk *app)
 		goto exit_create_gltf_loader_file_free_gltf_data;
 
 	struct uvr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
-	gltfTextureImagesInfo.gltfFile = gltfFile;
-	gltfTextureImagesInfo.directory = gltfFileLoadInfo.fileName;
+	gltfTextureImagesInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfTextureImagesInfo.directory = gltfLoaderFileLoadInfo.fileName;
 
 	app->uvr_gltf_loader_texture_image = uvr_gltf_loader_texture_image_create(&gltfTextureImagesInfo);
 	if (!app->uvr_gltf_loader_texture_image.imageData)
 		goto exit_create_gltf_loader_file_free_gltf_vertex;
 
-	struct uvr_gltf_loader_node_create_info gltfFileNodeInfo;
-	gltfFileNodeInfo.gltfLoaderFile = gltfFile;
-	gltfFileNodeInfo.sceneIndex = 0;
+	struct uvr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
+	gltfLoaderFileNodeInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfLoaderFileNodeInfo.sceneIndex = 0;
 
-	struct uvr_gltf_loader_node gltfFileNodes = uvr_gltf_loader_node_create(&gltfFileNodeInfo);
-	if (!gltfFileNodes.nodeData)
+	struct uvr_gltf_loader_node gltfLoaderFileNodes = uvr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
+	if (!gltfLoaderFileNodes.nodeData)
 		goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
 	app->meshCount = app->uvr_gltf_loader_vertex.meshDataCount;
@@ -1153,15 +1153,15 @@ int create_gltf_load_required_data(struct app_vk *app)
 	}
 
 	// Copy TRS matrix transform data to the passable buffer used during draw operations
-	for (uint32_t meshIndex = 0; meshIndex < gltfFileNodes.nodeDataCount; meshIndex++) {
-		glm_mat4_copy(gltfFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfFileNodes.nodeData[meshIndex].objectIndex].matrix);
+	for (uint32_t meshIndex = 0; meshIndex < gltfLoaderFileNodes.nodeDataCount; meshIndex++) {
+		glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
 		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_vertex.meshData[meshIndex].firstIndex;
 		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_vertex.meshData[meshIndex].indexBufferDataCount;
 	}
 
 	// Have everything we need free memory created
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfFileNodes });
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfLoaderFile });
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfLoaderFileNodes });
 	return 0;
 
 exit_create_gltf_loader_file_free_gltf_texture_image:
@@ -1169,7 +1169,7 @@ exit_create_gltf_loader_file_free_gltf_texture_image:
 exit_create_gltf_loader_file_free_gltf_vertex:
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
 exit_create_gltf_loader_file_free_gltf_data:
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfFile });
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfLoaderFile });
 	return -1;
 }
 

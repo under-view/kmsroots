@@ -92,7 +92,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 	cgltf_size i, j, k, bufferViewElementType, bufferViewComponentType, meshCount, gltfBufferDataCount = 0;
 	cgltf_buffer *buffer = NULL;
 	cgltf_buffer_view *bufferView = NULL;
-	cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
+	cgltf_data *gltfData = uvrgltf->gltfLoaderFile.gltfData;
 
 	uint32_t vertexBufferElementCounts[8], indexBufferElementCounts[8];
 	struct uvr_gltf_loader_gltf_buffer_data *gltfBufferData = NULL;
@@ -277,7 +277,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 
 		if (bufferType == UVR_GLTF_LOADER_VERTEX_INDEX) {
 			// Base buffer data adress + base byte offset address = address in buffer where data resides
-			finalAddress = uvrgltf->gltfFile.gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset;
+			finalAddress = gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset;
 			memcpy(meshData[j].indexBufferData, finalAddress, bufferSize);
 
 			meshData[j].firstIndex = firstIndex;
@@ -285,7 +285,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 		} else {
 			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
 				// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
-				finalAddress = uvrgltf->gltfFile.gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset + (vertexIndex * bufferElementSize);
+				finalAddress = gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset + (vertexIndex * bufferElementSize);
 
 				switch (bufferType) {
 					case UVR_GLTF_LOADER_VERTEX_TEXTURE: // Texture Coordinate Buffer
@@ -326,7 +326,7 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_create(struct
 	struct uvr_utils_image_buffer *imageData = NULL;
 	uint32_t curImage = 0, totalBufferSize = 0;
 
-	cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
+	cgltf_data *gltfData = uvrgltf->gltfLoaderFile.gltfData;
 
 	imageData = calloc(gltfData->images_count, sizeof(struct uvr_utils_image_buffer));
 	if (!imageData) {
@@ -366,7 +366,7 @@ struct uvr_gltf_loader_material uvr_gltf_loader_material_create(struct uvr_gltf_
 	cgltf_material *material = NULL;
 	struct uvr_gltf_loader_material_data *materialData = NULL;
 
-	cgltf_data *gltfData = uvrgltf->gltfFile.gltfData;
+	cgltf_data *gltfData = uvrgltf->gltfLoaderFile.gltfData;
 
 	for (i = 0; i < gltfData->meshes_count; i++) {
 		for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {

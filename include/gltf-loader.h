@@ -57,10 +57,10 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
  * @color    - Color
  */
 struct uvr_gltf_loader_vertex_data {
-	vec3     position;
-	vec3     normal;
-	vec2     texCoord;
-	vec3     color;
+	vec3 position;
+	vec3 normal;
+	vec2 texCoord;
+	vec3 color;
 };
 
 
@@ -108,11 +108,11 @@ struct uvr_gltf_loader_vertex {
  * struct uvr_gltf_loader_vertex_buffer_create_info (Underview Renderer GLTF Loader Vertex Buffer Create Information)
  *
  * members:
- * @gltfFile    - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
- * @bufferIndex - Index of buffer in GLTF file buffers array
+ * @gltfLoaderFile - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
+ * @bufferIndex    - Index of buffer in GLTF file buffers array
  */
 struct uvr_gltf_loader_vertex_buffer_create_info {
-	struct uvr_gltf_loader_file gltfFile;
+	struct uvr_gltf_loader_file gltfLoaderFile;
 	uint16_t                    bufferIndex;
 };
 
@@ -156,12 +156,12 @@ struct uvr_gltf_loader_texture_image {
  * struct uvr_gltf_loader_texture_image_create_info (Underview Renderer GLTF Loader Texture Image Create Information)
  *
  * members:
- * @gltfFile  - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
- * @directory - Must pass a pointer to a string detailing the directory of where all images are stored.
- *              Absolute path to a file that resides in the same directory as the image files will work too.
+ * @gltfLoaderFile - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
+ * @directory      - Must pass a pointer to a string detailing the directory of where all images are stored.
+ *                   Absolute path to a file that resides in the same directory as the image files will work too.
  */
 struct uvr_gltf_loader_texture_image_create_info {
-	struct uvr_gltf_loader_file gltfFile;
+	struct uvr_gltf_loader_file gltfLoaderFile;
 	const char                  *directory;
 };
 
@@ -276,10 +276,10 @@ struct uvr_gltf_loader_material {
  * struct uvr_gltf_loader_material_create_info (Underview Renderer GLTF Loader Material Create Information)
  *
  * members:
- * @gltfFile  - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
+ * @gltfLoaderFile - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
  */
 struct uvr_gltf_loader_material_create_info {
-	struct uvr_gltf_loader_file gltfFile;
+	struct uvr_gltf_loader_file gltfLoaderFile;
 };
 
 
