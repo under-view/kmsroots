@@ -5,7 +5,7 @@ xcb and wayland clients.
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
-going.
+going. Run the `setenvars.sh` to setup necessary enviroment variables for building.
 
 **Tested Distro's**
 - Ubuntu 20.04
@@ -17,6 +17,7 @@ going.
 All features are disabled by default
 
 ```sh
+# Discrete GPU
 $ meson setup -Dgpu="discrete" \
               -Dexamples="true" \
               -Dtests="true" \
@@ -26,6 +27,18 @@ $ meson setup -Dgpu="discrete" \
               -Dwayland="enabled" \
               -Dwayland-compositor="enabled" \
               build
+
+# Embedded GPU (Normally test on the Udoo Bolt v3)
+$ meson setup -Dgpu="integrated" \
+              -Dexamples="true" \
+              -Dtests="true" \
+              -Ddebugging="disabled" \
+              -Dshaderc="disabled" \
+              -Dxcb="enabled" \
+              -Dwayland="enabled" \
+              -Dwayland-compositor="enabled" \
+              build
+
 $ meson compile -C build
 ```
 
