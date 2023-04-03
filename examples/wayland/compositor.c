@@ -15,7 +15,6 @@ static void run_stop(int UNUSED _)
 
 int main(void)
 {
-	/* Install signal handlers. */
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
 		fprintf(stderr, "[x] signal: Error while installing SIGINT signal handler.\n");
 		return 1;

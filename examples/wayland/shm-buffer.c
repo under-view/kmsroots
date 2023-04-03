@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 #include "wclient.h"
 
@@ -14,6 +15,15 @@ struct app_wc {
 	struct uvr_wc_surface uvr_wc_surface;
 	struct uvr_wc_buffer uvr_wc_buffer;
 };
+
+
+static volatile sig_atomic_t prun = 1;
+
+
+static void run_stop(int UNUSED signum)
+{
+	prun = 0;
+}
 
 
 /* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L825 */
@@ -31,7 +41,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 }
 
 
-void render(bool UNUSED *running, uint32_t *cbuf, void *data)
+void render(bool *running, uint32_t *cbuf, void *data)
 {
 	struct app_wc *wc = data;
 
@@ -51,6 +61,8 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data)
 			*(uint32_t *) &wc->uvr_wc_buffer.shmBufferObjects[*cbuf].shmPoolData[offset] = (r << 16) | (g << 8) | b;
 		}
 	}
+
+	*running = prun;
 }
 
 
@@ -59,6 +71,21 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data)
  */
 int main(void)
 {
+	if (signal(SIGINT, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
+		return 1;
+	}
+
+	if (signal(SIGABRT, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
+		return 1;
+	}
+
+	if (signal(SIGTERM, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
+		return 1;
+	}
+
 	struct app_wc wc;
 	struct uvr_wc_destroy wcd;
 	memset(&wcd, 0, sizeof(wcd));

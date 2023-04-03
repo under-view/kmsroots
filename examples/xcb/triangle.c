@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stddef.h> // For offsetof(3)
+#include <signal.h>
 
 #include <cglm/cglm.h>
 
@@ -65,6 +66,15 @@ const struct app_vertex_data meshData[3] = {
 };
 
 
+static volatile sig_atomic_t prun = 1;
+
+
+static void run_stop(int UNUSED signum)
+{
+	prun = 0;
+}
+
+
 int create_xcb_vk_surface(struct app_vk *app, struct uvr_xcb_window *xc);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app);
@@ -79,7 +89,7 @@ int create_vk_sync_objs(struct app_vk *app);
 int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
-void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
+void render(bool *running, uint32_t *imageIndex, void *data) {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_xcb *vkxcb = (struct app_vk_xcb *) data;
 	struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
@@ -129,13 +139,31 @@ void render(bool UNUSED *running, uint32_t *imageIndex, void *data) {
 	presentInfo.pResults = NULL;
 
 	vkQueuePresentKHR(app->uvr_vk_queue.queue, &presentInfo);
+
+	*running = prun;
 }
 
 
 /*
  * Example code demonstrating how use Vulkan with Wayland
  */
-int main(void) {
+int main(void)
+{
+	if (signal(SIGINT, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
+		return 1;
+	}
+
+	if (signal(SIGABRT, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
+		return 1;
+	}
+
+	if (signal(SIGTERM, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
+		return 1;
+	}
+
 	struct app_vk app;
 	struct uvr_vk_destroy appd;
 	memset(&app, 0, sizeof(app));
