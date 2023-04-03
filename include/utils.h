@@ -60,12 +60,18 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
  * struct uvr_utils_image_buffer (Underview Renderer Utils Image Buffer)
  *
  * members:
- * @pixels        - Pointer to actual pixel data
- * @bitsPerPixel  - Stores information about amount of bits per pixel
- * @imageWidth    - Width of image in pixels/texels
- * @imageHeight   - Height of image in pixels/texels
- * @imageChannels - Amount of color channels image has { RGBA(4): all images get converted to RGBA }
- * @imageSize     - Byte size of the image (@textureWidth * @textureHeight) * @textureChannels
+ * @pixels            - Pointer to actual pixel data
+ * @bitsPerPixel      - Stores information about amount of bits per pixel
+ * @imageWidth        - Width of image in pixels/texels
+ * @imageHeight       - Height of image in pixels/texels
+ * @imageChannels     - Amount of color channels image has { RGBA(4): all images get converted to RGBA }
+ * @imageSize         - Byte size of the image (@imageWidth * @imageHeight) * @imageChannels
+ * @imageBufferOffset - Special member used by uvr_gltf_loader_texture_image_create(3) to keep track of byte
+ *                      offset in larger VkBuffer->VkDeviceMemory. Image assets and metadata of image assets
+ *                      associated with GLTF file are loaded into an array of type struct uvr_utils_image_buffer.
+ *                      This array can then be cycled through by the application to populate section of VkBuffer->VkDeviceMemory.
+ *                      In order to save the application a bit of clock cycles (i.e by removing duplicate offset additions) compute
+ *                      offset once and store value in @imageBufferOffset.
  */
 struct uvr_utils_image_buffer {
 	uint8_t  *pixels;
@@ -74,6 +80,7 @@ struct uvr_utils_image_buffer {
 	uint32_t imageHeight;
 	uint32_t imageChannels;
 	size_t   imageSize;
+	size_t   imageBufferOffset;
 };
 
 

@@ -344,6 +344,7 @@ struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image_create(struct
 		imageData[curImage] = uvr_utils_image_buffer_create(&imageDataCreateInfo);
 		if (!imageData[curImage].pixels)
 			goto exit_error_uvr_gltf_loader_texture_image_create_free_image_data;
+		imageData[curImage].imageBufferOffset = totalBufferSize;
 		totalBufferSize += imageData[curImage].imageSize;
 	}
 
