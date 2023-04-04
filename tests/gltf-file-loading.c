@@ -9,7 +9,7 @@ int main(void)
 	memset(&gltfLoaderFileDestroy, 0, sizeof(struct uvr_gltf_loader_destroy));
 
 	struct uvr_gltf_loader_file gltfLoaderFile;
-	struct uvr_gltf_loader_vertex gltfLoaderFileVertex;
+	struct uvr_gltf_loader_mesh gltfLoaderFileMesh;
 	struct uvr_gltf_loader_node gltfLoaderFileNode;
 
 	struct uvr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
@@ -19,12 +19,12 @@ int main(void)
 	if (!gltfLoaderFile.gltfData)
 		return 1;
 
-	struct uvr_gltf_loader_vertex_buffer_create_info gltfVertexBuffersInfo;
-	gltfVertexBuffersInfo.gltfLoaderFile = gltfLoaderFile;
-	gltfVertexBuffersInfo.bufferIndex = 0;
+	struct uvr_gltf_loader_mesh_create_info gltfMeshInfo;
+	gltfMeshInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfMeshInfo.bufferIndex = 0;
 
-	gltfLoaderFileVertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
-	if (!gltfLoaderFileVertex.meshData)
+	gltfLoaderFileMesh = uvr_gltf_loader_mesh_create(&gltfMeshInfo);
+	if (!gltfLoaderFileMesh.meshData)
 		goto exit_gltf_loader_file_free_cgltf_data;
 
 	struct uvr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
@@ -39,16 +39,16 @@ int main(void)
 
 	gltfLoaderFileDestroy.uvr_gltf_loader_node_cnt = 1;
 	gltfLoaderFileDestroy.uvr_gltf_loader_node = &gltfLoaderFileNode;
-	gltfLoaderFileDestroy.uvr_gltf_loader_vertex_cnt = 1;
-	gltfLoaderFileDestroy.uvr_gltf_loader_vertex = &gltfLoaderFileVertex;
+	gltfLoaderFileDestroy.uvr_gltf_loader_mesh_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_mesh = &gltfLoaderFileMesh;
 	gltfLoaderFileDestroy.uvr_gltf_loader_file_cnt = 1;
 	gltfLoaderFileDestroy.uvr_gltf_loader_file = &gltfLoaderFile;
 	uvr_gltf_loader_destroy(&gltfLoaderFileDestroy);
 	return 0;
 
 exit_gltf_loader_file_free_vertex_data:
-	gltfLoaderFileDestroy.uvr_gltf_loader_vertex_cnt = 1;
-	gltfLoaderFileDestroy.uvr_gltf_loader_vertex = &gltfLoaderFileVertex;
+	gltfLoaderFileDestroy.uvr_gltf_loader_mesh_cnt = 1;
+	gltfLoaderFileDestroy.uvr_gltf_loader_mesh = &gltfLoaderFileMesh;
 exit_gltf_loader_file_free_cgltf_data:
 	gltfLoaderFileDestroy.uvr_gltf_loader_file_cnt = 1;
 	gltfLoaderFileDestroy.uvr_gltf_loader_file = &gltfLoaderFile;

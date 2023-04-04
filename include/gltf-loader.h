@@ -46,7 +46,7 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
 
 
 /*
- * struct uvr_gltf_loader_vertex_data (Underview Renderer GLTF Loader Vertex Data)
+ * struct uvr_gltf_loader_mesh_data (Underview Renderer GLTF Loader Mesh Data)
  *
  * Struct member order is arbitrary. SHOULD NOT BE USED DIRECTLY. Advise to create second stack buffer
  * and copy data over to it. Members populated with vertices from GLTF file buffer.
@@ -56,7 +56,7 @@ struct uvr_gltf_loader_file uvr_gltf_loader_file_load(struct uvr_gltf_loader_fil
  * @texCoord - Texture Coordinate
  * @color    - Color
  */
-struct uvr_gltf_loader_vertex_data {
+struct uvr_gltf_loader_mesh_data {
 	vec3 position;
 	vec3 normal;
 	vec2 texCoord;
@@ -65,9 +65,9 @@ struct uvr_gltf_loader_vertex_data {
 
 
 /*
- * struct uvr_gltf_loader_vertex_mesh_data (Underview Renderer GLTF Loader Vertex Mesh Data)
+ * struct uvr_gltf_loader_mesh_mesh_data (Underview Renderer GLTF Loader Mesh Data)
  *
- * @firstIndex            - Base index within the index buffer. Calculated in uvr_gltf_loader_vertex_buffer_create(3)
+ * @firstIndex            - Base index within the index buffer. Calculated in uvr_gltf_loader_mesh_create(3)
  *                          firstIndex = firstIndex + bufferElementCount (GLTF file accessor[index].count)
  *                          Can be used by the application to fill in vkCmdDrawIndexed(3) function.
  * @indexBufferData       - Buffer of index data belonging to mesh populated from GLTF file buffer at @bufferIndex.
@@ -77,63 +77,63 @@ struct uvr_gltf_loader_vertex_data {
  * @vertexBufferDataCount - Amount of elements in @vertexBufferData array.
  * @vertexBufferDataSize  - The total size in bytes of the @vertexBufferData array.
  */
-struct uvr_gltf_loader_vertex_mesh_data {
-	uint32_t                           firstIndex;
-	uint32_t                           *indexBufferData;
-	uint32_t                           indexBufferDataCount;
-	uint32_t                           indexBufferDataSize;
-	struct uvr_gltf_loader_vertex_data *vertexBufferData;
-	uint32_t                           vertexBufferDataCount;
-	uint32_t                           vertexBufferDataSize;
+struct uvr_gltf_loader_mesh_mesh_data {
+	uint32_t                         firstIndex;
+	uint32_t                         *indexBufferData;
+	uint32_t                         indexBufferDataCount;
+	uint32_t                         indexBufferDataSize;
+	struct uvr_gltf_loader_mesh_data *vertexBufferData;
+	uint32_t                         vertexBufferDataCount;
+	uint32_t                         vertexBufferDataSize;
 };
 
 
 /*
- * struct uvr_gltf_loader_vertex (Underview Renderer GLTF Loader Vertex)
+ * struct uvr_gltf_loader_mesh (Underview Renderer GLTF Loader Mesh)
  *
  * members:
  * @bufferIndex   - The index in the "buffers" array of give GLTF file.
  * @meshDataCount - Amount of meshes associated with a @bufferIndex GLTF buffer. The array size of @meshData array.
- * @meshData      - Pointer to an array of struct uvr_gltf_loader_vertex_mesh_data storing all important data
+ * @meshData      - Pointer to an array of struct uvr_gltf_loader_mesh_mesh_data storing all important data
  *                  related to each mesh.
  */
-struct uvr_gltf_loader_vertex {
-	uint16_t                                bufferIndex;
-	uint16_t                                meshDataCount;
-	struct uvr_gltf_loader_vertex_mesh_data *meshData;
+struct uvr_gltf_loader_mesh {
+	uint16_t                              bufferIndex;
+	uint16_t                              meshDataCount;
+	struct uvr_gltf_loader_mesh_mesh_data *meshData;
 };
 
 
 /*
- * struct uvr_gltf_loader_vertex_buffer_create_info (Underview Renderer GLTF Loader Vertex Buffer Create Information)
+ * struct uvr_gltf_loader_mesh_create_info (Underview Renderer GLTF Loader Mesh Create Information)
  *
  * members:
  * @gltfLoaderFile - Must pass a valid struct uvr_gltf_loader_file for cgltf_data @gltfData member
  * @bufferIndex    - Index of buffer in GLTF file buffers array
  */
-struct uvr_gltf_loader_vertex_buffer_create_info {
+struct uvr_gltf_loader_mesh_create_info {
 	struct uvr_gltf_loader_file gltfLoaderFile;
 	uint16_t                    bufferIndex;
 };
 
 
 /*
- * uvr_gltf_loader_vertex_buffer_create: Function loops through all meshes and finds the associated accessor->buffer view
- *                                       for a given buffer at @bufferIndex. After retrieves all information required to
- *                                       understand the contents of a buffer. The function then creates multiple meshes
- *                                       with appropriate data (struct uvr_gltf_loader_vertex_data) so the application
- *                                       only need to call function and create their vertex buffer + index buffer array
- *                                       based upon what's already populated. Converts GLTF buffer to a buffer that Vulkan
- *                                       can understand seperating each buffer, by their mesh index in GLTF file "meshes"
- *                                       array. @meshData must be free'd by the application with call to uvr_gltf_loader_destroy(3).
+ * uvr_gltf_loader_mesh_create: Function loops through all meshes and finds the associated accessor->buffer view
+ *                              for a given buffer at @bufferIndex. After retrieves all information required to
+ *                              understand the contents of a buffer. The function then creates multiple meshes
+ *                              with appropriate data (struct uvr_gltf_loader_mesh_data) so the application
+ *                              only need to call function and create their vertex buffer + index buffer array
+ *                              based upon what's already populated. Converts GLTF buffer to a buffer that Vulkan
+ *                              can understand seperating each buffer, by their mesh index in GLTF file "meshes"
+ *                              array. @meshData must be free'd by the application with call to uvr_gltf_loader_destroy(3).
  *
  * args:
- * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_vertex_buffer_create_info
+ * @uvrgltf - Must pass a pointer to a struct uvr_gltf_loader_mesh_create_info
  * return:
- *	on success struct uvr_gltf_loader_vertex { with member being pointer to an array }
- *	on failure struct uvr_gltf_loader_vertex { with member nulled }
+ *	on success struct uvr_gltf_loader_mesh { with member being pointer to an array }
+ *	on failure struct uvr_gltf_loader_mesh { with member nulled }
  */
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gltf_loader_vertex_buffer_create_info *uvrgltf);
+struct uvr_gltf_loader_mesh uvr_gltf_loader_mesh_create(struct uvr_gltf_loader_mesh_create_info *uvrgltf);
 
 
 /*
@@ -387,8 +387,8 @@ void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *
  * members:
  * @uvr_gltf_loader_file_cnt          - Must pass the amount of elements in struct uvr_gltf_loader_file array
  * @uvr_gltf_loader_file              - Must pass a pointer to an array of valid struct uvr_gltf_loader_file { free'd members: @gltfData }
- * @uvr_gltf_loader_vertex_cnt        - Must pass the amount of elements in struct uvr_gltf_loader_vertex array
- * @uvr_gltf_loader_vertex            - Must pass a pointer to an array of valid struct uvr_gltf_loader_vertex { free'd members: @verticesData }
+ * @uvr_gltf_loader_mesh_cnt          - Must pass the amount of elements in struct uvr_gltf_loader_mesh array
+ * @uvr_gltf_loader_mesh              - Must pass a pointer to an array of valid struct uvr_gltf_loader_mesh { free'd members: @verticesData }
  * @uvr_gltf_loader_texture_image_cnt - Must pass the amount of elements in struct uvr_gltf_loader_texture_image array
  * @uvr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct uvr_gltf_loader_texture_image { free'd members: @imageData, @pixels }
  * @uvr_gltf_loader_material_cnt      - Must pass the amount of elements in struct uvr_gltf_loader_material array
@@ -399,8 +399,8 @@ void uvr_gltf_loader_node_display_matrix_transform(struct uvr_gltf_loader_node *
 struct uvr_gltf_loader_destroy {
 	uint32_t                             uvr_gltf_loader_file_cnt;
 	struct uvr_gltf_loader_file          *uvr_gltf_loader_file;
-	uint32_t                             uvr_gltf_loader_vertex_cnt;
-	struct uvr_gltf_loader_vertex        *uvr_gltf_loader_vertex;
+	uint32_t                             uvr_gltf_loader_mesh_cnt;
+	struct uvr_gltf_loader_mesh          *uvr_gltf_loader_mesh;
 	uint32_t                             uvr_gltf_loader_texture_image_cnt;
 	struct uvr_gltf_loader_texture_image *uvr_gltf_loader_texture_image;
 	uint32_t                             uvr_gltf_loader_material_cnt;

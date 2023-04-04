@@ -51,7 +51,7 @@ exit_error_uvr_gltf_loader_file_load:
 }
 
 
-struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gltf_loader_vertex_buffer_create_info *uvrgltf)
+struct uvr_gltf_loader_mesh uvr_gltf_loader_mesh_create(struct uvr_gltf_loader_mesh_create_info *uvrgltf)
 {
 	cgltf_size i, j, k;
 	uint32_t bufferOffset, bufferType, bufferViewElementType, bufferViewComponentType;
@@ -62,13 +62,13 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 
 	vec4 vec4Dest;
 	void *finalAddress = NULL;
-	struct uvr_gltf_loader_vertex_mesh_data *meshData = NULL;
+	struct uvr_gltf_loader_mesh_mesh_data *meshData = NULL;
 
 	/* Allocate large enough buffer to store all mesh data in array */
-	meshData = calloc(gltfData->meshes_count, sizeof(struct uvr_gltf_loader_vertex_mesh_data));
+	meshData = calloc(gltfData->meshes_count, sizeof(struct uvr_gltf_loader_mesh_mesh_data));
 	if (!meshData) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc(meshData): %s", strerror(errno));
-		goto exit_error_uvr_gltf_loader_vertex_buffer_create;
+		goto exit_error_uvr_gltf_loader_mesh_create;
 	}
 
 	// TODO: account for accessor bufferOffset
@@ -94,13 +94,13 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 				bufferType = gltfData->meshes[i].primitives[j].attributes[k].type;
 
 				if (!meshData[i].vertexBufferData) {
-					meshData[i].vertexBufferData = calloc(bufferElementCount, sizeof(struct uvr_gltf_loader_vertex_data));
+					meshData[i].vertexBufferData = calloc(bufferElementCount, sizeof(struct uvr_gltf_loader_mesh_data));
 					if (!meshData[i].vertexBufferData) {
 						uvr_utils_log(UVR_DANGER, "[x] calloc(meshData[%u].vertexBufferData): %s", i, strerror(errno));
 					}
 
 					meshData[i].vertexBufferDataCount = bufferElementCount;
-					meshData[i].vertexBufferDataSize = bufferElementCount * sizeof(struct uvr_gltf_loader_vertex_data);
+					meshData[i].vertexBufferDataSize = bufferElementCount * sizeof(struct uvr_gltf_loader_mesh_data);
 				}
 
 				for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
@@ -142,7 +142,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 				meshData[i].indexBufferData = calloc(bufferElementCount, sizeof(uint32_t));
 				if (!meshData[i].indexBufferData) {
 					uvr_utils_log(UVR_DANGER, "[x] calloc(meshData[%u].indexBufferData): %s", i, strerror(errno));
-					goto exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData;
+					goto exit_error_uvr_gltf_loader_mesh_create_free_meshData;
 				}
 
 				meshData[i].indexBufferDataCount = bufferElementCount;
@@ -164,7 +164,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 						break;
 					default:
 						uvr_utils_log(UVR_DANGER, "[x] Somethings gone horribly wrong here. GLTF buffer indices section doesn't have correct data type");
-						goto exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData;
+						goto exit_error_uvr_gltf_loader_mesh_create_free_meshData;
 				}
 			}
 
@@ -173,16 +173,16 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 		}
 	}
 
-	return (struct uvr_gltf_loader_vertex) { .bufferIndex = uvrgltf->bufferIndex, .meshDataCount = gltfData->meshes_count, .meshData = meshData };
+	return (struct uvr_gltf_loader_mesh) { .bufferIndex = uvrgltf->bufferIndex, .meshDataCount = gltfData->meshes_count, .meshData = meshData };
 
-exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData:
+exit_error_uvr_gltf_loader_mesh_create_free_meshData:
 	for (i = 0; i < meshCount; i++) {
 		free(meshData[i].vertexBufferData);
 		free(meshData[i].indexBufferData);
 	}
 	free(meshData);
-exit_error_uvr_gltf_loader_vertex_buffer_create:
-	return (struct uvr_gltf_loader_vertex) { .bufferIndex = 0, .meshDataCount = 0, .meshData = NULL };
+exit_error_uvr_gltf_loader_mesh_create:
+	return (struct uvr_gltf_loader_mesh) { .bufferIndex = 0, .meshDataCount = 0, .meshData = NULL };
 }
 
 
@@ -476,20 +476,20 @@ void uvr_gltf_loader_destroy(struct uvr_gltf_loader_destroy *uvrgltf)
 			uvrgltf->uvr_gltf_loader_file[i].gltfData = NULL;
 		}
 	}
-	for (i = 0; i < uvrgltf->uvr_gltf_loader_vertex_cnt; i++) {
-		for (j = 0; j < uvrgltf->uvr_gltf_loader_vertex[i].meshDataCount; j++) {
-			if (uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].vertexBufferData) { // Gating to prevent accident double free'ing
-				free(uvrgltf->uvr_gltf_loader_vertex[i].meshData[i].vertexBufferData);
-				uvrgltf->uvr_gltf_loader_vertex[i].meshData[i].vertexBufferData = NULL;
+	for (i = 0; i < uvrgltf->uvr_gltf_loader_mesh_cnt; i++) {
+		for (j = 0; j < uvrgltf->uvr_gltf_loader_mesh[i].meshDataCount; j++) {
+			if (uvrgltf->uvr_gltf_loader_mesh[i].meshData[j].vertexBufferData) { // Gating to prevent accident double free'ing
+				free(uvrgltf->uvr_gltf_loader_mesh[i].meshData[i].vertexBufferData);
+				uvrgltf->uvr_gltf_loader_mesh[i].meshData[i].vertexBufferData = NULL;
 			}
-			if (uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].indexBufferData) { // Gating to prevent accident double free'ing
-				free(uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].indexBufferData);
-				uvrgltf->uvr_gltf_loader_vertex[i].meshData[j].indexBufferData = NULL;
+			if (uvrgltf->uvr_gltf_loader_mesh[i].meshData[j].indexBufferData) { // Gating to prevent accident double free'ing
+				free(uvrgltf->uvr_gltf_loader_mesh[i].meshData[j].indexBufferData);
+				uvrgltf->uvr_gltf_loader_mesh[i].meshData[j].indexBufferData = NULL;
 			}
 		}
-		if (uvrgltf->uvr_gltf_loader_vertex[i].meshData) {
-			free(uvrgltf->uvr_gltf_loader_vertex[i].meshData);
-			uvrgltf->uvr_gltf_loader_vertex[i].meshData = NULL;
+		if (uvrgltf->uvr_gltf_loader_mesh[i].meshData) {
+			free(uvrgltf->uvr_gltf_loader_mesh[i].meshData);
+			uvrgltf->uvr_gltf_loader_mesh[i].meshData = NULL;
 		}
 	}
 	for (i = 0; i < uvrgltf->uvr_gltf_loader_texture_image_cnt; i++) {

@@ -66,7 +66,7 @@ struct app_vk {
 	/*
 	 * Keep track of data related to FlightHelmet.gltf
 	 */
-	struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex;
+	struct uvr_gltf_loader_mesh uvr_gltf_loader_mesh;
 	struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
 
 	/*
@@ -790,10 +790,10 @@ int create_vk_buffers(struct app_vk *app)
 	uint32_t vertexBufferDataSize = 0, indexBufferDataSize = 0;
 	uint32_t curVertexBufferIndex = 0, curIndexBufferIndex = 0, index;
 
-	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
+	for (m = 0; m < app->uvr_gltf_loader_mesh.meshDataCount; m++) {
 		app->meshData[m].bufferOffset += vertexBufferDataSize;
-		vertexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataSize;
-		indexBufferDataSize += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataSize;
+		vertexBufferDataSize += app->uvr_gltf_loader_mesh.meshData[m].vertexBufferDataSize;
+		indexBufferDataSize += app->uvr_gltf_loader_mesh.meshData[m].indexBufferDataSize;
 	}
 
 	vertexBufferData = alloca(vertexBufferDataSize);		
@@ -801,40 +801,40 @@ int create_vk_buffers(struct app_vk *app)
 	app->indexBufferOffset = vertexBufferDataSize;
 
 	/*
-	 * Application must take vertex + index buffer arrays created in uvr_gltf_loader_vertex_buffer_create(3)
+	 * Application must take vertex + index buffer arrays created in uvr_gltf_loader_mesh_create(3)
 	 * and populate it's local array before creating and copying buffer into VkBuffer
 	 */
-	for (m = 0; m < app->uvr_gltf_loader_vertex.meshDataCount; m++) {
+	for (m = 0; m < app->uvr_gltf_loader_mesh.meshDataCount; m++) {
 		// uvr_utils_log(UVR_INFO, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
-		for (v = 0; v < app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataCount; v++) {
+		for (v = 0; v < app->uvr_gltf_loader_mesh.meshData[m].vertexBufferDataCount; v++) {
 			index = curVertexBufferIndex + v;
-			vertexBufferData[index].pos[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[0];
-			vertexBufferData[index].pos[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[1];
-			vertexBufferData[index].pos[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].position[2];
+			vertexBufferData[index].pos[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[0];
+			vertexBufferData[index].pos[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[1];
+			vertexBufferData[index].pos[2] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[2];
 			
-			vertexBufferData[index].color[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[0];
-			vertexBufferData[index].color[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[1];
-			vertexBufferData[index].color[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].color[2];
+			vertexBufferData[index].color[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[0];
+			vertexBufferData[index].color[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[1];
+			vertexBufferData[index].color[2] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[2];
 			
-			vertexBufferData[index].normal[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[0];
-			vertexBufferData[index].normal[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[1];
-			vertexBufferData[index].normal[2] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].normal[2];
+			vertexBufferData[index].normal[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[0];
+			vertexBufferData[index].normal[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[1];
+			vertexBufferData[index].normal[2] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[2];
 			
-			vertexBufferData[index].texCoord[0] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[0];
-			vertexBufferData[index].texCoord[1] = app->uvr_gltf_loader_vertex.meshData[m].vertexBufferData[v].texCoord[1];
+			vertexBufferData[index].texCoord[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[0];
+			vertexBufferData[index].texCoord[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[1];
 		}
 
-		for (v = 0; v < app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataCount; v++) {
-			indexBufferData[curIndexBufferIndex + v] = app->uvr_gltf_loader_vertex.meshData[m].indexBufferData[v];
+		for (v = 0; v < app->uvr_gltf_loader_mesh.meshData[m].indexBufferDataCount; v++) {
+			indexBufferData[curIndexBufferIndex + v] = app->uvr_gltf_loader_mesh.meshData[m].indexBufferData[v];
 		}
 
-		curIndexBufferIndex += app->uvr_gltf_loader_vertex.meshData[m].indexBufferDataCount;
-		curVertexBufferIndex += app->uvr_gltf_loader_vertex.meshData[m].vertexBufferDataCount;
+		curIndexBufferIndex += app->uvr_gltf_loader_mesh.meshData[m].indexBufferDataCount;
+		curVertexBufferIndex += app->uvr_gltf_loader_mesh.meshData[m].vertexBufferDataCount;
 		// uvr_utils_log(UVR_WARNING, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
 	}
 
-	// Free'ing uvr_gltf_loader_vertex no longer required
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
+	// Free'ing uvr_gltf_loader_mesh no longer required
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_mesh_cnt = 1, .uvr_gltf_loader_mesh = &app->uvr_gltf_loader_mesh });
 
 	/*
 	 * Create CPU visible buffer [vertex + index]
@@ -1034,7 +1034,7 @@ int create_vk_texture_images(struct app_vk *app)
 	copyRegion.bufferImageHeight = 0;
 
 	/* Copy VkImage resource to VkBuffer resource */
-	struct uvr_vk_resource_copy_info UNUSED bufferCopyInfo;
+	struct uvr_vk_resource_copy_info bufferCopyInfo;
 	bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
 	bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 	bufferCopyInfo.queue = app->uvr_vk_queue.queue;
@@ -1123,12 +1123,12 @@ int create_gltf_load_required_data(struct app_vk *app)
 	if (!gltfLoaderFile.gltfData)
 		return -1;
 
-	struct uvr_gltf_loader_vertex_buffer_create_info gltfVertexBuffersInfo;
-	gltfVertexBuffersInfo.gltfLoaderFile = gltfLoaderFile;
-	gltfVertexBuffersInfo.bufferIndex = 0;
+	struct uvr_gltf_loader_mesh_create_info gltfMeshInfo;
+	gltfMeshInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfMeshInfo.bufferIndex = 0;
 
-	app->uvr_gltf_loader_vertex = uvr_gltf_loader_vertex_buffer_create(&gltfVertexBuffersInfo);
-	if (!app->uvr_gltf_loader_vertex.meshData)
+	app->uvr_gltf_loader_mesh = uvr_gltf_loader_mesh_create(&gltfMeshInfo);
+	if (!app->uvr_gltf_loader_mesh.meshData)
 		goto exit_create_gltf_loader_file_free_gltf_data;
 
 	struct uvr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
@@ -1147,7 +1147,7 @@ int create_gltf_load_required_data(struct app_vk *app)
 	if (!gltfLoaderFileNodes.nodeData)
 		goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
-	app->meshCount = app->uvr_gltf_loader_vertex.meshDataCount;
+	app->meshCount = app->uvr_gltf_loader_mesh.meshDataCount;
 	app->meshData = calloc(app->meshCount, sizeof(struct mesh_data));
 	if (!app->meshData) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
@@ -1158,8 +1158,8 @@ int create_gltf_load_required_data(struct app_vk *app)
 	for (uint32_t meshIndex = 0; meshIndex < gltfLoaderFileNodes.nodeDataCount; meshIndex++) {
 		//glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
 		memcpy(app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix, gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, sizeof(mat4));
-		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_vertex.meshData[meshIndex].firstIndex;
-		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_vertex.meshData[meshIndex].indexBufferDataCount;
+		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_mesh.meshData[meshIndex].firstIndex;
+		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_mesh.meshData[meshIndex].indexBufferDataCount;
 	}
 
 	// Have everything we need free memory created
@@ -1170,7 +1170,7 @@ int create_gltf_load_required_data(struct app_vk *app)
 exit_create_gltf_loader_file_free_gltf_texture_image:
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
 exit_create_gltf_loader_file_free_gltf_vertex:
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_vertex_cnt = 1, .uvr_gltf_loader_vertex = &app->uvr_gltf_loader_vertex });
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_mesh_cnt = 1, .uvr_gltf_loader_mesh = &app->uvr_gltf_loader_mesh });
 exit_create_gltf_loader_file_free_gltf_data:
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfLoaderFile });
 	return -1;
