@@ -79,7 +79,7 @@ struct uvr_gltf_loader_vertex_data {
  */
 struct uvr_gltf_loader_vertex_mesh_data {
 	uint32_t                           firstIndex;
-	uint16_t                           *indexBufferData;
+	uint32_t                           *indexBufferData;
 	uint32_t                           indexBufferDataCount;
 	uint32_t                           indexBufferDataSize;
 	struct uvr_gltf_loader_vertex_data *vertexBufferData;

@@ -222,7 +222,7 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 	meshCount++;
 
 	struct uvr_gltf_loader_vertex_mesh_data *meshData = NULL;
-	uint32_t byteOffset, bufferElementSize, bufferElementCount, bufferType, bufferSize, vertexIndex;
+	uint32_t byteOffset, bufferElementSize, bufferElementCount, bufferType, vertexIndex;
 	uint32_t prevMeshIndex = 0, firstIndex = 0;
 	void *finalAddress = NULL;
 	vec4 vec4Dest;
@@ -244,28 +244,27 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 		}
 
 		meshData[j].indexBufferDataCount = indexBufferElementCounts[j];
-		meshData[j].indexBufferDataSize = indexBufferElementCounts[j] * sizeof(uint16_t);
-		meshData[j].indexBufferData = calloc(indexBufferElementCounts[j], sizeof(uint16_t));
+		meshData[j].indexBufferDataSize = indexBufferElementCounts[j] * sizeof(uint32_t);
+		meshData[j].indexBufferData = calloc(indexBufferElementCounts[j], sizeof(uint32_t));
 		if (!meshData[j].indexBufferData) {
 			uvr_utils_log(UVR_DANGER, "[x] calloc(meshData[%u].indexBufferData): %s", j, strerror(errno));
 			goto exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData;
 		}
 	}
 
-	prevMeshIndex = gltfBufferData[0].meshIndex;
 	j=0; // Represents the current index in @meshData array.
+	prevMeshIndex = gltfBufferData[0].meshIndex;
 
 	/*
 	 * Converts GLTF buffer to
 	 * 	- struct uvr_gltf_loader_vertex_data [] { .pos, .normal, .texCoord, .color }
-	 * 	- uint16_t []
+	 * 	- uint8_t, uint16_t, uint32_t indices []
 	 */
 	for (i = 0; i < gltfBufferDataCount; i++) {
 		bufferType = gltfBufferData[i].bufferType;
 		bufferElementCount = gltfBufferData[i].bufferElementCount;
 		byteOffset = gltfBufferData[i].byteOffset;
 		bufferElementSize = gltfBufferData[i].bufferElementSize;
-		bufferSize = gltfBufferData[i].bufferSize;
 
 		/*
 		 * Update @curVertexDataIndex if @meshIndex changes
@@ -276,9 +275,24 @@ struct uvr_gltf_loader_vertex uvr_gltf_loader_vertex_buffer_create(struct uvr_gl
 		}
 
 		if (bufferType == UVR_GLTF_LOADER_VERTEX_INDEX) {
-			// Base buffer data adress + base byte offset address = address in buffer where data resides
-			finalAddress = gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset;
-			memcpy(meshData[j].indexBufferData, finalAddress, bufferSize);
+			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
+				// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
+				finalAddress = gltfData->buffers[uvrgltf->bufferIndex].data + byteOffset + (vertexIndex * bufferElementSize);
+				switch (bufferElementSize) {
+					case 1:
+						meshData[j].indexBufferData[vertexIndex] = *((uint8_t*) finalAddress);
+						break;
+					case 2:
+						meshData[j].indexBufferData[vertexIndex] = *((uint16_t*) finalAddress);
+						break;
+					case 4:
+						meshData[j].indexBufferData[vertexIndex] = *((uint32_t*) finalAddress);
+						break;
+					default:
+						uvr_utils_log(UVR_DANGER, "[x] Somethings gone horribly wrong here. GLTF buffer view doesn't have correct data type");
+						goto exit_error_uvr_gltf_loader_vertex_buffer_create_free_meshData;
+				}
+			}
 
 			meshData[j].firstIndex = firstIndex;
 			firstIndex += bufferElementCount;
