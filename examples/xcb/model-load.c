@@ -1154,7 +1154,8 @@ int create_gltf_load_required_data(struct app_vk *app)
 
 	// Copy TRS matrix transform data to the passable buffer used during draw operations
 	for (uint32_t meshIndex = 0; meshIndex < gltfLoaderFileNodes.nodeDataCount; meshIndex++) {
-		glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
+		// glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
+		memcpy(app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix, gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, sizeof(mat4));
 		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_vertex.meshData[meshIndex].firstIndex;
 		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_vertex.meshData[meshIndex].indexBufferDataCount;
 	}
