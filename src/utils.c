@@ -49,7 +49,7 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 {
 	char *imageFile = NULL;
 	uint8_t bitsPerPixel = 8;
-	uint8_t *pixels = NULL, *data = NULL;
+	uint8_t *pixels = NULL;
 	int imageWidth = 0, imageHeight = 0, imageChannels = 0;
 	int imageSize = 0, requestedImageChannels = 0;
 	struct uvr_utils_file loadedImageFile;
@@ -80,8 +80,8 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 	 * channel.
 	 */
 	if (stbi_is_16_bit_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize)) {
-		data = (uint8_t *) stbi_load_16_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
-		if (data) {
+		pixels = (uint8_t *) stbi_load_16_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
+		if (pixels) {
 			bitsPerPixel = 16;
 		}
 	}
@@ -92,10 +92,10 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 	 * 16bit per channel, we are going to load it as a normal 8bit per channel
 	 * image as we used to do.
 	 */
-	if (!data)
-		data = (uint8_t *) stbi_load_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
+	if (!pixels)
+		pixels = (uint8_t *) stbi_load_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
 
-	if (!data) {
+	if (!pixels) {
 		uvr_utils_log(UVR_DANGER, "[x] stbi_load_from_memory: Unknown image format. STB cannot decode image data for %s", imageFile);
 		goto exit_error_utils_image_buffer_free_loadedImageFileBytes;
 	}
@@ -104,35 +104,12 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 	free(loadedImageFile.bytes);
 
 	imageSize += (imageWidth * imageHeight) * requestedImageChannels;
-	pixels = calloc(imageSize, sizeof(uint8_t));
-	if (!pixels) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_utils_image_buffer_free_stbdata;
-	}
-
-	if (imageChannels == 3) {
-		uint8_t *rgba = pixels;
-		uint8_t *rgb = data;
-
-		uint8_t colors[4];
-		colors[3] = 1;
-
-		for (int i = 0; i < imageSize; i+=4) {
-			memcpy(colors, rgb, 3);
-			memcpy(rgba, colors, 4);
-			rgba += 4; rgb += 3;
-		}
-	} else {
-		memcpy(pixels, data, imageSize);
-	}
-
-	stbi_image_free(data);
 
 	return (struct uvr_utils_image_buffer) { .pixels = pixels, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight,
-	                                         .imageChannels = requestedImageChannels, .imageSize = imageSize, .imageBufferOffset = 0 };
+	                                         .imageChannels = imageChannels, .imageSize = imageSize, .imageBufferOffset = 0 };
 
-exit_error_utils_image_buffer_free_stbdata:
-	stbi_image_free(data);
+//exit_error_utils_image_buffer_free_stbdata:
+//	stbi_image_free(pixels);
 exit_error_utils_image_buffer_free_loadedImageFileBytes:
 	free(loadedImageFile.bytes);
 exit_error_utils_image_buffer_free_imageFile:

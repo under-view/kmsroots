@@ -65,6 +65,8 @@ struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils
  * @imageWidth        - Width of image in pixels/texels
  * @imageHeight       - Height of image in pixels/texels
  * @imageChannels     - Amount of color channels image has { RGBA(4): all images get converted to RGBA }
+ *                      NOTE: Some images may have an @imageChannels value of 3, but when calculating @imageSize
+ *                      the value of 4 is utilized.
  * @imageSize         - Byte size of the image (@imageWidth * @imageHeight) * @imageChannels
  * @imageBufferOffset - Special member used by uvr_gltf_loader_texture_image_create(3) to keep track of byte
  *                      offset in larger VkBuffer->VkDeviceMemory. Image assets and metadata of image assets
@@ -102,9 +104,9 @@ struct uvr_utils_image_buffer_create_info {
 
 /*
  * uvr_utils_image_buffer_create: Create pixel buffer for any given image and return its size, width, height,
- *                                color channels will always be 4, actual pixel buffer, and amount of
- *                                bits per pixel. Function converts RGB-only images to RGBA, as most devices
- *                                don't support RGB-formats in Vulkan.
+ *                                color channel count, actual pixel buffer, and amount of bits per pixel.
+ *                                Function converts RGB-only images to RGBA, as most devices don't support
+ *                                RGB-formats in Vulkan.
  *
  * args:
  * @uvrutils - pointer to a struct uvr_utils_image_buffer_create_info
