@@ -1023,10 +1023,17 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 
 	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
-	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.blendEnable = VK_TRUE;
+
+	/*
+	 * Blending uses equation (srcColorBlendFactor * new color) colorBlendOp (dstColorBlendFactor * old color)
+	 * (VK_BLEND_FACTOR_SRC_ALPHA * new color) VK_BLEND_OP_ADD (VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA * old color)
+	 * (new color alpha channel * new color) + ((1 - new color alpha channel) * old color)
+	 */
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; // multiply new color by its alpha value
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	// (1 * new color alpha channel) + (0 * old color alpha channel) = new alpha
 	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
@@ -1136,14 +1143,24 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	subpass.preserveAttachmentCount = 0;
 	subpass.pPreserveAttachments = NULL;
 
-	VkSubpassDependency subpassDependency;
-	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	subpassDependency.dstSubpass = 0;
-	subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	subpassDependency.srcAccessMask = 0;
-	subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	subpassDependency.dependencyFlags = 0;
+	VkSubpassDependency subpassDependencies[2];
+	// Conversion from VK_IMAGE_LAYOUT_UNDEFINED to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+	subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	subpassDependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	subpassDependencies[0].dstSubpass = 0;
+	subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	subpassDependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	// Conversion from VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+	subpassDependencies[1].srcSubpass = 0;
+	subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+	subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	subpassDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	subpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 	struct uvr_vk_render_pass_create_info renderPassInfo;
 	renderPassInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
@@ -1151,8 +1168,8 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	renderPassInfo.attachmentDescriptions = attachmentDescriptions;
 	renderPassInfo.subpassDescriptionCount = 1;
 	renderPassInfo.subpassDescriptions = &subpass;
-	renderPassInfo.subpassDependencyCount = 1;
-	renderPassInfo.subpassDependencies = &subpassDependency;
+	renderPassInfo.subpassDependencyCount = ARRAY_LEN(subpassDependencies);
+	renderPassInfo.subpassDependencies = subpassDependencies;
 
 	app->uvr_vk_render_pass = uvr_vk_render_pass_create(&renderPassInfo);
 	if (!app->uvr_vk_render_pass.renderPass)
@@ -1245,7 +1262,8 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 	viewport.maxDepth = 1.0f;
 
 	/*
-	 * Values used by VK_ATTACHMENT_LOAD_OP_CLEAR
+	 * Values used by VK_ATTACHMENT_LOAD_OP_CLEAR to clear
+	 * framebuffer attachments with.
 	 */
 	float float32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 	int32_t int32[4] = {0.0f, 0.0f, 0.0f, 1.0f};

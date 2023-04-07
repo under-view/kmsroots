@@ -609,7 +609,8 @@ struct uvr_vk_pipeline_layout_create_info {
 /*
  * uvr_vk_pipeline_layout_create: Function creates a VkPipelineLayout handle that is then later used by the graphics pipeline
  *                                itself so that is knows what resources are need to produce the final image, at what shader
- *                                stages these resources will be accessed, and how to access them.
+ *                                stages these resources will be accessed, and how to access them. Describes the layout of the
+ *                                data that will be given to the pipeline for a single draw operation.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_pipeline_layout_create_info
@@ -637,16 +638,20 @@ struct uvr_vk_render_pass {
  * struct uvr_vk_render_pass_create_info (Underview Renderer Vulkan Render Pass Create Information)
  *
  * members:
- * @logicalDevice   - Must pass a valid VkDevice handle (Logical Device)
+ * @logicalDevice              - Must pass a valid VkDevice handle (Logical Device)
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html for more info on bellow members
  *
- * @attachmentDescriptionCount -
- * @attachmentDescriptions     -
- * @subpassDescriptionCount    -
- * @subpassDescriptions        -
- * @subpassDependenciesCount   - Amount of elements in VkSubpassDependency array
- * @subpassDependencies        - Pointer to an array of subpass dependencies that define stages in a pipeline where transitions need to occur
+ * @attachmentDescriptionCount - Array size of @attachmentDescriptions
+ * @attachmentDescriptions     - Describes the type of location to output fragment data to
+ *                               Depth attachment outputs to a VkImage used for depth
+ *                               Color attachment outputs to a VkImage used for coloring insides of a triangle
+ * @subpassDescriptionCount    - Array size of @subpassDescriptions
+ * @subpassDescriptions        - What type of pipeline attachments are bounded to (Graphics being the one we want) and the final layout
+ *                               og the image before its presented on the screen.
+ * @subpassDependenciesCount   - Amount of elements in @subpassDependencies array
+ * @subpassDependencies        - Pointer to an array of subpass dependencies that define stages in a pipeline where image
+ *                               transitions need to occur before sending output to framebuffer then later the viewport.
  */
 struct uvr_vk_render_pass_create_info {
 	VkDevice                      logicalDevice;
@@ -661,13 +666,13 @@ struct uvr_vk_render_pass_create_info {
 
 /*
  * uvr_vk_render_pass_create: Function creates a VkRenderPass handle that is then later used by the graphics pipeline
- *                            itself so that is knows how many color and depth buffers there will be, how many samples
- *                            to use for each of them, and how their contents should be handled throughout rendering
- *                            operations. Subpasses within a render pass then references the attachments for every draw
- *                            operations and connects attachments to the graphics pipeline. In short the render pass
- *                            defines the entire render process and outputs from each pipeline to a framebuffer.
- *
- *                            Taken from: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
+ *                            itself so that is knows how many attachments (color, depth, etc...) there will be per VkFramebuffer,
+ *                            how many samples an attachment has (samples to use for multisampling), and how their contents should
+ *                            be handled throughout rendering operations. Subpasses within a render pass then references the attachments
+ *                            for every draw operations and connects attachments (i.e. VkImage's connect to a VkFramebuffer) to the graphics
+ *                            pipeline. In short the render pass is the intermediary step between your graphics pipeline and the framebuffer.
+ *                            It describes how you want to render things to the viewport upon render time. Example at render time we wish to
+ *                            color in the center of a triangle. We want to give the appears of depth to an image.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_render_pass_create_info
@@ -716,10 +721,10 @@ struct uvr_vk_graphics_pipeline {
  * @dynamicState        - Graphics pipelines settings are static once set they can't change. To get new settings you'd have to create a whole new pipeline.
  *                        There are settings however that can be changed at runtime. We define which settings here.
  * @pipelineLayout      - Pass VkPipelineLayout handle to define the resources (i.e. descriptor sets, push constants) given to the pipeline for a single draw operation
- * @renderPass          - Pass VkRenderPAss handle which Holds a pipeline and handles how it is execute. With final outputs being to a framebuffer.
- *                        One can have multiple smaller subpasses inside of it that each use a different pipeline.
+ * @renderPass          - Pass VkRenderPass handle which holds a pipeline and handles how it is execute. With final outputs being to a framebuffer.
+ *                        One can have multiple smaller subpasses inside of render pass. Used to bind a given render pass to the graphics pipeline.
  *                        Contains multiple attachments that go to all plausible pipeline outputs (i.e Depth, Color, etc..)
- * @subpass             - Pass the index of the subpass in the render pass
+ * @subpass             - Pass the index of the subpass to use in the @renderPass instance
  */
 struct uvr_vk_graphics_pipeline_create_info {
 	VkDevice                                      logicalDevice;
@@ -741,11 +746,11 @@ struct uvr_vk_graphics_pipeline_create_info {
 
 
 /*
- * uvr_vk_graphics_pipeline_create: Function creates a VkPipeline handle. The graphics pipeline is a sequence of operations
- *                                  that takes the vertices and textures of your meshes all the way to the pixels in the render
- *                                  targets and outputs it into a framebuffer
- *
- *                                  Taken from: https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Introduction
+ * uvr_vk_graphics_pipeline_create: Function creates a VkPipeline handle that references a sequence of operations that first takes
+ *                                  raw vertices (points on a coordinate plane), textures coordinates, color coordinates, tangent,
+ *                                  etc.. [NOTE: Data combinded is called a mesh]. Utilizes shaders to plot the points on a coordinate
+ *                                  system then the rasterizer converts all plotted points and turns it into fragments/pixels for your
+ *                                  fragment shader to then color in.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_graphics_pipeline_create_info
@@ -788,9 +793,15 @@ struct uvr_vk_framebuffer {
  * members:
  * @logicalDevice            - Must pass a valid VkDevice handle (Logical Device)
  * @frameBufferCount         - Amount of VkFramebuffer handles to create
- * @imageViewHandles         - Pointer to an array of VkImageView handles which will be used in a render pass instance.
+ * @imageViewHandles         - Pointer to an array of VkImageView handles which the @renderPass instance will output fragment data
+ *                             generated from the graphics pipeline exection to the VkImage bound to the VkImageView. These VkImageView
+ *                             handles must always be in a format that equals to the render pass attachment format. Otherwise you get errors
+ *                             and vulkan barks at you.
  * @miscImageViewHandleCount - Amount of elements in @miscImageViewHandles array
- * @miscImageViewHandles     - Pointer to an array of extra VkImageViews to attach to a given swap chain image View (i.e Depth Buffer Image View)
+ * @miscImageViewHandles     - Pointer to an array of extra VkImageViews handles to attach to @imageViewHandles (i.e Depth Buffer Image View).
+ *                             All additional attachments (VkImageView) will be added to each @imageViewHandles attachments.
+ *                             @imageViewHandles[0] = { @miscImageViewHandles[0], @miscImageViewHandles[1], @miscImageViewHandles[2] } = Final VkFramebuffer
+ *                             @imageViewHandles[1] = { @miscImageViewHandles[0], @miscImageViewHandles[1], @miscImageViewHandles[2] } = Final VkFramebuffer
  * @renderPass               - Defines the render pass a given framebuffer is compatible with
  * @width                    - Framebuffer width in pixels
  * @height                   - Framebuffer height in pixels
@@ -816,7 +827,9 @@ struct uvr_vk_framebuffer_create_info {
  * uvr_vk_framebuffer_create: Creates @frameBufferCount amount of VkFramebuffer handles. For simplicity each VkFramebuffer
  *                            handle created only has one VkImageView attached. Can think of this function as creating the
  *                            frames to hold the pictures in them, with each frame only containing one picture. Note framebuffer
- *                            images must match up one to one with attachments in the render pass.
+ *                            VkImage's must match up one to one with attachments in the render pass. Meaning if are @renderPass
+ *                            instance has 1 color + 1 depth attachment then each VkFramebuffer must have one VkImage for color
+ *                            and one VkImage for depth. Function forces you to have at least a color attachment via @imageViewHandles.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_framebuffer_create_info
@@ -1200,8 +1213,8 @@ struct uvr_vk_descriptor_set uvr_vk_descriptor_set_create(struct uvr_vk_descript
  *                  TAKEN FROM: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSampler.html
  */
 struct uvr_vk_sampler {
-  VkDevice  logicalDevice;
-  VkSampler sampler;
+	VkDevice  logicalDevice;
+	VkSampler sampler;
 };
 
 
@@ -1213,46 +1226,51 @@ struct uvr_vk_sampler {
  *
  * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerCreateInfo.html for more information
  *
- * @samplerFlags
- * @samplerMagFilter
- * @samplerMinFilter
- * @samplerMipmapMode
- * @samplerAddressModeU
- * @samplerAddressModeV
- * @samplerAddressModeW
- * @samplerMipLodBias
- * @samplerAnisotropyEnable
- * @samplerMaxAnisotropy
- * @samplerCompareEnable
- * @samplerCompareOp
- * @samplerMinLod
- * @samplerMaxLod
- * @samplerBorderColor
- * @samplerUnnormalizedCoordinates
+ * @samplerFlags                   -
+ * @samplerMagFilter               - How to render when image is magnified on screen (Camera close to texture)
+ * @samplerMinFilter               - How to render when image is minimized on screen (Camera further away from texture)
+ * @samplerAddressModeU            - How to handle texture wrap in U (x) direction
+ * @samplerAddressModeV            - How to handle texture wrap in U (y) direction
+ * @samplerAddressModeW            - How to handle texture wrap in U (z) direction
+ * @samplerBorderColor             - Used if @samplerAddressMode{U,V,W} == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
+ *                                   set border beyond texture.
+ * @samplerMipmapMode              - Mipmap interpolation mode
+ * @samplerMipLodBias              - Level of details bias for mip level. Sets value to add to mip levels.
+ * @samplerMinLod                  - Minimum level of detail to pick miplevel
+ * @samplerMaxLod                  - Maximum level of detail to pick miplevel
+ * @samplerUnnormalizedCoordinates - Sets if the texture coordinates should be normalized (between 0 and 1)
+ * @samplerAnisotropyEnable        - Enable/Disable Anisotropy
+ * @samplerMaxAnisotropy           - Anisotropy sample level
+ * @samplerCompareEnable           -
+ * @samplerCompareOp               -
  */
 struct uvr_vk_sampler_create_info {
 	VkDevice                logicalDevice;
 	VkSamplerCreateFlags    samplerFlags;
 	VkFilter                samplerMagFilter;
 	VkFilter                samplerMinFilter;
-	VkSamplerMipmapMode     samplerMipmapMode;
 	VkSamplerAddressMode    samplerAddressModeU;
 	VkSamplerAddressMode    samplerAddressModeV;
 	VkSamplerAddressMode    samplerAddressModeW;
-	float                   samplerMipLodBias;
+	VkBorderColor           samplerBorderColor;
 	VkBool32                samplerAnisotropyEnable;
 	float                   samplerMaxAnisotropy;
 	VkBool32                samplerCompareEnable;
 	VkCompareOp             samplerCompareOp;
+	VkSamplerMipmapMode     samplerMipmapMode;
+	float                   samplerMipLodBias;
 	float                   samplerMinLod;
 	float                   samplerMaxLod;
-	VkBorderColor           samplerBorderColor;
 	VkBool32                samplerUnnormalizedCoordinates;
 };
 
 
 /*
- * uvr_vk_sampler_create: Functions creates VkSampler handle
+ * uvr_vk_sampler_create: Functions creates VkSampler handle this object accesses the image using pre-defined
+ *                        methods. These methods cover concepts such as picking a point between two texels or
+ *                        beyond the edge of the image. Describes how an image should be read.
+ *
+ *                        Loaded images (png, jpg)-> VkImage -> Sampler interacts with the VkImage.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_sampler_create_info

@@ -1022,21 +1022,21 @@ int create_vk_image_sampler(struct app_vk *app)
 	struct uvr_vk_sampler_create_info vkSamplerCreateInfo;
 	vkSamplerCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	vkSamplerCreateInfo.samplerFlags = 0;
-	vkSamplerCreateInfo.samplerMagFilter = VK_FILTER_LINEAR;
-	vkSamplerCreateInfo.samplerMinFilter = VK_FILTER_LINEAR;
-	vkSamplerCreateInfo.samplerMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	vkSamplerCreateInfo.samplerMagFilter = VK_FILTER_LINEAR;                  // Close to texture: 50/50 sample of two pixels if camera inbetween to pixels
+	vkSamplerCreateInfo.samplerMinFilter = VK_FILTER_LINEAR;                  // Away from texture
 	vkSamplerCreateInfo.samplerAddressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	vkSamplerCreateInfo.samplerAddressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	vkSamplerCreateInfo.samplerAddressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	vkSamplerCreateInfo.samplerCompareOp = VK_COMPARE_OP_ALWAYS;
+	vkSamplerCreateInfo.samplerMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	vkSamplerCreateInfo.samplerMipLodBias = 0.0f;
+	vkSamplerCreateInfo.samplerMinLod = 0.0f;
+	vkSamplerCreateInfo.samplerMaxLod = 0.0f;
+	vkSamplerCreateInfo.samplerUnnormalizedCoordinates = VK_FALSE;
+	vkSamplerCreateInfo.samplerBorderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	vkSamplerCreateInfo.samplerAnisotropyEnable = VK_TRUE;
 	vkSamplerCreateInfo.samplerMaxAnisotropy = app->uvr_vk_phdev.physDeviceProperties.limits.maxSamplerAnisotropy;
 	vkSamplerCreateInfo.samplerCompareEnable = VK_FALSE;
-	vkSamplerCreateInfo.samplerCompareOp = VK_COMPARE_OP_ALWAYS;
-	vkSamplerCreateInfo.samplerMinLod = 0.0f;
-	vkSamplerCreateInfo.samplerMaxLod = 0.0f;
-	vkSamplerCreateInfo.samplerBorderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	vkSamplerCreateInfo.samplerUnnormalizedCoordinates = VK_FALSE;
 
 	app->uvr_vk_sampler = uvr_vk_sampler_create(&vkSamplerCreateInfo);
 	if (!app->uvr_vk_sampler.sampler)
@@ -1161,10 +1161,10 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 
 	VkPipelineShaderStageCreateInfo shaderStages[2] = {vertShaderStageInfo, fragShaderStageInfo};
 
-	VkVertexInputBindingDescription VkVertexInputBindingDescription = {};
-	VkVertexInputBindingDescription.binding = 0;
-	VkVertexInputBindingDescription.stride = sizeof(struct app_vertex_data); // Number of bytes from one entry to another
-	VkVertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Move to next data entry after each vertex
+	VkVertexInputBindingDescription vertexInputBindingDescription = {};
+	vertexInputBindingDescription.binding = 0;
+	vertexInputBindingDescription.stride = sizeof(struct app_vertex_data); // Number of bytes from one entry to another
+	vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Move to next data entry after each vertex
 
 	// Two incomming vertex atributes in the vertex shader.
 	VkVertexInputAttributeDescription vertexAttributeDescriptions[3];
@@ -1194,7 +1194,7 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.pVertexBindingDescriptions = &VkVertexInputBindingDescription;
+	vertexInputInfo.pVertexBindingDescriptions = &vertexInputBindingDescription;
 	vertexInputInfo.vertexAttributeDescriptionCount = ARRAY_LEN(vertexAttributeDescriptions);
 	vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions;
 
@@ -1247,10 +1247,17 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 
 	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
-	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.blendEnable = VK_TRUE;
+
+	/*
+	 * Blending uses equation (srcColorBlendFactor * new color) colorBlendOp (dstColorBlendFactor * old color)
+	 * (VK_BLEND_FACTOR_SRC_ALPHA * new color) VK_BLEND_OP_ADD (VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA * old color)
+	 * (new color alpha channel * new color) + ((1 - new color alpha channel) * old color)
+	 */
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; // multiply new color by its alpha value
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	// (1 * new color alpha channel) + (0 * old color alpha channel) = new alpha
 	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
@@ -1360,14 +1367,24 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	subpass.preserveAttachmentCount = 0;
 	subpass.pPreserveAttachments = NULL;
 
-	VkSubpassDependency subpassDependency;
-	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	subpassDependency.dstSubpass = 0;
-	subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	subpassDependency.srcAccessMask = 0;
-	subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	subpassDependency.dependencyFlags = 0;
+	VkSubpassDependency subpassDependencies[2];
+	// Conversion from VK_IMAGE_LAYOUT_UNDEFINED to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+	subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	subpassDependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	subpassDependencies[0].dstSubpass = 0;
+	subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	subpassDependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	// Conversion from VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+	subpassDependencies[1].srcSubpass = 0;
+	subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+	subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	subpassDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	subpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 	struct uvr_vk_render_pass_create_info renderPassInfo;
 	renderPassInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
@@ -1375,8 +1392,8 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	renderPassInfo.attachmentDescriptions = attachmentDescriptions;
 	renderPassInfo.subpassDescriptionCount = 1;
 	renderPassInfo.subpassDescriptions = &subpass;
-	renderPassInfo.subpassDependencyCount = 1;
-	renderPassInfo.subpassDependencies = &subpassDependency;
+	renderPassInfo.subpassDependencyCount = ARRAY_LEN(subpassDependencies);
+	renderPassInfo.subpassDependencies = subpassDependencies;
 
 	app->uvr_vk_render_pass = uvr_vk_render_pass_create(&renderPassInfo);
 	if (!app->uvr_vk_render_pass.renderPass)
@@ -1469,8 +1486,8 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 	viewport.maxDepth = 1.0f;
 
 	/*
-	 * Values used by VK_ATTACHMENT_LOAD_OP_CLEAR
-	 * Black with 100% opacity
+	 * Values used by VK_ATTACHMENT_LOAD_OP_CLEAR to reset
+	 * framebuffer attachments with.
 	 */
 	float float32[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 	int32_t int32[4] = {0.0f, 0.0f, 0.0f, 1.0f};

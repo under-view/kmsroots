@@ -852,7 +852,6 @@ exit_vk_framebuffer_vk_framebuffer_destroy:
 		if (frameBufferHandles[currentFrameBuffer].frameBuffer)
 			vkDestroyFramebuffer(uvrvk->logicalDevice, frameBufferHandles[currentFrameBuffer].frameBuffer, NULL);
 	}
-//exit_vk_framebuffer_free_vkfbs:
 	free(frameBufferHandles);
 exit_vk_framebuffer:
 	return (struct uvr_vk_framebuffer) { .logicalDevice = VK_NULL_HANDLE, .frameBufferCount = 0, .frameBufferHandles = NULL };
