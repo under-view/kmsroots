@@ -68,6 +68,7 @@ struct app_vk {
 	 */
 	struct uvr_gltf_loader_mesh uvr_gltf_loader_mesh;
 	struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
+	struct uvr_gltf_loader_material uvr_gltf_loader_material;
 
 	/*
 	 * Other required data needed for draw operations
@@ -1147,6 +1148,13 @@ int create_gltf_load_required_data(struct app_vk *app)
 	if (!gltfLoaderFileNodes.nodeData)
 		goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
+	struct uvr_gltf_loader_material_create_info gltfLoaderMaterialInfo;
+	gltfLoaderMaterialInfo.gltfLoaderFile = gltfLoaderFile;
+
+	app->uvr_gltf_loader_material = uvr_gltf_loader_material_create(&gltfLoaderMaterialInfo);
+	if (!app->uvr_gltf_loader_material.materialData)
+		goto exit_create_gltf_loader_file_free_gltf_node;
+
 	app->meshCount = app->uvr_gltf_loader_mesh.meshDataCount;
 	app->meshData = calloc(app->meshCount, sizeof(struct mesh_data));
 	if (!app->meshData) {
@@ -1167,6 +1175,8 @@ int create_gltf_load_required_data(struct app_vk *app)
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfLoaderFileNodes });
 	return 0;
 
+exit_create_gltf_loader_file_free_gltf_node:
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfLoaderFileNodes });
 exit_create_gltf_loader_file_free_gltf_texture_image:
 	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
 exit_create_gltf_loader_file_free_gltf_vertex:
@@ -1212,6 +1222,9 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	VkDescriptorSetLayoutBinding descSetLayoutBindings[3]; // Amount of descriptors in the set
 	uint32_t descriptorBindingCount = ARRAY_LEN(descSetLayoutBindings);
 
+	uint32_t materialCount = app->uvr_gltf_loader_material.materialDataCount;
+	struct uvr_gltf_loader_material_data *materialData = app->uvr_gltf_loader_material.materialData;
+
 	// Uniform descriptor
 	descSetLayoutBindings[0].binding = 0;
 	descSetLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1232,7 +1245,7 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	descSetLayoutBindings[2].binding = 2;
 	descSetLayoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// See struct uvr_vk_descriptor_set_handle for more information in this
-	descSetLayoutBindings[2].descriptorCount = 1;
+	descSetLayoutBindings[2].descriptorCount = materialCount;
 	descSetLayoutBindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	descSetLayoutBindings[2].pImmutableSamplers = NULL;
 
@@ -1280,12 +1293,17 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	bufferInfos[1].range = app->modelTransferSpace.bufferAlignment;
 
 	// Texture images from GLTF file
-	VkDescriptorImageInfo imageInfos[app->uvr_vk_image[2].imageCount];
-	for (i = 0; i < app->uvr_vk_image[2].imageCount; i++) {
+	uint8_t baseColorTextureImageIndex;
+	VkDescriptorImageInfo imageInfos[materialCount];
+	for (i = 0; i < materialCount; i++) {
+		baseColorTextureImageIndex = materialData[i].pbrMetallicRoughness.baseColorTexture.imageIndex;
 		imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[i].imageView = app->uvr_vk_image[2].imageViewHandles[i].view; // created in create_vk_texture_image
-		imageInfos[i].sampler = app->uvr_vk_sampler.sampler;                     // created in create_vk_image_sampler
+		imageInfos[i].imageView = app->uvr_vk_image[2].imageViewHandles[baseColorTextureImageIndex].view; // created in create_vk_texture_image
+		imageInfos[i].sampler = app->uvr_vk_sampler.sampler;                                              // created in create_vk_image_sampler
 	}
+
+	// Remove material data no longer required
+	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_material_cnt = 1, .uvr_gltf_loader_material = &app->uvr_gltf_loader_material });
 
 	/* Binds multiple descriptors and their objects to the same set */
 	VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
