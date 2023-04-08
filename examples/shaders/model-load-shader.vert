@@ -6,6 +6,7 @@ layout (location = 1) out vec3 outColor;
 layout (location = 2) out vec2 outTexCoord;
 layout (location = 3) out vec3 outViewVec;
 layout (location = 4) out vec3 outLightVec;
+layout (location = 5) out flat int outTextureIndex;
 
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inNormal;
@@ -22,17 +23,20 @@ layout (set = 0, binding = 0) uniform uniform_buffer_scene {
 // Used in conjunction with dynamic uniform buffer
 layout(set = 0, binding = 1) uniform uniform_buffer_scene_model {
 	mat4 model;
+	int textureIndex;
 } uboModel;
 
 // Won't be included when shader is compiled as it's not in use
 layout(push_constant) uniform uniform_push_model {
 	mat4 model;
+	int textureIndex;
 } pushModel;
 
 void main() {
 	outNormal = inNormal;
 	outColor = inColor;
 	outTexCoord = inTexCoord;
+	outTextureIndex = uboModel.textureIndex;
 	gl_Position = uboScene.projection * uboScene.view * uboModel.model * vec4(inPosition.xyz, 1.0);
 
 	vec4 pos = uboScene.view * vec4(inPosition, 1.0);

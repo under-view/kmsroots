@@ -110,6 +110,7 @@ struct app_vertex_data {
 
 struct app_uniform_buffer_scene_model {
 	mat4 model;
+	uint8_t textureIndex;
 };
 
 
@@ -649,7 +650,8 @@ int create_vk_shader_modules(struct app_vk *app)
 		"layout (location = 1) out vec3 outColor;\n"
 		"layout (location = 2) out vec2 outTexCoord;\n"
 		"layout (location = 3) out vec3 outViewVec;\n"
-		"layout (location = 4) out vec3 outLightVec;\n\n"
+		"layout (location = 4) out vec3 outLightVec;\n"
+		"layout (location = 5) out flat int outTextureIndex;\n\n"
 		"layout (location = 0) in vec3 inPosition;\n"
 		"layout (location = 1) in vec3 inNormal;\n"
 		"layout (location = 2) in vec2 inTexCoord;\n"
@@ -662,11 +664,13 @@ int create_vk_shader_modules(struct app_vk *app)
 		"} uboScene;\n\n"
 		"layout(set = 0, binding = 1) uniform uniform_buffer_scene_model {\n"
 		"	mat4 model;\n"
+		"	int textureIndex;\n"
 		"} uboModel;\n"
 		"void main() {\n"
 		"	outNormal = inNormal;\n"
 		"	outColor = inColor;\n"
 		"	outTexCoord = inTexCoord;\n"
+		"	outTextureIndex = uboModel.textureIndex;\n"
 		"	gl_Position = uboScene.projection * uboScene.view * uboModel.model * vec4(inPosition.xyz, 1.0);\n"
 		"	vec4 pos = uboScene.view * vec4(inPosition, 1.0);\n"
 		"	outNormal = mat3(uboScene.view) * inNormal;\n"
@@ -677,15 +681,16 @@ int create_vk_shader_modules(struct app_vk *app)
 	const char fragmentShader[] = \
 		"#version 450\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n"
-		"layout (set = 0, binding = 2) uniform sampler2D samplerColorMap;\n\n"
+		"layout (set = 0, binding = 2) uniform sampler2D samplerColorMap[5];\n\n"
 		"layout (location = 0) in vec3 inNormal;\n"
 		"layout (location = 1) in vec3 inColor;\n"
 		"layout (location = 2) in vec2 inTexCoord;\n"
 		"layout (location = 3) in vec3 inViewVec;\n"
-		"layout (location = 4) in vec3 inLightVec;\n\n"
+		"layout (location = 4) in vec3 inLightVec;\n"
+		"layout (location = 5) in flat int inTextureIndex;\n\n"
 		"layout (location = 0) out vec4 outColor;\n"
 		"void main() {\n"
-		"	vec4 color = texture(samplerColorMap, inTexCoord) * vec4(inColor, 1.0);\n\n"
+		"	vec4 color = texture(samplerColorMap[inTextureIndex], inTexCoord) * vec4(inColor, 1.0);\n\n"
 		"	vec3 N = normalize(inNormal);\n"
 		"	vec3 L = normalize(inLightVec);\n"
 		"	vec3 V = normalize(inViewVec);\n"
@@ -1780,10 +1785,11 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
 	// Copy Model data
-	struct app_uniform_buffer_scene_model *model = NULL;
+	struct app_uniform_buffer_scene_model *sceneModel = NULL;
 	for (uint32_t mesh = 0; mesh < app->meshCount; mesh++) {
-		model = (struct app_uniform_buffer_scene_model *) ((uint64_t) app->modelTransferSpace.alignedBufferMemory + (mesh * app->modelTransferSpace.bufferAlignment));
-		memcpy(model, app->meshData[mesh].matrix, app->modelTransferSpace.bufferAlignment);
+		sceneModel = (struct app_uniform_buffer_scene_model *) ((uint64_t) app->modelTransferSpace.alignedBufferMemory + (mesh * app->modelTransferSpace.bufferAlignment));
+		memcpy(sceneModel->model, app->meshData[mesh].matrix, sizeof(mat4));
+		sceneModel->textureIndex = mesh;
 	}
 
 	// Map all Model data
