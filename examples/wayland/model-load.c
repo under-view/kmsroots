@@ -110,7 +110,7 @@ struct app_vertex_data {
 
 struct app_uniform_buffer_scene_model {
 	mat4 model;
-	uint8_t textureIndex;
+	int textureIndex;
 };
 
 
