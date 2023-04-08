@@ -1,14 +1,16 @@
-progs = [ 'shader-file-load.c', 'gltf-file-loading.c' ]
+progs = [ 'gltf-file-loading.c' ]
 
 if shaderc.enabled()
   progs += ['shader-buffer-load.c']
+else
+  progs += ['shader-file-load.c']
 endif
 
 original_args = pargs
 foreach p : progs
   exec_name = 'test-' + p.substring(0,-2) # remove .c extension from name
 
-  if p == 'shader-file-load.c'
+  if p == 'shader-file-load.c' and shaderc.disabled()
     pargs += [
       '-DVERTEX_SHADER_SPIRV='   + '"@0@'.format(shader_build_dir) + '/' + 'triangle-shader-vert.spv"',
       '-DFRAGMENT_SHADER_SPIRV=' + '"@0@'.format(shader_build_dir) + '/' + 'triangle-shader-frag.spv"',

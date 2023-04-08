@@ -23,15 +23,17 @@ if libxcb.found() and libxcbewmh.found()
       ]
     endif
 
-    pargs += [
-      '-DVERTEX_SHADER_SPIRV='   + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-vert.spv"',
-      '-DFRAGMENT_SHADER_SPIRV=' + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-frag.spv"',
-    ]
+    if shaderc.disabled()
+      pargs += [
+        '-DVERTEX_SHADER_SPIRV='   + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-vert.spv"',
+        '-DFRAGMENT_SHADER_SPIRV=' + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-frag.spv"',
+      ]
+    endif
 
     exec_name = 'underview-renderer-xcb-client-' + p.substring(0,-2) # remove .c extension from name
     executable(exec_name, p,
                link_with: lib_underview_renderer,
-               dependencies: lib_uvr_deps,
+               dependencies: example_deps,
                include_directories: [inc],
                c_args: pargs,
                install: false)
