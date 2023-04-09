@@ -8,7 +8,7 @@ librt = cc.find_library('rt', required: true)
 # Needed by `gltf-loader.c`
 libcglm = dependency('cglm', required: true)
 
-fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c' ]
+fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c', 'stb_image.c' ]
 lib_uvr_deps = [vulkan, libmath, librt]
 
 
