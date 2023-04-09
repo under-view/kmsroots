@@ -1759,10 +1759,10 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	vec4 lightPosition = {5.0f, 5.0f, -5.0f, 1.0f};
 	glm_vec4_copy(lightPosition, ubo.lightPosition);
 
-	// Update view matrix
-	vec3 eye = {2.0f, 2.0f, 2.0f};
-	vec3 center = {0.0f, 0.0f, 0.0f};
-	vec3 up = {0.0f, 0.0f, 1.0f};
+	// Update view/camera matrix
+	vec3 eye = {0.3f, -0.1f, 1.0f};
+	vec3 center = {0.0f, -0.1f, 0.0f};
+	vec3 up = {0.0f, 1.0f, 0.0f};
 	glm_lookat(eye, center, up, ubo.view);
 
 	// Update projection matrix
@@ -1775,7 +1775,7 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	// invert y - coordinate on projection matrix
 	ubo.projection[1][1] *= -1;
 
-	// Copy VP data
+	// Copy UBO Scene data
 	struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = uniformBufferDeviceMemory;
@@ -1784,10 +1784,29 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	deviceMemoryCopyInfo.bufferData = &ubo;
 	uvr_vk_map_memory(&deviceMemoryCopyInfo);
 
+	// Spin model about the X-axis
+	static float angle = 0.0f;
+	static float lastTime = 0;
+
+	int angleDivisor = 0;
+	float now = 0.0f;
+	float deltaTime = 0.0f;
+	vec3 axis = {0.0f, 1.0f, 0.0f};
+
+	now = (float) (uvr_utils_nanosecond() / 10000000ULL);
+	deltaTime = now - lastTime;
+	lastTime = now;
+
+	// Update model matrix
+	angleDivisor = (VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 100000 : 10000000;
+	angle += ((deltaTime * glm_rad(10.0f)) / angleDivisor);
+	if (angle > 360.0f) angle = 0.0f;
+
 	// Copy Model data
 	struct app_uniform_buffer_scene_model *sceneModel = NULL;
 	for (uint32_t mesh = 0; mesh < app->meshCount; mesh++) {
 		sceneModel = (struct app_uniform_buffer_scene_model *) ((uint64_t) app->modelTransferSpace.alignedBufferMemory + (mesh * app->modelTransferSpace.bufferAlignment));
+		glm_rotate(app->meshData[mesh].matrix, glm_rad(angle), axis);
 		memcpy(sceneModel->model, app->meshData[mesh].matrix, sizeof(mat4));
 		sceneModel->textureIndex = mesh;
 	}
