@@ -19,6 +19,6 @@ if shaderc.disabled()
 endif
 
 subdir('textures')
-#subdir('kms')
+subdir('kms')
 subdir('wayland')
 subdir('xcb')
