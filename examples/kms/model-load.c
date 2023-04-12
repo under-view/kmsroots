@@ -8,7 +8,7 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
-#include "xclient.h"
+#include "wserver.h"
 #include "vulkan.h"
 #include "shader.h"
 #include "gltf-loader.h"
@@ -88,8 +88,8 @@ struct app_vk {
 };
 
 
-struct app_vk_xcb {
-	struct uvr_xcb_window *uvr_xcb_window;
+struct app_vk_kms {
+	struct uvr_ws_core *uvr_ws_core;
 	struct app_vk *app_vk;
 };
 
@@ -126,7 +126,7 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct uvr_xcb_window *xc);
+int create_vk_kms_instance(struct app_vk *app, struct uvr_ws_core *wc);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -150,9 +150,8 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 void render(bool *running, uint32_t *imageIndex, void *data)
 {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
-	struct app_vk_xcb *vkxcb = (struct app_vk_xcb *) data;
-	struct app_vk *app = vkxcb->app_vk;
-	struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
+	struct app_vk_kms *vkkms = (struct app_vk_kms *) data;
+	struct app_vk *app = vkkms->app_vk;
 
 	if (!app->uvr_vk_sync_obj.fenceHandles || !app->uvr_vk_sync_obj.semaphoreHandles)
 		return;
@@ -229,10 +228,10 @@ int main(void)
 	memset(&app, 0, sizeof(app));
 	memset(&appd, 0, sizeof(appd));
 
-	struct uvr_xcb_window xc;
-	struct uvr_xcb_destroy xcd;
-	memset(&xc, 0, sizeof(xc));
-	memset(&xcd, 0, sizeof(xcd));
+	struct uvr_ws_core wsCore;
+	struct uvr_ws_destroy wsCored;
+	memset(&wsCore, 0, sizeof(wsCore));
+	memset(&wsCored, 0, sizeof(wsCored));
 
 	struct uvr_gltf_loader_destroy gltfd;
 	memset(&gltfd,0,sizeof(struct uvr_gltf_loader_destroy));
@@ -240,10 +239,10 @@ int main(void)
 	VkSurfaceFormatKHR surfaceFormat;
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 
-	if (create_vk_instance(&app) == -1)
+	if (create_vk_kms_instance(&app, &wsCore) == -1)
 		goto exit_error;
 
-	if (create_xcb_vk_surface(&app, &xc) == -1)
+	if (create_vk_instance(&app) == -1)
 		goto exit_error;
 
 	/*
@@ -292,27 +291,12 @@ int main(void)
 	if (create_vk_sync_objs(&app) == -1)
 		goto exit_error;
 
-	/* Map the window to the screen */
-	uvr_xcb_window_make_visible(&xc);
+	static uint32_t UNUSED cbuf = 0;
+	static bool UNUSED running = true;
 
-	static uint32_t cbuf = 0;
-	static bool running = true;
-
-	static struct app_vk_xcb vkxc;
-	vkxc.uvr_xcb_window = &xc;
-	vkxc.app_vk = &app;
-
-	struct uvr_xcb_window_handle_event_info eventInfo;
-	eventInfo.xcbWindowObject = &xc;
-	eventInfo.renderer = render;
-	eventInfo.rendererData = &vkxc;
-	eventInfo.rendererCurrentBuffer = &cbuf;
-	eventInfo.rendererRunning = &running;
-
-	while (uvr_xcb_window_handle_event(&eventInfo) && running) {
-		// Initentionally left blank
-	}
-
+	static struct app_vk_kms UNUSED kmsvk;
+	kmsvk.uvr_ws_core = &wsCore;
+	kmsvk.app_vk = &app;
 
 exit_error:
 	free(app.modelTransferSpace.alignedBufferMemory);
@@ -353,44 +337,16 @@ exit_error:
 	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
 	uvr_vk_destory(&appd);
 
-	xcd.uvr_xcb_window = xc;
-	uvr_xcb_destory(&xcd);
+	wsCored.uvr_ws_core = wsCore;
+	uvr_ws_destroy(&wsCored);
+
 	return 0;
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct uvr_xcb_window *xc)
+int create_vk_kms_instance(struct app_vk UNUSED *app, struct uvr_ws_core UNUSED *ws)
 {
-	/*
-	 * Create xcb client
-	 */
-	struct uvr_xcb_window_create_info xcbWindowCreateInfo;
-	xcbWindowCreateInfo.display = NULL;
-	xcbWindowCreateInfo.screen = NULL;
-	xcbWindowCreateInfo.appName = "GLTF Model Loading Example App";
-	xcbWindowCreateInfo.width = WIDTH;
-	xcbWindowCreateInfo.height = HEIGHT;
-	xcbWindowCreateInfo.fullscreen = false;
-	xcbWindowCreateInfo.transparent = false;
-
-	*xc = uvr_xcb_window_create(&xcbWindowCreateInfo);
-	if (!xc->conn)
-		return -1;
-
-	/*
-	 * Create Vulkan Surface
-	 */
-	struct uvr_vk_surface_create_info vkSurfaceCreateInfo;
-	vkSurfaceCreateInfo.surfaceType = UVR_SURFACE_XCB_CLIENT;
-	vkSurfaceCreateInfo.instance = app->instance;
-	vkSurfaceCreateInfo.display = xc->conn;
-	vkSurfaceCreateInfo.window = xc->window;
-
-	app->surface = uvr_vk_surface_create(&vkSurfaceCreateInfo);
-	if (!app->surface)
-		return -1;
-
-	return 0;
+	return -1;
 }
 
 
