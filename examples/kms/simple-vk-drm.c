@@ -62,7 +62,7 @@ exit_error:
 	 */
 	kmsbuffsd.uvr_buffer_cnt = 1;
 	kmsbuffsd.uvr_buffer = &kms.uvr_buffer;
-	uvr_buffer_destory(&kmsbuffsd);
+	uvr_buffer_destroy(&kmsbuffsd);
 
 	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
@@ -71,7 +71,7 @@ exit_error:
 	appd.instance = app.instance;
 	appd.uvr_vk_lgdev_cnt = 1;
 	appd.uvr_vk_lgdev = &app.uvr_vk_lgdev;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 #ifdef INCLUDE_SDBUS
 	uvr_sd_session_destroy(&kms.uvr_sd_session);
 #endif

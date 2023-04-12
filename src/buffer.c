@@ -181,7 +181,7 @@ exit_error_buffer_null_struct:
 }
 
 
-void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff)
+void uvr_buffer_destroy(struct uvr_buffer_destroy *uvrbuff)
 {
 	unsigned int currentIndex, i, j;
 

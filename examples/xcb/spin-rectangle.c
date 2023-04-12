@@ -334,10 +334,10 @@ exit_error:
 	appd.uvr_vk_descriptor_set_layout = &app.uvr_vk_descriptor_set_layout;
 	appd.uvr_vk_descriptor_set_cnt = 1;
 	appd.uvr_vk_descriptor_set = &app.uvr_vk_descriptor_set;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	xcd.uvr_xcb_window = xc;
-	uvr_xcb_destory(&xcd);
+	uvr_xcb_destroy(&xcd);
 	return 0;
 }
 

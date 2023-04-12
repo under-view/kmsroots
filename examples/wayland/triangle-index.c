@@ -279,7 +279,7 @@ exit_error:
 	appd.uvr_vk_sync_obj = &app.uvr_vk_sync_obj;
 	appd.uvr_vk_buffer_cnt = ARRAY_LEN(app.uvr_vk_buffer);
 	appd.uvr_vk_buffer = app.uvr_vk_buffer;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	wcd.uvr_wc_core_interface = wc.uvr_wc_core_interface;
 	wcd.uvr_wc_surface = wc.uvr_wc_surface;

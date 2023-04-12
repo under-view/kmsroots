@@ -1404,7 +1404,7 @@ void uvr_vk_map_memory(struct uvr_vk_map_memory_info *uvrvk)
 }
 
 
-void uvr_vk_destory(struct uvr_vk_destroy *uvrvk)
+void uvr_vk_destroy(struct uvr_vk_destroy *uvrvk)
 {
 	uint32_t i, j;
 

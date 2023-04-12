@@ -253,7 +253,7 @@ struct uvr_wc_surface uvr_wc_surface_create(struct uvr_wc_surface_create_info *u
 
 
 /*
- * struct uvr_wc_destory (Underview Renderer Wayland Client Destroy)
+ * struct uvr_wc_destroy (Underview Renderer Wayland Client Destroy)
  *
  * members:
  * @uvr_wc_core_interface - Must pass a valid struct uvr_wc_core_interface, to release all binded members
@@ -268,7 +268,7 @@ struct uvr_wc_destroy {
 
 
 /*
- * uvr_wc_destory: frees any remaining allocated memory contained in struct uvr_wc_destory
+ * uvr_wc_destroy: frees any remaining allocated memory contained in struct uvr_wc_destroy
  *
  * args:
  * @uvrwc - pointer to a struct uvr_wc contains all objects/interfaces

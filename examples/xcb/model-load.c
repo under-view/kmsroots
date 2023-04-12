@@ -234,9 +234,6 @@ int main(void)
 	memset(&xc, 0, sizeof(xc));
 	memset(&xcd, 0, sizeof(xcd));
 
-	struct uvr_gltf_loader_destroy gltfd;
-	memset(&gltfd,0,sizeof(struct uvr_gltf_loader_destroy));
-
 	VkSurfaceFormatKHR surfaceFormat;
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 
@@ -351,10 +348,10 @@ exit_error:
 	appd.uvr_vk_descriptor_set = &app.uvr_vk_descriptor_set;
 	appd.uvr_vk_sampler_cnt = 1;
 	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	xcd.uvr_xcb_window = xc;
-	uvr_xcb_destory(&xcd);
+	uvr_xcb_destroy(&xcd);
 	return 0;
 }
 

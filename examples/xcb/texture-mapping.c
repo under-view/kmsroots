@@ -350,10 +350,10 @@ exit_error:
 	appd.uvr_vk_descriptor_set = &app.uvr_vk_descriptor_set;
 	appd.uvr_vk_sampler_cnt = 1;
 	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	xcd.uvr_xcb_window = xc;
-	uvr_xcb_destory(&xcd);
+	uvr_xcb_destroy(&xcd);
 	return 0;
 }
 

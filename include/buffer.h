@@ -147,12 +147,12 @@ struct uvr_buffer_destroy {
 
 
 /*
- * uvr_buffer_destory: Function free's all allocate objects associated with a given buffer
+ * uvr_buffer_destroy: Function free's all allocate objects associated with a given buffer
  *
  * args:
  * @uvrbuff - Pointer to a struct uvr_buffer_destroy
  */
-void uvr_buffer_destory(struct uvr_buffer_destroy *uvrbuff);
+void uvr_buffer_destroy(struct uvr_buffer_destroy *uvrbuff);
 
 
 #endif

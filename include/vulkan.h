@@ -1589,12 +1589,12 @@ struct uvr_vk_destroy {
 
 
 /*
- * uvr_vk_destory: frees any allocated memory defined by customer
+ * uvr_vk_destroy: frees any allocated memory defined by customer
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_destroy contains all objects created during
  *          application lifetime in need freeing
  */
-void uvr_vk_destory(struct uvr_vk_destroy *uvrvk);
+void uvr_vk_destroy(struct uvr_vk_destroy *uvrvk);
 
 #endif

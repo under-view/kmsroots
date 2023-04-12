@@ -155,7 +155,7 @@ error_exit_xcb_window_event_loop:
 }
 
 
-void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb)
+void uvr_xcb_destroy(struct uvr_xcb_destroy *uvrxcb)
 {
 	free(uvrxcb->uvr_xcb_window.delWindow);
 	if (uvrxcb->uvr_xcb_window.window)

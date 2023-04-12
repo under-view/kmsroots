@@ -341,7 +341,7 @@ exit_error:
 	appd.uvr_vk_descriptor_set = &app.uvr_vk_descriptor_set;
 	appd.uvr_vk_sampler_cnt = 1;
 	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	wcd.uvr_wc_core_interface = wc.uvr_wc_core_interface;
 	wcd.uvr_wc_surface = wc.uvr_wc_surface;

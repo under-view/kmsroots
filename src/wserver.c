@@ -169,7 +169,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
 	core.wlrBackend = wlr_backend_autocreate(core.wlDisplay, NULL);
 	if (!core.wlrBackend) {
 		uvr_utils_log(UVR_DANGER, "[x] wlr_backend_autocreate: Failed to create backend {DRM/KMS, Wayland, X, Headless}");
-		goto exit_ws_core_wl_display_destory;
+		goto exit_ws_core_wl_display_destroy;
 	}
 
 	// TODO: Implement custom renderer
@@ -278,7 +278,7 @@ exit_ws_core_wlr_renderer_destroy:
 exit_ws_core_wlr_backend_destroy:
 	if (core.wlrBackend)
 		wlr_backend_destroy(core.wlrBackend);
-exit_ws_core_wl_display_destory:
+exit_ws_core_wl_display_destroy:
 	if (core.wlDisplay)
 		wl_display_destroy(core.wlDisplay);
 exit_ws_core:

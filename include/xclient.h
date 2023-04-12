@@ -138,12 +138,12 @@ struct uvr_xcb_destroy {
 
 
 /*
- * uvr_xcb_destory: frees all allocated memory contained in struct uvrxcb
+ * uvr_xcb_destroy: frees all allocated memory contained in struct uvrxcb
  *
  * args:
  * @uvrxcb - pointer to a struct uvrxcb_destroy contains all objects
  *           created during window lifetime in need of destruction
  */
-void uvr_xcb_destory(struct uvr_xcb_destroy *uvrxcb);
+void uvr_xcb_destroy(struct uvr_xcb_destroy *uvrxcb);
 
 #endif

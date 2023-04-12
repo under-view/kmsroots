@@ -263,10 +263,10 @@ exit_error:
 	appd.uvr_vk_sync_obj = &app.uvr_vk_sync_obj;
 	appd.uvr_vk_buffer_cnt = ARRAY_LEN(app.uvr_vk_buffer);
 	appd.uvr_vk_buffer = app.uvr_vk_buffer;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	xcd.uvr_xcb_window = xc;
-	uvr_xcb_destory(&xcd);
+	uvr_xcb_destroy(&xcd);
 	return 0;
 }
 

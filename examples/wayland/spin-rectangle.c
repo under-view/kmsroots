@@ -323,7 +323,7 @@ exit_error:
 	appd.uvr_vk_descriptor_set_layout = &app.uvr_vk_descriptor_set_layout;
 	appd.uvr_vk_descriptor_set_cnt = 1;
 	appd.uvr_vk_descriptor_set = &app.uvr_vk_descriptor_set;
-	uvr_vk_destory(&appd);
+	uvr_vk_destroy(&appd);
 
 	wcd.uvr_wc_core_interface = wc.uvr_wc_core_interface;
 	wcd.uvr_wc_surface = wc.uvr_wc_surface;
