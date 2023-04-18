@@ -112,46 +112,46 @@ struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff)
 		 * which is there, and 0 for everything else.
 		 */
 		if (uvrbuff->bufferType == UVR_BUFFER_GBM_BUFFER) {
-			struct drm_mode_fb_cmd frameBuffer;
-			memset(&frameBuffer,0,sizeof(struct drm_mode_fb_cmd));
+			struct drm_mode_fb_cmd framebuffer;
+			memset(&framebuffer,0,sizeof(struct drm_mode_fb_cmd));
 
-			frameBuffer.bpp    = uvrbuff->bitsPerPixel;
-			frameBuffer.depth  = uvrbuff->bitDepth;
-			frameBuffer.width  = uvrbuff->width;
-			frameBuffer.height = uvrbuff->height;
-			frameBuffer.pitch  = bufferObjects[currentBuffer].pitches[0];
-			frameBuffer.handle = bufferObjects[currentBuffer].gemHandles[0];
+			framebuffer.bpp    = uvrbuff->bitsPerPixel;
+			framebuffer.depth  = uvrbuff->bitDepth;
+			framebuffer.width  = uvrbuff->width;
+			framebuffer.height = uvrbuff->height;
+			framebuffer.pitch  = bufferObjects[currentBuffer].pitches[0];
+			framebuffer.handle = bufferObjects[currentBuffer].gemHandles[0];
 			bufferObjects[currentBuffer].fbid = 0;
 
-			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB, &frameBuffer) == -1) {
+			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB, &framebuffer) == -1) {
 				uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB): %s", strerror(errno));
 				goto exit_error_buffer_gbm_bo_detroy;
 			}
 
-			bufferObjects[currentBuffer].fbid = frameBuffer.fb_id;
+			bufferObjects[currentBuffer].fbid = framebuffer.fb_id;
 		}
 
 		if (uvrbuff->bufferType == UVR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
-			struct drm_mode_fb_cmd2 frameBuffer;
-			memset(&frameBuffer,0,sizeof(struct drm_mode_fb_cmd2));
+			struct drm_mode_fb_cmd2 framebuffer;
+			memset(&framebuffer,0,sizeof(struct drm_mode_fb_cmd2));
 
-			frameBuffer.width  = uvrbuff->width;
-			frameBuffer.height = uvrbuff->height;
-			frameBuffer.pixel_format = bufferObjects[currentBuffer].format;
-			frameBuffer.flags = DRM_MODE_FB_MODIFIERS;
+			framebuffer.width  = uvrbuff->width;
+			framebuffer.height = uvrbuff->height;
+			framebuffer.pixel_format = bufferObjects[currentBuffer].format;
+			framebuffer.flags = DRM_MODE_FB_MODIFIERS;
 
-			memcpy(frameBuffer.handles, bufferObjects[currentBuffer].gemHandles, sizeof(frameBuffer.handles));
-			memcpy(frameBuffer.pitches, bufferObjects[currentBuffer].pitches, sizeof(frameBuffer.pitches));
-			memcpy(frameBuffer.offsets, bufferObjects[currentBuffer].offsets, sizeof(frameBuffer.offsets));
-			memcpy(frameBuffer.modifier, uvrbuff->modifiers, sizeof(frameBuffer.modifier));
+			memcpy(framebuffer.handles, bufferObjects[currentBuffer].gemHandles, sizeof(framebuffer.handles));
+			memcpy(framebuffer.pitches, bufferObjects[currentBuffer].pitches, sizeof(framebuffer.pitches));
+			memcpy(framebuffer.offsets, bufferObjects[currentBuffer].offsets, sizeof(framebuffer.offsets));
+			memcpy(framebuffer.modifier, uvrbuff->modifiers, sizeof(framebuffer.modifier));
 			bufferObjects[currentBuffer].fbid = 0;
 
-			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB2, &frameBuffer) == -1) {
+			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB2, &framebuffer) == -1) {
 				uvr_utils_log(UVR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB2): %s", strerror(errno));
 				goto exit_error_buffer_gbm_bo_detroy;
 			}
 
-			bufferObjects[currentBuffer].fbid = frameBuffer.fb_id;
+			bufferObjects[currentBuffer].fbid = framebuffer.fb_id;
 		}
 	}
 
