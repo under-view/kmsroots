@@ -1429,19 +1429,26 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 
 int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 {
-	struct uvr_vk_framebuffer_create_info frameBufferInfo;
-	frameBufferInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	frameBufferInfo.frameBufferCount = app->uvr_vk_image[0].imageCount;           // Amount of images in swapchain
-	frameBufferInfo.imageViewHandles = app->uvr_vk_image[0].imageViewHandles;     // swapchain image views
-	frameBufferInfo.miscImageViewHandleCount = 1;                                 // Should only be a depth image view
-	frameBufferInfo.miscImageViewHandles = app->uvr_vk_image[1].imageViewHandles; // Depth Buffer image
-	frameBufferInfo.renderPass = app->uvr_vk_render_pass.renderPass;
-	frameBufferInfo.width = extent2D.width;
-	frameBufferInfo.height = extent2D.height;
-	frameBufferInfo.layers = 1;
+	uint8_t framebufferCount = app->uvr_vk_image[0].imageCount;
+	struct uvr_vk_framebuffer_images framebufferImages[framebufferCount];
 
-	app->uvr_vk_framebuffer = uvr_vk_framebuffer_create(&frameBufferInfo);
-	if (!app->uvr_vk_framebuffer.frameBufferHandles[0].frameBuffer)
+	for (uint8_t i = 0; i < framebufferCount; i++) {
+		framebufferImages[i].imageAttachments[0] = app->uvr_vk_image[0].imageViewHandles[i].view; // VkImageView->VkImage for color image attachment
+		framebufferImages[i].imageAttachments[1] = app->uvr_vk_image[1].imageViewHandles[0].view; // VkImageView->VkImage for depth buffer image attachment
+	}
+
+	struct uvr_vk_framebuffer_create_info framebufferInfo;
+	framebufferInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	framebufferInfo.framebufferCount = framebufferCount;      // Amount of framebuffers to create
+	framebufferInfo.framebufferImagesCount = 2;
+	framebufferInfo.framebufferImages = framebufferImages;    // image attachments per framebuffer
+	framebufferInfo.renderPass = app->uvr_vk_render_pass.renderPass;
+	framebufferInfo.width = extent2D.width;
+	framebufferInfo.height = extent2D.height;
+	framebufferInfo.layers = 1;
+
+	app->uvr_vk_framebuffer = uvr_vk_framebuffer_create(&framebufferInfo);
+	if (!app->uvr_vk_framebuffer.framebufferHandles[0].framebuffer)
 		return -1;
 
 	return 0;
@@ -1513,7 +1520,7 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.pNext = NULL;
 	renderPassInfo.renderPass = app->uvr_vk_render_pass.renderPass;
-	renderPassInfo.framebuffer = app->uvr_vk_framebuffer.frameBufferHandles[swapchainImageIndex].frameBuffer;
+	renderPassInfo.framebuffer = app->uvr_vk_framebuffer.framebufferHandles[swapchainImageIndex].framebuffer;
 	renderPassInfo.renderArea = renderArea;
 	renderPassInfo.clearValueCount = ARRAY_LEN(clearColors);
 	renderPassInfo.pClearValues = clearColors;
