@@ -801,12 +801,12 @@ exit_vk_graphics_pipeline:
 struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_create_info *uvrvk)
 {
 	VkResult res = VK_RESULT_MAX_ENUM;
-	uint32_t currentFrameBuffer = 0;
+	uint8_t currentFrameBuffer = 0;
 
-	struct uvr_vk_framebuffer_handle *frameBufferHandles = NULL;
+	struct uvr_vk_framebuffer_handle *framebufferHandles = NULL;
 
-	frameBufferHandles = (struct uvr_vk_framebuffer_handle *) calloc(uvrvk->frameBufferCount, sizeof(struct uvr_vk_framebuffer_handle));
-	if (!frameBufferHandles) {
+	framebufferHandles = (struct uvr_vk_framebuffer_handle *) calloc(uvrvk->framebufferCount, sizeof(struct uvr_vk_framebuffer_handle));
+	if (!framebufferHandles) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_vk_framebuffer;
 	}
@@ -820,41 +820,29 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
 	createInfo.height = uvrvk->height;
 	createInfo.layers = uvrvk->layers;
 
-	VkImageView *frameBufferAttachments = NULL;
-	for (currentFrameBuffer = 0; currentFrameBuffer < uvrvk->frameBufferCount; currentFrameBuffer++) {
-		createInfo.attachmentCount = (uvrvk->miscImageViewHandles) ? uvrvk->miscImageViewHandleCount + 1 : 1;
+	for (currentFrameBuffer = 0; currentFrameBuffer < uvrvk->framebufferCount; currentFrameBuffer++) {
+		createInfo.attachmentCount = uvrvk->framebufferImagesCount;
+		createInfo.pAttachments = uvrvk->framebufferImages[currentFrameBuffer].imageAttachments;
 
-		if (uvrvk->miscImageViewHandles) {
-			frameBufferAttachments = alloca(createInfo.attachmentCount * sizeof(VkImageView)); // +1 Color Attachment VkImageView always stored first
-
-			frameBufferAttachments[0] = uvrvk->imageViewHandles[currentFrameBuffer].view;
-			for (uint32_t attachItem = 0; attachItem < uvrvk->miscImageViewHandleCount; attachItem++)
-				frameBufferAttachments[attachItem+1] = uvrvk->miscImageViewHandles[attachItem].view;
-
-			createInfo.pAttachments = frameBufferAttachments;
-		} else {
-			createInfo.pAttachments = &uvrvk->imageViewHandles[currentFrameBuffer].view;
-		}
-
-		res = vkCreateFramebuffer(uvrvk->logicalDevice, &createInfo, NULL, &frameBufferHandles[currentFrameBuffer].frameBuffer);
+		res = vkCreateFramebuffer(uvrvk->logicalDevice, &createInfo, NULL, &framebufferHandles[currentFrameBuffer].framebuffer);
 		if (res) {
 			uvr_utils_log(UVR_DANGER, "[x] vkCreateFramebuffer: %s", vkres_msg(res));
 			goto exit_vk_framebuffer_vk_framebuffer_destroy;
 		}
 
-		uvr_utils_log(UVR_SUCCESS, "uvr_vk_framebuffer_create: VkFramebuffer successfully created retval(%p)", frameBufferHandles[currentFrameBuffer].frameBuffer);
+		uvr_utils_log(UVR_SUCCESS, "uvr_vk_framebuffer_create: VkFramebuffer successfully created retval(%p)", framebufferHandles[currentFrameBuffer].framebuffer);
 	}
 
-	return (struct uvr_vk_framebuffer) { .logicalDevice = uvrvk->logicalDevice, .frameBufferCount = uvrvk->frameBufferCount, .frameBufferHandles = frameBufferHandles };
+	return (struct uvr_vk_framebuffer) { .logicalDevice = uvrvk->logicalDevice, .framebufferCount = uvrvk->framebufferCount, .framebufferHandles = framebufferHandles };
 
 exit_vk_framebuffer_vk_framebuffer_destroy:
-	for (currentFrameBuffer = 0; currentFrameBuffer < uvrvk->frameBufferCount; currentFrameBuffer++) {
-		if (frameBufferHandles[currentFrameBuffer].frameBuffer)
-			vkDestroyFramebuffer(uvrvk->logicalDevice, frameBufferHandles[currentFrameBuffer].frameBuffer, NULL);
+	for (currentFrameBuffer = 0; currentFrameBuffer < uvrvk->framebufferCount; currentFrameBuffer++) {
+		if (framebufferHandles[currentFrameBuffer].framebuffer)
+			vkDestroyFramebuffer(uvrvk->logicalDevice, framebufferHandles[currentFrameBuffer].framebuffer, NULL);
 	}
-	free(frameBufferHandles);
+	free(framebufferHandles);
 exit_vk_framebuffer:
-	return (struct uvr_vk_framebuffer) { .logicalDevice = VK_NULL_HANDLE, .frameBufferCount = 0, .frameBufferHandles = NULL };
+	return (struct uvr_vk_framebuffer) { .logicalDevice = VK_NULL_HANDLE, .framebufferCount = 0, .framebufferHandles = NULL };
 }
 
 
@@ -1465,11 +1453,11 @@ void uvr_vk_destroy(struct uvr_vk_destroy *uvrvk)
 
 	if (uvrvk->uvr_vk_framebuffer) {
 		for (i = 0; i < uvrvk->uvr_vk_framebuffer_cnt; i++) {
-			for (j = 0; j < uvrvk->uvr_vk_framebuffer[i].frameBufferCount; j++) {
-				if (uvrvk->uvr_vk_framebuffer[i].logicalDevice && uvrvk->uvr_vk_framebuffer[i].frameBufferHandles[j].frameBuffer)
-					vkDestroyFramebuffer(uvrvk->uvr_vk_framebuffer[i].logicalDevice, uvrvk->uvr_vk_framebuffer[i].frameBufferHandles[j].frameBuffer, NULL);
+			for (j = 0; j < uvrvk->uvr_vk_framebuffer[i].framebufferCount; j++) {
+				if (uvrvk->uvr_vk_framebuffer[i].logicalDevice && uvrvk->uvr_vk_framebuffer[i].framebufferHandles[j].framebuffer)
+					vkDestroyFramebuffer(uvrvk->uvr_vk_framebuffer[i].logicalDevice, uvrvk->uvr_vk_framebuffer[i].framebufferHandles[j].framebuffer, NULL);
 			}
-			free(uvrvk->uvr_vk_framebuffer[i].frameBufferHandles);
+			free(uvrvk->uvr_vk_framebuffer[i].framebufferHandles);
 		}
 	}
 

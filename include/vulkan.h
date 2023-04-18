@@ -764,11 +764,11 @@ struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline_create(struct uvr_vk_gr
 /*
  * struct uvr_vk_framebuffer_handle (Underview Renderer Vulkan Framebuffer Handle)
  *
- * @frameBuffer - Framebuffers represent a collection of specific memory attachments that a render pass instance uses.
+ * @framebuffer - Framebuffers represent a collection of specific memory attachments that a render pass instance uses.
  *                Connection between an image (or images) and the render pass instance.
  */
 struct uvr_vk_framebuffer_handle {
-	VkFramebuffer frameBuffer;
+	VkFramebuffer framebuffer;
 };
 
 
@@ -776,14 +776,24 @@ struct uvr_vk_framebuffer_handle {
  * struct uvr_vk_framebuffer (Underview Renderer Vulkan Framebuffer)
  *
  * members:
- * @logicalDevice      - VkDevice handle (Logical Device) associated with @frameBufferCount VkFramebuffer's
- * @frameBufferCount   - Amount of VkFramebuffer handles created
- * @frameBufferHandles - Pointer to an array of VkFramebuffer handles
+ * @logicalDevice      - VkDevice handle (Logical Device) associated with @framebufferCount VkFramebuffer's
+ * @framebufferCount   - Amount of VkFramebuffer handles created
+ * @framebufferHandles - Pointer to an array of VkFramebuffer handles
  */
 struct uvr_vk_framebuffer {
 	VkDevice                          logicalDevice;
-	uint32_t                          frameBufferCount;
-	struct uvr_vk_framebuffer_handle  *frameBufferHandles;
+	uint8_t                           framebufferCount;
+	struct uvr_vk_framebuffer_handle  *framebufferHandles;
+};
+
+
+/*
+ * struct uvr_vk_framebuffer_images (Underview Renderer Vulkan Framebuffer Images)
+ *
+ * @imageAttachments - Allow at most 6 attachments (VkImageView->VkImage) per VkFrameBbuffer.
+ */
+struct uvr_vk_framebuffer_images {
+	VkImageView imageAttachments[6];
 };
 
 
@@ -791,20 +801,14 @@ struct uvr_vk_framebuffer {
  * struct uvr_vk_framebuffer_create_info (Underview Renderer Vulkan Framebuffer Create Information)
  *
  * members:
- * @logicalDevice            - Must pass a valid VkDevice handle (Logical Device)
- * @frameBufferCount         - Amount of VkFramebuffer handles to create
- * @imageViewHandles         - Pointer to an array of VkImageView handles which the @renderPass instance will output fragment data
- *                             generated from the graphics pipeline exection to the VkImage bound to the VkImageView. These VkImageView
- *                             handles must always be in a format that equals to the render pass attachment format. Otherwise you get errors
- *                             and vulkan barks at you.
- * @miscImageViewHandleCount - Amount of elements in @miscImageViewHandles array
- * @miscImageViewHandles     - Pointer to an array of extra VkImageViews handles to attach to @imageViewHandles (i.e Depth Buffer Image View).
- *                             All additional attachments (VkImageView) will be added to each @imageViewHandles attachments.
- *                             @imageViewHandles[0] = { @miscImageViewHandles[0], @miscImageViewHandles[1], @miscImageViewHandles[2] } = Final VkFramebuffer
- *                             @imageViewHandles[1] = { @miscImageViewHandles[0], @miscImageViewHandles[1], @miscImageViewHandles[2] } = Final VkFramebuffer
- * @renderPass               - Defines the render pass a given framebuffer is compatible with
- * @width                    - Framebuffer width in pixels
- * @height                   - Framebuffer height in pixels
+ * @logicalDevice           - Must pass a valid VkDevice handle (Logical Device)
+ * @framebufferCount        - Amount of VkFramebuffer handles to create (i.e the array length of @framebufferImages)
+ * @framebufferImagesCount  - Amount of framebuffer attachments (VkImageView->VkImage) per each framebuffer.
+ * @framebufferImages       - Pointer to an array of VkImageView handles which the @renderPass instance will merge to create final VkFramebuffer.
+ *                            These VkImageView->VkImage handles must always be in a format that equals to the render pass attachment format.
+ * @renderPass              - Defines the render pass a given framebuffer is compatible with
+ * @width                   - Framebuffer width in pixels
+ * @height                  - Framebuffer height in pixels
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for more info on bellow members
  *
@@ -812,10 +816,9 @@ struct uvr_vk_framebuffer {
  */
 struct uvr_vk_framebuffer_create_info {
 	VkDevice                         logicalDevice;
-	uint32_t                         frameBufferCount;
-	struct uvr_vk_image_view_handle  *imageViewHandles;
-	uint32_t                         miscImageViewHandleCount;
-	struct uvr_vk_image_view_handle  *miscImageViewHandles;
+	uint8_t                          framebufferCount;
+	uint8_t                          framebufferImagesCount;
+	struct uvr_vk_framebuffer_images *framebufferImages;
 	VkRenderPass                     renderPass;
 	uint32_t                         width;
 	uint32_t                         height;
@@ -824,12 +827,11 @@ struct uvr_vk_framebuffer_create_info {
 
 
 /*
- * uvr_vk_framebuffer_create: Creates @frameBufferCount amount of VkFramebuffer handles. For simplicity each VkFramebuffer
- *                            handle created only has one VkImageView attached. Can think of this function as creating the
+ * uvr_vk_framebuffer_create: Creates @framebufferCount amount of VkFramebuffer handles. Can think of this function as creating the
  *                            frames to hold the pictures in them, with each frame only containing one picture. Note framebuffer
- *                            VkImage's must match up one to one with attachments in the render pass. Meaning if are @renderPass
- *                            instance has 1 color + 1 depth attachment then each VkFramebuffer must have one VkImage for color
- *                            and one VkImage for depth. Function forces you to have at least a color attachment via @imageViewHandles.
+ *                            VkImage's (@framebufferImages->@imageAttachments) must match up one to one with attachments in the
+ *                            render pass. Meaning if are @renderPass instance has 1 color + 1 depth attachment. Then each VkFramebuffer
+ *                            must have one VkImage for color and one VkImage for depth.
  *
  * args:
  * @uvrvk - pointer to a struct uvr_vk_framebuffer_create_info
