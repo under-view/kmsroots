@@ -821,7 +821,7 @@ struct uvr_vk_framebuffer uvr_vk_framebuffer_create(struct uvr_vk_framebuffer_cr
 	createInfo.layers = uvrvk->layers;
 
 	for (currentFrameBuffer = 0; currentFrameBuffer < uvrvk->framebufferCount; currentFrameBuffer++) {
-		createInfo.attachmentCount = uvrvk->framebufferImagesCount;
+		createInfo.attachmentCount = uvrvk->framebufferImageAttachmentCount;
 		createInfo.pAttachments = uvrvk->framebufferImages[currentFrameBuffer].imageAttachments;
 
 		res = vkCreateFramebuffer(uvrvk->logicalDevice, &createInfo, NULL, &framebufferHandles[currentFrameBuffer].framebuffer);

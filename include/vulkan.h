@@ -801,14 +801,14 @@ struct uvr_vk_framebuffer_images {
  * struct uvr_vk_framebuffer_create_info (Underview Renderer Vulkan Framebuffer Create Information)
  *
  * members:
- * @logicalDevice           - Must pass a valid VkDevice handle (Logical Device)
- * @framebufferCount        - Amount of VkFramebuffer handles to create (i.e the array length of @framebufferImages)
- * @framebufferImagesCount  - Amount of framebuffer attachments (VkImageView->VkImage) per each framebuffer.
- * @framebufferImages       - Pointer to an array of VkImageView handles which the @renderPass instance will merge to create final VkFramebuffer.
- *                            These VkImageView->VkImage handles must always be in a format that equals to the render pass attachment format.
- * @renderPass              - Defines the render pass a given framebuffer is compatible with
- * @width                   - Framebuffer width in pixels
- * @height                  - Framebuffer height in pixels
+ * @logicalDevice                   - Must pass a valid VkDevice handle (Logical Device)
+ * @framebufferCount                - Amount of VkFramebuffer handles to create (i.e the array length of @framebufferImages)
+ * @framebufferImageAttachmentCount - Amount of framebuffer attachments (VkImageView->VkImage) per each framebuffer.
+ * @framebufferImages               - Pointer to an array of VkImageView handles which the @renderPass instance will merge to create final VkFramebuffer.
+ *                                    These VkImageView->VkImage handles must always be in a format that equals to the render pass attachment format.
+ * @renderPass                      - Defines the render pass a given framebuffer is compatible with
+ * @width                           - Framebuffer width in pixels
+ * @height                          - Framebuffer height in pixels
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for more info on bellow members
  *
@@ -817,7 +817,7 @@ struct uvr_vk_framebuffer_images {
 struct uvr_vk_framebuffer_create_info {
 	VkDevice                         logicalDevice;
 	uint8_t                          framebufferCount;
-	uint8_t                          framebufferImagesCount;
+	uint8_t                          framebufferImageAttachmentCount;
 	struct uvr_vk_framebuffer_images *framebufferImages;
 	VkRenderPass                     renderPass;
 	uint32_t                         width;

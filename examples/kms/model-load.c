@@ -1581,7 +1581,7 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 	struct uvr_vk_framebuffer_create_info framebufferInfo;
 	framebufferInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	framebufferInfo.framebufferCount = framebufferCount;      // Amount of framebuffers to create
-	framebufferInfo.framebufferImagesCount = 2;
+	framebufferInfo.framebufferImageAttachmentCount = 2;
 	framebufferInfo.framebufferImages = framebufferImages;    // image attachments per framebuffer
 	framebufferInfo.renderPass = app->uvr_vk_render_pass.renderPass;
 	framebufferInfo.width = extent2D.width;
