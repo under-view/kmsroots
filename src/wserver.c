@@ -196,7 +196,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
 	 * cannot set the selection directly without compositor approval, see the
 	 * handling of the request_set_selection event below.
 	 */
-	wlr_compositor_create(core.wlDisplay, core.wlrRenderer);
+	wlr_compositor_create(core.wlDisplay, 5, core.wlrRenderer);
 	wlr_subcompositor_create(core.wlDisplay);
 	wlr_data_device_manager_create(core.wlDisplay);
 
