@@ -250,15 +250,6 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
 
 	uvr_utils_log(UVR_SUCCESS, "Succefully established socket for wayland clients to connect at %s", unixSocket);
 
-	/*
-	 * Start the backend. This will enumerate outputs and inputs, become the DRM master, etc.
-	 * see: kms.c for an implementation of how enumeration and becoming DRM master works.
-	 */
-	if (!wlr_backend_start(core.wlrBackend)) {
-		uvr_utils_log(UVR_DANGER, "[x] wl_display_add_socket: Unable to add socket %s to Wayland display.", uvrws->unixSockName);
-		goto exit_ws_core_wlr_output_layout_destroy;
-	}
-
 	core.kmsfd = wlr_backend_get_drm_fd(core.wlrBackend);
 
 	/*
