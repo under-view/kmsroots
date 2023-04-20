@@ -126,9 +126,9 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_vk_kms_instance(struct app_vk *app, struct uvr_ws_core *wc);
+int create_kms_instance(struct uvr_ws_core *wscore);
 int create_vk_instance(struct app_vk *app);
-int create_vk_device(struct app_vk *app);
+int create_vk_device(struct app_vk *app, struct uvr_ws_core *wscore);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_depth_image(struct app_vk *app);
@@ -228,15 +228,15 @@ int main(void)
 	memset(&app, 0, sizeof(app));
 	memset(&appd, 0, sizeof(appd));
 
-	struct uvr_ws_core wsCore;
-	struct uvr_ws_destroy wsCored;
-	memset(&wsCore, 0, sizeof(wsCore));
-	memset(&wsCored, 0, sizeof(wsCored));
+	struct uvr_ws_core wscore;
+	struct uvr_ws_destroy wscored;
+	memset(&wscore, 0, sizeof(wscore));
+	memset(&wscored, 0, sizeof(wscored));
 
 	VkSurfaceFormatKHR surfaceFormat;
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 
-	if (create_vk_kms_instance(&app, &wsCore) == -1)
+	if (create_kms_instance(&wscore) == -1)
 		goto exit_error;
 
 	if (create_vk_instance(&app) == -1)
@@ -246,7 +246,7 @@ int main(void)
 	 * Create Vulkan Physical Device Handle, After Window Surface
 	 * so that it doesn't effect VkPhysicalDevice selection
 	 */
-	if (create_vk_device(&app) == -1)
+	if (create_vk_device(&app, &wscore) == -1)
 		goto exit_error;
 
 	if (create_vk_swapchain(&app, &surfaceFormat, extent2D) == -1)
@@ -292,7 +292,7 @@ int main(void)
 	static bool UNUSED running = true;
 
 	static struct app_vk_kms UNUSED kmsvk;
-	kmsvk.uvr_ws_core = &wsCore;
+	kmsvk.uvr_ws_core = &wscore;
 	kmsvk.app_vk = &app;
 
 exit_error:
@@ -334,16 +334,24 @@ exit_error:
 	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
 	uvr_vk_destroy(&appd);
 
-	wsCored.uvr_ws_core = wsCore;
-	uvr_ws_destroy(&wsCored);
+	wscored.uvr_ws_core = wscore;
+	uvr_ws_destroy(&wscored);
 
 	return 0;
 }
 
 
-int create_vk_kms_instance(struct app_vk UNUSED *app, struct uvr_ws_core UNUSED *ws)
+int create_kms_instance(struct uvr_ws_core *wscore)
 {
-	return -1;
+	struct uvr_ws_core_create_info wsCoreCreateInfo;
+	wsCoreCreateInfo.includeWlrDebugLogs = false;
+	wsCoreCreateInfo.unixSockName = "underview-comp-0";
+
+	*wscore = uvr_ws_core_create(&wsCoreCreateInfo);
+	if (!wscore->wlDisplay || !wscore->wlrBackend)
+		return -1;
+
+	return 0;
 }
 
 
@@ -361,9 +369,6 @@ int create_vk_instance(struct app_vk *app)
 	};
 
 	const char *instanceExtensions[] = {
-		"VK_KHR_xcb_surface",
-		"VK_KHR_surface",
-		"VK_KHR_display",
 		"VK_EXT_debug_utils"
 	};
 
@@ -383,22 +388,30 @@ int create_vk_instance(struct app_vk *app)
 }
 
 
-int create_vk_device(struct app_vk *app)
+int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 {
 	const char *deviceExtensions[] = {
-		"VK_KHR_swapchain"
+		"VK_KHR_external_memory_fd",
+		"VK_KHR_external_semaphore_fd",
+		"VK_KHR_image_format_list",
+		"VK_EXT_external_memory_dma_buf",
+		"VK_EXT_queue_family_foreign",
+		"VK_EXT_image_drm_format_modifier",
+		"VK_KHR_timeline_semaphore",
 	};
 
 	struct uvr_vk_phdev_create_info phdevCreateInfo;
 	phdevCreateInfo.instance = app->instance;
 	phdevCreateInfo.deviceType = VK_PHYSICAL_DEVICE_TYPE;
 #ifdef INCLUDE_KMS
-	phdevCreateInfo.kmsfd = -1;
+	phdevCreateInfo.kmsfd = wscore->kmsfd;
 #endif
 
 	app->uvr_vk_phdev = uvr_vk_phdev_create(&phdevCreateInfo);
 	if (!app->uvr_vk_phdev.physDevice)
 		return -1;
+
+	return -1;
 
 	struct uvr_vk_queue_create_info queueCreateInfo;
 	queueCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
