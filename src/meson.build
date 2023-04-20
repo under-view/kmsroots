@@ -73,7 +73,7 @@ wlroots_renderer = get_option('renderer')
 cglue_code = []
 
 if wlroots.found() and wayland_server.found()
-  pargs += ['-DWLR_USE_UNSTABLE=1', '-DINCLUDE_WAYLAND_COMP=1']
+  pargs += ['-DWLR_USE_UNSTABLE=1', '-DINCLUDE_WAYLAND_COMP=1', '-DINCLUDE_KMS=1']
 
   fs += ['wserver.c']
   if wlroots_renderer == 'underview'
