@@ -16,6 +16,7 @@
  * struct uvr_ws_core (Underview Renderer Wayland Server Core)
  *
  * members:
+ * @kmsfd                  - KMS node file descriptor associated with a given backend.
  * @wlDisplay              - Wayland Display object is managed by libwayland. It handles accepting
  *                           clients from the Unix socket '$XDG_RUNTIME_DIR/(wayland display unix socket name)',
  *                           managing Wayland globals, and so on. XDG_RUNTIME_DIR="/run/user/1000"
@@ -31,6 +32,7 @@
  * @newOutputListener      - Listener used to notify when a new output is connected
  */
 struct uvr_ws_core {
+	int                      kmsfd;
 	struct wl_display        *wlDisplay;
 	struct wlr_backend       *wlrBackend;
 	struct wlr_renderer      *wlrRenderer;
@@ -83,7 +85,7 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws);
  * @uvr_ws_core - Must pass an array of valid struct uvr_ws_core { free'd members: struct wl_display ref, struct wlr_backend ref }
  */
 struct uvr_ws_destroy {
-  struct uvr_ws_core uvr_ws_core;
+	struct uvr_ws_core uvr_ws_core;
 };
 
 

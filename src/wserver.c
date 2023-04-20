@@ -259,6 +259,8 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
 		goto exit_ws_core_wlr_output_layout_destroy;
 	}
 
+	core.kmsfd = wlr_backend_get_drm_fd(core.wlrBackend);
+
 	/*
 	 * Set the WAYLAND_DISPLAY environment variable to our socket
 	 */
@@ -282,7 +284,7 @@ exit_ws_core_wl_display_destroy:
 	if (core.wlDisplay)
 		wl_display_destroy(core.wlDisplay);
 exit_ws_core:
-	return (struct uvr_ws_core) { .wlDisplay = NULL, .wlrBackend = NULL, .wlrRenderer = NULL,
+	return (struct uvr_ws_core) { .kmsfd = -1, .wlDisplay = NULL, .wlrBackend = NULL, .wlrRenderer = NULL,
 	                              .wlrRendererAllocator = NULL, .wlrOutputLayout = NULL };
 }
 
