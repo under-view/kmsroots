@@ -14,7 +14,7 @@
 #endif
 
 if wlroots.found() and wayland_server.found()
-  progs = ['compositor.c', 'model-load.c']
+  progs = ['model-load.c']
 
   original_args = pargs
   foreach p : progs
