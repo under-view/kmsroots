@@ -41,5 +41,5 @@ option('gpu',
 
 option('renderer',
       type: 'combo', value: 'wlroots',
-      choices: ['wlroots', 'underview'],
+      choices: ['wlroots', 'underview', 'custom'],
       description: 'Select which renderer you want to utilize with wlroots backend.')
