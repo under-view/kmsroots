@@ -156,8 +156,8 @@ struct uvr_vk_phdev_create_info {
  * @kmsfd                   - KMS device node file descriptor passed via struct uvr_vk_phdev_create_info
  * @physDeviceDrmProperties - Structure containing DRM information of a physical device. A VkPhysicalDeviceProperties2 structure
  *                            is utilzed to populate this member. Member information is then checked by the implementation to see
- *                            if passed KMS device node file descriptor struct uvr_vk_phdev_create_info { @kmsFd } is equal to the
- *                            physical device suggested by struct uvr_vk_phdev_create_info { @vkPhdevType }. Contains data stored
+ *                            if passed KMS device node file descriptor struct uvr_vk_phdev_create_info { @kmsfd } is equal to the
+ *                            physical device suggested by struct uvr_vk_phdev_create_info { @deviceType }. Contains data stored
  *                            after associate a DRM file descriptor with a vulkan physical device.
  */
 struct uvr_vk_phdev {
