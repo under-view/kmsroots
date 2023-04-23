@@ -13,6 +13,10 @@
 #include "shader.h"
 #include "gltf-loader.h"
 
+#ifdef UNDERVIEW_RENDERER
+#include "renderers/underview.h"
+#endif
+
 //#define WIDTH 3840
 //#define HEIGHT 2160
 #define WIDTH 1920
@@ -343,9 +347,33 @@ exit_error:
 
 int create_kms_instance(struct uvr_ws_core *wscore)
 {
+#ifdef UNDERVIEW_RENDERER
+	static struct wlr_renderer_impl rendererImpl = {
+		.bind_buffer = uvr_renderers_underview_bind_buffer,
+		.begin = uvr_renderers_underview_begin,
+		.end = uvr_renderers_underview_end,
+		.clear = uvr_renderers_underview_clear,
+		.scissor = uvr_renderers_underview_scissor,
+		.render_subtexture_with_matrix = uvr_renderers_underview_render_subtexture_with_matrix,
+		.render_quad_with_matrix = uvr_renderers_underview_render_quad_with_matrix,
+		.get_shm_texture_formats = uvr_renderers_underview_get_shm_texture_formats,
+		.get_dmabuf_texture_formats = uvr_renderers_underview_get_dmabuf_texture_formats,
+		.get_render_formats = uvr_renderers_underview_get_render_formats,
+		.preferred_read_format = uvr_renderers_underview_preferred_read_format,
+		.read_pixels = uvr_renderers_underview_read_pixels,
+		.destroy = uvr_renderers_underview_destroy,
+		.get_drm_fd = uvr_renderers_underview_get_drm_fd,
+		.get_render_buffer_caps = uvr_renderers_underview_get_render_buffer_caps,
+		.texture_from_buffer= uvr_renderers_underview_texture_from_buffer
+	};
+#endif
+
 	struct uvr_ws_core_create_info wsCoreCreateInfo;
 	wsCoreCreateInfo.includeWlrDebugLogs = false;
 	wsCoreCreateInfo.unixSockName = "underview-comp-0";
+#ifdef UNDERVIEW_RENDERER
+	wsCoreCreateInfo.rendererImpl = &rendererImpl;
+#endif
 
 	*wscore = uvr_ws_core_create(&wsCoreCreateInfo);
 	if (!wscore->wlDisplay || !wscore->wlrBackend)
