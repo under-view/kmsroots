@@ -8,6 +8,7 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/allocator.h>
+#include <wlr/render/interface.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
@@ -56,10 +57,16 @@ struct uvr_ws_core {
  *                        will be created in the directory pointed to by environment variable
  *                        XDG_RUNTIME_DIR. If XDG_RUNTIME_DIR is not set, then this function
  *                        fails.
+ * @rendererImpl        - Way for applications to build custom wlroots renderer implementation.
+ *                        Using both functions from src/renderers/underview.c and their own
+ *                        implementations.
  */
 struct uvr_ws_core_create_info {
-	bool includeWlrDebugLogs;
-	char *unixSockName;
+	bool                     includeWlrDebugLogs;
+	char                     *unixSockName;
+#ifdef UNDERVIEW_RENDERER
+	struct wlr_renderer_impl *rendererImpl;
+#endif
 };
 
 

@@ -8,6 +8,7 @@
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_output.h>
+#include <wlr/render/interface.h>
 #include <wlr/util/log.h>
 #include "wserver.h"
 
@@ -172,12 +173,24 @@ struct uvr_ws_core uvr_ws_core_create(struct uvr_ws_core_create_info *uvrws)
 		goto exit_ws_core_wl_display_destroy;
 	}
 
-	// TODO: Implement custom renderer
+#if defined(WLROOTS_RENDERER)
 	core.wlrRenderer = wlr_renderer_autocreate(core.wlrBackend);
 	if (!core.wlrRenderer) {
 		uvr_utils_log(UVR_DANGER, "[X] wlr_renderer_autocreate: failed to create wlr_renderer");
 		goto exit_ws_core_wlr_backend_destroy;
 	}
+#elif defined(UNDERVIEW_RENDERER)
+	core.wlrRenderer = calloc(1, sizeof(struct wlr_renderer));
+	if (!core.wlrRenderer) {
+		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_ws_core_wlr_backend_destroy;
+	}
+
+	wlr_renderer_init(core.wlrRenderer, uvrws->rendererImpl);
+#else
+	uvr_utils_log(UVR_DANGER, "[x] uvr_ws_core_create: how'd we get here!!!");
+	goto exit_ws_core_wlr_backend_destroy;
+#endif
 
 	wlr_renderer_init_wl_display(core.wlrRenderer, core.wlDisplay);
 
