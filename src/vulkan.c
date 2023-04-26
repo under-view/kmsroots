@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <string.h>
 #include <math.h>
@@ -271,7 +272,7 @@ struct uvr_vk_phdev uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk)
 	physDeviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 #endif
 
-	int enter = 0;
+	bool enter = 0;
 	VkPhysicalDeviceFeatures physDeviceFeatures;
 	VkPhysicalDeviceProperties physDeviceProperties;
 
@@ -279,7 +280,7 @@ struct uvr_vk_phdev uvr_vk_phdev_create(struct uvr_vk_phdev_create_info *uvrvk)
 	 * get a physical device that is suitable
 	 * to do the graphics related task that we need
 	 */
-	for (uint32_t i = 0; i < deviceCount; i++) {
+	for (uint8_t i = 0; i < deviceCount; i++) {
 		vkGetPhysicalDeviceFeatures(devices[i], &physDeviceFeatures); /* Query device features */
 		vkGetPhysicalDeviceProperties(devices[i], &physDeviceProperties); /* Query device properties */
 
