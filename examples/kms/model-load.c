@@ -419,13 +419,13 @@ int create_vk_instance(struct app_vk *app)
 int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 {
 	const char *deviceExtensions[] = {
+		"VK_KHR_timeline_semaphore",
 		"VK_KHR_external_memory_fd",
 		"VK_KHR_external_semaphore_fd",
 		"VK_KHR_image_format_list",
 		"VK_EXT_external_memory_dma_buf",
 		"VK_EXT_queue_family_foreign",
 		"VK_EXT_image_drm_format_modifier",
-		"VK_KHR_timeline_semaphore",
 	};
 
 	struct uvr_vk_phdev_create_info phdevCreateInfo;
@@ -439,8 +439,6 @@ int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 	if (!app->uvr_vk_phdev.physDevice)
 		return -1;
 
-	return -1;
-
 	struct uvr_vk_queue_create_info queueCreateInfo;
 	queueCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
@@ -450,7 +448,7 @@ int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 		return -1;
 
 	/*
-	 * Can Hardset features prior
+	 * Can hard set features prior
 	 * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
 	 * app->uvr_vk_phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
 	 */
@@ -469,7 +467,7 @@ int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 	if (!app->uvr_vk_lgdev.logicalDevice)
 		return -1;
 
-	return 0;
+	return -1;
 }
 
 
