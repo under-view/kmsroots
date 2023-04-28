@@ -1232,8 +1232,9 @@ int create_vk_sync_objs(struct app_vk *app)
 {
 	struct uvr_vk_sync_obj_create_info syncObjsCreateInfo;
 	syncObjsCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	syncObjsCreateInfo.fenceCount = 1;
+	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_BINARY;
 	syncObjsCreateInfo.semaphoreCount = 2;
+	syncObjsCreateInfo.fenceCount = 1;
 
 	app->uvr_vk_sync_obj = uvr_vk_sync_obj_create(&syncObjsCreateInfo);
 	if (!app->uvr_vk_sync_obj.fenceHandles[0].fence && !app->uvr_vk_sync_obj.semaphoreHandles[0].semaphore)
