@@ -416,6 +416,7 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk)
 
 	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timelineSemaphoreFeatures;
 	timelineSemaphoreFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
+	timelineSemaphoreFeatures.pNext = NULL;
 	timelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
 
 	for (qc = 0; qc < uvrvk->enabledExtensionCount; qc++) {
