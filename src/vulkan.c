@@ -961,7 +961,7 @@ int uvr_vk_command_buffer_record_end(struct uvr_vk_command_buffer_record_info *u
 struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info *uvrvk)
 {
 	VkResult res = VK_RESULT_MAX_ENUM;
-	uint32_t currentSyncObject = 0;
+	uint8_t currentSyncObject = 0;
 
 	struct uvr_vk_fence_handle *fenceHandles = NULL;
 	struct uvr_vk_semaphore_handle *semaphoreHandles = NULL;
@@ -983,9 +983,15 @@ struct uvr_vk_sync_obj uvr_vk_sync_obj_create(struct uvr_vk_sync_obj_create_info
 	fenceCreateInfo.pNext = NULL;
 	fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+	VkSemaphoreTypeCreateInfo semaphoreTypeCreateInfo;
+	semaphoreTypeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+	semaphoreTypeCreateInfo.pNext = NULL;
+	semaphoreTypeCreateInfo.semaphoreType = uvrvk->semaphoreType;
+	semaphoreTypeCreateInfo.initialValue = 0;
+
 	VkSemaphoreCreateInfo semphoreCreateInfo = {};
 	semphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	semphoreCreateInfo.pNext = NULL;
+	semphoreCreateInfo.pNext = &semaphoreTypeCreateInfo;
 	semphoreCreateInfo.flags = 0;
 
 	for (currentSyncObject = 0; currentSyncObject < uvrvk->fenceCount; currentSyncObject++) {

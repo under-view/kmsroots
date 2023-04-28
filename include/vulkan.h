@@ -992,13 +992,16 @@ struct uvr_vk_sync_obj {
  *
  * members:
  * @logicalDevice  - Must pass a valid VkDevice handle (Logical Device)
+ * @semaphoreType  - Specifies the type of semaphore to create.
+ * @semaphoreCount - Amount of VkSemaphore objects to allocate. Initial value of each semaphore
+ *                   is set to zero.
  * @fenceCount     - Amount of VkFence objects to allocate.
- * @semaphoreCount - Amount of VkSemaphore objects to allocate.
  */
 struct uvr_vk_sync_obj_create_info {
-	VkDevice logicalDevice;
-	uint32_t fenceCount;
-	uint32_t semaphoreCount;
+	VkDevice        logicalDevice;
+	VkSemaphoreType semaphoreType;
+	uint8_t         semaphoreCount;
+	uint8_t         fenceCount;
 };
 
 
