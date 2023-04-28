@@ -342,7 +342,8 @@ exit_error_vk_phdev_create:
 
 struct uvr_vk_queue uvr_vk_queue_create(struct uvr_vk_queue_create_info *uvrvk)
 {
-	uint32_t queueCount = 0, flagCount = 0;
+	uint8_t flagCount = 0;
+	uint32_t queueCount = 0;
 	VkQueueFamilyProperties *queueFamilies = NULL;
 	struct uvr_vk_queue queue;
 
@@ -402,14 +403,26 @@ err_vk_queue_create:
 
 struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk)
 {
+	uint32_t qc;
+	void *pNext = NULL;
 	VkDevice logicalDevice = VK_NULL_HANDLE;
 	VkResult res = VK_RESULT_MAX_ENUM;
-	uint32_t qc;
 
 	VkDeviceQueueCreateInfo *queueCreateInfo = (VkDeviceQueueCreateInfo *) calloc(uvrvk->queueCount, sizeof(VkDeviceQueueCreateInfo));
 	if (!queueCreateInfo) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto err_vk_lgdev_create;
+	}
+
+	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timelineSemaphoreFeatures;
+	timelineSemaphoreFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
+	timelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
+
+	for (qc = 0; qc < uvrvk->enabledExtensionCount; qc++) {
+		if (!strncmp(uvrvk->enabledExtensionNames[qc], VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME, 30)) {
+			pNext = &timelineSemaphoreFeatures;
+			break;
+		}
 	}
 
 	/*
@@ -427,7 +440,7 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk)
 
 	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceCreateInfo.pNext = NULL;
+	deviceCreateInfo.pNext = pNext;
 	deviceCreateInfo.flags = 0;
 	deviceCreateInfo.queueCreateInfoCount = uvrvk->queueCount;
 	deviceCreateInfo.pQueueCreateInfos = queueCreateInfo;
