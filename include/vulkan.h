@@ -1511,6 +1511,20 @@ struct uvr_vk_phdev_format_prop uvr_vk_get_phdev_format_properties(VkPhysicalDev
 
 
 /*
+ * uvr_vk_get_external_semaphore_properties:
+ *
+ *
+ * args:
+ * @physDev    - Must pass a valid VkPhysicalDevice handle
+ * @handleType - Must pass bitwise or value specifying the external semaphore
+ *               handle type for which capabilities/properties will be returned. 
+ * return:
+ *	Populated VkExternalSemaphoreProperties
+ */
+VkExternalSemaphoreProperties uvr_vk_get_external_semaphore_properties(VkPhysicalDevice physDev, VkExternalSemaphoreHandleTypeFlagBits handleType);
+
+
+/*
  * struct uvr_vk_destroy (Underview Renderer Vulkan Destroy)
  *
  * members:

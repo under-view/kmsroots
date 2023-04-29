@@ -1404,6 +1404,23 @@ exit_get_phdev_format_properties:
 }
 
 
+VkExternalSemaphoreProperties uvr_vk_get_external_semaphore_properties(VkPhysicalDevice physDev, VkExternalSemaphoreHandleTypeFlagBits handleType) {
+	VkPhysicalDeviceExternalSemaphoreInfo externalSemaphoreInfo;
+	externalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO;
+	externalSemaphoreInfo.pNext = NULL;
+	externalSemaphoreInfo.handleType = handleType;
+
+	VkExternalSemaphoreProperties semaphoreProperties;
+	memset(&semaphoreProperties, 0, sizeof(semaphoreProperties));
+	semaphoreProperties.sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES;
+	semaphoreProperties.pNext = NULL;
+
+	vkGetPhysicalDeviceExternalSemaphoreProperties(physDev, &externalSemaphoreInfo, &semaphoreProperties);
+
+	return semaphoreProperties;
+}
+
+
 void uvr_vk_map_memory(struct uvr_vk_map_memory_info *uvrvk)
 {
 	void *data = NULL;
