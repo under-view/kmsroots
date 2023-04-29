@@ -422,6 +422,7 @@ int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 		"VK_KHR_timeline_semaphore",
 		"VK_KHR_external_memory_fd",
 		"VK_KHR_external_semaphore_fd",
+		"VK_KHR_synchronization2",
 		"VK_KHR_image_format_list",
 		"VK_EXT_external_memory_dma_buf",
 		"VK_EXT_queue_family_foreign",
@@ -1640,7 +1641,7 @@ int create_vk_sync_objs(struct app_vk *app)
 	struct uvr_vk_sync_obj_create_info syncObjsCreateInfo;
 	syncObjsCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
 	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-	syncObjsCreateInfo.semaphoreCount = 2;
+	syncObjsCreateInfo.semaphoreCount = 1;
 	syncObjsCreateInfo.fenceCount = 0;
 
 	app->uvr_vk_sync_obj = uvr_vk_sync_obj_create(&syncObjsCreateInfo);

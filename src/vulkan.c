@@ -414,15 +414,23 @@ struct uvr_vk_lgdev uvr_vk_lgdev_create(struct uvr_vk_lgdev_create_info *uvrvk)
 		goto err_vk_lgdev_create;
 	}
 
+	VkPhysicalDeviceSynchronization2FeaturesKHR externalSemaphoreInfo;
+	externalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
+	externalSemaphoreInfo.pNext = NULL;
+	externalSemaphoreInfo.synchronization2 = VK_TRUE;
+
 	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timelineSemaphoreFeatures;
 	timelineSemaphoreFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
 	timelineSemaphoreFeatures.pNext = NULL;
 	timelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
 
 	for (qc = 0; qc < uvrvk->enabledExtensionCount; qc++) {
+		if (!strncmp(uvrvk->enabledExtensionNames[qc], VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME, 30)) {
+			timelineSemaphoreFeatures.pNext = &externalSemaphoreInfo;
+		}
+	
 		if (!strncmp(uvrvk->enabledExtensionNames[qc], VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME, 30)) {
 			pNext = &timelineSemaphoreFeatures;
-			break;
 		}
 	}
 
