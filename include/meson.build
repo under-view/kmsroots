@@ -22,8 +22,4 @@ if get_option('wayland').enabled()
   main_headers += ['wclient.h']
 endif
 
-if get_option('wayland-compositor').enabled()
-  main_headers += ['wserver.h']
-endif
-
 install_headers(main_headers, subdir: 'underview')

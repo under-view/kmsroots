@@ -14,10 +14,6 @@ option('wayland',
        type: 'feature', value: 'disabled',
        description: 'Build wayland client API')
 
-option('wayland-compositor',
-       type: 'feature', value: 'disabled',
-       description: 'Build wlroots based compositing api with custom out-of-tree renderer')
-
 option('shaderc',
        type: 'feature', value: 'disabled',
        description: 'Enable/disable google shaderc')
@@ -38,8 +34,3 @@ option('gpu',
        type: 'combo', value: 'discrete',
        choices: ['integrated', 'discrete', 'cpu'],
        description: 'Select VkPhysicalDeviceType to use in examples')
-
-option('renderer',
-      type: 'combo', value: 'wlroots',
-      choices: ['wlroots', 'underview', 'custom'],
-      description: 'Select which renderer you want to utilize with wlroots backend.')

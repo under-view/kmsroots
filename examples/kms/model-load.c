@@ -8,7 +8,8 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
-#include "wserver.h"
+#include "kms.h"
+#include "buffer.h"
 #include "vulkan.h"
 #include "shader.h"
 #include "gltf-loader.h"
@@ -92,9 +93,19 @@ struct app_vk {
 };
 
 
+struct app_kms {
+	struct uvr_kms_node uvr_kms_node;
+	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
+	struct uvr_buffer uvr_buffer;
+#ifdef INCLUDE_SDBUS
+	struct uvr_sd_session uvr_sd_session;
+#endif
+};
+
+
 struct app_vk_kms {
-	struct uvr_ws_core *uvr_ws_core;
-	struct app_vk *app_vk;
+	struct app_kms *app_kms;
+	struct app_vk  *app_vk;
 };
 
 
@@ -130,9 +141,9 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_kms_instance(struct uvr_ws_core *wscore);
+int create_kms_instance(struct app_kms *kms);
 int create_vk_instance(struct app_vk *app);
-int create_vk_device(struct app_vk *app, struct uvr_ws_core *wscore);
+int create_vk_device(struct app_vk *app, struct app_kms *kms);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_depth_image(struct app_vk *app);
@@ -232,25 +243,27 @@ int main(void)
 	memset(&app, 0, sizeof(app));
 	memset(&appd, 0, sizeof(appd));
 
-	struct uvr_ws_core wscore;
-	struct uvr_ws_destroy wscored;
-	memset(&wscore, 0, sizeof(wscore));
-	memset(&wscored, 0, sizeof(wscored));
+	struct app_kms kms;
+	struct uvr_kms_node_destroy kmsdevd;
+	struct uvr_buffer_destroy kmsbuffsd;
+	memset(&kms, 0, sizeof(kms));
+	memset(&kmsdevd, 0, sizeof(kmsdevd));
+	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
 	VkSurfaceFormatKHR surfaceFormat;
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 
-	if (create_kms_instance(&wscore) == -1)
+	if (create_vk_instance(&app) == -1)
 		goto exit_error;
 
-	if (create_vk_instance(&app) == -1)
+	if (create_kms_instance(&kms) == -1)
 		goto exit_error;
 
 	/*
 	 * Create Vulkan Physical Device Handle, After Window Surface
 	 * so that it doesn't effect VkPhysicalDevice selection
 	 */
-	if (create_vk_device(&app, &wscore) == -1)
+	if (create_vk_device(&app, &kms) == -1)
 		goto exit_error;
 
 	if (create_vk_swapchain(&app, &surfaceFormat, extent2D) == -1)
@@ -296,7 +309,7 @@ int main(void)
 	static bool UNUSED running = true;
 
 	static struct app_vk_kms UNUSED kmsvk;
-	kmsvk.uvr_ws_core = &wscore;
+	kmsvk.app_kms = &kms;
 	kmsvk.app_vk = &app;
 
 exit_error:
@@ -338,45 +351,73 @@ exit_error:
 	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
 	uvr_vk_destroy(&appd);
 
-	wscored.uvr_ws_core = wscore;
-	uvr_ws_destroy(&wscored);
+	kmsbuffsd.uvr_buffer_cnt = 1;
+	kmsbuffsd.uvr_buffer = &kms.uvr_buffer;
+	uvr_buffer_destroy(&kmsbuffsd);
+
+	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
+	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
+	uvr_kms_node_destroy(&kmsdevd);
+#ifdef INCLUDE_SDBUS
+	uvr_sd_session_destroy(&kms.uvr_sd_session);
+#endif
+	return 0;
+}
+
+
+int create_kms_instance(struct app_kms *kms)
+{
+	struct uvr_kms_node_create_info kmsNodeCreateInfo;
+
+#ifdef INCLUDE_SDBUS
+	if (uvr_sd_session_create(&(kms->uvr_sd_session)) == -1)
+		return -1;
+
+	kmsNodeCreateInfo.systemdSession = &(kms->uvr_sd_session);
+	kmsNodeCreateInfo.useLogind = true;
+#endif
+
+	kmsNodeCreateInfo.kmsNode = NULL;
+	kms->uvr_kms_node = uvr_kms_node_create(&kmsNodeCreateInfo);
+	if (kms->uvr_kms_node.kmsfd == -1)
+		return -1;
+
+	struct uvr_kms_node_display_output_chain_create_info dochainCreateInfo;
+	dochainCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
+
+	kms->uvr_kms_node_display_output_chain = uvr_kms_node_display_output_chain_create(&dochainCreateInfo);
+	if (!kms->uvr_kms_node_display_output_chain.connector ||
+	    !kms->uvr_kms_node_display_output_chain.encoder   ||
+	    !kms->uvr_kms_node_display_output_chain.crtc      ||
+	    !kms->uvr_kms_node_display_output_chain.plane)
+	{
+		return -1;
+	}
+
+	struct uvr_kms_node_device_capabilites UNUSED kmsNodeDeviceCapabilites;
+	kmsNodeDeviceCapabilites = uvr_kms_node_get_device_capabilities(kms->uvr_kms_node.kmsfd);
 
 	return 0;
 }
 
 
-int create_kms_instance(struct uvr_ws_core *wscore)
+int create_gbm_buffers(struct app_kms *kms)
 {
-#ifdef UNDERVIEW_RENDERER
-	static struct wlr_renderer_impl rendererImpl = {
-		.bind_buffer = uvr_renderers_underview_bind_buffer,
-		.begin = uvr_renderers_underview_begin,
-		.end = uvr_renderers_underview_end,
-		.clear = uvr_renderers_underview_clear,
-		.scissor = uvr_renderers_underview_scissor,
-		.render_subtexture_with_matrix = uvr_renderers_underview_render_subtexture_with_matrix,
-		.render_quad_with_matrix = uvr_renderers_underview_render_quad_with_matrix,
-		.get_shm_texture_formats = uvr_renderers_underview_get_shm_texture_formats,
-		.get_dmabuf_texture_formats = uvr_renderers_underview_get_dmabuf_texture_formats,
-		.get_render_formats = uvr_renderers_underview_get_render_formats,
-		.preferred_read_format = uvr_renderers_underview_preferred_read_format,
-		.read_pixels = uvr_renderers_underview_read_pixels,
-		.destroy = uvr_renderers_underview_destroy,
-		.get_drm_fd = uvr_renderers_underview_get_drm_fd,
-		.get_render_buffer_caps = uvr_renderers_underview_get_render_buffer_caps,
-		.texture_from_buffer= uvr_renderers_underview_texture_from_buffer
-	};
-#endif
+	struct uvr_buffer_create_info gbmBufferInfo;
+	gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;
+	gbmBufferInfo.kmsfd = kms->uvr_kms_node.kmsfd;
+	gbmBufferInfo.bufferCount = 2;
+	gbmBufferInfo.width = WIDTH;
+	gbmBufferInfo.height = HEIGHT;
+	gbmBufferInfo.bitDepth = 24;
+	gbmBufferInfo.bitsPerPixel = 32;
+	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
+	gbmBufferInfo.pixelFormat = GBM_BO_FORMAT_XRGB8888;
+	gbmBufferInfo.modifiers = NULL;
+	gbmBufferInfo.modifierCount = 0;
 
-	struct uvr_ws_core_create_info wsCoreCreateInfo;
-	wsCoreCreateInfo.includeWlrDebugLogs = false;
-	wsCoreCreateInfo.unixSockName = "underview-comp-0";
-#ifdef UNDERVIEW_RENDERER
-	wsCoreCreateInfo.rendererImpl = &rendererImpl;
-#endif
-
-	*wscore = uvr_ws_core_create(&wsCoreCreateInfo);
-	if (!wscore->wlDisplay || !wscore->wlrBackend)
+	kms->uvr_buffer = uvr_buffer_create(&gbmBufferInfo);
+	if (!kms->uvr_buffer.gbmDevice)
 		return -1;
 
 	return 0;
@@ -416,7 +457,7 @@ int create_vk_instance(struct app_vk *app)
 }
 
 
-int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
+int create_vk_device(struct app_vk *app, struct app_kms *kms)
 {
 	const char *deviceExtensions[] = {
 		"VK_KHR_timeline_semaphore",
@@ -432,9 +473,7 @@ int create_vk_device(struct app_vk *app, struct uvr_ws_core UNUSED *wscore)
 	struct uvr_vk_phdev_create_info phdevCreateInfo;
 	phdevCreateInfo.instance = app->instance;
 	phdevCreateInfo.deviceType = VK_PHYSICAL_DEVICE_TYPE;
-#ifdef INCLUDE_KMS
-	phdevCreateInfo.kmsfd = wscore->kmsfd;
-#endif
+	phdevCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
 
 	app->uvr_vk_phdev = uvr_vk_phdev_create(&phdevCreateInfo);
 	if (!app->uvr_vk_phdev.physDevice)

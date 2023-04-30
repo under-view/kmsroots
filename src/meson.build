@@ -64,28 +64,10 @@ endif
 # Wayland libs, files, & extra compiler args
 ################################################################################
 wayland_client = dependency('wayland-client', required: get_option('wayland'))
-wayland_server = dependency('wayland-server', required: get_option('wayland-compositor'))
-wlroots = dependency('wlroots', required: get_option('wayland-compositor'))
 
 # Needed to stored corresponding C glue code
 # from wayland xml protocls extension files
 cglue_code = []
-
-if wlroots.found() and wayland_server.found()
-  pargs += ['-DWLR_USE_UNSTABLE=1', '-DINCLUDE_WAYLAND_COMP=1', '-DINCLUDE_KMS=1']
-
-  fs += ['wserver.c']
-  if renderer == 'underview'
-    pargs += ['-DUNDERVIEW_RENDERER=1']
-    fs += ['renderers/underview.c']
-  endif
-
-  if renderer == 'wlroots'
-    pargs += ['-DWLROOTS_RENDERER=1']
-  endif
-
-  lib_uvr_deps += [wayland_server, wlroots]
-endif
 
 if wayland_client.found()
   wayland_scanner = find_program('wayland-scanner', required: true)

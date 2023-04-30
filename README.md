@@ -18,15 +18,14 @@ going. Run the `setenvars.sh` to setup necessary enviroment variables for buildi
 All features are disabled by default
 
 ```sh
-# Discrete GPU
+# Discrete GPU (Normally test with AMDGPU [Radeon 6600])
 $ meson setup -Dgpu="discrete" \
               -Dexamples="true" \
               -Dtests="true" \
               -Ddebugging="enabled" \
-              -Dshaderc="enabled" \
+              -Dshaderc="disabled" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \
-              -Dwayland-compositor="enabled" \
               -Dkms="enabled" \
               -Dsd-bus="enabled" \
               build
@@ -39,7 +38,6 @@ $ meson setup -Dgpu="integrated" \
               -Dshaderc="disabled" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \
-              -Dwayland-compositor="enabled" \
               -Dkms="enabled" \
               -Dsd-bus="enabled" \
               build
