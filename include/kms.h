@@ -3,8 +3,8 @@
 
 #include "utils.h"
 
-#ifdef INCLUDE_SDBUS
-#include "sd-dbus.h"
+#ifdef INCLUDE_SEATD
+#include "session.h"
 #endif
 
 /*
@@ -33,16 +33,16 @@
  * @kmsfd          - A valid file descriptor to an open DRI device node
  * @vtfd           - File descriptor to open tty character device (i.e '/dev/tty0')
  * @keyBoardMode   - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
- * @systemdSession - Stores address of struct uvr_sd_session. Used when releasing a device
+ * @session - Stores address of struct uvr_session. Used when releasing a device
  * @useLogind      - Stores whether systemd-logind is utilized or not
  */
 struct uvr_kms_node {
-	int                   kmsfd;
-	int                   vtfd;
-	int                   keyBoardMode;
-#ifdef INCLUDE_SDBUS
-	struct uvr_sd_session *systemdSession;
-	bool                  useLogind;
+	int                kmsfd;
+	int                vtfd;
+	int                keyBoardMode;
+#ifdef INCLUDE_SEATD
+	struct uvr_session *session;
+	bool               useLogind;
 #endif
 };
 
@@ -51,7 +51,7 @@ struct uvr_kms_node {
  * struct uvr_kms_node_create_info (Underview Renderer KMS Node Create Information)
  *
  * members:
- * @systemdSession - Address of struct uvrsd_session. Which members are used to communicate
+ * @session - Address of struct uvrsd_session. Which members are used to communicate
  *                   with systemd-logind via D-Bus systemd-logind interface. Needed by
  *                   kms_node_create to acquire and taken control of a device without the
  *                   need of being root.
@@ -64,11 +64,11 @@ struct uvr_kms_node {
  *                   choosen for you.
  */
 struct uvr_kms_node_create_info {
-#ifdef INCLUDE_SDBUS
-	struct uvr_sd_session *systemdSession;
-	bool                  useLogind;
+#ifdef INCLUDE_SEATD
+	struct uvr_session *session;
+	bool               useLogind;
 #endif
-	const char            *kmsNode;
+	const char         *kmsNode;
 };
 
 

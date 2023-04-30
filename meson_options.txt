@@ -2,9 +2,9 @@ option('kms',
        type: 'feature', value: 'disabled',
        description: 'Build DRM/KMS/GBM backend')
 
-option('sd-bus',
+option('seatd',
        type: 'feature', value: 'disabled',
-       description: 'Build with systemd dbus API if option enabled')
+       description: 'Build with libseat support')
 
 option('xcb',
        type: 'feature', value: 'disabled',

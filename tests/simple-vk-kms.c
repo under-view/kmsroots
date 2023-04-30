@@ -20,8 +20,8 @@ struct app_kms {
 	struct uvr_kms_node uvr_kms_node;
 	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
 	struct uvr_buffer uvr_buffer;
-#ifdef INCLUDE_SDBUS
-	struct uvr_sd_session uvr_sd_session;
+#ifdef INCLUDE_SEATD
+	struct uvr_session uvr_session;
 #endif
 };
 
@@ -77,8 +77,8 @@ exit_error:
 	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
 	uvr_kms_node_destroy(&kmsdevd);
-#ifdef INCLUDE_SDBUS
-	uvr_sd_session_destroy(&kms.uvr_sd_session);
+#ifdef INCLUDE_SEATD
+	uvr_session_destroy(&kms.uvr_session);
 #endif
 	return 0;
 }
@@ -124,11 +124,11 @@ int create_kms_instance(struct app_kms *kms)
 {
 	struct uvr_kms_node_create_info kmsNodeCreateInfo;
 
-#ifdef INCLUDE_SDBUS
-	if (uvr_sd_session_create(&(kms->uvr_sd_session)) == -1)
+#ifdef INCLUDE_SEATD
+	if (uvr_session_create(&(kms->uvr_session)) == -1)
 		return -1;
 
-	kmsNodeCreateInfo.systemdSession = &(kms->uvr_sd_session);
+	kmsNodeCreateInfo.session = &(kms->uvr_session);
 	kmsNodeCreateInfo.useLogind = true;
 #endif
 

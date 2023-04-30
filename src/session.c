@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 
-#include "sd-dbus.h"
+#include "session.h"
 
 
 /*
@@ -129,7 +129,7 @@ static void release_session_control(sd_bus *bus, char *path)
 
 
 /* Create logind session to access devices without being root */
-int uvr_sd_session_create(struct uvr_sd_session *uvrsd)
+int uvr_session_create(struct uvr_session *uvrsd)
 {
 	int ret = 0;
 
@@ -155,7 +155,7 @@ int uvr_sd_session_create(struct uvr_sd_session *uvrsd)
 	}
 
 	if (type[0] != 't' || type[1] != 't' || type[2] != 'y') {
-		uvr_utils_log(UVR_DANGER, "[x] Unfortunately for you, the available session is not a tty :{");
+		uvr_utils_log(UVR_DANGER, "[x] Must run session in a tty");
 		free(type); return -1;
 	}
 
@@ -210,7 +210,7 @@ start_session:
 }
 
 
-int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const char *devpath)
+int uvr_session_take_control_of_device(struct uvr_session *uvrsd, const char *devpath)
 {
 	sd_bus_message *msg = NULL;
 	sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -218,7 +218,7 @@ int uvr_sd_session_take_control_of_device(struct uvr_sd_session *uvrsd, const ch
 
 	if (!uvrsd->path) {
 		uvr_utils_log(UVR_DANGER, "[x] Must have an active logind session inorder to take control over a device");
-		uvr_utils_log(UVR_DANGER, "[x] Must first make a call to uvr_sd_session_create()");
+		uvr_utils_log(UVR_DANGER, "[x] Must first make a call to uvr_session_create()");
 		return fd;
 	}
 
@@ -263,7 +263,7 @@ exit_logind_take_dev:
 }
 
 
-void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd)
+void uvr_session_release_device(struct uvr_session *uvrsd, int fd)
 {
 	sd_bus_message *msg = NULL;
 	sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -288,7 +288,7 @@ void uvr_sd_session_release_device(struct uvr_sd_session *uvrsd, int fd)
 }
 
 
-void uvr_sd_session_destroy(struct uvr_sd_session *uvrsd)
+void uvr_session_destroy(struct uvr_session *uvrsd)
 {
 	if (uvrsd->bus && uvrsd->path)
 		release_session_control(uvrsd->bus, uvrsd->path);

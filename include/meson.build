@@ -6,8 +6,8 @@ if get_option('kms').enabled()
   main_headers += ['kms.h', 'buffer.h']
 endif
 
-if get_option('sd-bus').enabled()
-  main_headers += ['sd-dbus.h']
+if get_option('seatd').enabled()
+  main_headers += ['session.h']
 endif
 
 if get_option('shaderc').enabled()

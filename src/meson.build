@@ -27,7 +27,8 @@ endif
 # KMS libs, files, & extra compiler args (Deprecated Interface)
 ################################################################################
 libdrm = dependency('libdrm', required: get_option('kms'))
-libsystemd = dependency('libsystemd', required: get_option('sd-bus'))
+libsystemd = dependency('libsystemd', required: get_option('seatd'))
+libseat = dependency('libseat', required: get_option('seatd'))
 libgbm = dependency('gbm', required: get_option('kms'))
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
@@ -35,10 +36,10 @@ if libdrm.found()
   fs += ['kms.c']
 endif
 
-if libsystemd.found()
-  pargs += ['-DINCLUDE_SDBUS=1']
-  lib_uvr_deps += [libsystemd]
-  fs += ['sd-dbus.c']
+if libseat.found()
+  pargs += ['-DINCLUDE_SEATD=1']
+  lib_uvr_deps += [libseat, libsystemd]
+  fs += ['session.c']
 endif
 
 if libgbm.found()

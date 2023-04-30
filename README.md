@@ -1,6 +1,6 @@
 # libunderview-renderer
 
-Library used to help build vulkan renderers that display render pass rendered framebuffers directly with DRM/KMS. Can also
+Library used to help build vulkan renderers that display render pass rendered framebuffers directly to KMS. Can also
 be used to build xcb and wayland clients. Can also assists any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
 based compositors build their wlroots compatible out-of-tree vulkan renderers and DRM backends.
 
@@ -27,7 +27,7 @@ $ meson setup -Dgpu="discrete" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \
               -Dkms="enabled" \
-              -Dsd-bus="enabled" \
+              -Dseatd="enabled" \
               build
 
 # Embedded GPU (Normally test on the Udoo Bolt v3)
@@ -39,7 +39,7 @@ $ meson setup -Dgpu="integrated" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \
               -Dkms="enabled" \
-              -Dsd-bus="enabled" \
+              -Dseatd="enabled" \
               build
 
 $ meson compile -C build

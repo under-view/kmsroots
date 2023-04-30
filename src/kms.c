@@ -148,9 +148,9 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
 	/* If the const char *kmsnode member is defined attempt to open it */
 	if (uvrkms->kmsNode) {
-#ifdef INCLUDE_SDBUS
+#ifdef INCLUDE_SEATD
 		if (uvrkms->useLogind)
-			kmsfd = uvr_sd_session_take_control_of_device(uvrkms->systemdSession, uvrkms->kmsNode);
+			kmsfd = uvr_session_take_control_of_device(uvrkms->session, uvrkms->kmsNode);
 		else
 #endif
 			kmsfd = open(uvrkms->kmsNode, O_RDONLY | O_CLOEXEC, 0);
@@ -165,8 +165,8 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
 		uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsNode, kmsfd);
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
-#ifdef INCLUDE_SDBUS
-			                       , .systemdSession = uvrkms->systemdSession, .useLogind = uvrkms->useLogind
+#ifdef INCLUDE_SEATD
+			                       , .session = uvrkms->session, .useLogind = uvrkms->useLogind
 #endif
 		};
 	}
@@ -204,9 +204,9 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 		if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
 			continue;
 
-#ifdef INCLUDE_SDBUS
+#ifdef INCLUDE_SEATD
 		if (uvrkms->useLogind)
-			kmsfd = uvr_sd_session_take_control_of_device(uvrkms->systemdSession, kmsNode);
+			kmsfd = uvr_session_take_control_of_device(uvrkms->session, kmsNode);
 		else
 #endif
 			kmsfd = open(kmsNode, O_RDONLY | O_CLOEXEC, 0);
@@ -251,17 +251,17 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 			goto exit_error_kms_node_create_free_kms_dev;
 
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
-#ifdef INCLUDE_SDBUS
-		                               , .systemdSession = uvrkms->systemdSession, .useLogind = uvrkms->useLogind
+#ifdef INCLUDE_SEATD
+		                               , .session = uvrkms->session, .useLogind = uvrkms->useLogind
 #endif
 		};
 	}
 
 exit_error_kms_node_create_free_kms_dev:
 	if (kmsfd != -1) {
-#ifdef INCLUDE_SDBUS
+#ifdef INCLUDE_SEATD
 		if (uvrkms->useLogind)
-			uvr_sd_session_release_device(uvrkms->systemdSession, kmsfd);
+			uvr_session_release_device(uvrkms->session, kmsfd);
 		else
 #endif
 			close(kmsfd);
@@ -270,8 +270,8 @@ exit_error_kms_node_create_free_kms_dev:
 		drmFreeDevices(devices, deviceCount);
 
 	return (struct uvr_kms_node) { .kmsfd = -1, .vtfd = -1, .keyBoardMode = -1
-#ifdef INCLUDE_SDBUS
-		                       , .systemdSession = NULL, .useLogind = false
+#ifdef INCLUDE_SEATD
+		                       , .session = NULL, .useLogind = false
 #endif
 	};
 }
@@ -462,9 +462,9 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 	if (uvrkms->uvr_kms_node.kmsfd != -1) {
 		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
 			vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.keyBoardMode);
-#ifdef INCLUDE_SDBUS
+#ifdef INCLUDE_SEATD
 	if (uvrkms->uvr_kms_node.useLogind)
-		uvr_sd_session_release_device(uvrkms->uvr_kms_node.systemdSession, uvrkms->uvr_kms_node.kmsfd);
+		uvr_session_release_device(uvrkms->uvr_kms_node.session, uvrkms->uvr_kms_node.kmsfd);
 	else
 #endif
 		close(uvrkms->uvr_kms_node.kmsfd);
