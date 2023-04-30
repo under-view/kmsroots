@@ -41,7 +41,10 @@ static int vt_setup(int *keyBoardMode)
 		/*
 		 * Otherwise, if we're running from a VT ourselves, just reuse that.
 		 */
-		ttyname_r(STDIN_FILENO, ttyDevice, sizeof(ttyDevice));
+		if (ttyname_r(STDIN_FILENO, ttyDevice, sizeof(ttyDevice))) {
+			uvr_utils_log(UVR_DANGER, "[x] ttyname_r: %s", strerror(errno));
+			return -1;
+		}
 	} else {
 		int tty0;
 
