@@ -1,7 +1,8 @@
 # libunderview-renderer
 
-[wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositing library with an out-of-tree vulkan based renderer. Can also be used to build
-xcb and wayland clients.
+Library used to help build vulkan renderers that display render pass rendered framebuffers directly with DRM/KMS. Can also
+be used to build xcb and wayland clients. Can also assists any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
+based compositors build their wlroots compatible out-of-tree vulkan renderers and DRM backends.
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
@@ -26,6 +27,8 @@ $ meson setup -Dgpu="discrete" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \
               -Dwayland-compositor="enabled" \
+              -Dkms="enabled" \
+              -Dsd-bus="enabled" \
               build
 
 # Embedded GPU (Normally test on the Udoo Bolt v3)
@@ -37,6 +40,8 @@ $ meson setup -Dgpu="integrated" \
               -Dxcb="enabled" \
               -Dwayland="enabled" \
               -Dwayland-compositor="enabled" \
+              -Dkms="enabled" \
+              -Dsd-bus="enabled" \
               build
 
 $ meson compile -C build
