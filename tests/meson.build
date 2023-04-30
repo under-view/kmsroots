@@ -6,6 +6,10 @@ else
   progs += ['shader-file-load.c']
 endif
 
+if kms.enabled()
+  progs += ['simple-vk-kms.c']
+endif
+
 original_args = pargs
 foreach p : progs
   exec_name = 'test-' + p.substring(0,-2) # remove .c extension from name

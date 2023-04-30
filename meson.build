@@ -17,7 +17,7 @@ cc = meson.get_compiler('c')
 
 debuging = get_option('debugging')
 shaderc = get_option('shaderc')
-renderer = get_option('renderer')
+kms = get_option('kms')
 
 inc = include_directories('include', 'external/include')
 
