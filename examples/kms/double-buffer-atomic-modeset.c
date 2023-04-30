@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "kms.h"
 #include "buffer.h"
 
@@ -14,8 +17,8 @@ struct app_kms {
 };
 
 
-int create_kms_node(struct app_kms *kms);
-int create_gbm_buffers(struct app_kms *kms);
+int create_kms_instance(struct app_kms *kms);
+int create_kms_gbm_buffers(struct app_kms *kms);
 
 /*
  * Example code demonstrating how to use Vulkan with KMS
@@ -29,10 +32,10 @@ int main(void)
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
-	if (create_kms_node(&kms) == -1)
+	if (create_kms_instance(&kms) == -1)
 		goto exit_error;
 
-	if (create_gbm_buffers(&kms) == -1)
+	if (create_kms_gbm_buffers(&kms) == -1)
 		goto exit_error;
 
 exit_error:
@@ -54,7 +57,7 @@ exit_error:
 }
 
 
-int create_kms_node(struct app_kms *kms)
+int create_kms_instance(struct app_kms *kms)
 {
 	struct uvr_kms_node_create_info kmsNodeCreateInfo;
 
@@ -90,7 +93,7 @@ int create_kms_node(struct app_kms *kms)
 }
 
 
-int create_gbm_buffers(struct app_kms *kms)
+int create_kms_gbm_buffers(struct app_kms *kms)
 {
 	struct uvr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;

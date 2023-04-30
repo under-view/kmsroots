@@ -142,6 +142,7 @@ static void run_stop(int UNUSED signum)
 
 
 int create_kms_instance(struct app_kms *kms);
+int create_kms_gbm_buffers(struct app_kms *kms);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -257,6 +258,9 @@ int main(void)
 		goto exit_error;
 
 	if (create_kms_instance(&kms) == -1)
+		goto exit_error;
+
+	if (create_kms_gbm_buffers(&kms) == -1)
 		goto exit_error;
 
 	/*
@@ -401,7 +405,7 @@ int create_kms_instance(struct app_kms *kms)
 }
 
 
-int create_gbm_buffers(struct app_kms *kms)
+int create_kms_gbm_buffers(struct app_kms *kms)
 {
 	struct uvr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;

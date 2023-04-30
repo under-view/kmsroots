@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "vulkan.h"
 #include "kms.h"
 #include "buffer.h"
@@ -23,9 +26,9 @@ struct app_kms {
 };
 
 
+int create_kms_instance(struct app_kms *kms);
+int create_kms_gbm_buffers(struct app_kms *kms);
 int create_vk_instance(struct app_vk *app);
-int create_kms_node(struct app_kms *kms);
-int create_gbm_buffers(struct app_kms *kms);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
 
 
@@ -49,10 +52,10 @@ int main(void)
 	if (create_vk_instance(&app) == -1)
 		goto exit_error;
 
-	if (create_kms_node(&kms) == -1)
+	if (create_kms_instance(&kms) == -1)
 		goto exit_error;
 
-	if (create_gbm_buffers(&kms) == -1)
+	if (create_kms_gbm_buffers(&kms) == -1)
 		goto exit_error;
 
 	if (create_vk_device(&app, &kms) == -1)
@@ -62,6 +65,11 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
+	appd.instance = app.instance;
+	appd.uvr_vk_lgdev_cnt = 1;
+	appd.uvr_vk_lgdev = &app.uvr_vk_lgdev;
+	uvr_vk_destroy(&appd);
+
 	kmsbuffsd.uvr_buffer_cnt = 1;
 	kmsbuffsd.uvr_buffer = &kms.uvr_buffer;
 	uvr_buffer_destroy(&kmsbuffsd);
@@ -69,11 +77,6 @@ exit_error:
 	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
 	uvr_kms_node_destroy(&kmsdevd);
-
-	appd.instance = app.instance;
-	appd.uvr_vk_lgdev_cnt = 1;
-	appd.uvr_vk_lgdev = &app.uvr_vk_lgdev;
-	uvr_vk_destroy(&appd);
 #ifdef INCLUDE_SDBUS
 	uvr_sd_session_destroy(&kms.uvr_sd_session);
 #endif
@@ -89,7 +92,9 @@ int create_vk_instance(struct app_vk *app)
 	 * bundled into a layer included in the SDK
 	 */
 	const char *validationLayers[] = {
+#ifdef INCLUDE_VULKAN_VALIDATION_LAYERS
 		"VK_LAYER_KHRONOS_validation"
+#endif
 	};
 
 	const char *instanceExtensions[] = {
@@ -115,7 +120,7 @@ int create_vk_instance(struct app_vk *app)
 }
 
 
-int create_kms_node(struct app_kms *kms)
+int create_kms_instance(struct app_kms *kms)
 {
 	struct uvr_kms_node_create_info kmsNodeCreateInfo;
 
@@ -151,7 +156,7 @@ int create_kms_node(struct app_kms *kms)
 }
 
 
-int create_gbm_buffers(struct app_kms *kms)
+int create_kms_gbm_buffers(struct app_kms *kms)
 {
 	struct uvr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;
