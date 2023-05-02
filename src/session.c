@@ -69,13 +69,21 @@ struct uvr_session *uvr_session_create()
 
 	uvr_utils_log(UVR_SUCCESS, "Session created with libseat established!");
 
-	session->seatName = (char *) libseat_seat_name(session->seat);
+	session->seatName = libseat_seat_name(session->seat);
 	if (!session->seatName) {
 		uvr_utils_log(UVR_DANGER, "[x] libseat_seat_name: Unable to acquire seat name");
 		goto exit_uvr_session_create_close_seat;
 	}
 
 	uvr_utils_log(UVR_INFO, "seatName: %s", session->seatName);
+
+	session->seatFd = libseat_get_fd(session->seat);
+	if (session->seatFd == -1) {
+		uvr_utils_log(UVR_DANGER, "[x] libseat_get_fd: %s", strerror(errno));
+		goto exit_uvr_session_create_close_seat;
+	}
+
+	uvr_utils_log(UVR_INFO, "libseat instance pollable fd: %d", session->seatFd);
 
 	return session;
 

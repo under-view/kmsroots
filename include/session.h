@@ -12,12 +12,14 @@
  *
  * members:
  * @active   - Determines if the session is active or not
+ * @seatFd   - Pollable file descriptor to a libseat seatd/systemd-logind D-Bus session
  * @seatName - Pointer to name of given seat
- * @seat     - Pointer to libseat systemd-logind/seatd D-bus session
+ * @seat     - Pointer to libseat seatd/systemd-logind D-Bus session
  */
 struct uvr_session {
 	bool           active;
-	char           *seatName;
+	int            seatFd;
+	const char     *seatName;
 	struct libseat *seat;
 };
 
