@@ -1,8 +1,9 @@
 # libunderview-renderer
 
-Library used to help build single applications with vulkan renderers that display vulkan render pass rendered framebuffers directly to KMS.
-Can also be used to build xcb and wayland clients. May also assists any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
-based compositors build their wlroots compatible out-of-tree vulkan renderers and DRM backends.
+Library used to assists in building applications that require vulkan renderers. These renderers can display vulkan render pass
+final framebuffers directly to display via KMS API or to one of the other linux display server clients (xcb,wayland). May also assists
+any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositors build their wlroots compatible out-of-tree vulkan
+renderers and DRM backends.
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
