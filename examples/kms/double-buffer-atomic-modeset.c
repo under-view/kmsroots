@@ -67,7 +67,6 @@ int create_kms_instance(struct app_kms *kms)
 		return -1;
 
 	kmsNodeCreateInfo.session = kms->uvr_session;
-	kmsNodeCreateInfo.useLogind = true;
 #endif
 
 	kmsNodeCreateInfo.kmsNode = NULL;

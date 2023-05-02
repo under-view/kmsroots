@@ -33,8 +33,7 @@
  * @kmsfd          - A valid file descriptor to an open DRI device node
  * @vtfd           - File descriptor to open tty character device (i.e '/dev/tty0')
  * @keyBoardMode   - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
- * @session - Stores address of struct uvr_session. Used when releasing a device
- * @useLogind      - Stores whether systemd-logind is utilized or not
+ * @session        - Stores address of struct uvr_session. Used when releasing a device
  */
 struct uvr_kms_node {
 	int                kmsfd;
@@ -42,7 +41,6 @@ struct uvr_kms_node {
 	int                keyBoardMode;
 #ifdef INCLUDE_SEATD
 	struct uvr_session *session;
-	bool               useLogind;
 #endif
 };
 
@@ -52,21 +50,16 @@ struct uvr_kms_node {
  *
  * members:
  * @session - Address of struct uvrsd_session. Which members are used to communicate
- *                   with systemd-logind via D-Bus systemd-logind interface. Needed by
- *                   kms_node_create to acquire and taken control of a device without the
- *                   need of being root.
- * @useLogind      - Not redundant. If one includes -Dsd-bus=yes meson option, but doesn't
- *                   want to utilize systemd-logind D-bus interface to open/take control of a
- *                   GPU device set member to false. If variable is set to true this will use
- *                   systemd-logind D-bus interface.
- * @kmsNode        - Path to character device associated with GPU. If set to NULL. List of
- *                   available kmsnode's will be queried and one will be automatically
- *                   choosen for you.
+ *            with systemd-logind via D-Bus systemd-logind interface. Needed by
+ *            kms_node_create to acquire and taken control of a device without the
+ *            need of being root.
+ * @kmsNode - Path to character device associated with GPU. If set to NULL. List of
+ *            available kmsnode's will be queried and one will be automatically
+ *            choosen for you.
  */
 struct uvr_kms_node_create_info {
 #ifdef INCLUDE_SEATD
 	struct uvr_session *session;
-	bool               useLogind;
 #endif
 	const char         *kmsNode;
 };
