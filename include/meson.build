@@ -6,7 +6,7 @@ if get_option('kms').enabled()
   main_headers += ['kms.h', 'buffer.h']
 endif
 
-if get_option('seatd').enabled()
+if get_option('libseat').enabled()
   main_headers += ['session.h']
 endif
 

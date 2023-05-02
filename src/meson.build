@@ -36,7 +36,7 @@ if libdrm.found()
 endif
 
 if libseat.found()
-  pargs += ['-DINCLUDE_SEATD=1']
+  pargs += ['-DINCLUDE_LIBSEAT=1']
   lib_uvr_deps += [libseat]
   fs += ['session.c']
 endif
