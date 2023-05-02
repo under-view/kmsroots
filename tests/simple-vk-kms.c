@@ -21,7 +21,7 @@ struct app_kms {
 	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
 	struct uvr_buffer uvr_buffer;
 #ifdef INCLUDE_SEATD
-	struct uvr_session uvr_session;
+	struct uvr_session *uvr_session;
 #endif
 };
 
@@ -78,7 +78,7 @@ exit_error:
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
 	uvr_kms_node_destroy(&kmsdevd);
 #ifdef INCLUDE_SEATD
-	uvr_session_destroy(&kms.uvr_session);
+	uvr_session_destroy(kms.uvr_session);
 #endif
 	return 0;
 }
@@ -125,10 +125,11 @@ int create_kms_instance(struct app_kms *kms)
 	struct uvr_kms_node_create_info kmsNodeCreateInfo;
 
 #ifdef INCLUDE_SEATD
-	if (uvr_session_create(&(kms->uvr_session)) == -1)
+	kms->uvr_session = uvr_session_create();
+	if (!kms->uvr_session->seat)
 		return -1;
 
-	kmsNodeCreateInfo.session = &(kms->uvr_session);
+	kmsNodeCreateInfo.session = kms->uvr_session;
 	kmsNodeCreateInfo.useLogind = true;
 #endif
 

@@ -3,45 +3,36 @@
 
 #include "utils.h"
 
-/*
- * D-Bus (Desktop Bus) daemon through the use of an IPC mechanism allows
- * for the communication of multiple processes running concurrently.
- * As long as a process is D-Bus aware it can invoke functions of
- * another process.
- *
- * systemd-logind D-Bus interface:
- * https://www.freedesktop.org/software/systemd/man/org.freedesktop.login1.html
- */
-#include <systemd/sd-bus.h>
-#include <systemd/sd-login.h>
+#include <stdbool.h>
+#include <libseat.h>
 
 
 /*
- * struct uvr_session (Underview Renderer Systemd Session)
+ * struct uvr_session (Underview Renderer Session)
  *
  * members:
- * @bus     - An open D-Bus connection
- * @id      - Session id
- * @path    - Path to session object
+ * @active   - Determines if the session is active or not
+ * @seatName - Pointer to name of given seat
+ * @seat     - Pointer to libseat systemd-logind/seatd D-bus session
  */
 struct uvr_session {
-	sd_bus *bus;
-	char   *id;
-	char   *path;
+	bool           active;
+	char           *seatName;
+	struct libseat *seat;
 };
 
 
 /*
- * uvr_session_create: Create logind session to access devices without being root.
- *                     Function populates all the members of the uvrsd_session struct
+ * uvr_session_create: Create logind/seatd session to access devices without being root.
+ *                     Function populates all the members of the uvr_session struct
  *
  * args:
- * @uvrsd - pointer to a struct uvr_session stores information about the current session
+ * @session - pointer to a struct uvr_session stores information about the current session
  * return:
- *	on success 0
- *	on failure -1
+ *	on success pointer to a struct uvr_session { members populated }
+ *	on failure NULL
  */
-int uvr_session_create(struct uvr_session *uvrsd);
+struct uvr_session *uvr_session_create();
 
 
 /*
@@ -52,13 +43,13 @@ int uvr_session_create(struct uvr_session *uvrsd);
  *                                     descriptor to the device that has been acquired.
  *
  * args:
- * @uvrsd   - pointer to a struct uvr_session stores information about the current session
+ * @session - pointer to a struct uvr_session stores information about the current session
  * @devpath - Path to a given character device associated with a connected device
  * return:
  *	on success an open file descriptor
  *	on failure -1
  */
-int uvr_session_take_control_of_device(struct uvr_session *uvrsd, const char *devpath);
+int uvr_session_take_control_of_device(struct uvr_session *session, const char *devpath);
 
 
 /*
@@ -67,10 +58,10 @@ int uvr_session_take_control_of_device(struct uvr_session *uvrsd, const char *de
  *                             function also close the passed file descriptor.
  *
  * args:
- * @uvrsd - pointer to a struct uvr_session stores information about the current session
- * @fd    - file descriptor associated with a given opened character device file
+ * @session - pointer to a struct uvr_session stores information about the current session
+ * @fd      - file descriptor associated with a given opened character device file
  */
-void uvr_session_release_device(struct uvr_session *uvrsd, int fd);
+void uvr_session_release_device(struct uvr_session *session, int fd);
 
 
 /*
@@ -79,7 +70,7 @@ void uvr_session_release_device(struct uvr_session *uvrsd, int fd);
  * args:
  * @uvrsd - pointer to a struct uvr_session stores information about the current session
  */
-void uvr_session_destroy(struct uvr_session *uvrsd);
+void uvr_session_destroy(struct uvr_session *session);
 
 
 #endif
