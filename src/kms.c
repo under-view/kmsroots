@@ -151,7 +151,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
 	/* If the const char *kmsnode member is defined attempt to open it */
 	if (uvrkms->kmsNode) {
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 		kmsfd = uvr_session_take_control_of_device(uvrkms->session, uvrkms->kmsNode);
 #else
 		kmsfd = open(uvrkms->kmsNode, O_RDONLY | O_CLOEXEC, 0);
@@ -167,7 +167,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
 		uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsNode, kmsfd);
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 			                       , .session = uvrkms->session
 #endif
 		};
@@ -206,7 +206,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 		if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
 			continue;
 
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 		kmsfd = uvr_session_take_control_of_device(uvrkms->session, kmsNode);
 #else
 		kmsfd = open(kmsNode, O_RDONLY | O_CLOEXEC, 0);
@@ -252,7 +252,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 			goto exit_error_kms_node_create_free_kms_dev;
 
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 		                               , .session = uvrkms->session
 #endif
 		};
@@ -260,7 +260,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
 exit_error_kms_node_create_free_kms_dev:
 	if (kmsfd != -1) {
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 		uvr_session_release_device(uvrkms->session, kmsfd);
 #else
 		close(kmsfd);
@@ -270,7 +270,7 @@ exit_error_kms_node_create_free_kms_dev:
 		drmFreeDevices(devices, deviceCount);
 
 	return (struct uvr_kms_node) { .kmsfd = -1, .vtfd = -1, .keyBoardMode = -1
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 		                       , .session = NULL
 #endif
 	};
@@ -462,7 +462,7 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 	if (uvrkms->uvr_kms_node.kmsfd != -1) {
 		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
 			vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.keyBoardMode);
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 		uvr_session_release_device(uvrkms->uvr_kms_node.session, uvrkms->uvr_kms_node.kmsfd);
 #else
 		close(uvrkms->uvr_kms_node.kmsfd);

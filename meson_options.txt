@@ -2,7 +2,7 @@ option('kms',
        type: 'feature', value: 'disabled',
        description: 'Build DRM/KMS/GBM backend')
 
-option('seatd',
+option('libseat',
        type: 'feature', value: 'disabled',
        description: 'Build with libseat support')
 

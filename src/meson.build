@@ -26,8 +26,8 @@ endif
 ################################################################################
 # KMS libs, files, & extra compiler args (Deprecated Interface)
 ################################################################################
+libseat = dependency('libseat', required: get_option('libseat'))
 libdrm = dependency('libdrm', required: get_option('kms'))
-libseat = dependency('libseat', required: get_option('seatd'))
 libgbm = dependency('gbm', required: get_option('kms'))
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']

@@ -3,7 +3,7 @@
 
 #include "utils.h"
 
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 #include "session.h"
 #endif
 
@@ -39,7 +39,7 @@ struct uvr_kms_node {
 	int                kmsfd;
 	int                vtfd;
 	int                keyBoardMode;
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 	struct uvr_session *session;
 #endif
 };
@@ -58,7 +58,7 @@ struct uvr_kms_node {
  *            choosen for you.
  */
 struct uvr_kms_node_create_info {
-#ifdef INCLUDE_SEATD
+#ifdef INCLUDE_LIBSEAT
 	struct uvr_session *session;
 #endif
 	const char         *kmsNode;
