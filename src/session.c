@@ -99,16 +99,17 @@ exit_uvr_session_create:
 
 int uvr_session_take_control_of_device(struct uvr_session *session, const char *devpath)
 {
-	int fd, device;
-	device = libseat_open_device(session->seat, devpath, &fd);
-	uvr_utils_log(UVR_INFO, "libseat_open_device(seat: %p, path: %s, fd: %p) = %d",
-	                        (void*) session->seat, devpath, (void*) &fd, device);
-	if (device == -1) {
+	int fd;
+
+	if (libseat_open_device(session->seat, devpath, &fd) == -1) {
 		uvr_utils_log(UVR_DANGER, "[x] libseat_open_device: %s\n", strerror(errno));
-		return device;
+		return -1;
 	}
 
-	return device;
+	uvr_utils_log(UVR_INFO, "libseat_open_device(seat: %p, path: %s, fd: %p) = %d",
+	                        (void*) session->seat, devpath, (void*) &fd, fd);
+
+	return fd;
 }
 
 
