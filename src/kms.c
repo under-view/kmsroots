@@ -84,7 +84,6 @@ static int vt_setup(int *keyBoardMode)
 		goto exit_error_vt_setup_exit;
 	}
 
-
 	uvr_utils_log(UVR_INFO, "Switched to VT %d", ttyNum);
 
 	/*
@@ -299,7 +298,6 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	drmModeRes *drmResources = NULL;
 	drmModePlaneRes *drmPlaneResources = NULL;
 	unsigned int p;
-	int i;
 
 	/* Query connector->encoder->crtc->plane properties */
 	drmResources = drmModeGetResources(uvrkms->kmsfd);
@@ -327,7 +325,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	drmModePlane **planes = alloca(drmPlaneResources->count_planes * sizeof(drmModePlane));
 	memset(planes, 0, drmPlaneResources->count_planes * sizeof(drmModePlane));
 
-	for (p = 0; p < drmPlaneResources->count_planes; i++) {
+	for (p = 0; p < drmPlaneResources->count_planes; p++) {
 		planes[p] = drmModeGetPlane(uvrkms->kmsfd, drmPlaneResources->planes[p]);
 		if (!planes[p]) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
@@ -344,8 +342,8 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	drmModeCrtc *crtc = NULL;
 	drmModePlane *plane = NULL;
 
-	for (i = 0; i < drmResources->count_connectors; i++) {
-		connector = drmModeGetConnector(uvrkms->kmsfd, drmResources->connectors[i]);
+	for (int c = 0; c < drmResources->count_connectors; c++) {
+		connector = drmModeGetConnector(uvrkms->kmsfd, drmResources->connectors[c]);
 		if (!connector) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
 			goto exit_error_kms_node_doc_create_drm_mode_free_planes;
