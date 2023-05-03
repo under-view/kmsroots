@@ -342,16 +342,17 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	drmModeCrtc *crtc = NULL;
 	drmModePlane *plane = NULL;
 
-	for (int c = 0; c < drmResources->count_connectors; c++) {
-		connector = drmModeGetConnector(uvrkms->kmsfd, drmResources->connectors[c]);
+	for (int conn = 0; conn < drmResources->count_connectors; conn++) {
+		connector = drmModeGetConnector(uvrkms->kmsfd, drmResources->connectors[conn]);
 		if (!connector) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
 			goto exit_error_kms_node_doc_create_drm_mode_free_planes;
 		}
 
 		if (connector->encoder_id == 0) {
-			uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no encoder", connector->connector_id);
-			goto exit_error_kms_node_doc_create_drm_mode_free_connector;
+			uvr_utils_log(UVR_INFO, "[CONNECTOR:%" PRIu32 "]: no encoder", connector->connector_id);
+			drmModeFreeConnector(connector); connector = NULL;
+			continue;
 		}
 
 		/* Find the encoder (a deprecated KMS object) for this connector. */
@@ -362,14 +363,15 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 					uvr_utils_log(UVR_DANGER, "[x] drmModeGetEncoder: Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
 					goto exit_error_kms_node_doc_create_drm_mode_free_connector;
 				}
-				break;
+
+				if (encoder->crtc_id == 0) {
+					uvr_utils_log(UVR_INFO, "[ENCODER:%" PRIu32 "]: no CRTC", encoder->encoder_id);
+					drmModeFreeEncoder(encoder); encoder = NULL;
+					continue;
+				}
 			}
 		}
 
-		if (encoder->crtc_id == 0) {
-			uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: no CRTC", connector->connector_id);
-			goto exit_error_kms_node_doc_create_drm_mode_free_encoder;
-		}
 
 		for (int c = 0; c < drmResources->count_crtcs; c++) {
 			if (drmResources->crtcs[c] == encoder->crtc_id) {
@@ -378,14 +380,14 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 					uvr_utils_log(UVR_DANGER, "[x] drmModeGetCrtc: Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
 					goto exit_error_kms_node_doc_create_drm_mode_free_encoder;
 				}
-				break;
-			}
-		}
 
-		/* Ensure the CRTC is active. */
-		if (crtc->buffer_id == 0) {
-			uvr_utils_log(UVR_INFO, "[CONN:%" PRIu32 "]: not active", connector->connector_id);
-			goto exit_error_kms_node_doc_create_drm_mode_free_crtc;
+				/* Ensure the CRTC is active. */
+				if (crtc->buffer_id == 0) {
+					uvr_utils_log(UVR_INFO, "[CRTC:%" PRIu32 "]: not active", crtc->crtc_id);
+					drmModeFreeCrtc(crtc); crtc = NULL;
+					continue;
+				}
+			}
 		}
 
 		/*
@@ -414,12 +416,17 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		drmModeFreePlaneResources(drmPlaneResources);
 		drmModeFreeResources(drmResources);
 
+		uvr_utils_log(UVR_INFO, "Plane ID: %u", plane->plane_id);
+		uvr_utils_log(UVR_INFO, "CRTC ID: %u", crtc->crtc_id);
+		uvr_utils_log(UVR_INFO, "ENCODER ID: %u", encoder->encoder_id);
+		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
+
 		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane };
 	}
 
-exit_error_kms_node_doc_create_drm_mode_free_crtc:
-	if (crtc)
-		drmModeFreeCrtc(crtc);
+//exit_error_kms_node_doc_create_drm_mode_free_crtc:
+//	if (crtc)
+//		drmModeFreeCrtc(crtc);
 exit_error_kms_node_doc_create_drm_mode_free_encoder:
 	if (encoder)
 		drmModeFreeEncoder(encoder);
