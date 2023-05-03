@@ -37,14 +37,6 @@ static int vt_setup(int *keyBoardMode)
 		}
 
 		snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
-	} else if (ttyname(STDIN_FILENO)) {
-		/*
-		 * Otherwise, if we're running from a VT ourselves, just reuse that.
-		 */
-		if (ttyname_r(STDIN_FILENO, ttyDevice, sizeof(ttyDevice))) {
-			uvr_utils_log(UVR_DANGER, "[x] ttyname_r: %s", strerror(errno));
-			return -1;
-		}
 	} else {
 		int tty0;
 
@@ -64,6 +56,8 @@ static int vt_setup(int *keyBoardMode)
 			return -1;
 		}
 
+		uvr_utils_log(UVR_INFO, "Using VT %d", ttyNum);
+
 		close(tty0);
 		snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
 	}
@@ -74,28 +68,22 @@ static int vt_setup(int *keyBoardMode)
 		return -1;
 	}
 
-	/* If we get our VT from stdin, work painfully backwards to find its VT number. */
-	if (ttyNum == 0) {
-		struct stat vtStat;
-
-		if (fstat(vtfd, &vtStat) == -1 || major(vtStat.st_rdev) != TTY_MAJOR) {
-			uvr_utils_log(UVR_DANGER, "[x] fstat() || major(): VT file %s is bad", ttyDevice);
-			goto exit_error_vt_setup_exit;
-		}
-
-		ttyNum = minor(vtStat.st_rdev);
-	}
-
 	if (!ttyNum)
 		goto exit_error_vt_setup_exit;
 
 	uvr_utils_log(UVR_INFO, "Using VT %d", ttyNum);
 
 	/* Switch to the target VT. */
-	if (ioctl(vtfd, VT_ACTIVATE, ttyNum) != 0 || ioctl(vtfd, VT_WAITACTIVE, ttyNum) != 0) {
-		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_ACTIVATE) || ioctl(VT_WAITACTIVE): couldn't switch to VT %d", ttyNum);
+	if (ioctl(vtfd, VT_ACTIVATE, ttyNum) < 0) {
+		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_ACTIVATE): couldn't switch to VT %d", ttyNum);
 		goto exit_error_vt_setup_exit;
 	}
+
+	if (ioctl(vtfd, VT_WAITACTIVE, ttyNum) < 0) {
+		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_WAITACTIVE): couldn't switch to VT %d", ttyNum);
+		goto exit_error_vt_setup_exit;
+	}
+
 
 	uvr_utils_log(UVR_INFO, "Switched to VT %d", ttyNum);
 
@@ -111,7 +99,7 @@ static int vt_setup(int *keyBoardMode)
 	/*
 	 * Change the VT into graphics mode, so the kernel no longer prints
 	 * text out on top of us.
-	 * */
+	 */
 	if (ioctl(vtfd, KDSETMODE, KD_GRAPHICS) != 0) {
 		uvr_utils_log(UVR_DANGER, "[x] ioctl(KDSETMODE): failed to switch TTY to graphics mode");
 		goto exit_error_vt_setup_exit;
@@ -229,10 +217,16 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 		 * already active on the current VT.
 		 */
 		drm_magic_t magic;
-		if (drmGetMagic(kmsfd, &magic) || drmAuthMagic(kmsfd, magic)) {
-			uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' is not master", kmsNode);
+		if (drmGetMagic(kmsfd, &magic) < 0) {
+			uvr_utils_log(UVR_DANGER, "[x] drmGetMagic: KMS device '%s(fd: %d)' could not become master", kmsNode, kmsfd);
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
+
+		if (drmAuthMagic(kmsfd, magic) < 0) {
+			uvr_utils_log(UVR_DANGER, "[x] drmGetMagic: KMS device '%s(fd: %d)' could not become master", kmsNode, kmsfd);
+			goto exit_error_kms_node_create_free_kms_dev;
+		}
+
 
 		/*
 		 * Tell DRM core to expose atomic properties to userspace. This also enables
