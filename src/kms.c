@@ -56,8 +56,6 @@ static int vt_setup(int *keyBoardMode)
 			return -1;
 		}
 
-		uvr_utils_log(UVR_INFO, "Using VT %d", ttyNum);
-
 		close(tty0);
 		snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
 	}
@@ -141,7 +139,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 #ifdef INCLUDE_LIBSEAT
 		kmsfd = uvr_session_take_control_of_device(uvrkms->session, uvrkms->kmsNode);
 #else
-		kmsfd = open(uvrkms->kmsNode, O_RDONLY | O_CLOEXEC, 0);
+		kmsfd = open(uvrkms->kmsNode, O_RDWR | O_CLOEXEC, 0);
 #endif
 		if (kmsfd < 0) {
 			uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsNode, strerror(errno));
@@ -196,7 +194,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 #ifdef INCLUDE_LIBSEAT
 		kmsfd = uvr_session_take_control_of_device(uvrkms->session, kmsNode);
 #else
-		kmsfd = open(kmsNode, O_RDONLY | O_CLOEXEC, 0);
+		kmsfd = open(kmsNode, O_RDWR | O_CLOEXEC, 0);
 #endif
 		if (kmsfd < 0) {
 			uvr_utils_log(UVR_WARNING, "open('%s'): %s", kmsNode, strerror(errno));
