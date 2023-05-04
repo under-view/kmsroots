@@ -13,6 +13,7 @@
 
 #include "kms.h"
 
+
 /*
  * Verbatim TAKEN FROM Daniel Stone (gitlab/kms-quads)
  * Set up the VT/TTY so it runs in graphics mode and lets us handle our own
@@ -37,7 +38,16 @@ static int vt_setup(int *keyBoardMode)
 		}
 
 		snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
+	} else if (ttyname(STDIN_FILENO)) {
+		/*
+		 * Otherwise, if we're running from a VT ourselves, just reuse that.
+		 */
+		if (ttyname_r(STDIN_FILENO, ttyDevice, sizeof(ttyDevice))) {
+			uvr_utils_log(UVR_DANGER, "[x] ttyname_r: %s", strerror(errno));
+			return -1;
+		}
 	} else {
+search_for_free_vt:
 		int tty0;
 
 		/*
@@ -66,23 +76,51 @@ static int vt_setup(int *keyBoardMode)
 		return -1;
 	}
 
-	if (!ttyNum)
-		goto exit_error_vt_setup_exit;
+	uvr_utils_log(UVR_INFO, "Using VT %s (fd: %d)", ttyDevice, vtfd);
 
-	uvr_utils_log(UVR_INFO, "Using VT %d", ttyNum);
+	/* If we get our VT from stdin, work painfully backwards to find its VT number. */
+	if (ttyNum == 0) {
+		int deviceMajor = 0;
+		struct stat vtStat;
+
+		if (fstat(vtfd, &vtStat) == -1) {
+			uvr_utils_log(UVR_DANGER, "[x] fstat(%s:%d): %s", ttyDevice, vtfd, strerror(errno));
+			goto exit_error_vt_setup_exit;
+		}
+
+		deviceMajor = major(vtStat.st_rdev);
+		if (deviceMajor == UNIX98_PTY_SLAVE_MAJOR || deviceMajor == PTY_SLAVE_MAJOR) {
+			uvr_utils_log(UVR_DANGER, "VT file %s is a psuedo terminal.", ttyDevice);
+			goto exit_error_vt_setup_exit;
+		}
+
+		if (deviceMajor != TTY_MAJOR) {
+			uvr_utils_log(UVR_DANGER, "[x] major(%d): VT file %s is not a tty device file", vtStat.st_rdev, ttyDevice);
+			goto exit_error_vt_setup_exit;
+		}
+
+		ttyNum = minor(vtStat.st_rdev);
+
+		/*
+		 * If current device file is a serial device.
+		 * Search for an available VT
+		 */
+		if (ttyNum >= 64 && ttyNum <= 255) {
+			close(vtfd); vtfd = -1; ttyNum = 0;
+			goto search_for_free_vt;
+		}
+	}
+
+	if (ttyNum == 0)
+		goto exit_error_vt_setup_exit;
 
 	/* Switch to the target VT. */
-	if (ioctl(vtfd, VT_ACTIVATE, ttyNum) < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_ACTIVATE): couldn't switch to VT %d", ttyNum);
+	if (ioctl(vtfd, VT_ACTIVATE, ttyNum) < 0 || ioctl(vtfd, VT_WAITACTIVE, ttyNum) < 0) {
+		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_WAITACTIVE || VT_WAITACTIVE): couldn't switch to VT %d", ttyNum);
 		goto exit_error_vt_setup_exit;
 	}
 
-	if (ioctl(vtfd, VT_WAITACTIVE, ttyNum) < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_WAITACTIVE): couldn't switch to VT %d", ttyNum);
-		goto exit_error_vt_setup_exit;
-	}
-
-	uvr_utils_log(UVR_INFO, "Switched to VT %d", ttyNum);
+	uvr_utils_log(UVR_INFO, "Switched to VT %s", ttyDevice);
 
 	/*
 	 * Completely disable kernel keyboard processing: this prevents us
