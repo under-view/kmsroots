@@ -97,6 +97,15 @@ exit_uvr_session_create:
 }
 
 
+int uvr_session_switch_vt(struct uvr_session *session, unsigned int vt)
+{
+	if (!session)
+		return -1;
+
+	return libseat_switch_session(session->seat, vt);
+}
+
+
 int uvr_session_take_control_of_device(struct uvr_session *session, const char *devpath)
 {
 	int fd;

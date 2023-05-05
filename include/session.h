@@ -37,6 +37,23 @@ struct uvr_session {
 struct uvr_session *uvr_session_create();
 
 
+
+/*
+ * uvr_session_swtch_vt: Calls libseat_switch_session() which requests that the seat switches session
+ *                       to the specified session number. For seats that are VT-bound, the session number
+ *                       matches the VT number, and switching session results in a VT switch.
+ *
+ * args:
+ * @session - pointer to a struct uvr_session stores information about the current session
+ * @vt      - Unsigned integer number of the TTY/VT (Virtual Terminal) a given seat or
+ *            seatd/systemd logind session should switch to.
+ * return:
+ *	on success 0
+ *	on failure -1
+ */
+int uvr_session_switch_vt(struct uvr_session *session, unsigned int vt);
+
+
 /*
  * uvr_session_take_control_of_device: The TakeDevice systemd-logind D-Bus interface function allows
  *                                     session controller to get a file descriptor for a specific
