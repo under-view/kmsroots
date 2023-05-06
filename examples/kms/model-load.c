@@ -411,8 +411,8 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;
 	gbmBufferInfo.kmsfd = kms->uvr_kms_node.kmsfd;
 	gbmBufferInfo.bufferCount = 2;
-	gbmBufferInfo.width = WIDTH;
-	gbmBufferInfo.height = HEIGHT;
+	gbmBufferInfo.width = kms->uvr_kms_node_display_output_chain.width;
+	gbmBufferInfo.height = kms->uvr_kms_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
 	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;

@@ -124,12 +124,16 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  *              a portion of the image memory (source) and optionally scale it to a destination size.
  *              The result is then blended with or overlayed on top of a CRTC.
  * For more info see https://manpages.org/drm-kms/7
+ * @width     - Highest mode (display resolution) width for @connector attached to display
+ * @width     - Highest mode (display resolution) height for @connector attached to display
  */
 struct uvr_kms_node_display_output_chain {
 	drmModeConnector *connector;
 	drmModeEncoder   *encoder;
 	drmModeCrtc      *crtc;
 	drmModePlane     *plane;
+	uint16_t         width;
+	uint16_t         height;
 };
 
 

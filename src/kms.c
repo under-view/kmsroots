@@ -387,7 +387,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
 		/* check if a monitor is connected */
 		if (connector->encoder_id == 0 || connector->connection != DRM_MODE_CONNECTED) {
-			uvr_utils_log(UVR_INFO, "[CONNECTOR:%" PRIu32 "]: no encoder or not connected", connector->connector_id);
+			uvr_utils_log(UVR_INFO, "[CONNECTOR:%" PRIu32 "]: no encoder or not connected to display", connector->connector_id);
 			drmModeFreeConnector(connector); connector = NULL;
 			continue;
 		}
@@ -458,7 +458,8 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_INFO, "ENCODER ID: %u", encoder->encoder_id);
 		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
 
-		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane };
+		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane,
+			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay };
 	}
 
 //exit_error_kms_node_doc_create_drm_mode_free_crtc:
@@ -481,7 +482,7 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 	if (drmResources)
 		drmModeFreeResources(drmResources);
 exit_error_kms_node_doc_create:
-	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0 };
+	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0, .width = 0, .height = 0 };
 }
 
 
