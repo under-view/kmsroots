@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <time.h>
 #include <signal.h>
 #include <sys/mman.h>
@@ -17,9 +18,17 @@ struct app_kms {
 };
 
 
+struct app_kms_pass {
+	unsigned int pixelBufferSize;
+	uint8_t *pixelBuffer;
+	struct app_kms *app;
+};
+
+
 int create_kms_instance(struct app_kms *kms);
 int create_kms_gbm_buffers(struct app_kms *kms);
 int create_kms_set_crtc(struct app_kms *app);
+int create_kms_pixel_buffer(struct app_kms_pass *passData);
 
 
 static volatile sig_atomic_t prun = 1;
@@ -48,7 +57,8 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 
 void render(bool UNUSED *running, uint32_t *cbuf, void *data)
 {
-	struct app_kms *app = (struct app_kms *) data;
+	struct app_kms_pass *passData = (struct app_kms_pass *) data;
+	struct app_kms *app = passData->app;
 
 	unsigned int width = app->uvr_kms_node_display_output_chain.width;
 	unsigned int height = app->uvr_kms_node_display_output_chain.height;
@@ -61,8 +71,8 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data)
 	uint8_t g = next_color(&g_up, rand() % 0xff, 10);
 	uint8_t b = next_color(&b_up, rand() % 0xff, 5);
 
-	unsigned int pixelBufferSize = stride * height;
-	uint8_t *pixelBuffer = alloca(pixelBufferSize);
+	unsigned int pixelBufferSize = passData->pixelBufferSize;
+	uint8_t *pixelBuffer = passData->pixelBuffer;
 
 	for (unsigned int x = 0; x < width; x++) {
 		for (unsigned int y = 0; y < height; y++) {
@@ -118,11 +128,21 @@ int main(void)
 	static uint32_t cbuf = 0;
 	static bool running = true;
 
+	struct app_kms_pass passData;
+	memset(&passData, 0, sizeof(passData));
+	passData.app = &kms;
+
+	if (create_kms_pixel_buffer(&passData) == -1)
+		goto exit_error;
+
 	while (running) {
-		render(&running, &cbuf, &kms);
+		render(&running, &cbuf, &passData);
 	}
 
 exit_error:
+	if (passData.pixelBuffer)
+		munmap(passData.pixelBuffer, passData.pixelBufferSize);
+
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
@@ -210,6 +230,28 @@ int create_kms_set_crtc(struct app_kms *app)
 		if (uvr_kms_set_display_mode(&nextImageInfo))
 			return -1;
 	}
+
+	return 0;
+}
+
+
+int create_kms_pixel_buffer(struct app_kms_pass *passData)
+{
+	struct app_kms *app = passData->app;
+
+	unsigned int width = app->uvr_kms_node_display_output_chain.width;
+	unsigned int height = app->uvr_kms_node_display_output_chain.height;
+	unsigned int bytesPerPixel = 4;
+	unsigned int pixelBufferSize = width * height * bytesPerPixel;
+
+	uint8_t *pixelBuffer = mmap(NULL, pixelBufferSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, app->uvr_buffer.bufferObjects[0].offsets[0]);
+	if (pixelBuffer == MAP_FAILED) {
+		uvr_utils_log(UVR_DANGER, "[x] mmap: %s", strerror(errno));
+		return -1;
+	}
+
+	passData->pixelBuffer = pixelBuffer;
+	passData->pixelBufferSize = pixelBufferSize;
 
 	return 0;
 }
