@@ -262,7 +262,6 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
 
-
 		/*
 		 * Tell DRM core to expose atomic properties to userspace. This also enables
 		 * DRM_CLIENT_CAP_UNIVERSAL_PLANES and DRM_CLIENT_CAP_ASPECT_RATIO.
@@ -459,7 +458,8 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
 
 		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane,
-			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay };
+			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay,
+								    .kmsfd = uvrkms->kmsfd };
 	}
 
 //exit_error_kms_node_doc_create_drm_mode_free_crtc:
@@ -482,7 +482,42 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 	if (drmResources)
 		drmModeFreeResources(drmResources);
 exit_error_kms_node_doc_create:
-	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0, .width = 0, .height = 0 };
+	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0, .width = 0, .height = 0, .kmsfd = -1 };
+}
+
+
+int uvr_kms_set_display_mode(struct uvr_kms_display_mode_info *uvrkms)
+{
+	drmModeConnector *conn = uvrkms->displayChain->connector;
+	uint32_t connector = uvrkms->displayChain->connector->connector_id;
+	uint32_t crtc = uvrkms->displayChain->crtc->crtc_id;
+	int kmsfd = uvrkms->displayChain->kmsfd;
+
+	drmModeModeInfo mode;
+	memcpy(&mode, &conn->modes[0], sizeof(mode));
+
+	if (drmModeSetCrtc(kmsfd, crtc, uvrkms->fbid, 0, 0, &connector, 1, &mode)) {
+		uvr_utils_log(UVR_DANGER, "[x] drmModeSetCrtc: %s", strerror(errno));
+		uvr_utils_log(UVR_DANGER, "[x] drmModeSetCrtc: failed to set preferred display mode");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms)
+{
+	uint32_t crtc = uvrkms->displayChain->crtc->crtc_id;
+	int kmsfd = uvrkms->displayChain->kmsfd;
+
+	if (drmModeSetCrtc(kmsfd, crtc, 0, 0, 0, NULL, 0, NULL)) {
+		uvr_utils_log(UVR_DANGER, "[x] drmModeSetCrtc: %s", strerror(errno));
+		uvr_utils_log(UVR_DANGER, "[x] drmModeSetCrtc: failed to reset current display mode");
+		return -1;
+	}
+
+	return 0;
 }
 
 

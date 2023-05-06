@@ -126,6 +126,7 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  * For more info see https://manpages.org/drm-kms/7
  * @width     - Highest mode (display resolution) width for @connector attached to display
  * @width     - Highest mode (display resolution) height for @connector attached to display
+ * @kmsfd     - File descriptor associated with GPU device
  */
 struct uvr_kms_node_display_output_chain {
 	drmModeConnector *connector;
@@ -134,6 +135,7 @@ struct uvr_kms_node_display_output_chain {
 	drmModePlane     *plane;
 	uint16_t         width;
 	uint16_t         height;
+	int              kmsfd;
 };
 
 
@@ -156,11 +158,49 @@ struct uvr_kms_node_display_output_chain_create_info {
  *
  * args:
  * @uvrkms - pointer to a struct uvr_kms_node_display_output_chain_create_info used to determine what operation will happen in the function
- * return:
+ * return
  *	on success struct uvr_kms_node_display_output_chain
  *	on failure struct uvr_kms_node_display_output_chain { with members nulled }
  */
 struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_create(struct uvr_kms_node_display_output_chain_create_info *uvrkms);
+
+
+/*
+ * struct uvr_kms_create_mode_info (Underview Renderer KMS Crtc Mode Information)
+ *
+ * members:
+ * @fbid    - Id of framebuffer associated with gbm or dump buffer
+ * @display - Pointer to a plane->crtc->encoder->connector pair
+ */
+struct uvr_kms_display_mode_info {
+	int                                      fbid;
+	struct uvr_kms_node_display_output_chain *displayChain;
+};
+
+
+/*
+ * uvr_kms_set_display_mode: Sets the display connected to @displayChain.connecter screen resolution
+ *                           and refresh to the highest possible value.
+ *
+ * args:
+ * @uvrkms - pointer to a struct uvr_kms_display_mode_info used to set highest display mode
+ * return
+ *	on success 0
+ *	on failure -1
+ */
+int uvr_kms_set_display_mode(struct uvr_kms_display_mode_info *uvrkms);
+
+
+/*
+ * uvr_kms_reset_display_mode: Clears the current display mode setting
+ *
+ * args:
+ * @uvrkms - pointer to a struct uvr_kms_display_mode_info used to set highest display mode
+ * return
+ *	on success 0
+ *	on failure -1
+ */
+int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms);
 
 
 /*
