@@ -21,7 +21,7 @@
  * if we're running directly from a VT, or failing that tries to find a free
  * one to switch to.
  */
-static int vt_setup(int *keyBoardMode)
+static int UNUSED vt_setup(int *keyBoardMode)
 {
 	const char *ttyNumEnv = getenv("TTYNO");
 	int ttyNum = 0, vtfd = -1;
@@ -183,11 +183,11 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 			uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsNode, strerror(errno));
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
-
+/*
 		vtfd = vt_setup(&keyBoardMode);
 		if (vtfd == -1)
 			goto exit_error_kms_node_create_free_kms_dev;
-
+*/
 		uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsNode, kmsfd);
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
 #ifdef INCLUDE_LIBSEAT
@@ -274,11 +274,11 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 			uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' has no support for universal planes or kms atomic", kmsNode);
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
-
+/*
 		vtfd = vt_setup(&keyBoardMode);
 		if (vtfd == -1)
 			goto exit_error_kms_node_create_free_kms_dev;
-
+*/
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
 #ifdef INCLUDE_LIBSEAT
 		                               , .session = uvrkms->session
