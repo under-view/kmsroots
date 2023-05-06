@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/mman.h>
 
 #include "kms.h"
 #include "buffer.h"
@@ -16,12 +19,86 @@ struct app_kms {
 
 int create_kms_instance(struct app_kms *kms);
 int create_kms_gbm_buffers(struct app_kms *kms);
+int create_kms_set_crtc(struct app_kms *app);
+
+
+static volatile sig_atomic_t prun = 1;
+
+
+static void run_stop(int UNUSED signum)
+{
+	prun = 0;
+}
+
+
+/* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L825 */
+static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
+{
+	uint8_t next;
+
+	next = cur + (*up ? 1 : -1) * (rand() % mod);
+	if ((*up && next < cur) || (!*up && next > cur)) {
+		*up = !*up;
+		next = cur;
+	}
+
+	return next;
+}
+
+
+void render(bool UNUSED *running, uint32_t *cbuf, void *data)
+{
+	struct app_kms *app = (struct app_kms *) data;
+
+	unsigned int width = app->uvr_kms_node_display_output_chain.width;
+	unsigned int height = app->uvr_kms_node_display_output_chain.height;
+	unsigned int bytesPerPixel = 4, offset = 0;
+	unsigned int stride = width * bytesPerPixel;
+	bool r_up = true, g_up = true, b_up = true;
+
+	srand(time(NULL));
+	uint8_t r = next_color(&r_up, rand() % 0xff, 20);
+	uint8_t g = next_color(&g_up, rand() % 0xff, 10);
+	uint8_t b = next_color(&b_up, rand() % 0xff, 5);
+
+	unsigned int pixelBufferSize = stride * height;
+	uint8_t *pixelBuffer = alloca(pixelBufferSize);
+
+	for (unsigned int x = 0; x < width; x++) {
+		for (unsigned int y = 0; y < height; y++) {
+			offset = (x * bytesPerPixel) + (y * stride);
+			*(uint32_t *) &pixelBuffer[offset] = (r << 16) | (g << 8) | b;
+		}
+	}
+
+	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
+
+	*cbuf = (*cbuf + 1) % app->uvr_buffer.bufferCount;
+
+	*running = prun;
+}
+
 
 /*
  * Example code demonstrating how to use Vulkan with KMS
  */
 int main(void)
 {
+	if (signal(SIGINT, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
+		return 1;
+	}
+
+	if (signal(SIGABRT, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
+		return 1;
+	}
+
+	if (signal(SIGTERM, run_stop) == SIG_ERR) {
+		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
+		return 1;
+	}
+
 	struct app_kms kms;
 	struct uvr_kms_node_destroy kmsdevd;
 	struct uvr_buffer_destroy kmsbuffsd;
@@ -34,6 +111,16 @@ int main(void)
 
 	if (create_kms_gbm_buffers(&kms) == -1)
 		goto exit_error;
+
+	if (create_kms_set_crtc(&kms) == -1)
+		goto exit_error;
+
+	static uint32_t cbuf = 0;
+	static bool running = true;
+
+	while (running) {
+		render(&running, &cbuf, &kms);
+	}
 
 exit_error:
 	/*
@@ -100,7 +187,7 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	gbmBufferInfo.height = kms->uvr_kms_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
-	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
+	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
 	gbmBufferInfo.pixelFormat = GBM_BO_FORMAT_XRGB8888;
 	gbmBufferInfo.modifiers = NULL;
 	gbmBufferInfo.modifierCount = 0;
@@ -108,6 +195,21 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	kms->uvr_buffer = uvr_buffer_create(&gbmBufferInfo);
 	if (!kms->uvr_buffer.gbmDevice)
 		return -1;
+
+	return 0;
+}
+
+
+int create_kms_set_crtc(struct app_kms *app)
+{
+	struct uvr_kms_display_mode_info nextImageInfo;
+
+	for (uint8_t i = 0; i < app->uvr_buffer.bufferCount; i++) {
+		nextImageInfo.fbid = app->uvr_buffer.bufferObjects[0].fbid;
+		nextImageInfo.displayChain = &app->uvr_kms_node_display_output_chain;
+		if (uvr_kms_set_display_mode(&nextImageInfo))
+			return -1;
+	}
 
 	return 0;
 }
