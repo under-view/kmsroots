@@ -385,8 +385,9 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 			goto exit_error_kms_node_doc_create_drm_mode_free_planes;
 		}
 
-		if (connector->encoder_id == 0) {
-			uvr_utils_log(UVR_INFO, "[CONNECTOR:%" PRIu32 "]: no encoder", connector->connector_id);
+		/* check if a monitor is connected */
+		if (connector->encoder_id == 0 || connector->connection != DRM_MODE_CONNECTED) {
+			uvr_utils_log(UVR_INFO, "[CONNECTOR:%" PRIu32 "]: no encoder or not connected", connector->connector_id);
 			drmModeFreeConnector(connector); connector = NULL;
 			continue;
 		}
