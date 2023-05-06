@@ -81,9 +81,15 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data)
 		}
 	}
 
-	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
+	// Write to back buffer
+	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf^1].bo, pixelBuffer, pixelBufferSize);
 
-	*cbuf = (*cbuf + 1) % app->uvr_buffer.bufferCount;
+	// Display front buffer
+	struct uvr_kms_display_mode_info nextImageInfo;
+	nextImageInfo.fbid = app->uvr_buffer.bufferObjects[*cbuf].fbid;
+	nextImageInfo.displayChain = &app->uvr_kms_node_display_output_chain;
+	if (uvr_kms_set_display_mode(&nextImageInfo) == 0)
+		*cbuf ^= 1;
 
 	*running = prun;
 }
