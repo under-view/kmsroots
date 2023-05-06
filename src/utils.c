@@ -246,6 +246,25 @@ char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, 
 }
 
 
+int uvr_utils_update_fd_flags(int fd, int flags) {
+	int opt;
+
+	opt = fcntl(fd, F_GETFL);
+	if (fd < 0) {
+		uvr_utils_log(UVR_DANGER, "[x] fcntl(F_GETFL): %s", strerror(errno));
+		return -1;
+	}
+
+	opt |= flags;
+	if (fcntl(fd, F_SETFL, opt) < 0) {
+		uvr_utils_log(UVR_DANGER, "[x] fcntl(F_SETFL): %s", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+
 /* https://wayland-book.com/surfaces/shared-memory.html */
 static void randname(char *buf)
 {

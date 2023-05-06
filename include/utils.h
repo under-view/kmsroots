@@ -170,6 +170,19 @@ uint64_t uvr_utils_nanosecond();
 char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, uint16_t maxStrLen);
 
 
+/*
+ * uvr_utils_update_fd_flags: Updates the flags set on a file descriptor
+ *
+ * args:
+ * @fd    - File descriptor to updates
+ * @flags - Flags to update
+ * return:
+ *	on success 0
+ *	on failure -1
+ */
+int uvr_utils_update_fd_flags(int fd, int flags);
+
+
 int allocate_shm_file(size_t size);
 
 
