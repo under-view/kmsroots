@@ -204,13 +204,33 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms);
 
 
 /*
+ * Underview Renderer Implementation
+ * Function pointer used by struct uvr_kms_handle_drm_event_info*
+ * Allows to pass the address of an external function you want to run
+ * Given that the arguments of the function are a pointer to a boolean,
+ * pointer to an integer, and a pointer to void data type
+ */
+typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, void*);
+
+
+/*
  * struct uvr_kms_handle_drm_event_info (Underview Renderer KMS Crtc Mode Information)
  *
  * members:
- * @kmsfd - Id of framebuffer associated with gbm or dump buffer
+ * @kmsfd                 - Id of framebuffer associated with gbm or dump buffer.
+ * @renderer              - Function pointer that allows custom external renderers to be executed by the api
+ *                          upon @kmsfd polled events.
+ * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
+ *                          Reference/Address passed depends on external renderer function.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
+ * @rendererRunning       - Pointer to a boolean that determines if a given drm Context is actively running/displaying.
  */
 struct uvr_kms_handle_drm_event_info {
-	int kmsfd;
+	int                   kmsfd;
+	uvr_kms_renderer_impl renderer;
+	void                  *rendererData;
+	uint8_t               *rendererCurrentBuffer;
+	bool                  *rendererRunning;
 };
 
 
