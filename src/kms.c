@@ -452,19 +452,26 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		drmModeFreePlaneResources(drmPlaneResources);
 		drmModeFreeResources(drmResources);
 
+		uint32_t modeId = 0; // Stores mode id given to one of the displays resolution + refresh
+		if (drmModeCreatePropertyBlob(uvrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeId) != 0) {
+			uvr_utils_log(UVR_DANGER, "[x] drmModeCreatePropertyBlob: couldn't create a blob property");
+			goto exit_error_kms_node_doc_create_drm_mode_free_crtc;
+		}
+
 		uvr_utils_log(UVR_INFO, "Plane ID: %u", plane->plane_id);
 		uvr_utils_log(UVR_INFO, "CRTC ID: %u", crtc->crtc_id);
 		uvr_utils_log(UVR_INFO, "ENCODER ID: %u", encoder->encoder_id);
 		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
+		uvr_utils_log(UVR_INFO, "MODE (resolution + refresh) ID: %u", modeId);
 
 		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane,
 			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay,
-								    .kmsfd = uvrkms->kmsfd };
+								    .kmsfd = uvrkms->kmsfd, .modeId = modeId };
 	}
 
-//exit_error_kms_node_doc_create_drm_mode_free_crtc:
-//	if (crtc)
-//		drmModeFreeCrtc(crtc);
+exit_error_kms_node_doc_create_drm_mode_free_crtc:
+	if (crtc)
+		drmModeFreeCrtc(crtc);
 exit_error_kms_node_doc_create_drm_mode_free_encoder:
 	if (encoder)
 		drmModeFreeEncoder(encoder);
@@ -482,7 +489,8 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 	if (drmResources)
 		drmModeFreeResources(drmResources);
 exit_error_kms_node_doc_create:
-	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0, .width = 0, .height = 0, .kmsfd = -1 };
+	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0,
+	                                                    .width = 0, .height = 0, .kmsfd = -1, .modeId = 0 };
 }
 
 
@@ -570,15 +578,17 @@ int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
 
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 {
-	if (uvrkms->uvr_kms_node_display_output_chain.plane)
-		drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
-	if (uvrkms->uvr_kms_node_display_output_chain.crtc)
-		drmModeFreeCrtc(uvrkms->uvr_kms_node_display_output_chain.crtc);
-	if (uvrkms->uvr_kms_node_display_output_chain.encoder)
-		drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
-	if (uvrkms->uvr_kms_node_display_output_chain.connector)
-		drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
 	if (uvrkms->uvr_kms_node.kmsfd != -1) {
+		if (uvrkms->uvr_kms_node_display_output_chain.plane)
+			drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
+		if (uvrkms->uvr_kms_node_display_output_chain.crtc)
+			drmModeFreeCrtc(uvrkms->uvr_kms_node_display_output_chain.crtc);
+		if (uvrkms->uvr_kms_node_display_output_chain.encoder)
+			drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
+		if (uvrkms->uvr_kms_node_display_output_chain.connector)
+			drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
+		if (uvrkms->uvr_kms_node_display_output_chain.modeId)
+			drmModeDestroyPropertyBlob(uvrkms->uvr_kms_node.kmsfd, uvrkms->uvr_kms_node_display_output_chain.modeId);
 		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
 			vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.keyBoardMode);
 #ifdef INCLUDE_LIBSEAT

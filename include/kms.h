@@ -127,6 +127,9 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  * @width     - Highest mode (display resolution) width for @connector attached to display
  * @width     - Highest mode (display resolution) height for @connector attached to display
  * @kmsfd     - File descriptor associated with GPU device
+ * @modeId    - Store the mode (resolution + refresh) property id. When we perform an atomic commit,
+ *              the driver expects a CRTC property named "MODE_ID", which points to the id given to one
+ *              of connceted display resolution & refresh rate. At the moment the highest mode it choosen.
  */
 struct uvr_kms_node_display_output_chain {
 	drmModeConnector *connector;
@@ -136,6 +139,7 @@ struct uvr_kms_node_display_output_chain {
 	uint16_t         width;
 	uint16_t         height;
 	int              kmsfd;
+	uint32_t         modeId;
 };
 
 
