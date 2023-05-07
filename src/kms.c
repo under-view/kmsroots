@@ -521,6 +521,32 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms)
 }
 
 
+static void handle_page_flip_event(int UNUSED fd,
+                                   unsigned int UNUSED seq,
+                                   unsigned int UNUSED tv_sec,
+                                   unsigned int UNUSED tv_usec,
+                                   unsigned int UNUSED crtc_id,
+                                   void UNUSED *data)
+{
+	// No-op
+}
+
+
+int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
+{
+	drmEventContext event;
+	event.version = 3;
+	event.page_flip_handler2 = handle_page_flip_event;
+
+	if (drmHandleEvent(uvrkms->kmsfd, &event) != 0) {
+		uvr_utils_log(UVR_DANGER, "[x] drmHandleEvent: failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 {
 	if (uvrkms->uvr_kms_node_display_output_chain.plane)

@@ -166,7 +166,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
 
 /*
- * struct uvr_kms_create_mode_info (Underview Renderer KMS Crtc Mode Information)
+ * struct uvr_kms_display_mode_info (Underview Renderer KMS Display Mode Information)
  *
  * members:
  * @fbid    - Id of framebuffer associated with gbm or dump buffer
@@ -201,6 +201,31 @@ int uvr_kms_set_display_mode(struct uvr_kms_display_mode_info *uvrkms);
  *	on failure -1
  */
 int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms);
+
+
+/*
+ * struct uvr_kms_handle_drm_event_info (Underview Renderer KMS Crtc Mode Information)
+ *
+ * members:
+ * @kmsfd - Id of framebuffer associated with gbm or dump buffer
+ */
+struct uvr_kms_handle_drm_event_info {
+	int kmsfd;
+};
+
+
+/*
+ * uvr_kms_handle_drm_event: Function calls drmHandleEvent() which processes outstanding DRM events
+ *                           on the DRM file-descriptor. This function should be called after the DRM
+ *                           file-descriptor has polled readable.
+ *
+ * args:
+ * @uvrkms - pointer to a struct uvr_kms_handle_drm_event_info
+ * return
+ *	on success 0
+ *	on failure -1
+ */
+int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms);
 
 
 /*
