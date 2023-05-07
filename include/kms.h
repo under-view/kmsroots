@@ -169,8 +169,8 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
  * struct uvr_kms_display_mode_info (Underview Renderer KMS Display Mode Information)
  *
  * members:
- * @fbid    - Id of framebuffer associated with gbm or dump buffer
- * @display - Pointer to a plane->crtc->encoder->connector pair
+ * @fbid         - Id of framebuffer associated with gbm or dump buffer
+ * @displayChain - Pointer to a plane->crtc->encoder->connector pair
  */
 struct uvr_kms_display_mode_info {
 	int                                      fbid;

@@ -521,14 +521,35 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms)
 }
 
 
+/*
+ * struct uvr_kms_renderer_info (Underview Renderer DRM/KMS Renderer Information)
+ *
+ * members:
+ * @renderer              - Function pointer that allows custom external renderers to be executed by the api
+ *                          upon @kmsfd polled events.
+ * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
+ *                          Reference/Address passed depends on external renderer function.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
+ * @rendererRunning       - Pointer to a boolean that determines if a given drm Context is actively running/displaying.
+ * @fbids                 - Array of framebuffer IDs created with a call to drmModeAddFb2
+ */
+struct uvr_kms_renderer_info {
+	uvr_kms_renderer_impl renderer;
+	void *rendererData;
+	uint8_t *rendererCurrentBuffer;
+	bool *rendererRunning;
+};
+
+
 static void handle_page_flip_event(int UNUSED fd,
                                    unsigned int UNUSED seq,
                                    unsigned int UNUSED tv_sec,
                                    unsigned int UNUSED tv_usec,
                                    unsigned int UNUSED crtc_id,
-                                   void UNUSED *data)
+                                   void *data)
 {
-	// No-op
+	struct uvr_kms_renderer_info *rendererInfo = (struct uvr_kms_renderer_info *) data;
+	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererData);
 }
 
 
