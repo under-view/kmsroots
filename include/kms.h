@@ -111,35 +111,59 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
 
 
 /*
+ * struct uvr_kms_object_props (Underview Renderer KMS Object Properties)
+ *
+ * It stores properties of certain KMS objects (connectors, CRTC and planes) that are
+ * used in atomic modeset setup and also in atomic page-flips.
+ *
+ * members:
+ * @props     - Stores list of property ids and their values
+ * @propsData - Resources avaliable to a given KMS object
+ * @id        - Driver assigned ID of the KMS object
+ */
+struct uvr_kms_object_props {
+	drmModeObjectProperties *props;
+	drmModePropertyRes      **propsData;
+	uint32_t                id;
+};
+
+
+/*
  * struct uvr_kms_node_display_output_chain (Underview Renderer KMS Node Display Output Chain)
  *
  * members:
- * @connector - Anything that can display pixels in some form. (i.e HDMI). Connectors can
- *              be hotplugged and unplugged at runtime
- * @encoder   - Takes pixel data from a crtc and converts it to an output that
- *              the connector can understand. This is a Deprecated kms object
- * @crtc      - Represents a part of the chip that contains a pointer to a scanout buffer.
- * @plane     - A plane represents an image source that can be blended with or overlayed on top of
- *              a CRTC during the scanout process. Planes are associated with a frame buffer to crop
- *              a portion of the image memory (source) and optionally scale it to a destination size.
- *              The result is then blended with or overlayed on top of a CRTC.
+ * @connector      - Anything that can display pixels in some form. (i.e HDMI). Connectors can
+ *                   be hotplugged and unplugged at runtime
+ * @connectorProps - Stores connector properties used during KMS atomic modesetting and page-flips.
+ * @encoder        - Takes pixel data from a crtc and converts it to an output that
+ *                   the connector can understand. This is a Deprecated kms object
+ * @crtc           - Represents a part of the chip that contains a pointer to a scanout buffer.
+ * @crtcProps      - Stores crtc properties used during KMS atomic modesetting and page-flips.
+ * @plane          - A plane represents an image source that can be blended with or overlayed on top of
+ *                   a CRTC during the scanout process. Planes are associated with a frame buffer to crop
+ *                   a portion of the image memory (source) and optionally scale it to a destination size.
+ *                   The result is then blended with or overlayed on top of a CRTC.
+ * @planeProps     - Stores plane properties used during KMS atomic modesetting and page-flips.
  * For more info see https://manpages.org/drm-kms/7
- * @width     - Highest mode (display resolution) width for @connector attached to display
- * @width     - Highest mode (display resolution) height for @connector attached to display
- * @kmsfd     - File descriptor associated with GPU device
- * @modeId    - Store the mode (resolution + refresh) property id. When we perform an atomic commit,
- *              the driver expects a CRTC property named "MODE_ID", which points to the id given to one
- *              of connceted display resolution & refresh rate. At the moment the highest mode it choosen.
+ * @width          - Highest mode (display resolution) width for @connector attached to display
+ * @width          - Highest mode (display resolution) height for @connector attached to display
+ * @kmsfd          - File descriptor associated with GPU device
+ * @modeId         - Store the mode (resolution + refresh) property id. When we perform an atomic commit,
+ *                   the driver expects a CRTC property named "MODE_ID", which points to the id given to one
+ *                   of connceted display resolution & refresh rate. At the moment the highest mode it choosen.
  */
 struct uvr_kms_node_display_output_chain {
-	drmModeConnector *connector;
-	drmModeEncoder   *encoder;
-	drmModeCrtc      *crtc;
-	drmModePlane     *plane;
-	uint16_t         width;
-	uint16_t         height;
-	int              kmsfd;
-	uint32_t         modeId;
+	drmModeConnector            *connector;
+	struct uvr_kms_object_props connectorProps;
+	drmModeEncoder              *encoder;
+	drmModeCrtc                 *crtc;
+	struct uvr_kms_object_props crtcProps;
+	drmModePlane                *plane;
+	struct uvr_kms_object_props planeProps;
+	uint16_t                    width;
+	uint16_t                    height;
+	int                         kmsfd;
+	uint32_t                    modeId;
 };
 
 

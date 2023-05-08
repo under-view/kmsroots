@@ -328,6 +328,75 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
 }
 
 
+static void free_kms_object_properties(drmModeObjectProperties *props, drmModePropertyRes **propsData)
+{
+	uint32_t i = 0;
+
+	if (!props) return;
+	if (!propsData) return;
+
+	for (i = 0; i < props->count_props; i++) {
+		if (propsData[i])
+			drmModeFreeProperty(propsData[i]);
+	}
+
+	drmModeFreeObjectProperties(props);
+
+	free(propsData);
+}
+
+
+/*
+ * acquire_kms_object_properties: helpfer function that retrieves the properties of a certain CRTC, plane or connector object.
+ * https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L194
+ */
+static int acquire_kms_object_properties(int fd, struct uvr_kms_object_props *obj, uint32_t type)
+{
+	char *typeStr;
+	unsigned int i;
+
+	obj->props = drmModeObjectGetProperties(fd, obj->id, type);
+	if (!obj->props) {
+		switch(type) {
+			case DRM_MODE_OBJECT_CONNECTOR:
+				typeStr = "connector";
+				break;
+			case DRM_MODE_OBJECT_PLANE:
+				typeStr = "plane";
+				break;
+			case DRM_MODE_OBJECT_CRTC:
+				typeStr = "CRTC";
+				break;
+			default:
+				typeStr = "unknown type";
+				break;
+		}
+		uvr_utils_log(UVR_DANGER, "[x] cannot get %s %d properties: %s\n", typeStr, obj->id, strerror(errno));
+		return -1;
+	}
+
+	obj->propsData = calloc(obj->props->count_props, sizeof(obj->propsData));
+	if (!obj->propsData) {
+		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_acquire_kms_object_properties;
+	}
+
+	for (i = 0; i < obj->props->count_props; i++) {
+		obj->propsData[i] = drmModeGetProperty(fd, obj->props->props[i]);
+		if (!obj->propsData[i]) {
+			uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+			goto exit_error_acquire_kms_object_properties;
+		}
+	}
+
+	return 0;
+
+exit_error_acquire_kms_object_properties:
+	free_kms_object_properties(obj->props, obj->propsData);
+	return -1;
+}
+
+
 struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_create(struct uvr_kms_node_display_output_chain_create_info *uvrkms)
 {
 	drmModeRes *drmResources = NULL;
@@ -357,10 +426,11 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	}
 
 	/* Query KMS device plane info */
-	drmModePlane **planes = alloca(drmPlaneResources->count_planes * sizeof(drmModePlane));
-	memset(planes, 0, drmPlaneResources->count_planes * sizeof(drmModePlane));
+	unsigned int planesCount = drmPlaneResources->count_planes;
+	drmModePlane **planes = alloca(planesCount * sizeof(drmModePlane));
+	memset(planes, 0, planesCount * sizeof(drmModePlane));
 
-	for (p = 0; p < drmPlaneResources->count_planes; p++) {
+	for (p = 0; p < planesCount; p++) {
 		planes[p] = drmModeGetPlane(uvrkms->kmsfd, drmPlaneResources->planes[p]);
 		if (!planes[p]) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
@@ -376,6 +446,15 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	drmModeEncoder *encoder = NULL;
 	drmModeCrtc *crtc = NULL;
 	drmModePlane *plane = NULL;
+	uint32_t modeId = 0;
+
+	struct uvr_kms_object_props connectorProps;
+	struct uvr_kms_object_props crtcProps;
+	struct uvr_kms_object_props planeProps;
+
+	memset(&connectorProps, 0, sizeof(connectorProps));
+	memset(&crtcProps, 0, sizeof(crtcProps));
+	memset(&planeProps, 0, sizeof(planeProps));
 
 	for (int conn = 0; conn < drmResources->count_connectors; conn++) {
 		connector = drmModeGetConnector(uvrkms->kmsfd, drmResources->connectors[conn]);
@@ -445,18 +524,33 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_SUCCESS, "Successfully created a display output chain");
 
 		/* Free all plane resources not in use */
-		for (p = 0; p < drmPlaneResources->count_planes; p++)
-			if (planes[p]->fb_id != plane->fb_id)
+		for (p = 0; p < planesCount; p++) {
+			if (planes[p]->fb_id != plane->fb_id) {
 				drmModeFreePlane(planes[p]);
+				planes[p] = NULL;
+			}
+		}
 
-		drmModeFreePlaneResources(drmPlaneResources);
-		drmModeFreeResources(drmResources);
+		drmModeFreePlaneResources(drmPlaneResources); drmPlaneResources = NULL;
+		drmModeFreeResources(drmResources); drmResources = NULL;
 
-		uint32_t modeId = 0; // Stores mode id given to one of the displays resolution + refresh
+		// Stores mode id given to one of the displays resolution + refresh
 		if (drmModeCreatePropertyBlob(uvrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeId) != 0) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeCreatePropertyBlob: couldn't create a blob property");
 			goto exit_error_kms_node_doc_create_drm_mode_free_crtc;
 		}
+
+		connectorProps.id = connector->connector_id;
+		if (acquire_kms_object_properties(uvrkms->kmsfd, &connectorProps, DRM_MODE_OBJECT_CONNECTOR) == -1)
+			goto exit_error_kms_node_doc_create_drm_mode_destroy_mode_id;
+
+		crtcProps.id = crtc->crtc_id;
+		if (acquire_kms_object_properties(uvrkms->kmsfd, &crtcProps, DRM_MODE_OBJECT_CRTC) == -1)
+			goto exit_error_kms_node_doc_create_free_kms_obj_props;
+
+		planeProps.id = plane->plane_id;
+		if (acquire_kms_object_properties(uvrkms->kmsfd, &planeProps, DRM_MODE_OBJECT_PLANE) == -1)
+			goto exit_error_kms_node_doc_create_free_kms_obj_props;
 
 		uvr_utils_log(UVR_INFO, "Plane ID: %u", plane->plane_id);
 		uvr_utils_log(UVR_INFO, "CRTC ID: %u", crtc->crtc_id);
@@ -464,11 +558,22 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
 		uvr_utils_log(UVR_INFO, "MODE (resolution + refresh) ID: %u", modeId);
 
-		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .encoder = encoder, .crtc = crtc , .plane = plane,
+		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .connectorProps = connectorProps, .encoder = encoder,
+		                                                    .crtc = crtc, .crtcProps = crtcProps, .plane = plane, .planeProps = planeProps,
 			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay,
 								    .kmsfd = uvrkms->kmsfd, .modeId = modeId };
 	}
 
+exit_error_kms_node_doc_create_free_kms_obj_props:
+	free_kms_object_properties(planeProps.props, planeProps.propsData);
+	free_kms_object_properties(crtcProps.props, crtcProps.propsData);
+	free_kms_object_properties(connectorProps.props, connectorProps.propsData);
+	memset(&connectorProps, 0, sizeof(connectorProps));
+	memset(&crtcProps, 0, sizeof(crtcProps));
+	memset(&planeProps, 0, sizeof(planeProps));
+exit_error_kms_node_doc_create_drm_mode_destroy_mode_id:
+	if (modeId)
+		drmModeDestroyPropertyBlob(uvrkms->kmsfd, modeId);
 exit_error_kms_node_doc_create_drm_mode_free_crtc:
 	if (crtc)
 		drmModeFreeCrtc(crtc);
@@ -479,7 +584,7 @@ exit_error_kms_node_doc_create_drm_mode_free_connector:
 	if (connector)
 		drmModeFreeConnector(connector);
 exit_error_kms_node_doc_create_drm_mode_free_planes:
-	for (p = 0; p < drmPlaneResources->count_planes; p++)
+	for (p = 0; p < planesCount; p++)
 		if (planes[p])
 			drmModeFreePlane(planes[p]);
 exit_error_kms_node_doc_create_drm_mode_free_plane_resources:
@@ -489,7 +594,8 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 	if (drmResources)
 		drmModeFreeResources(drmResources);
 exit_error_kms_node_doc_create:
-	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .encoder = 0, .crtc = 0 , .plane = 0,
+	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .connectorProps = connectorProps, .encoder = 0,
+	                                                    .crtc = 0, .crtcProps = crtcProps, .plane = 0, .planeProps = planeProps,
 	                                                    .width = 0, .height = 0, .kmsfd = -1, .modeId = 0 };
 }
 
@@ -579,14 +685,24 @@ int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 {
 	if (uvrkms->uvr_kms_node.kmsfd != -1) {
-		if (uvrkms->uvr_kms_node_display_output_chain.plane)
+		if (uvrkms->uvr_kms_node_display_output_chain.plane) {
 			drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
-		if (uvrkms->uvr_kms_node_display_output_chain.crtc)
+			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.planeProps.props,
+						   uvrkms->uvr_kms_node_display_output_chain.planeProps.propsData);
+		}
+		if (uvrkms->uvr_kms_node_display_output_chain.crtc) {
 			drmModeFreeCrtc(uvrkms->uvr_kms_node_display_output_chain.crtc);
+			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.crtcProps.props,
+						   uvrkms->uvr_kms_node_display_output_chain.crtcProps.propsData);
+
+		}
 		if (uvrkms->uvr_kms_node_display_output_chain.encoder)
 			drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
-		if (uvrkms->uvr_kms_node_display_output_chain.connector)
+		if (uvrkms->uvr_kms_node_display_output_chain.connector) {
 			drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
+			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.connectorProps.props,
+						   uvrkms->uvr_kms_node_display_output_chain.connectorProps.propsData);
+		}
 		if (uvrkms->uvr_kms_node_display_output_chain.modeId)
 			drmModeDestroyPropertyBlob(uvrkms->uvr_kms_node.kmsfd, uvrkms->uvr_kms_node_display_output_chain.modeId);
 		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
