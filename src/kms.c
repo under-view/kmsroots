@@ -808,7 +808,7 @@ static void handle_page_flip_event(int fd,
 {
 	struct uvr_kms_renderer_info *rendererInfo = (struct uvr_kms_renderer_info *) data;
 
-	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererAtomicRequest, rendererInfo->rendererFbId, rendererInfo->rendererData);
+	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
 
 	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *rendererInfo->rendererFbId, rendererInfo->displayOutputChain) == -1)
 		return;

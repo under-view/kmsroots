@@ -240,15 +240,13 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms);
  *	   Used to exit rendering operations.
  * 	2. A pointer to an unsigned 8 bit integer determining current buffer
  *	   GBM/DUMP buffer being used.
- *	3. A pointer to a drmModeAtomicRequest instance. Used during modesetting.
- *	   DO NOT MODIFY in the renderer implementation.
- *	4. A pointer to an integer determing framebuffer ID associated with
+ *	3. A pointer to an integer determing framebuffer ID associated with
  *	   GBM/DUMP buffer.
- *	5. A pointer to any arbitrary data the custom renderer may want pass
+ *	4. A pointer to any arbitrary data the custom renderer may want pass
  *	   during rendering operations.
  * pointer to an integer, and a pointer to void data type
  */
-typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, drmModeAtomicReq*, int*, void*);
+typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, int*, void*);
 
 
 /*

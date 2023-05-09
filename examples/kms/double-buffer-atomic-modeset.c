@@ -60,7 +60,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 }
 
 
-void render(bool *running, uint8_t *cbuf, drmModeAtomicReq UNUSED *req, int *fbid, void *data)
+void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 {
 	struct app_kms_pass *passData = (struct app_kms_pass *) data;
 	struct app_kms *app = passData->app;
