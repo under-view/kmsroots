@@ -132,7 +132,7 @@ int main(void)
 	if (create_kms_set_crtc(&kms) == -1)
 		goto exit_error;
 
-	struct uvr_kms_atomic_request request;
+	struct uvr_kms_node_atomic_request request;
 
 	struct epoll_event event, events[MAX_EPOLL_EVENTS];
 	int nfds = -1, epollfd = -1, kmsfd = -1, n;
@@ -148,7 +148,7 @@ int main(void)
 	kmsfd = kms.uvr_kms_node_display_output_chain.kmsfd;
 	fbid = kms.uvr_buffer.bufferObjects[0].fbid;
 
-	struct uvr_kms_atomic_request_create_info atomicRequestInfo;
+	struct uvr_kms_node_atomic_request_create_info atomicRequestInfo;
 	atomicRequestInfo.kmsfd = kmsfd;
 	atomicRequestInfo.displayOutputChain = &kms.uvr_kms_node_display_output_chain;
 	atomicRequestInfo.renderer = &render;
@@ -157,13 +157,13 @@ int main(void)
 	atomicRequestInfo.rendererFbId = &fbid;
 	atomicRequestInfo.rendererData = &passData;
 
-	struct uvr_kms_handle_drm_event_info drmEventInfo;
+	struct uvr_kms_node_handle_drm_event_info drmEventInfo;
 	drmEventInfo.kmsfd = kmsfd;
 
 	if (create_kms_pixel_buffer(&passData) == -1)
 		goto exit_error;
 
-	request = uvr_kms_atomic_request_create(&atomicRequestInfo);
+	request = uvr_kms_node_atomic_request_create(&atomicRequestInfo);
 	if (!request.atomicRequest)
 		goto exit_error;
 
@@ -189,7 +189,7 @@ int main(void)
 
 		for (n = 0; n < nfds; n++) {
 			if (events[n].data.fd == kmsfd) {
-				uvr_kms_handle_drm_event(&drmEventInfo);
+				uvr_kms_node_handle_drm_event(&drmEventInfo);
 			}
 		}
 	}
@@ -207,7 +207,7 @@ exit_error:
 
 	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
-	kmsdevd.uvr_kms_atomic_request = request;
+	kmsdevd.uvr_kms_node_atomic_request = request;
 	uvr_kms_node_destroy(&kmsdevd);
 
 #ifdef INCLUDE_LIBSEAT
@@ -278,12 +278,12 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 
 int create_kms_set_crtc(struct app_kms *app)
 {
-	struct uvr_kms_display_mode_info nextImageInfo;
+	struct uvr_kms_node_display_mode_info nextImageInfo;
 
 	for (uint8_t i = 0; i < app->uvr_buffer.bufferCount; i++) {
 		nextImageInfo.fbid = app->uvr_buffer.bufferObjects[0].fbid;
 		nextImageInfo.displayChain = &app->uvr_kms_node_display_output_chain;
-		if (uvr_kms_set_display_mode(&nextImageInfo))
+		if (uvr_kms_node_display_mode_set(&nextImageInfo))
 			return -1;
 	}
 

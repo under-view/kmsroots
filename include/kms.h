@@ -111,7 +111,7 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
 
 
 /*
- * struct uvr_kms_object_props (Underview Renderer KMS Object Properties)
+ * struct uvr_kms_node_object_props (Underview Renderer KMS Node Object Properties)
  *
  * It stores properties of certain KMS objects (connectors, CRTC and planes) that are
  * used in atomic modeset setup and also in atomic page-flips.
@@ -121,7 +121,7 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  * @propsData - Resources avaliable to a given KMS object
  * @id        - Driver assigned ID of the KMS object
  */
-struct uvr_kms_object_props {
+struct uvr_kms_node_object_props {
 	drmModeObjectProperties *props;
 	drmModePropertyRes      **propsData;
 	uint32_t                id;
@@ -148,22 +148,22 @@ struct uvr_kms_object_props {
  * @width          - Highest mode (display resolution) width for @connector attached to display
  * @width          - Highest mode (display resolution) height for @connector attached to display
  * @kmsfd          - File descriptor associated with GPU device
- * @modeId         - Store the mode (resolution + refresh) property id. When we perform an atomic commit,
+ * @modeid         - Store the mode (resolution + refresh) property id. When we perform an atomic commit,
  *                   the driver expects a CRTC property named "MODE_ID", which points to the id given to one
  *                   of connceted display resolution & refresh rate. At the moment the highest mode it choosen.
  */
 struct uvr_kms_node_display_output_chain {
-	drmModeConnector            *connector;
-	struct uvr_kms_object_props connectorProps;
-	drmModeEncoder              *encoder;
-	drmModeCrtc                 *crtc;
-	struct uvr_kms_object_props crtcProps;
-	drmModePlane                *plane;
-	struct uvr_kms_object_props planeProps;
-	uint16_t                    width;
-	uint16_t                    height;
-	int                         kmsfd;
-	uint32_t                    modeId;
+	drmModeConnector                 *connector;
+	struct uvr_kms_node_object_props connectorProps;
+	drmModeEncoder                   *encoder;
+	drmModeCrtc                      *crtc;
+	struct uvr_kms_node_object_props crtcProps;
+	drmModePlane                     *plane;
+	struct uvr_kms_node_object_props planeProps;
+	uint16_t                         width;
+	uint16_t                         height;
+	int                              kmsfd;
+	uint32_t                         modeid;
 };
 
 
@@ -194,63 +194,63 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
 
 /*
- * struct uvr_kms_display_mode_info (Underview Renderer KMS Display Mode Information)
+ * struct uvr_kms_node_display_mode_info (Underview Renderer KMS Display Mode Information)
  *
  * members:
  * @fbid         - Id of framebuffer associated with gbm or dump buffer
  * @displayChain - Pointer to a plane->crtc->encoder->connector pair
  */
-struct uvr_kms_display_mode_info {
+struct uvr_kms_node_display_mode_info {
 	int                                      fbid;
 	struct uvr_kms_node_display_output_chain *displayChain;
 };
 
 
 /*
- * uvr_kms_set_display_mode: Sets the display connected to @displayChain.connecter screen resolution
- *                           and refresh to the highest possible value.
+ * uvr_kms_node_display_mode_set: Sets the display connected to @displayChain.connecter screen resolution
+ *                                and refresh to the highest possible value.
  *
  * args:
- * @uvrkms - pointer to a struct uvr_kms_display_mode_info used to set highest display mode
+ * @uvrkms - pointer to a struct uvr_kms_node_display_mode_info used to set highest display mode
  * return
  *	on success 0
  *	on failure -1
  */
-int uvr_kms_set_display_mode(struct uvr_kms_display_mode_info *uvrkms);
+int uvr_kms_node_display_mode_set(struct uvr_kms_node_display_mode_info *uvrkms);
 
 
 /*
- * uvr_kms_reset_display_mode: Clears the current display mode setting
+ * uvr_kms_node_display_mode_reset: Clears the current display mode setting
  *
  * args:
- * @uvrkms - pointer to a struct uvr_kms_display_mode_info used to set highest display mode
+ * @uvrkms - pointer to a struct uvr_kms_node_display_mode_info used to set highest display mode
  * return
  *	on success 0
  *	on failure -1
  */
-int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms);
+int uvr_kms_node_display_mode_reset(struct uvr_kms_node_display_mode_info *uvrkms);
 
 
 /*
  * Underview Renderer Implementation
- * Function pointer used by struct uvr_kms_atomic_request_create_info*
+ * Function pointer used by struct uvr_kms_node_atomic_request_create_info*
  * Used to pass the address of an external function you want to run
  * Given that the arguments of the function are:
  * 	1. A pointer to a boolean determining if the renderer is running.
  *	   Used to exit rendering operations.
  * 	2. A pointer to an unsigned 8 bit integer determining current buffer
  *	   GBM/DUMP buffer being used.
- *	3. A pointer to an integer determing framebuffer ID associated with
- *	   GBM/DUMP buffer.
+ *	3. A pointer to an integer storing framebuffer ID associated with
+ *	   the GBM(GEM DMA Buf) or DUMP buffer. Used by the implementation
+ *	   during atomic modesetting operations.
  *	4. A pointer to any arbitrary data the custom renderer may want pass
  *	   during rendering operations.
- * pointer to an integer, and a pointer to void data type
  */
-typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, int*, void*);
+typedef void (*uvr_kms_node_renderer_impl)(bool*, uint8_t*, int*, void*);
 
 
 /*
- * struct uvr_kms_atomic_request_create_info (Underview Renderer KMS Atomic Request Create Information)
+ * struct uvr_kms_node_atomic_request_create_info (Underview Renderer KMS Node Atomic Request Create Information)
  *
  * members:
  * @kmsfd                 - File descriptor to an open KMS device node.
@@ -266,10 +266,10 @@ typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, int*, void*);
  * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
  *                          Reference/Address passed depends on external renderer function.
  */
-struct uvr_kms_atomic_request_create_info {
+struct uvr_kms_node_atomic_request_create_info {
 	int                                      kmsfd;
 	struct uvr_kms_node_display_output_chain *displayOutputChain;
-	uvr_kms_renderer_impl                    renderer;
+	uvr_kms_node_renderer_impl               renderer;
 	bool                                     *rendererRunning;
 	uint8_t                                  *rendererCurrentBuffer;
 	int                                      *rendererFbId;
@@ -278,55 +278,55 @@ struct uvr_kms_atomic_request_create_info {
 
 
 /*
- * struct uvr_kms_atomic_request (Underview Renderer KMS Atomic Request)
+ * struct uvr_kms_node_atomic_request (Underview Renderer KMS Node Atomic Request)
  *
  * members:
  * @atomicRequest - Pointer to a KMS atomic request instance
  * @rendererInfo  - Used by the implementation. DO NOT MODIFY.
  */
-struct uvr_kms_atomic_request {
+struct uvr_kms_node_atomic_request {
 	drmModeAtomicReq *atomicRequest;
 	void             *rendererInfo;
 };
 
 
 /*
- * uvr_kms_atomic_request_create: Function creates a KMS atomic request instance. Sets the interface that allows
- *                                users of API to setup custom renderer implementation.
+ * uvr_kms_node_atomic_request_create: Function creates a KMS atomic request instance. Sets the interface that allows
+ *                                     users of API to setup custom renderer implementation.
  *
  * args:
- * @uvrkms - pointer to a struct uvr_kms_atomic_request_create_info used to set external renderer and arguments
+ * @uvrkms - pointer to a struct uvr_kms_node_atomic_request_create_info used to set external renderer and arguments
  *           of the external renderer.
  * return
- *	on success struct uvr_kms_atomic_request
- *	on failure struct uvr_kms_atomic_request { with members nulled }
+ *	on success struct uvr_kms_node_atomic_request
+ *	on failure struct uvr_kms_node_atomic_request { with members nulled }
  */
-struct uvr_kms_atomic_request uvr_kms_atomic_request_create(struct uvr_kms_atomic_request_create_info *uvrkms);
+struct uvr_kms_node_atomic_request uvr_kms_node_atomic_request_create(struct uvr_kms_node_atomic_request_create_info *uvrkms);
 
 
 /*
- * struct uvr_kms_handle_drm_event_info (Underview Renderer KMS Handle DRM Event Information)
+ * struct uvr_kms_node_handle_drm_event_info (Underview Renderer KMS Node Handle DRM Event Information)
  *
  * members:
  * @kmsfd - File descriptor to an open KMS device node.
  */
-struct uvr_kms_handle_drm_event_info {
+struct uvr_kms_node_handle_drm_event_info {
 	int kmsfd;
 };
 
 
 /*
- * uvr_kms_handle_drm_event: Function calls drmHandleEvent() which processes outstanding DRM events
- *                           on the DRM file-descriptor. This function should be called after the DRM
- *                           file-descriptor has polled readable.
+ * uvr_kms_node_handle_drm_event: Function calls drmHandleEvent() which processes outstanding DRM events
+ *                                on the DRM file-descriptor. This function should be called after the DRM
+ *                                file-descriptor has polled readable.
  *
  * args:
- * @uvrkms - pointer to a struct uvr_kms_handle_drm_event_info
+ * @uvrkms - pointer to a struct uvr_kms_node_handle_drm_event_info
  * return
  *	on success 0
  *	on failure -1
  */
-int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms);
+int uvr_kms_node_handle_drm_event(struct uvr_kms_node_handle_drm_event_info *uvrkms);
 
 
 /*
@@ -339,12 +339,12 @@ int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms);
  *                                      of a given device. That given device is a DRI device file.
  * @uvr_kms_node_display_output_chain - Must pass a valid struct uvr_kms_node_display_output_chain. Stores information
  *                                      about KMS device node connector->encoder->crtc->plane pair
- * @uvr_kms_atomic_request            - Must pass a valid struct uvr_kms_atomic_request { free'd members: @atomicRequest }
+ * @uvr_kms_node_atomic_request       - Must pass a valid struct uvr_kms_node_atomic_request { free'd members: @atomicRequest, @rendererInfo }
  */
 struct uvr_kms_node_destroy {
 	struct uvr_kms_node                      uvr_kms_node;
 	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
-	struct uvr_kms_atomic_request            uvr_kms_atomic_request;
+	struct uvr_kms_node_atomic_request       uvr_kms_node_atomic_request;
 };
 
 

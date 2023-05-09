@@ -350,7 +350,7 @@ static void free_kms_object_properties(drmModeObjectProperties *props, drmModePr
  * acquire_kms_object_properties: helpfer function that retrieves the properties of a certain CRTC, plane or connector object.
  * https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L191
  */
-static int acquire_kms_object_properties(int fd, struct uvr_kms_object_props *obj, uint32_t type)
+static int acquire_kms_object_properties(int fd, struct uvr_kms_node_object_props *obj, uint32_t type)
 {
 	char *typeStr;
 	unsigned int i;
@@ -446,11 +446,11 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	drmModeEncoder *encoder = NULL;
 	drmModeCrtc *crtc = NULL;
 	drmModePlane *plane = NULL;
-	uint32_t modeId = 0;
+	uint32_t modeid = 0;
 
-	struct uvr_kms_object_props connectorProps;
-	struct uvr_kms_object_props crtcProps;
-	struct uvr_kms_object_props planeProps;
+	struct uvr_kms_node_object_props connectorProps;
+	struct uvr_kms_node_object_props crtcProps;
+	struct uvr_kms_node_object_props planeProps;
 
 	memset(&connectorProps, 0, sizeof(connectorProps));
 	memset(&crtcProps, 0, sizeof(crtcProps));
@@ -535,7 +535,7 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		drmModeFreeResources(drmResources); drmResources = NULL;
 
 		// Stores mode id given to one of the displays resolution + refresh
-		if (drmModeCreatePropertyBlob(uvrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeId) != 0) {
+		if (drmModeCreatePropertyBlob(uvrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeid) != 0) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeCreatePropertyBlob: couldn't create a blob property");
 			goto exit_error_kms_node_doc_create_drm_mode_free_crtc;
 		}
@@ -556,12 +556,12 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_INFO, "CRTC ID: %u", crtc->crtc_id);
 		uvr_utils_log(UVR_INFO, "ENCODER ID: %u", encoder->encoder_id);
 		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
-		uvr_utils_log(UVR_INFO, "MODE (resolution + refresh) ID: %u", modeId);
+		uvr_utils_log(UVR_INFO, "MODE (resolution + refresh) ID: %u", modeid);
 
 		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .connectorProps = connectorProps, .encoder = encoder,
 		                                                    .crtc = crtc, .crtcProps = crtcProps, .plane = plane, .planeProps = planeProps,
 			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay,
-								    .kmsfd = uvrkms->kmsfd, .modeId = modeId };
+								    .kmsfd = uvrkms->kmsfd, .modeid = modeid };
 	}
 
 exit_error_kms_node_doc_create_free_kms_obj_props:
@@ -572,8 +572,8 @@ exit_error_kms_node_doc_create_free_kms_obj_props:
 	memset(&crtcProps, 0, sizeof(crtcProps));
 	memset(&planeProps, 0, sizeof(planeProps));
 exit_error_kms_node_doc_create_drm_mode_destroy_mode_id:
-	if (modeId)
-		drmModeDestroyPropertyBlob(uvrkms->kmsfd, modeId);
+	if (modeid)
+		drmModeDestroyPropertyBlob(uvrkms->kmsfd, modeid);
 exit_error_kms_node_doc_create_drm_mode_free_crtc:
 	if (crtc)
 		drmModeFreeCrtc(crtc);
@@ -596,11 +596,11 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 exit_error_kms_node_doc_create:
 	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .connectorProps = connectorProps, .encoder = 0,
 	                                                    .crtc = 0, .crtcProps = crtcProps, .plane = 0, .planeProps = planeProps,
-	                                                    .width = 0, .height = 0, .kmsfd = -1, .modeId = 0 };
+	                                                    .width = 0, .height = 0, .kmsfd = -1, .modeid = 0 };
 }
 
 
-int uvr_kms_set_display_mode(struct uvr_kms_display_mode_info *uvrkms)
+int uvr_kms_node_display_mode_set(struct uvr_kms_node_display_mode_info *uvrkms)
 {
 	drmModeConnector *conn = uvrkms->displayChain->connector;
 	uint32_t connector = uvrkms->displayChain->connector->connector_id;
@@ -620,7 +620,7 @@ int uvr_kms_set_display_mode(struct uvr_kms_display_mode_info *uvrkms)
 }
 
 
-int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms)
+int uvr_kms_node_display_mode_reset(struct uvr_kms_node_display_mode_info *uvrkms)
 {
 	uint32_t crtc = uvrkms->displayChain->crtc->crtc_id;
 	int kmsfd = uvrkms->displayChain->kmsfd;
@@ -637,7 +637,7 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms)
 
 /* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L233 */
 static int set_kms_object_property(drmModeAtomicReq *atomicRequest,
-                                   struct uvr_kms_object_props obj,
+                                   struct uvr_kms_node_object_props obj,
                                    const char *name,
                                    uint64_t value)
 {
@@ -675,14 +675,14 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
 	 * set the mode id of the CRTC; this property receives the id of a blob
 	 * property that holds the struct that actually contains the mode info
 	 */
-	if (set_kms_object_property(atomicRequest, displayOutputChain->crtcProps, "MODE_ID", displayOutputChain->modeId) < 0)
+	if (set_kms_object_property(atomicRequest, displayOutputChain->crtcProps, "MODE_ID", displayOutputChain->modeid) < 0)
 		return -1;
 
 	/* set the CRTC object as active */
 	if (set_kms_object_property(atomicRequest, displayOutputChain->crtcProps, "ACTIVE", 1) < 0)
 		return -1;
 
-	struct uvr_kms_object_props plane = displayOutputChain->planeProps;
+	struct uvr_kms_node_object_props plane = displayOutputChain->planeProps;
 
 	/* set properties of the plane related to the CRTC and the framebuffer */
 	if (set_kms_object_property(atomicRequest, plane, "FB_ID", fbid) < 0)
@@ -720,7 +720,7 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
 
 
 /*
- * struct uvr_kms_renderer_info (Underview Renderer KMS Renderer Information)
+ * struct uvr_kms_node_renderer_info (Underview Renderer KMS Node Renderer Information)
  *
  * members:
  * @displayOutputChain    - Pointer to a struct containing all plane->crtc->connector data used during
@@ -735,9 +735,9 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
  * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
  *                          Reference/Address passed depends on external renderer function.
  */
-struct uvr_kms_renderer_info {
+struct uvr_kms_node_renderer_info {
 	struct uvr_kms_node_display_output_chain *displayOutputChain;
-	uvr_kms_renderer_impl                    renderer;
+	uvr_kms_node_renderer_impl               renderer;
 	bool                                     *rendererRunning;
 	uint8_t                                  *rendererCurrentBuffer;
 	drmModeAtomicReq                         *rendererAtomicRequest;
@@ -746,20 +746,20 @@ struct uvr_kms_renderer_info {
 };
 
 
-struct uvr_kms_atomic_request uvr_kms_atomic_request_create(struct uvr_kms_atomic_request_create_info *uvrkms)
+struct uvr_kms_node_atomic_request uvr_kms_node_atomic_request_create(struct uvr_kms_node_atomic_request_create_info *uvrkms)
 {
 	int atomicRequestFlags = 0;
 	drmModeAtomicReq *atomicRequest = NULL;
-	struct uvr_kms_renderer_info *rendererInfo = NULL;
+	struct uvr_kms_node_renderer_info *rendererInfo = NULL;
 
 	atomicRequest = drmModeAtomicAlloc();
 	if (!atomicRequest)
-		goto exit_error_uvr_kms_atomic_request_create;
+		goto exit_error_uvr_kms_node_atomic_request_create;
 
-	rendererInfo = calloc(1, sizeof(struct uvr_kms_renderer_info));
+	rendererInfo = calloc(1, sizeof(struct uvr_kms_node_renderer_info));
 	if (!rendererInfo) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_uvr_kms_atomic_request_create_free_request;
+		goto exit_error_uvr_kms_node_atomic_request_create_free_request;
 	}
 
 	rendererInfo->displayOutputChain = uvrkms->displayOutputChain;
@@ -771,13 +771,13 @@ struct uvr_kms_atomic_request uvr_kms_atomic_request_create(struct uvr_kms_atomi
 	rendererInfo->rendererData = uvrkms->rendererData;
 
 	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *uvrkms->rendererFbId, uvrkms->displayOutputChain) == -1)
-		goto exit_error_uvr_kms_atomic_request_create_free_request;
+		goto exit_error_uvr_kms_node_atomic_request_create_free_request;
 
 	/* perform test-only atomic commit */
 	atomicRequestFlags = DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET;
 	if (drmModeAtomicCommit(uvrkms->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
 		uvr_utils_log(UVR_DANGER, "drmModeAtomicCommit: %s", strerror(errno));
-		goto exit_error_uvr_kms_atomic_request_create_free_rendererInfo;
+		goto exit_error_uvr_kms_node_atomic_request_create_free_rendererInfo;
 	}
 
 	/* initial modeset on all outputs */
@@ -785,17 +785,17 @@ struct uvr_kms_atomic_request uvr_kms_atomic_request_create(struct uvr_kms_atomi
 	if (drmModeAtomicCommit(uvrkms->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
 		uvr_utils_log(UVR_DANGER, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
 		uvr_utils_log(UVR_DANGER, "[x] drmModeAtomicCommit: %s", strerror(errno));
-		goto exit_error_uvr_kms_atomic_request_create_free_rendererInfo;
+		goto exit_error_uvr_kms_node_atomic_request_create_free_rendererInfo;
 	}
 
-	return (struct uvr_kms_atomic_request) { .atomicRequest = rendererInfo->rendererAtomicRequest, .rendererInfo = rendererInfo };
+	return (struct uvr_kms_node_atomic_request) { .atomicRequest = rendererInfo->rendererAtomicRequest, .rendererInfo = rendererInfo };
 
-exit_error_uvr_kms_atomic_request_create_free_rendererInfo:
+exit_error_uvr_kms_node_atomic_request_create_free_rendererInfo:
 	free(rendererInfo);
-exit_error_uvr_kms_atomic_request_create_free_request:
+exit_error_uvr_kms_node_atomic_request_create_free_request:
 	drmModeAtomicFree(atomicRequest);
-exit_error_uvr_kms_atomic_request_create:
-	return (struct uvr_kms_atomic_request) { .atomicRequest = NULL, .rendererInfo = NULL };
+exit_error_uvr_kms_node_atomic_request_create:
+	return (struct uvr_kms_node_atomic_request) { .atomicRequest = NULL, .rendererInfo = NULL };
 }
 
 
@@ -806,7 +806,7 @@ static void handle_page_flip_event(int fd,
                                    unsigned int UNUSED crtc_id,
                                    void *data)
 {
-	struct uvr_kms_renderer_info *rendererInfo = (struct uvr_kms_renderer_info *) data;
+	struct uvr_kms_node_renderer_info *rendererInfo = (struct uvr_kms_node_renderer_info *) data;
 
 	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
 
@@ -821,7 +821,7 @@ static void handle_page_flip_event(int fd,
 }
 
 
-int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
+int uvr_kms_node_handle_drm_event(struct uvr_kms_node_handle_drm_event_info *uvrkms)
 {
 	/*
 	 * Version 3 is the first version that allow us to use page_flip_handler2, which
@@ -848,9 +848,9 @@ int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 {
 	if (uvrkms->uvr_kms_node.kmsfd != -1) {
-		if (uvrkms->uvr_kms_atomic_request.atomicRequest)
-			drmModeAtomicFree(uvrkms->uvr_kms_atomic_request.atomicRequest);
-		free(uvrkms->uvr_kms_atomic_request.rendererInfo);
+		if (uvrkms->uvr_kms_node_atomic_request.atomicRequest)
+			drmModeAtomicFree(uvrkms->uvr_kms_node_atomic_request.atomicRequest);
+		free(uvrkms->uvr_kms_node_atomic_request.rendererInfo);
 		if (uvrkms->uvr_kms_node_display_output_chain.plane) {
 			drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
 			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.planeProps.props,
@@ -869,8 +869,8 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.connectorProps.props,
 						   uvrkms->uvr_kms_node_display_output_chain.connectorProps.propsData);
 		}
-		if (uvrkms->uvr_kms_node_display_output_chain.modeId)
-			drmModeDestroyPropertyBlob(uvrkms->uvr_kms_node.kmsfd, uvrkms->uvr_kms_node_display_output_chain.modeId);
+		if (uvrkms->uvr_kms_node_display_output_chain.modeid)
+			drmModeDestroyPropertyBlob(uvrkms->uvr_kms_node.kmsfd, uvrkms->uvr_kms_node_display_output_chain.modeid);
 		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
 			vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.keyBoardMode);
 #ifdef INCLUDE_LIBSEAT
