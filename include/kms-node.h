@@ -1,5 +1,5 @@
-#ifndef UVR_KMS_H
-#define UVR_KMS_H
+#ifndef UVR_KMS_NODE_H
+#define UVR_KMS_NODE_H
 
 #include "utils.h"
 

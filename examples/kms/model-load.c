@@ -8,7 +8,7 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
-#include "kms.h"
+#include "kms-node.h"
 #include "buffer.h"
 #include "vulkan.h"
 #include "shader.h"

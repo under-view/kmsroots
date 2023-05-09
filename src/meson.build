@@ -32,7 +32,7 @@ libgbm = dependency('gbm', required: get_option('kms'))
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
   lib_uvr_deps += [libdrm]
-  fs += ['kms.c']
+  fs += ['kms-node.c']
 endif
 
 if libseat.found()

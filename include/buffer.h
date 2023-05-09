@@ -2,7 +2,6 @@
 #define UVR_BUFFER_H
 
 #include "utils.h"
-#include "kms.h"
 
 #include <gbm.h>
 

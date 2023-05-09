@@ -5,6 +5,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <drm.h>
+#include <drm_fourcc.h>
+#include <drm_mode.h>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
+
 #include "buffer.h"
 
 

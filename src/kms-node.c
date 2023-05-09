@@ -11,7 +11,7 @@
 #include <sys/kd.h>
 #include <linux/major.h>
 
-#include "kms.h"
+#include "kms-node.h"
 
 
 /*

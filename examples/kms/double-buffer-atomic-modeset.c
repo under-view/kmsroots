@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 
-#include "kms.h"
+#include "kms-node.h"
 #include "buffer.h"
 
 #define MAX_EPOLL_EVENTS 1
