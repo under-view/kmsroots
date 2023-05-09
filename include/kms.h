@@ -233,32 +233,87 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms);
 
 /*
  * Underview Renderer Implementation
- * Function pointer used by struct uvr_kms_handle_drm_event_info*
- * Allows to pass the address of an external function you want to run
- * Given that the arguments of the function are a pointer to a boolean,
+ * Function pointer used by struct uvr_kms_atomic_request_create_info*
+ * Used to pass the address of an external function you want to run
+ * Given that the arguments of the function are:
+ * 	1. A pointer to a boolean determining if the renderer is running.
+ *	   Used to exit rendering operations.
+ * 	2. A pointer to an unsigned 8 bit integer determining current buffer
+ *	   GBM/DUMP buffer being used.
+ *	3. A pointer to a drmModeAtomicRequest instance. Used during modesetting.
+ *	   DO NOT MODIFY in the renderer implementation.
+ *	4. A pointer to an integer determing framebuffer ID associated with
+ *	   GBM/DUMP buffer.
+ *	5. A pointer to any arbitrary data the custom renderer may want pass
+ *	   during rendering operations.
  * pointer to an integer, and a pointer to void data type
  */
-typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, void*);
+typedef void (*uvr_kms_renderer_impl)(bool*, uint8_t*, drmModeAtomicReq*, int*, void*);
 
 
 /*
- * struct uvr_kms_handle_drm_event_info (Underview Renderer KMS Crtc Mode Information)
+ * struct uvr_kms_atomic_request_create_info (Underview Renderer KMS Atomic Request Create Information)
  *
  * members:
- * @kmsfd                 - Id of framebuffer associated with gbm or dump buffer.
+ * @kmsfd                 - File descriptor to an open KMS device node.
+ * @displayOutputChain    - Pointer to a struct containing all plane->crtc->connector data used during
+ *                          KMS atomic mode setting.
  * @renderer              - Function pointer that allows custom external renderers to be executed by the api
  *                          upon @kmsfd polled events.
+ * @rendererRunning       - Pointer to a boolean that determines if a given renderer is running and in need
+ *                          of stopping.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
+ * @rendererFbId          - Pointer to an integer used as the value of the FB_ID property for a plane related to
+ *                          the CRTC during the atomic modeset operation
  * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
  *                          Reference/Address passed depends on external renderer function.
- * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
- * @rendererRunning       - Pointer to a boolean that determines if a given drm Context is actively running/displaying.
+ */
+struct uvr_kms_atomic_request_create_info {
+	int                                      kmsfd;
+	struct uvr_kms_node_display_output_chain *displayOutputChain;
+	uvr_kms_renderer_impl                    renderer;
+	bool                                     *rendererRunning;
+	uint8_t                                  *rendererCurrentBuffer;
+	int                                      *rendererFbId;
+	void                                     *rendererData;
+};
+
+
+/*
+ * struct uvr_kms_atomic_request (Underview Renderer KMS Atomic Request)
+ *
+ * members:
+ * @atomicRequest - Pointer to a KMS atomic request instance
+ * @rendererInfo  - Used by the implementation. DO NOT MODIFY.
+ */
+struct uvr_kms_atomic_request {
+	drmModeAtomicReq *atomicRequest;
+	void             *rendererInfo;
+};
+
+
+/*
+ * uvr_kms_atomic_request_create: Function creates a KMS atomic request instance. Sets the interface that allows
+ *                                users of API to setup custom renderer implementation.
+ *
+ * args:
+ * @uvrkms - pointer to a struct uvr_kms_atomic_request_create_info used to set external renderer and arguments
+ *           of the external renderer.
+ * return
+ *	on success struct uvr_kms_atomic_request
+ *	on failure struct uvr_kms_atomic_request { with members nulled }
+ */
+struct uvr_kms_atomic_request uvr_kms_atomic_request_create(struct uvr_kms_atomic_request_create_info *uvrkms);
+
+
+/*
+ * struct uvr_kms_handle_drm_event_info (Underview Renderer KMS Handle DRM Event Information)
+ *
+ * members:
+ * @kmsfd - File descriptor to an open KMS device node.
  */
 struct uvr_kms_handle_drm_event_info {
-	int                   kmsfd;
-	uvr_kms_renderer_impl renderer;
-	void                  *rendererData;
-	uint8_t               *rendererCurrentBuffer;
-	bool                  *rendererRunning;
+	int kmsfd;
 };
 
 
@@ -286,10 +341,12 @@ int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms);
  *                                      of a given device. That given device is a DRI device file.
  * @uvr_kms_node_display_output_chain - Must pass a valid struct uvr_kms_node_display_output_chain. Stores information
  *                                      about KMS device node connector->encoder->crtc->plane pair
+ * @uvr_kms_atomic_request            - Must pass a valid struct uvr_kms_atomic_request { free'd members: @atomicRequest }
  */
 struct uvr_kms_node_destroy {
 	struct uvr_kms_node                      uvr_kms_node;
 	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
+	struct uvr_kms_atomic_request            uvr_kms_atomic_request;
 };
 
 

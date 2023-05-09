@@ -348,7 +348,7 @@ static void free_kms_object_properties(drmModeObjectProperties *props, drmModePr
 
 /*
  * acquire_kms_object_properties: helpfer function that retrieves the properties of a certain CRTC, plane or connector object.
- * https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L194
+ * https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L191
  */
 static int acquire_kms_object_properties(int fd, struct uvr_kms_object_props *obj, uint32_t type)
 {
@@ -371,7 +371,7 @@ static int acquire_kms_object_properties(int fd, struct uvr_kms_object_props *ob
 				typeStr = "unknown type";
 				break;
 		}
-		uvr_utils_log(UVR_DANGER, "[x] cannot get %s %d properties: %s\n", typeStr, obj->id, strerror(errno));
+		uvr_utils_log(UVR_DANGER, "[x] cannot get %s %d properties: %s", typeStr, obj->id, strerror(errno));
 		return -1;
 	}
 
@@ -635,27 +635,171 @@ int uvr_kms_reset_display_mode(struct uvr_kms_display_mode_info *uvrkms)
 }
 
 
+/* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L233 */
+static int set_kms_object_property(drmModeAtomicReq *atomicRequest,
+                                   struct uvr_kms_object_props obj,
+                                   const char *name,
+                                   uint64_t value)
+{
+	uint32_t i, prop_id = 0;
+
+	for (i = 0; i < obj.props->count_props; i++) {
+		if (!strcmp(obj.propsData[i]->name, name)) { // TODO: remove inefficient strcmp operation
+			prop_id = obj.propsData[i]->prop_id;
+			break;
+		}
+	}
+
+	if (prop_id == 0) {
+		uvr_utils_log(UVR_DANGER, "[x] set_kms_object_property: %s has no object property", name);
+		return -EINVAL;
+	}
+
+	return drmModeAtomicAddProperty(atomicRequest, obj.id, prop_id, value);
+}
+
+
 /*
- * struct uvr_kms_renderer_info (Underview Renderer DRM/KMS Renderer Information)
+ * Here we set the values of properties (of our connector, CRTC and plane objects)
+ * that we want to change in the atomic commit. These changes are temporarily stored
+ * in drmModeAtomicReq *atomicRequest until the commit actually happens.
+ */
+static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fbid,
+                                         struct uvr_kms_node_display_output_chain *displayOutputChain)
+{
+	/* set id of the CRTC id that the connector is using */
+	if (set_kms_object_property(atomicRequest, displayOutputChain->connectorProps, "CRTC_ID", displayOutputChain->crtcProps.id) < 0)
+		return -1;
+
+	/*
+	 * set the mode id of the CRTC; this property receives the id of a blob
+	 * property that holds the struct that actually contains the mode info
+	 */
+	if (set_kms_object_property(atomicRequest, displayOutputChain->crtcProps, "MODE_ID", displayOutputChain->modeId) < 0)
+		return -1;
+
+	/* set the CRTC object as active */
+	if (set_kms_object_property(atomicRequest, displayOutputChain->crtcProps, "ACTIVE", 1) < 0)
+		return -1;
+
+	struct uvr_kms_object_props plane = displayOutputChain->planeProps;
+
+	/* set properties of the plane related to the CRTC and the framebuffer */
+	if (set_kms_object_property(atomicRequest, plane, "FB_ID", fbid) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "CRTC_ID", displayOutputChain->crtcProps.id) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "SRC_X", 0) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "SRC_Y", 0) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "SRC_W", displayOutputChain->width << 16) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "SRC_H", displayOutputChain->height << 16) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "CRTC_X", 0) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "CRTC_Y", 0) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "CRTC_W", displayOutputChain->width) < 0)
+		return -1;
+
+	if (set_kms_object_property(atomicRequest, plane, "CRTC_H", displayOutputChain->height) < 0)
+		return -1;
+
+	return 0;
+}
+
+
+/*
+ * struct uvr_kms_renderer_info (Underview Renderer KMS Renderer Information)
  *
  * members:
+ * @displayOutputChain    - Pointer to a struct containing all plane->crtc->connector data used during
+ *                          KMS atomic mode setting.
  * @renderer              - Function pointer that allows custom external renderers to be executed by the api
  *                          upon @kmsfd polled events.
+ * @rendererRunning       - Pointer to a boolean that determines if a given renderer is running and in need
+ *                          of stopping.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
+ * @rendererFbId          - Pointer to an integer used as the value of the FB_ID property for a plane related to
+ *                          the CRTC during the atomic modeset operation
  * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
  *                          Reference/Address passed depends on external renderer function.
- * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
- * @rendererRunning       - Pointer to a boolean that determines if a given drm Context is actively running/displaying.
- * @fbids                 - Array of framebuffer IDs created with a call to drmModeAddFb2
  */
 struct uvr_kms_renderer_info {
-	uvr_kms_renderer_impl renderer;
-	void *rendererData;
-	uint8_t *rendererCurrentBuffer;
-	bool *rendererRunning;
+	struct uvr_kms_node_display_output_chain *displayOutputChain;
+	uvr_kms_renderer_impl                    renderer;
+	bool                                     *rendererRunning;
+	uint8_t                                  *rendererCurrentBuffer;
+	drmModeAtomicReq                         *rendererAtomicRequest;
+	int                                      *rendererFbId;
+	void                                     *rendererData;
 };
 
 
-static void handle_page_flip_event(int UNUSED fd,
+struct uvr_kms_atomic_request uvr_kms_atomic_request_create(struct uvr_kms_atomic_request_create_info *uvrkms)
+{
+	int atomicRequestFlags = 0;
+	drmModeAtomicReq *atomicRequest = NULL;
+	struct uvr_kms_renderer_info *rendererInfo = NULL;
+
+	atomicRequest = drmModeAtomicAlloc();
+	if (!atomicRequest)
+		goto exit_error_uvr_kms_atomic_request_create;
+
+	rendererInfo = calloc(1, sizeof(struct uvr_kms_renderer_info));
+	if (!rendererInfo) {
+		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_uvr_kms_atomic_request_create_free_request;
+	}
+
+	rendererInfo->displayOutputChain = uvrkms->displayOutputChain;
+	rendererInfo->renderer = uvrkms->renderer;
+	rendererInfo->rendererRunning = uvrkms->rendererRunning;
+	rendererInfo->rendererCurrentBuffer = uvrkms->rendererCurrentBuffer;
+	rendererInfo->rendererAtomicRequest = atomicRequest;
+	rendererInfo->rendererFbId = uvrkms->rendererFbId;
+	rendererInfo->rendererData = uvrkms->rendererData;
+
+	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *uvrkms->rendererFbId, uvrkms->displayOutputChain) == -1)
+		goto exit_error_uvr_kms_atomic_request_create_free_request;
+
+	/* perform test-only atomic commit */
+	atomicRequestFlags = DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET;
+	if (drmModeAtomicCommit(uvrkms->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
+		uvr_utils_log(UVR_DANGER, "drmModeAtomicCommit: %s", strerror(errno));
+		goto exit_error_uvr_kms_atomic_request_create_free_rendererInfo;
+	}
+
+	/* initial modeset on all outputs */
+	atomicRequestFlags = DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT;
+	if (drmModeAtomicCommit(uvrkms->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
+		uvr_utils_log(UVR_DANGER, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
+		uvr_utils_log(UVR_DANGER, "[x] drmModeAtomicCommit: %s", strerror(errno));
+		goto exit_error_uvr_kms_atomic_request_create_free_rendererInfo;
+	}
+
+	return (struct uvr_kms_atomic_request) { .atomicRequest = rendererInfo->rendererAtomicRequest, .rendererInfo = rendererInfo };
+
+exit_error_uvr_kms_atomic_request_create_free_rendererInfo:
+	free(rendererInfo);
+exit_error_uvr_kms_atomic_request_create_free_request:
+	drmModeAtomicFree(atomicRequest);
+exit_error_uvr_kms_atomic_request_create:
+	return (struct uvr_kms_atomic_request) { .atomicRequest = NULL, .rendererInfo = NULL };
+}
+
+
+static void handle_page_flip_event(int fd,
                                    unsigned int UNUSED seq,
                                    unsigned int UNUSED tv_sec,
                                    unsigned int UNUSED tv_usec,
@@ -663,12 +807,31 @@ static void handle_page_flip_event(int UNUSED fd,
                                    void *data)
 {
 	struct uvr_kms_renderer_info *rendererInfo = (struct uvr_kms_renderer_info *) data;
-	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererData);
+
+	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererAtomicRequest, rendererInfo->rendererFbId, rendererInfo->rendererData);
+
+	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *rendererInfo->rendererFbId, rendererInfo->displayOutputChain) == -1)
+		return;
+
+	if (drmModeAtomicCommit(fd, rendererInfo->rendererAtomicRequest, DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT, rendererInfo) < 0) {
+		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
+		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: %s", strerror(errno));
+		return;
+	}
 }
 
 
 int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
 {
+	/*
+	 * Version 3 is the first version that allow us to use page_flip_handler2, which
+	 * is just like page_flip_handler but with the addition of passing the
+	 * crtc_id as argument to the function which allows us to find which output
+	 * the page-flip happened.
+	 *
+	 * The usage of page_flip_handler2 is the reason why we needed to verify
+	 * the support for DRM_CAP_CRTC_IN_VBLANK_EVENT.
+	 */
 	drmEventContext event;
 	event.version = 3;
 	event.page_flip_handler2 = handle_page_flip_event;
@@ -685,6 +848,9 @@ int uvr_kms_handle_drm_event(struct uvr_kms_handle_drm_event_info *uvrkms)
 void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 {
 	if (uvrkms->uvr_kms_node.kmsfd != -1) {
+		if (uvrkms->uvr_kms_atomic_request.atomicRequest)
+			drmModeAtomicFree(uvrkms->uvr_kms_atomic_request.atomicRequest);
+		free(uvrkms->uvr_kms_atomic_request.rendererInfo);
 		if (uvrkms->uvr_kms_node_display_output_chain.plane) {
 			drmModeFreePlane(uvrkms->uvr_kms_node_display_output_chain.plane);
 			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.planeProps.props,
