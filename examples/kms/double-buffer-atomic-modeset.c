@@ -1,12 +1,17 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <sys/epoll.h>
 
 #include "kms.h"
 #include "buffer.h"
+
+#define MAX_EPOLL_EVENTS 1
 
 struct app_kms {
 	struct uvr_kms_node uvr_kms_node;
@@ -55,7 +60,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 }
 
 
-void render(bool UNUSED *running, uint32_t *cbuf, void *data)
+void render(bool *running, uint8_t *cbuf, drmModeAtomicReq UNUSED *req, int *fbid, void *data)
 {
 	struct app_kms_pass *passData = (struct app_kms_pass *) data;
 	struct app_kms *app = passData->app;
@@ -83,13 +88,9 @@ void render(bool UNUSED *running, uint32_t *cbuf, void *data)
 
 	// Write to back buffer
 	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf^1].bo, pixelBuffer, pixelBufferSize);
+	*fbid = app->uvr_buffer.bufferObjects[*cbuf].fbid;
 
-	// Display front buffer
-	struct uvr_kms_display_mode_info nextImageInfo;
-	nextImageInfo.fbid = app->uvr_buffer.bufferObjects[*cbuf].fbid;
-	nextImageInfo.displayChain = &app->uvr_kms_node_display_output_chain;
-	if (uvr_kms_set_display_mode(&nextImageInfo) == 0)
-		*cbuf ^= 1;
+	*cbuf ^= 1;
 
 	*running = prun;
 }
@@ -131,18 +132,66 @@ int main(void)
 	if (create_kms_set_crtc(&kms) == -1)
 		goto exit_error;
 
-	static uint32_t cbuf = 0;
+	struct uvr_kms_atomic_request request;
+
+	struct epoll_event event, events[MAX_EPOLL_EVENTS];
+	int nfds = -1, epollfd = -1, kmsfd = -1, n;
+
+	static int fbid = 0;
+	static uint8_t cbuf = 0;
 	static bool running = true;
 
 	struct app_kms_pass passData;
 	memset(&passData, 0, sizeof(passData));
 	passData.app = &kms;
 
+	kmsfd = kms.uvr_kms_node_display_output_chain.kmsfd;
+	fbid = kms.uvr_buffer.bufferObjects[0].fbid;
+
+	struct uvr_kms_atomic_request_create_info atomicRequestInfo;
+	atomicRequestInfo.kmsfd = kmsfd;
+	atomicRequestInfo.displayOutputChain = &kms.uvr_kms_node_display_output_chain;
+	atomicRequestInfo.renderer = &render;
+	atomicRequestInfo.rendererRunning = &running;
+	atomicRequestInfo.rendererCurrentBuffer = &cbuf;
+	atomicRequestInfo.rendererFbId = &fbid;
+	atomicRequestInfo.rendererData = &passData;
+
+	struct uvr_kms_handle_drm_event_info drmEventInfo;
+	drmEventInfo.kmsfd = kmsfd;
+
 	if (create_kms_pixel_buffer(&passData) == -1)
 		goto exit_error;
 
+	request = uvr_kms_atomic_request_create(&atomicRequestInfo);
+	if (!request.atomicRequest)
+		goto exit_error;
+
+	epollfd = epoll_create1(0);
+	if (epollfd == -1) {
+		uvr_utils_log(UVR_DANGER, "[x] epoll_create1: %s", strerror(errno));
+		goto exit_error;
+	}
+
+	event.events = EPOLLIN;
+	event.data.fd = kmsfd;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, kmsfd, &event) == -1) {
+		uvr_utils_log(UVR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+		goto exit_error;
+	}
+
 	while (running) {
-		render(&running, &cbuf, &passData);
+		nfds = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, -1);
+		if (nfds == -1) {
+			uvr_utils_log(UVR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+			goto exit_error;
+		}
+
+		for (n = 0; n < nfds; n++) {
+			if (events[n].data.fd == kmsfd) {
+				uvr_kms_handle_drm_event(&drmEventInfo);
+			}
+		}
 	}
 
 exit_error:
@@ -158,6 +207,7 @@ exit_error:
 
 	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
+	kmsdevd.uvr_kms_atomic_request = request;
 	uvr_kms_node_destroy(&kmsdevd);
 
 #ifdef INCLUDE_LIBSEAT
