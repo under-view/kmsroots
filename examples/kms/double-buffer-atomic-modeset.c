@@ -238,9 +238,9 @@ int create_kms_instance(struct app_kms *kms)
 	dochainCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
 
 	kms->uvr_kms_node_display_output_chain = uvr_kms_node_display_output_chain_create(&dochainCreateInfo);
-	if (!kms->uvr_kms_node_display_output_chain.connector ||
-	    !kms->uvr_kms_node_display_output_chain.crtc      ||
-	    !kms->uvr_kms_node_display_output_chain.plane)
+	if (!kms->uvr_kms_node_display_output_chain.connector.props ||
+	    !kms->uvr_kms_node_display_output_chain.crtc.props      ||
+	    !kms->uvr_kms_node_display_output_chain.plane.props)
 	{
 		return -1;
 	}
