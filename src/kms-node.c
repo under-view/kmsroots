@@ -174,26 +174,8 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 
 	/* If the const char *kmsnode member is defined attempt to open it */
 	if (uvrkms->kmsNode) {
-#ifdef INCLUDE_LIBSEAT
-		kmsfd = uvr_session_take_control_of_device(uvrkms->session, uvrkms->kmsNode);
-#else
-		kmsfd = open(uvrkms->kmsNode, O_RDWR | O_CLOEXEC, 0);
-#endif
-		if (kmsfd < 0) {
-			uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", uvrkms->kmsNode, strerror(errno));
-			goto exit_error_kms_node_create_free_kms_dev;
-		}
-/*
-		vtfd = vt_setup(&keyBoardMode);
-		if (vtfd == -1)
-			goto exit_error_kms_node_create_free_kms_dev;
-*/
-		uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", uvrkms->kmsNode, kmsfd);
-		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
-#ifdef INCLUDE_LIBSEAT
-			                       , .session = uvrkms->session
-#endif
-		};
+		kmsNode = (char *) uvrkms->kmsNode;
+		goto kms_node_create_open_drm_device;
 	}
 
 	/* Query list of available kms nodes (GPU) to get the amount available */
@@ -229,6 +211,7 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 		if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
 			continue;
 
+kms_node_create_open_drm_device:
 #ifdef INCLUDE_LIBSEAT
 		kmsfd = uvr_session_take_control_of_device(uvrkms->session, kmsNode);
 #else
