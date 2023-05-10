@@ -687,7 +687,7 @@ static int set_kms_object_property(drmModeAtomicReq *atomicRequest,
 /*
  * Here we set the values of properties (of our connector, CRTC and plane objects)
  * that we want to change in the atomic commit. These changes are temporarily stored
- * in drmModeAtomicReq *atomicRequest until the commit actually happens.
+ * in drmModeAtomicReq *atomicRequest until DRM core receives commit.
  */
 static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fbid,
                                          struct uvr_kms_node_display_output_chain *displayOutputChain)
@@ -833,11 +833,16 @@ static void handle_page_flip_event(int fd,
 {
 	struct uvr_kms_node_renderer_info *rendererInfo = (struct uvr_kms_node_renderer_info *) data;
 
+	/* Pepare properties for DRM core and temporarily store them in @rendererAtomicRequest. @rendererFbId should be an already populated buffer. */
+	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *rendererInfo->rendererFbId, rendererInfo->displayOutputChain) == -1) {
+		uvr_utils_log(UVR_WARNING, "[x] modeset_atomic_prepare_commit: failed to prepare atomic commit");
+		return;
+	}
+
+	/* Application updates @rendererFbId to the next displayable buffer and renders into buffer not being displayed */
 	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
 
-	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *rendererInfo->rendererFbId, rendererInfo->displayOutputChain) == -1)
-		return;
-
+	/* Send properties to DRM core */
 	if (drmModeAtomicCommit(fd, rendererInfo->rendererAtomicRequest, DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK, rendererInfo) < 0) {
 		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
 		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: %s", strerror(errno));
