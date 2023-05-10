@@ -226,6 +226,15 @@ kms_node_create_open_drm_device:
 
 		drmFreeDevices(devices, deviceCount); devices = NULL;
 
+		struct uvr_kms_node_device_capabilites deviceCap;
+		deviceCap = uvr_kms_node_get_device_capabilities(kmsfd);
+
+		if (!deviceCap.CAP_CRTC_IN_VBLANK_EVENT)
+			goto exit_error_kms_node_create_free_kms_dev;
+
+		if (!deviceCap.CAP_DUMB_BUFFER)
+			goto exit_error_kms_node_create_free_kms_dev;
+
 		/*
 		 * TAKEN FROM Daniel Stone (gitlab/kms-quads)
 		 * In order to drive KMS, we need to be 'master'. This should already
@@ -252,16 +261,27 @@ kms_node_create_open_drm_device:
 		 * DRM_CLIENT_CAP_ASPECT_RATIO     - Tells DRM core to provide aspect ratio information in modes
 		 */
 		err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
-		err |= drmSetClientCap(kmsfd, DRM_CLIENT_CAP_ATOMIC, 1);
-		if (err != 0) {
-			uvr_utils_log(UVR_DANGER, "[x] KMS device '%s' has no support for universal planes or kms atomic", kmsNode);
+		if (err) {
+			uvr_utils_log(UVR_DANGER, "[x] drmSetClientCap: Failed to set universal planes capability for KMS device '%s'", kmsNode);
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
+
+		/*
+		 * Tell DRM core that we're going to use the KMS atomic API. It's supposed
+		 * to set the DRM_CLIENT_CAP_UNIVERSAL_PLANES automatically.
+		 */
+		err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_ATOMIC, 1);
+		if (err) {
+			uvr_utils_log(UVR_DANGER, "[x] drmSetClientCap: Failed to set KMS atomic capability for KMS device '%s'", kmsNode);
+			goto exit_error_kms_node_create_free_kms_dev;
+		}
+
 /*
 		vtfd = vt_setup(&keyBoardMode);
 		if (vtfd == -1)
 			goto exit_error_kms_node_create_free_kms_dev;
 */
+
 		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
 #ifdef INCLUDE_LIBSEAT
 		                               , .session = uvrkms->session
@@ -291,21 +311,32 @@ exit_error_kms_node_create_free_kms_dev:
 struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int kmsfd)
 {
 	struct uvr_kms_node_device_capabilites kmsNodeDeviceCapabilites;
-	memset(&kmsNodeDeviceCapabilites, 0, sizeof(kmsNodeDeviceCapabilites));
 
+	bool supported = false;
 	uint64_t capabilites = 0, err = 0;
+
 	err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &capabilites);
-	if (err == 0 && capabilites != 0) {
-		kmsNodeDeviceCapabilites.ADDFB2_MODIFIERS = true;
-		uvr_utils_log(UVR_INFO, "device %s framebuffer modifiers", (err == 0 && capabilites != 0) ? "supports" : "does not support");
-	}
+	supported = (err == 0 && capabilites != 0);
+	kmsNodeDeviceCapabilites.CAP_ADDFB2_MODIFIERS = supported ? true : false;
+	uvr_utils_log(UVR_INFO, "device %s framebuffer modifiers", supported ? "supports" : "does not support");
 
 	capabilites=0;
 	err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &capabilites);
-	if (err == 0 && capabilites != 0) {
-		kmsNodeDeviceCapabilites.TIMESTAMP_MONOTONIC = true;
-		uvr_utils_log(UVR_INFO, "device %s clock monotonic timestamps", (err == 0 && capabilites != 0) ? "supports" : "does not support");
-	}
+	supported = (err == 0 && capabilites != 0);
+	kmsNodeDeviceCapabilites.CAP_TIMESTAMP_MONOTONIC = supported ? true : false;
+	uvr_utils_log(UVR_INFO, "device %s clock monotonic timestamps", supported ? "supports" : "does not support");
+
+	capabilites=0;
+	err = drmGetCap(kmsfd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &capabilites);
+	supported = (err == 0 && capabilites != 0);
+	kmsNodeDeviceCapabilites.CAP_CRTC_IN_VBLANK_EVENT = supported ? true : false;
+	uvr_utils_log(UVR_INFO, "device %s atomic KMS", supported ? "supports" : "does not support");
+
+	capabilites=0;
+	err = drmGetCap(kmsfd, DRM_CAP_DUMB_BUFFER, &capabilites);
+	supported = (err == 0 && capabilites != 0);
+	kmsNodeDeviceCapabilites.CAP_DUMB_BUFFER = supported ? true : false;
+	uvr_utils_log(UVR_INFO, "device %s dumb bufffers", supported ? "supports" : "does not support");
 
 	return kmsNodeDeviceCapabilites;
 }
