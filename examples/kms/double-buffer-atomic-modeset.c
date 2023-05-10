@@ -245,9 +245,6 @@ int create_kms_instance(struct app_kms *kms)
 		return -1;
 	}
 
-	struct uvr_kms_node_device_capabilites UNUSED kmsNodeDeviceCapabilites;
-	kmsNodeDeviceCapabilites = uvr_kms_node_get_device_capabilities(kms->uvr_kms_node.kmsfd);
-
 	return 0;
 }
 
