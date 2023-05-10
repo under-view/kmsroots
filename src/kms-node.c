@@ -544,14 +544,6 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 
 		uvr_utils_log(UVR_SUCCESS, "Successfully created a display output chain");
 
-		/* Free all plane resources not in use */
-		for (p = 0; p < planesCount; p++) {
-			if (planes[p]->fb_id != plane->fb_id) {
-				drmModeFreePlane(planes[p]);
-				planes[p] = NULL;
-			}
-		}
-
 		// Stores mode id given to one of the displays resolution + refresh
 		memcpy(&modeData.modeInfo, &connector->modes[0], sizeof(drmModeModeInfo));
 		if (drmModeCreatePropertyBlob(uvrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeData.id) != 0) {
@@ -581,7 +573,8 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_INFO, "MODE (resolution + refresh) ID: %u", modeData.id);
 
 		/* Free all unused resources */
-		drmModeFreePlane(plane);
+		for (p = 0; p < planesCount; p++)
+			drmModeFreePlane(planes[p]);
 		drmModeFreeEncoder(encoder);
 		drmModeFreeCrtc(crtc);
 		drmModeFreeConnector(connector);
