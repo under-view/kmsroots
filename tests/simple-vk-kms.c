@@ -139,7 +139,6 @@ int create_kms_instance(struct app_kms *kms)
 
 	kms->uvr_kms_node_display_output_chain = uvr_kms_node_display_output_chain_create(&dochainCreateInfo);
 	if (!kms->uvr_kms_node_display_output_chain.connector ||
-	    !kms->uvr_kms_node_display_output_chain.encoder   ||
 	    !kms->uvr_kms_node_display_output_chain.crtc      ||
 	    !kms->uvr_kms_node_display_output_chain.plane)
 	{
