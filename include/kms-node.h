@@ -135,7 +135,7 @@ struct uvr_kms_node_object_props {
  * @connector      - Anything that can display pixels in some form. (i.e HDMI). Connectors can
  *                   be hotplugged and unplugged at runtime
  * @connectorProps - Stores connector properties used during KMS atomic modesetting and page-flips.
- * @encoder        - Takes pixel data from a crtc and converts it to an output that
+ * @encoder        - (Deprecated) Takes pixel data from a crtc and converts it to an output that
  *                   the connector can understand. This is a Deprecated kms object
  * @crtc           - Represents a part of the chip that contains a pointer to a scanout buffer.
  * @crtcProps      - Stores crtc properties used during KMS atomic modesetting and page-flips.
@@ -155,7 +155,6 @@ struct uvr_kms_node_object_props {
 struct uvr_kms_node_display_output_chain {
 	drmModeConnector                 *connector;
 	struct uvr_kms_node_object_props connectorProps;
-	drmModeEncoder                   *encoder;
 	drmModeCrtc                      *crtc;
 	struct uvr_kms_node_object_props crtcProps;
 	drmModePlane                     *plane;

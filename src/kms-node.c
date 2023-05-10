@@ -531,9 +531,6 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 			}
 		}
 
-		drmModeFreePlaneResources(drmPlaneResources); drmPlaneResources = NULL;
-		drmModeFreeResources(drmResources); drmResources = NULL;
-
 		// Stores mode id given to one of the displays resolution + refresh
 		if (drmModeCreatePropertyBlob(uvrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeid) != 0) {
 			uvr_utils_log(UVR_DANGER, "[x] drmModeCreatePropertyBlob: couldn't create a blob property");
@@ -558,9 +555,12 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 		uvr_utils_log(UVR_INFO, "CONNECTOR ID: %u", connector->connector_id);
 		uvr_utils_log(UVR_INFO, "MODE (resolution + refresh) ID: %u", modeid);
 
-		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .connectorProps = connectorProps, .encoder = encoder,
-		                                                    .crtc = crtc, .crtcProps = crtcProps, .plane = plane, .planeProps = planeProps,
-			                                            .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay,
+		drmModeFreeEncoder(encoder);
+		drmModeFreePlaneResources(drmPlaneResources);
+		drmModeFreeResources(drmResources);
+
+		return (struct uvr_kms_node_display_output_chain) { .connector = connector, .connectorProps = connectorProps, .crtc = crtc, .crtcProps = crtcProps, .plane = plane,
+								    .planeProps = planeProps, .width = connector->modes[0].hdisplay, .height = connector->modes[0].vdisplay,
 								    .kmsfd = uvrkms->kmsfd, .modeid = modeid };
 	}
 
@@ -594,9 +594,8 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 	if (drmResources)
 		drmModeFreeResources(drmResources);
 exit_error_kms_node_doc_create:
-	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .connectorProps = connectorProps, .encoder = 0,
-	                                                    .crtc = 0, .crtcProps = crtcProps, .plane = 0, .planeProps = planeProps,
-	                                                    .width = 0, .height = 0, .kmsfd = -1, .modeid = 0 };
+	return (struct uvr_kms_node_display_output_chain) { .connector = 0, .connectorProps = connectorProps, .crtc = 0, .crtcProps = crtcProps,
+	                                                    .plane = 0, .planeProps = planeProps, .width = 0, .height = 0, .kmsfd = -1, .modeid = 0 };
 }
 
 
@@ -813,7 +812,7 @@ static void handle_page_flip_event(int fd,
 	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *rendererInfo->rendererFbId, rendererInfo->displayOutputChain) == -1)
 		return;
 
-	if (drmModeAtomicCommit(fd, rendererInfo->rendererAtomicRequest, DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT, rendererInfo) < 0) {
+	if (drmModeAtomicCommit(fd, rendererInfo->rendererAtomicRequest, DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK, rendererInfo) < 0) {
 		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
 		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: %s", strerror(errno));
 		return;
@@ -862,8 +861,6 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 						   uvrkms->uvr_kms_node_display_output_chain.crtcProps.propsData);
 
 		}
-		if (uvrkms->uvr_kms_node_display_output_chain.encoder)
-			drmModeFreeEncoder(uvrkms->uvr_kms_node_display_output_chain.encoder);
 		if (uvrkms->uvr_kms_node_display_output_chain.connector) {
 			drmModeFreeConnector(uvrkms->uvr_kms_node_display_output_chain.connector);
 			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.connectorProps.props,
