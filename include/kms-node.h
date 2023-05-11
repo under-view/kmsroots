@@ -30,15 +30,11 @@
  * struct uvr_kms_node (Underview Renderer KMS Node)
  *
  * members:
- * @kmsfd          - A valid file descriptor to an open DRI device node
- * @vtfd           - File descriptor to open tty character device (i.e '/dev/tty0')
- * @keyBoardMode   - Integer saving the current keyboard mode. (man 2 ioctl_console for more info)
- * @session        - Stores address of struct uvr_session. Used when releasing a device
+ * @kmsfd   - A valid file descriptor to an open DRI device node
+ * @session - Stores address of struct uvr_session. Used when releasing a device
  */
 struct uvr_kms_node {
 	int                kmsfd;
-	int                vtfd;
-	int                keyBoardMode;
 #ifdef INCLUDE_LIBSEAT
 	struct uvr_session *session;
 #endif
@@ -119,8 +115,8 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
  * struct uvr_kms_node_object_props_data (Underview Renderer KMS Node Object Properties Data)
  *
  * @id    - Id of the given property
- * @value - Value of the property. Can be used for instance to check if plane
- *          object is a DRM_PLANE_TYPE_PRIMARY.
+ * @value - Enum value of given KMS object property. Can be used for instance to check if plane
+ *          object is a primary plane (DRM_PLANE_TYPE_PRIMARY).
  */
 struct uvr_kms_node_object_props_data {
 	uint32_t id;

@@ -15,7 +15,7 @@
 
 
 /*
- * No garunteed that each GPU KMS objects (plane->crtc->connector)
+ * No guaranteed that each GPU's driver KMS objects (plane->crtc->connector)
  * will have properties in this exact order or these exact listed properties.
  */
 enum uvr_kms_node_connector_prop_type {
@@ -71,160 +71,9 @@ enum uvr_kms_node_plane_prop_type {
 };
 
 
-/*
- * Verbatim TAKEN FROM Daniel Stone (gitlab/kms-quads)
- * Set up the VT/TTY so it runs in graphics mode and lets us handle our own
- * input. This uses the VT specified in $TTYNO if specified, or the current VT
- * if we're running directly from a VT, or failing that tries to find a free
- * one to switch to.
- */
-static int UNUSED vt_setup(int *keyBoardMode)
-{
-	const char *ttyNumEnv = getenv("TTYNO");
-	int ttyNum = 0, vtfd = -1;
-	char ttyDevice[32];
-
-	/* If $TTYNO is set in the environment, then use that first. */
-	if (ttyNumEnv) {
-		char *endptr = NULL;
-
-		ttyNum = strtoul(ttyNumEnv, &endptr, 10);
-		if (ttyNum == 0 || *endptr != '\0') {
-			uvr_utils_log(UVR_DANGER, "[x] strtoul: invalid $TTYNO environment variable");
-			return -1;
-		}
-
-		snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
-	} else if (ttyname(STDIN_FILENO)) {
-		/*
-		 * Otherwise, if we're running from a VT ourselves, just reuse that.
-		 */
-		if (ttyname_r(STDIN_FILENO, ttyDevice, sizeof(ttyDevice))) {
-			uvr_utils_log(UVR_DANGER, "[x] ttyname_r: %s", strerror(errno));
-			return -1;
-		}
-	} else {
-search_for_free_vt:
-		int tty0;
-
-		/*
-		 * Other-other-wise, look for a free VT we can use by querying /dev/tty0.
-		 */
-		tty0 = open("/dev/tty0", O_WRONLY | O_CLOEXEC);
-		if (tty0 < 0) {
-			uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", "/dev/tty0", strerror(errno));
-			return -1;
-		}
-
-		if (ioctl(tty0, VT_OPENQRY, &ttyNum) < 0 || ttyNum < 0) {
-			uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_OPENQRY): %s", strerror(errno));
-			uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_OPENQRY): couldn't get free TTY");
-			close(tty0);
-			return -1;
-		}
-
-		close(tty0);
-		snprintf(ttyDevice, sizeof(ttyDevice), "/dev/tty%d", ttyNum);
-	}
-
-	vtfd = open(ttyDevice, O_RDWR | O_NOCTTY);
-	if (vtfd < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] open('%s'): %s", ttyDevice, strerror(errno));
-		return -1;
-	}
-
-	uvr_utils_log(UVR_INFO, "Using VT %s (fd: %d)", ttyDevice, vtfd);
-
-	/* If we get our VT from stdin, work painfully backwards to find its VT number. */
-	if (ttyNum == 0) {
-		int deviceMajor = 0;
-		struct stat vtStat;
-
-		if (fstat(vtfd, &vtStat) == -1) {
-			uvr_utils_log(UVR_DANGER, "[x] fstat(%s:%d): %s", ttyDevice, vtfd, strerror(errno));
-			goto exit_error_vt_setup_exit;
-		}
-
-		deviceMajor = major(vtStat.st_rdev);
-		if (deviceMajor == UNIX98_PTY_SLAVE_MAJOR || deviceMajor == PTY_SLAVE_MAJOR) {
-			uvr_utils_log(UVR_DANGER, "VT file %s is a psuedo terminal.", ttyDevice);
-			goto exit_error_vt_setup_exit;
-		}
-
-		if (deviceMajor != TTY_MAJOR) {
-			uvr_utils_log(UVR_DANGER, "[x] major(%d): VT file %s is not a tty device file", vtStat.st_rdev, ttyDevice);
-			goto exit_error_vt_setup_exit;
-		}
-
-		ttyNum = minor(vtStat.st_rdev);
-
-		/*
-		 * If current device file is a serial device.
-		 * Search for an available VT
-		 */
-		if (ttyNum >= 64 && ttyNum <= 255) {
-			close(vtfd); vtfd = -1; ttyNum = 0;
-			goto search_for_free_vt;
-		}
-	}
-
-	if (ttyNum == 0)
-		goto exit_error_vt_setup_exit;
-
-	/* Switch to the target VT. */
-	if (ioctl(vtfd, VT_ACTIVATE, ttyNum) < 0 || ioctl(vtfd, VT_WAITACTIVE, ttyNum) < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] ioctl(VT_WAITACTIVE || VT_WAITACTIVE): couldn't switch to VT %d", ttyNum);
-		goto exit_error_vt_setup_exit;
-	}
-
-	uvr_utils_log(UVR_INFO, "Switched to VT %s", ttyDevice);
-
-	/*
-	 * Completely disable kernel keyboard processing: this prevents us
-	 * from being killed on Ctrl-C.
-	 */
-	if (ioctl(vtfd, KDGKBMODE, keyBoardMode) != 0 || ioctl(vtfd, KDSKBMODE, K_OFF) != 0) {
-		uvr_utils_log(UVR_DANGER, "[x] ioctl(KDGKBMODE) || ioctl(KDSKBMODE): failed to disable TTY keyboard processing");
-		goto exit_error_vt_setup_exit;
-	}
-
-	/*
-	 * Change the VT into graphics mode, so the kernel no longer prints
-	 * text out on top of us.
-	 */
-	if (ioctl(vtfd, KDSETMODE, KD_GRAPHICS) != 0) {
-		uvr_utils_log(UVR_DANGER, "[x] ioctl(KDSETMODE): failed to switch TTY to graphics mode");
-		goto exit_error_vt_setup_exit;
-	}
-
-	uvr_utils_log(UVR_SUCCESS, "VT setup complete");
-
-	/*
-	 * Normally we would also call VT_SETMODE to change the mode to
-	 * VT_PROCESS here, which would allow us to intercept VT-switching
-	 * requests and tear down KMS. But we don't, since that requires
-	 * signal handling.
-	 */
-	return vtfd;
-
-exit_error_vt_setup_exit:
-	if (vtfd > 0)
-		close(vtfd);
-	return -1;
-}
-
-
-static void vt_reset(int vtfd, int savedKeyBoardMode)
-{
-	ioctl(vtfd, KDSKBMODE, savedKeyBoardMode);
-	ioctl(vtfd, KDSETMODE, KD_TEXT);
-}
-
-
 struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 {
 	int deviceCount = 0, err = 0, kmsfd = -1;
-	int keyBoardMode = -1, vtfd = -1;
 	char *kmsNode = NULL;
 	drmDevice **devices = NULL;
 	drmDevice *device = NULL;
@@ -333,13 +182,7 @@ kms_node_create_open_drm_device:
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
 
-/*
-		vtfd = vt_setup(&keyBoardMode);
-		if (vtfd == -1)
-			goto exit_error_kms_node_create_free_kms_dev;
-*/
-
-		return (struct uvr_kms_node) { .kmsfd = kmsfd, .vtfd = vtfd, .keyBoardMode = keyBoardMode
+		return (struct uvr_kms_node) { .kmsfd = kmsfd
 #ifdef INCLUDE_LIBSEAT
 		                               , .session = uvrkms->session
 #endif
@@ -357,7 +200,7 @@ exit_error_kms_node_create_free_kms_dev:
 	if (devices)
 		drmFreeDevices(devices, deviceCount);
 
-	return (struct uvr_kms_node) { .kmsfd = -1, .vtfd = -1, .keyBoardMode = -1
+	return (struct uvr_kms_node) { .kmsfd = -1
 #ifdef INCLUDE_LIBSEAT
 		                       , .session = NULL
 #endif
@@ -1001,8 +844,6 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 		free(uvrkms->uvr_kms_node_display_output_chain.connector.propsData);
 		if (uvrkms->uvr_kms_node_display_output_chain.modeData.id)
 			drmModeDestroyPropertyBlob(uvrkms->uvr_kms_node.kmsfd, uvrkms->uvr_kms_node_display_output_chain.modeData.id);
-		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
-			vt_reset(uvrkms->uvr_kms_node.vtfd, uvrkms->uvr_kms_node.keyBoardMode);
 #ifdef INCLUDE_LIBSEAT
 		uvr_session_release_device(uvrkms->uvr_kms_node.session, uvrkms->uvr_kms_node.kmsfd);
 #else
