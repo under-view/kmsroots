@@ -117,9 +117,11 @@ int main(void)
 	}
 
 	struct app_kms kms;
+	struct uvr_kms_node_atomic_request request;
 	struct uvr_kms_node_destroy kmsdevd;
 	struct uvr_buffer_destroy kmsbuffsd;
 	memset(&kms, 0, sizeof(kms));
+	memset(&request, 0, sizeof(request));
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
@@ -132,7 +134,6 @@ int main(void)
 	if (create_kms_set_crtc(&kms) == -1)
 		goto exit_error;
 
-	struct uvr_kms_node_atomic_request request;
 
 	struct epoll_event event, events[MAX_EPOLL_EVENTS];
 	int nfds = -1, epollfd = -1, kmsfd = -1, n;
@@ -238,9 +239,9 @@ int create_kms_instance(struct app_kms *kms)
 	dochainCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
 
 	kms->uvr_kms_node_display_output_chain = uvr_kms_node_display_output_chain_create(&dochainCreateInfo);
-	if (!kms->uvr_kms_node_display_output_chain.connector.props ||
-	    !kms->uvr_kms_node_display_output_chain.crtc.props      ||
-	    !kms->uvr_kms_node_display_output_chain.plane.props)
+	if (!kms->uvr_kms_node_display_output_chain.connector.propsData ||
+	    !kms->uvr_kms_node_display_output_chain.crtc.propsData      ||
+	    !kms->uvr_kms_node_display_output_chain.plane.propsData)
 	{
 		return -1;
 	}

@@ -116,20 +116,33 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
 
 
 /*
+ * struct uvr_kms_node_object_props_data (Underview Renderer KMS Node Object Properties Data)
+ *
+ * @id    - Id of the given property
+ * @value - Value of the property. Can be used for instance to check if plane
+ *          object is a DRM_PLANE_TYPE_PRIMARY.
+ */
+struct uvr_kms_node_object_props_data {
+	uint32_t id;
+	uint64_t value;
+};
+
+
+/*
  * struct uvr_kms_node_object_props (Underview Renderer KMS Node Object Properties)
  *
  * It stores properties of certain KMS objects (connectors, CRTC and planes) that are
  * used in atomic modeset setup and also in atomic page-flips.
  *
  * members:
- * @props     - Stores list of property ids and their values
- * @propsData - Resources avaliable to a given KMS object
- * @id        - Driver assigned ID of the KMS object
+ * @id             - Driver assigned ID of the KMS object.
+ * @propsData      - Stores data of properties used during KMS atomic operations.
+ * @propsDataCount - Array size of @propsData.
  */
 struct uvr_kms_node_object_props {
-	drmModeObjectProperties *props;
-	drmModePropertyRes      **propsData;
-	uint32_t                id;
+	uint32_t                              id;
+	struct uvr_kms_node_object_props_data *propsData;
+	uint8_t                               propsDataCount;
 };
 
 

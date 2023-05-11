@@ -15,6 +15,63 @@
 
 
 /*
+ * No garunteed that each GPU KMS objects (plane->crtc->connector)
+ * will have properties in this exact order or these exact listed properties.
+ */
+enum uvr_kms_node_connector_prop_type {
+	UVR_KMS_NODE_CONNECTOR_PROP_EDID                = 0,
+	UVR_KMS_NODE_CONNECTOR_PROP_DPMS                = 1,
+	UVR_KMS_NODE_CONNECTOR_PROP_LINK_STATUS         = 2,
+	UVR_KMS_NODE_CONNECTOR_PROP_NON_DESKTOP         = 3,
+	UVR_KMS_NODE_CONNECTOR_PROP_TILE                = 4,
+	UVR_KMS_NODE_CONNECTOR_PROP_CRTC_ID             = 5,
+	UVR_KMS_NODE_CONNECTOR_PROP_SCALING_MODE        = 6,
+	UVR_KMS_NODE_CONNECTOR_PROP_UNDERSCAN           = 7,
+	UVR_KMS_NODE_CONNECTOR_PROP_UNDERSCAN_HBORDER   = 8,
+	UVR_KMS_NODE_CONNECTOR_PROP_UNDERSCAN_VBORDER   = 9,
+	UVR_KMS_NODE_CONNECTOR_PROP_MAX_BPC             = 10,
+	UVR_KMS_NODE_CONNECTOR_PROP_HDR_OUTPUT_METADATA = 11,
+	UVR_KMS_NODE_CONNECTOR_PROP_VRR_CAPABLE         = 12,
+	UVR_KMS_NODE_CONNECTOR_PROP__COUNT              = 13
+};
+
+
+enum uvr_kms_node_crtc_prop_type {
+	UVR_KMS_NODE_CRTC_PROP_ACTIVE           = 0,
+	UVR_KMS_NODE_CRTC_PROP_MODE_ID          = 1,
+	UVR_KMS_NODE_CRTC_PROP_OUT_FENCE_PTR    = 2,
+	UVR_KMS_NODE_CRTC_PROP_VRR_ENABLED      = 3,
+	UVR_KMS_NODE_CRTC_PROP_DEGAMMA_LUT      = 4,
+	UVR_KMS_NODE_CRTC_PROP_DEGAMMA_LUT_SIZE = 5,
+	UVR_KMS_NODE_CRTC_PROP_CTM              = 6,
+	UVR_KMS_NODE_CRTC_PROP_GAMMA_LUT        = 7,
+	UVR_KMS_NODE_CRTC_PROP_GAMMA_LUT_SIZE   = 8,
+	UVR_KMS_NODE_CRTC_PROP__COUNT           = 9
+};
+
+
+enum uvr_kms_node_plane_prop_type {
+	UVR_KMS_NODE_PLANE_PROP_TYPE           = 0,
+	UVR_KMS_NODE_PLANE_PROP_FB_ID          = 1,
+	UVR_KMS_NODE_PLANE_PROP_IN_FENCE_FD    = 2,
+	UVR_KMS_NODE_PLANE_PROP_CRTC_ID        = 3,
+	UVR_KMS_NODE_PLANE_PROP_CRTC_X         = 4,
+	UVR_KMS_NODE_PLANE_PROP_CRTC_Y         = 5,
+	UVR_KMS_NODE_PLANE_PROP_CRTC_W         = 6,
+	UVR_KMS_NODE_PLANE_PROP_CRTC_H         = 7,
+	UVR_KMS_NODE_PLANE_PROP_SRC_X          = 8,
+	UVR_KMS_NODE_PLANE_PROP_SRC_Y          = 9,
+	UVR_KMS_NODE_PLANE_PROP_SRC_W          = 10,
+	UVR_KMS_NODE_PLANE_PROP_SRC_H          = 11,
+	UVR_KMS_NODE_PLANE_PROP_IN_FORMATS     = 12,
+	UVR_KMS_NODE_PLANE_PROP_COLOR_ENCODING = 13,
+	UVR_KMS_NODE_PLANE_PROP_COLOR_RANGE    = 14,
+	UVR_KMS_NODE_PLANE_PROP_ROTATION       = 15,
+	UVR_KMS_NODE_PLANE_PROP__COUNT         = 16
+};
+
+
+/*
  * Verbatim TAKEN FROM Daniel Stone (gitlab/kms-quads)
  * Set up the VT/TTY so it runs in graphics mode and lets us handle our own
  * input. This uses the VT specified in $TTYNO if specified, or the current VT
@@ -342,71 +399,162 @@ struct uvr_kms_node_device_capabilites uvr_kms_node_get_device_capabilities(int 
 }
 
 
-static void free_kms_object_properties(drmModeObjectProperties *props, drmModePropertyRes **propsData)
-{
-	uint32_t i = 0;
-
-	if (!props) return;
-	if (!propsData) return;
-
-	for (i = 0; i < props->count_props; i++) {
-		if (propsData[i])
-			drmModeFreeProperty(propsData[i]);
-	}
-
-	drmModeFreeObjectProperties(props);
-
-	free(propsData);
-}
-
-
 /*
- * acquire_kms_object_properties: helpfer function that retrieves the properties of a certain CRTC, plane or connector object.
- * https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L191
+ * Helper function that retrieves the properties of a certain CRTC, plane or connector kms object.
+ * There's no garunteed for the availability of kms object properties and the order which they
+ * reside in @props->props. All we can do is account for as many as possible.
+ * Function will only assign values and ids to properties we actually use for mode setting.
  */
 static int acquire_kms_object_properties(int fd, struct uvr_kms_node_object_props *obj, uint32_t type)
 {
-	char *typeStr;
 	unsigned int i;
+	uint16_t propsDataCount = 0;
 
-	obj->props = drmModeObjectGetProperties(fd, obj->id, type);
-	if (!obj->props) {
-		switch(type) {
-			case DRM_MODE_OBJECT_CONNECTOR:
-				typeStr = "connector";
-				break;
-			case DRM_MODE_OBJECT_PLANE:
-				typeStr = "plane";
-				break;
-			case DRM_MODE_OBJECT_CRTC:
-				typeStr = "CRTC";
-				break;
-			default:
-				typeStr = "unknown type";
-				break;
-		}
+	char *typeStr = NULL;
+	drmModePropertyRes *propData = NULL;
+	drmModeObjectProperties *props = NULL;
+
+	switch(type) {
+		case DRM_MODE_OBJECT_CONNECTOR:
+			typeStr = "connector";
+			propsDataCount = UVR_KMS_NODE_CONNECTOR_PROP__COUNT;
+			break;
+		case DRM_MODE_OBJECT_PLANE:
+			typeStr = "plane";
+			propsDataCount = UVR_KMS_NODE_PLANE_PROP__COUNT;
+			break;
+		case DRM_MODE_OBJECT_CRTC:
+			typeStr = "CRTC";
+			propsDataCount = UVR_KMS_NODE_CRTC_PROP__COUNT;
+			break;
+		default:
+			typeStr = "unknown type";
+			break;
+	}
+
+	props = drmModeObjectGetProperties(fd, obj->id, type);
+	if (!props) {
 		uvr_utils_log(UVR_DANGER, "[x] cannot get %s %d properties: %s", typeStr, obj->id, strerror(errno));
 		return -1;
 	}
 
-	obj->propsData = calloc(obj->props->count_props, sizeof(obj->propsData));
+	obj->propsDataCount = propsDataCount;
+	obj->propsData = calloc(obj->propsDataCount, sizeof(struct uvr_kms_node_object_props_data));
 	if (!obj->propsData) {
 		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_acquire_kms_object_properties;
 	}
 
-	for (i = 0; i < obj->props->count_props; i++) {
-		obj->propsData[i] = drmModeGetProperty(fd, obj->props->props[i]);
-		if (!obj->propsData[i]) {
-			uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+	for (i = 0; i < obj->propsDataCount; i++) {
+		propData = drmModeGetProperty(fd, props->props[i]);
+		if (!propData) {
+			uvr_utils_log(UVR_DANGER, "[x] drmModeGetProperty: failed to get property data.");
 			goto exit_error_acquire_kms_object_properties;
 		}
+
+		switch (type) {
+			case DRM_MODE_OBJECT_CONNECTOR:
+				if (!strncmp(propData->name, "CRTC_ID", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].value = props->prop_values[i];
+					break;
+				}
+
+				break;
+			case DRM_MODE_OBJECT_PLANE:
+				if (!strncmp(propData->name, "FB_ID", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_FB_ID].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_FB_ID].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "CRTC_ID", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_ID].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_ID].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "SRC_X", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_X].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_X].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "SRC_Y", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_Y].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_Y].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "SRC_W", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_W].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_W].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "SRC_H", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_H].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_SRC_H].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "CRTC_X", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_X].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_X].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "CRTC_Y", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_Y].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_Y].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "CRTC_W", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_W].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_W].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "CRTC_H", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_H].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_H].value = props->prop_values[i];
+					break;
+				}
+
+				break;
+			case DRM_MODE_OBJECT_CRTC:
+				if (!strncmp(propData->name, "MODE_ID", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_CRTC_PROP_MODE_ID].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_CRTC_PROP_MODE_ID].value = props->prop_values[i];
+					break;
+				}
+
+				if (!strncmp(propData->name, "ACTIVE", DRM_PROP_NAME_LEN)) {
+					obj->propsData[UVR_KMS_NODE_CRTC_PROP_ACTIVE].id = propData->prop_id;
+					obj->propsData[UVR_KMS_NODE_CRTC_PROP_ACTIVE].value = props->prop_values[i];
+					break;
+				}
+
+				break;
+			default:
+				break;
+		}
+
+		drmModeFreeProperty(propData); propData = NULL;
 	}
+
+	drmModeFreeObjectProperties(props);
 
 	return 0;
 
 exit_error_acquire_kms_object_properties:
-	free_kms_object_properties(obj->props, obj->propsData);
+	if (propData)
+		drmModeFreeProperty(propData);
+	if (props)
+		drmModeFreeObjectProperties(props);
+	free(obj->propsData);
+	obj->propsData = NULL;
 	return -1;
 }
 
@@ -586,9 +734,9 @@ struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain_creat
 	}
 
 exit_error_kms_node_doc_create_free_kms_obj_props:
-	free_kms_object_properties(planeProps.props, planeProps.propsData);
-	free_kms_object_properties(crtcProps.props, crtcProps.propsData);
-	free_kms_object_properties(connectorProps.props, connectorProps.propsData);
+	free(planeProps.propsData);
+	free(crtcProps.propsData);
+	free(connectorProps.propsData);
 	memset(&connectorProps, 0, sizeof(connectorProps));
 	memset(&crtcProps, 0, sizeof(crtcProps));
 	memset(&planeProps, 0, sizeof(planeProps));
@@ -653,30 +801,6 @@ int uvr_kms_node_display_mode_reset(struct uvr_kms_node_display_mode_info *uvrkm
 }
 
 
-/* https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset-atomic.c#L233 */
-static int set_kms_object_property(drmModeAtomicReq *atomicRequest,
-                                   struct uvr_kms_node_object_props obj,
-                                   const char *name,
-                                   uint64_t value)
-{
-	uint32_t i, prop_id = 0;
-
-	for (i = 0; i < obj.props->count_props; i++) {
-		if (!strcmp(obj.propsData[i]->name, name)) { // TODO: remove inefficient strcmp operation
-			prop_id = obj.propsData[i]->prop_id;
-			break;
-		}
-	}
-
-	if (prop_id == 0) {
-		uvr_utils_log(UVR_DANGER, "[x] set_kms_object_property: %s has no object property", name);
-		return -EINVAL;
-	}
-
-	return drmModeAtomicAddProperty(atomicRequest, obj.id, prop_id, value);
-}
-
-
 /*
  * Here we set the values of properties (of our connector, CRTC and plane objects)
  * that we want to change in the atomic commit. These changes are temporarily stored
@@ -686,51 +810,49 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
                                          struct uvr_kms_node_display_output_chain *displayOutputChain)
 {
 	/* set id of the CRTC id that the connector is using */
-	if (set_kms_object_property(atomicRequest, displayOutputChain->connector, "CRTC_ID", displayOutputChain->crtc.id) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->connector.id, displayOutputChain->connector.propsData[UVR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].id, displayOutputChain->crtc.id) < 0)
 		return -1;
 
 	/*
 	 * set the mode id of the CRTC; this property receives the id of a blob
 	 * property that holds the struct that actually contains the mode info
 	 */
-	if (set_kms_object_property(atomicRequest, displayOutputChain->crtc, "MODE_ID", displayOutputChain->modeData.id) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->crtc.id, displayOutputChain->crtc.propsData[UVR_KMS_NODE_CRTC_PROP_MODE_ID].id, displayOutputChain->modeData.id) < 0)
 		return -1;
 
 	/* set the CRTC object as active */
-	if (set_kms_object_property(atomicRequest, displayOutputChain->crtc, "ACTIVE", 1) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->crtc.id, displayOutputChain->crtc.propsData[UVR_KMS_NODE_CRTC_PROP_ACTIVE].id, 1) < 0)
 		return -1;
-
-	struct uvr_kms_node_object_props plane = displayOutputChain->plane;
 
 	/* set properties of the plane related to the CRTC and the framebuffer */
-	if (set_kms_object_property(atomicRequest, plane, "FB_ID", fbid) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_FB_ID].id, fbid) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "CRTC_ID", displayOutputChain->crtc.id) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_ID].id, displayOutputChain->crtc.id) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "SRC_X", 0) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_SRC_X].id, 0) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "SRC_Y", 0) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_SRC_Y].id, 0) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "SRC_W", displayOutputChain->width << 16) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_SRC_W].id, (displayOutputChain->width << 16)) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "SRC_H", displayOutputChain->height << 16) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_SRC_H].id, (displayOutputChain->height << 16)) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "CRTC_X", 0) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_X].id, 0) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "CRTC_Y", 0) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_Y].id, 0) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "CRTC_W", displayOutputChain->width) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_W].id, displayOutputChain->width) < 0)
 		return -1;
 
-	if (set_kms_object_property(atomicRequest, plane, "CRTC_H", displayOutputChain->height) < 0)
+	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->plane.id, displayOutputChain->plane.propsData[UVR_KMS_NODE_PLANE_PROP_CRTC_H].id, displayOutputChain->height) < 0)
 		return -1;
 
 	return 0;
@@ -874,19 +996,9 @@ void uvr_kms_node_destroy(struct uvr_kms_node_destroy *uvrkms)
 		if (uvrkms->uvr_kms_node_atomic_request.atomicRequest)
 			drmModeAtomicFree(uvrkms->uvr_kms_node_atomic_request.atomicRequest);
 		free(uvrkms->uvr_kms_node_atomic_request.rendererInfo);
-		if (uvrkms->uvr_kms_node_display_output_chain.plane.props) {
-			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.plane.props,
-						   uvrkms->uvr_kms_node_display_output_chain.plane.propsData);
-		}
-		if (uvrkms->uvr_kms_node_display_output_chain.crtc.props) {
-			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.crtc.props,
-						   uvrkms->uvr_kms_node_display_output_chain.crtc.propsData);
-
-		}
-		if (uvrkms->uvr_kms_node_display_output_chain.connector.props) {
-			free_kms_object_properties(uvrkms->uvr_kms_node_display_output_chain.connector.props,
-						   uvrkms->uvr_kms_node_display_output_chain.connector.propsData);
-		}
+		free(uvrkms->uvr_kms_node_display_output_chain.plane.propsData);
+		free(uvrkms->uvr_kms_node_display_output_chain.crtc.propsData);
+		free(uvrkms->uvr_kms_node_display_output_chain.connector.propsData);
 		if (uvrkms->uvr_kms_node_display_output_chain.modeData.id)
 			drmModeDestroyPropertyBlob(uvrkms->uvr_kms_node.kmsfd, uvrkms->uvr_kms_node_display_output_chain.modeData.id);
 		if (uvrkms->uvr_kms_node.vtfd != -1 && uvrkms->uvr_kms_node.keyBoardMode != -1)
