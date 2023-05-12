@@ -6,6 +6,10 @@ option('libseat',
        type: 'feature', value: 'disabled',
        description: 'Build with libseat support')
 
+option('libinput',
+       type: 'feature', value: 'disabled',
+       description: 'Build with libinput support')
+
 option('xcb',
        type: 'feature', value: 'disabled',
        description : 'Build xcb wrapper api')

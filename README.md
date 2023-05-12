@@ -1,9 +1,12 @@
 # libunderview-renderer
 
 Library used to assists in building applications that require vulkan renderers. These renderers can display vulkan render pass
-final framebuffers directly to display via KMS API or to one of the other linux display server clients (xcb,wayland). May also assists
-any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositors build their wlroots compatible out-of-tree vulkan
-renderers.
+final framebuffers directly to display via KMS atomic API or to one of the other linux display server clients (xcb,wayland). May also assists
+any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositors build their [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
+compatible out-of-tree vulkan renderers.
+
+**NOTE:** libunderview-renderer KMS atomic implementation will only support a single output device (i.e. kiosk).
+If more output devices required libunderview-renderer may be used in conjunction with [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots).
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
@@ -29,6 +32,7 @@ $ meson setup -Dgpu="discrete" \
               -Dwayland="enabled" \
               -Dkms="enabled" \
               -Dlibseat="enabled" \
+              -Dlibinput="enabled" \
               build
 
 # Embedded GPU (Normally test on the Udoo Bolt v3)
@@ -41,6 +45,7 @@ $ meson setup -Dgpu="integrated" \
               -Dwayland="enabled" \
               -Dkms="enabled" \
               -Dlibseat="enabled" \
+              -Dlibinput="enabled" \
               build
 
 $ meson compile -C build
@@ -48,7 +53,7 @@ $ meson compile -C build
 
 **Running Examples**
 ```sh
-# Client examples
+# Examples can exit with CTRL-C, ESC, or Q
 $ ./build/examples/xcb/underview-renderer-xcb-client-*
 $ ./build/examples/wayland/underview-renderer-wayland-client-*
 $ ./build/examples/wayland/underview-renderer-kms-*

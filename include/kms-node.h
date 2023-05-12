@@ -262,7 +262,7 @@ int uvr_kms_node_display_mode_reset(struct uvr_kms_node_display_mode_info *uvrkm
  *	   Used to exit rendering operations.
  * 	2. A pointer to an unsigned 8 bit integer determining current buffer
  *	   GBM/DUMP buffer being used.
- *	3. A pointer to an integer storing framebuffer ID associated with
+ *	3. A pointer to an integer storing KMS framebuffer ID associated with
  *	   the GBM(GEM DMA Buf) or DUMP buffer. Used by the implementation
  *	   during atomic modesetting operations.
  *	4. A pointer to any arbitrary data the custom renderer may want pass

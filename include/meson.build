@@ -10,6 +10,10 @@ if get_option('libseat').enabled()
   main_headers += ['session.h']
 endif
 
+if get_option('libinput').enabled()
+  main_headers += ['input.h']
+endif
+
 if get_option('shaderc').enabled()
   main_headers += ['shader.h']
 endif

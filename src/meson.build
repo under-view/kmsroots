@@ -24,11 +24,13 @@ endif
 
 
 ################################################################################
-# KMS libs, files, & extra compiler args (Deprecated Interface)
+# KMS libs, files, & extra compiler args
 ################################################################################
 libseat = dependency('libseat', required: get_option('libseat'))
+libinput = dependency('libinput', required: get_option('libinput'))
 libdrm = dependency('libdrm', required: get_option('kms'))
 libgbm = dependency('gbm', required: get_option('kms'))
+libudev = dependency('libudev', required: get_option('kms').enabled() or get_option('libinput').enabled())
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
   lib_uvr_deps += [libdrm]
@@ -44,6 +46,15 @@ endif
 if libgbm.found()
   lib_uvr_deps += [libgbm]
   fs += ['buffer.c']
+endif
+
+if libudev.found()
+  lib_uvr_deps += [libudev]
+endif
+
+if libinput.found()
+  lib_uvr_deps += [libinput]
+  fs += ['input.c']
 endif
 
 
