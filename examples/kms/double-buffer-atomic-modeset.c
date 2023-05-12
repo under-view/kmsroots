@@ -10,13 +10,16 @@
 
 #include "kms-node.h"
 #include "buffer.h"
+#include "input.h"
 
-#define MAX_EPOLL_EVENTS 1
+#define MAX_EPOLL_EVENTS 2
 
 struct app_kms {
 	struct uvr_kms_node uvr_kms_node;
 	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
+	struct uvr_kms_node_atomic_request uvr_kms_node_atomic_request;
 	struct uvr_buffer uvr_buffer;
+	struct uvr_input uvr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct uvr_session *uvr_session;
 #endif
@@ -129,13 +132,7 @@ int main(void)
 	}
 
 	struct app_kms kms;
-	struct uvr_kms_node_atomic_request request;
-	struct uvr_kms_node_destroy kmsdevd;
-	struct uvr_buffer_destroy kmsbuffsd;
 	memset(&kms, 0, sizeof(kms));
-	memset(&request, 0, sizeof(request));
-	memset(&kmsdevd, 0, sizeof(kmsdevd));
-	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
 	if (create_kms_instance(&kms) == -1)
 		goto exit_error;
@@ -146,17 +143,19 @@ int main(void)
 	if (create_kms_set_crtc(&kms) == -1)
 		goto exit_error;
 
+	struct app_kms_pass passData;
+	memset(&passData, 0, sizeof(passData));
+	passData.app = &kms;
+
+	if (create_kms_pixel_buffer(&passData) == -1)
+		goto exit_error;
 
 	struct epoll_event event, events[MAX_EPOLL_EVENTS];
-	int nfds = -1, epollfd = -1, kmsfd = -1, n;
+	int nfds = -1, epollfd = -1, kmsfd = -1, inputfd = -1, n;
 
 	static int fbid = 0;
 	static uint8_t cbuf = 0;
 	static bool running = true;
-
-	struct app_kms_pass passData;
-	memset(&passData, 0, sizeof(passData));
-	passData.app = &kms;
 
 	kmsfd = kms.uvr_kms_node_display_output_chain.kmsfd;
 	fbid = kms.uvr_buffer.bufferObjects[cbuf].fbid;
@@ -170,15 +169,20 @@ int main(void)
 	atomicRequestInfo.rendererFbId = &fbid;
 	atomicRequestInfo.rendererData = &passData;
 
-	struct uvr_kms_node_handle_drm_event_info drmEventInfo;
-	drmEventInfo.kmsfd = kmsfd;
+	kms.uvr_kms_node_atomic_request = uvr_kms_node_atomic_request_create(&atomicRequestInfo);
+	if (!kms.uvr_kms_node_atomic_request.atomicRequest)
+		goto exit_error;
+	
+	struct uvr_input_create_info inputInfo;
+#ifdef INCLUDE_LIBSEAT
+	inputInfo.session = kms.uvr_session;
+#endif
 
-	if (create_kms_pixel_buffer(&passData) == -1)
+	kms.uvr_input = uvr_input_create(&inputInfo);
+	if (!kms.uvr_input.input)
 		goto exit_error;
 
-	request = uvr_kms_node_atomic_request_create(&atomicRequestInfo);
-	if (!request.atomicRequest)
-		goto exit_error;
+	inputfd = kms.uvr_input.inputfd;
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
@@ -193,14 +197,41 @@ int main(void)
 		goto exit_error;
 	}
 
+	event.events = EPOLLIN;
+	event.data.fd = inputfd;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, inputfd, &event) == -1) {
+		uvr_utils_log(UVR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+		goto exit_error;
+	}
+
+	struct uvr_kms_node_handle_drm_event_info drmEventInfo;
+	drmEventInfo.kmsfd = kmsfd;
+	
+	uint64_t inputReturnCode;
+	struct uvr_input_handle_input_event_info inputEventInfo;
+	inputEventInfo.input = kms.uvr_input;
+
 	while (running) {
 		nfds = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, -1);
 		if (nfds == -1) {
-			uvr_utils_log(UVR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+			uvr_utils_log(UVR_DANGER, "[x] epoll_wait: %s", strerror(errno));
 			goto exit_error;
 		}
 
 		for (n = 0; n < nfds; n++) {
+			if (events[n].data.fd == inputfd) {
+				inputReturnCode = uvr_input_handle_input_event(&inputEventInfo);
+
+				/*
+				 * input-event-codes.h
+				 * 1 == KEY_ESC
+				 * 16 = KEY_Q
+				 */
+				if (inputReturnCode == 1 || inputReturnCode == 16) {
+					goto exit_error;	
+				}
+			}
+
 			if (events[n].data.fd == kmsfd) {
 				uvr_kms_node_handle_drm_event(&drmEventInfo);
 			}
@@ -208,6 +239,13 @@ int main(void)
 	}
 
 exit_error:
+	struct uvr_kms_node_destroy kmsdevd;
+	struct uvr_buffer_destroy kmsbuffsd;
+	struct uvr_input_destroy kmsinputd;
+	memset(&kmsdevd, 0, sizeof(kmsdevd));
+	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
+	memset(&kmsinputd, 0, sizeof(kmsinputd));
+
 	if (passData.pixelBuffer)
 		munmap(passData.pixelBuffer, passData.pixelBufferSize);
 
@@ -218,9 +256,12 @@ exit_error:
 	kmsbuffsd.uvr_buffer = &kms.uvr_buffer;
 	uvr_buffer_destroy(&kmsbuffsd);
 
+	kmsinputd.uvr_input = kms.uvr_input;	
+	uvr_input_destroy(&kmsinputd);
+
 	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
 	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
-	kmsdevd.uvr_kms_node_atomic_request = request;
+	kmsdevd.uvr_kms_node_atomic_request = kms.uvr_kms_node_atomic_request;
 	uvr_kms_node_destroy(&kmsdevd);
 
 #ifdef INCLUDE_LIBSEAT
