@@ -31,7 +31,7 @@
  *
  * members:
  * @kmsfd   - A valid file descriptor to an open DRI device node
- * @session - Stores address of struct uvr_session. Used when releasing a device
+ * @session - Stores address of struct uvr_session. Used when opening and releasing a device.
  */
 struct uvr_kms_node {
 	int                kmsfd;
@@ -70,8 +70,8 @@ struct uvr_kms_node_create_info {
  *                      So, if a graphical session is already active on the current VT function fails.
  *
  * args:
- * @uvrkms - pointer to a struct uvr_kms_node_create_info used to determine pass DRI device file that we may want to use
- *           and information about the current sytemd-logind session
+ * @uvrkms - pointer to a struct uvr_kms_node_create_info used to pass a DRI/KMS device file that we may want to use
+ *           and to store information about the current seatd/sytemd-logind D-bus session.
  * return:
  *	on success struct uvr_kms_node
  *	on failure struct uvr_kms_node { with members nulled, int's set to -1 }
