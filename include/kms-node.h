@@ -314,7 +314,8 @@ struct uvr_kms_node_atomic_request {
 
 /*
  * uvr_kms_node_atomic_request_create: Function creates a KMS atomic request instance. Sets the interface that allows
- *                                     users of API to setup custom renderer implementation.
+ *                                     users of API to setup custom renderer implementation. Performs the initial modeset
+ *                                     operation after all the application needs to do is wait for page-flip events to happen.
  *
  * args:
  * @uvrkms - pointer to a struct uvr_kms_node_atomic_request_create_info used to set external renderer and arguments

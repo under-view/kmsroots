@@ -60,6 +60,18 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 }
 
 
+/*
+ * Library implementation is as such
+ * 1. Prepare properties for submitting to DRM core. The KMS primary plane object property FB_ID value
+ *    is set before "render" function is called. @fbid value is initially set to
+ *    uvr_buffer.bufferObjects[cbuf=0].fbid (102). This is done when we created the first
+ *    KMS atomic request.
+ * 2. "render" function implementation is called. Application must update fbid value (updated number is 103).
+ *    This value won't be submitted to DRM core until a page-flip event occurs.
+ * 3. Prepared properties from step 1 are sent to DRM core and the driver performs an atomic commit.
+ *    Which leads to a page-flip. When submitted the @fbid is set to 102.
+ * 4. Redo steps 1-3. Using the now rendered into framebuffer.
+ */
 void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 {
 	struct app_kms_pass *passData = (struct app_kms_pass *) data;
@@ -86,11 +98,11 @@ void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 		}
 	}
 
-	// Write to back buffer
-	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf^1].bo, pixelBuffer, pixelBufferSize);
-	*fbid = app->uvr_buffer.bufferObjects[*cbuf].fbid;
-
 	*cbuf ^= 1;
+
+	// Write to back buffer
+	*fbid = app->uvr_buffer.bufferObjects[*cbuf].fbid;
+	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
 
 	*running = prun;
 }
@@ -147,7 +159,7 @@ int main(void)
 	passData.app = &kms;
 
 	kmsfd = kms.uvr_kms_node_display_output_chain.kmsfd;
-	fbid = kms.uvr_buffer.bufferObjects[0].fbid;
+	fbid = kms.uvr_buffer.bufferObjects[cbuf].fbid;
 
 	struct uvr_kms_node_atomic_request_create_info atomicRequestInfo;
 	atomicRequestInfo.kmsfd = kmsfd;

@@ -797,11 +797,14 @@ static void handle_page_flip_event(int fd,
 		return;
 	}
 
-	/* Application updates @rendererFbId to the next displayable buffer and renders into buffer not being displayed */
+	/* Application updates @rendererFbId to the next displayable GBM[GEM]/DUMP buffer and renders into that buffer as it's not the buffer going to be submitted to DRM core. */
 	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
 
-	/* Send properties to DRM core */
-	if (drmModeAtomicCommit(fd, rendererInfo->rendererAtomicRequest, DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK, rendererInfo) < 0) {
+	/*
+	 * Send properties to DRM core and asks the driver to perform an atomic commit.
+	 * This will lead to a page-flip and the content of the @rendererFbId will be displayed.
+	 */
+	if (drmModeAtomicCommit(fd, rendererInfo->rendererAtomicRequest, DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK, rendererInfo) < 0) {
 		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
 		uvr_utils_log(UVR_WARNING, "[x] drmModeAtomicCommit: %s", strerror(errno));
 		return;
