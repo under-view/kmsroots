@@ -9,7 +9,7 @@ librt = cc.find_library('rt', required: true)
 libcglm = dependency('cglm', required: true)
 
 fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c', 'stb_image.c' ]
-lib_uvr_deps = [vulkan, libmath, librt]
+lib_kmr_deps = [vulkan, libmath, librt]
 
 
 ################################################################################
@@ -18,7 +18,7 @@ lib_uvr_deps = [vulkan, libmath, librt]
 libshaderc = dependency('shaderc', required: get_option('shaderc'))
 if libshaderc.found()
   pargs += ['-DINCLUDE_SHADERC=1']
-  lib_uvr_deps += [libshaderc]
+  lib_kmr_deps += [libshaderc]
   fs += ['shader.c']
 endif
 
@@ -33,27 +33,27 @@ libgbm = dependency('gbm', required: get_option('kms'))
 libudev = dependency('libudev', required: get_option('kms').enabled() or get_option('libinput').enabled())
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
-  lib_uvr_deps += [libdrm]
+  lib_kmr_deps += [libdrm]
   fs += ['kms-node.c']
 endif
 
 if libseat.found()
   pargs += ['-DINCLUDE_LIBSEAT=1']
-  lib_uvr_deps += [libseat]
+  lib_kmr_deps += [libseat]
   fs += ['session.c']
 endif
 
 if libgbm.found()
-  lib_uvr_deps += [libgbm]
+  lib_kmr_deps += [libgbm]
   fs += ['buffer.c']
 endif
 
 if libudev.found()
-  lib_uvr_deps += [libudev]
+  lib_kmr_deps += [libudev]
 endif
 
 if libinput.found()
-  lib_uvr_deps += [libinput]
+  lib_kmr_deps += [libinput]
   fs += ['input.c']
 endif
 
@@ -67,7 +67,7 @@ libxcbewmh = dependency('xcb-ewmh', required: get_option('xcb'))
 if libxcb.found() and libxcbewmh.found()
   pargs += ['-DINCLUDE_XCB=1']
   fs += ['xclient.c']
-  lib_uvr_deps += [libxcb, libxcbewmh]
+  lib_kmr_deps += [libxcb, libxcbewmh]
 endif
 
 
@@ -115,13 +115,13 @@ if wayland_client.found()
 
   pargs += ['-DINCLUDE_WAYLAND=1']
   fs += ['wclient.c']
-  lib_uvr_deps += [wayland_client]
+  lib_kmr_deps += [wayland_client]
 endif
 
 
-lib_underview_renderer_static = static_library(
-  'uvr', cglue_code, files(fs),
-  dependencies: lib_uvr_deps,
+lib_kmsroots_static = static_library(
+  'kms', cglue_code, files(fs),
+  dependencies: lib_kmr_deps,
   include_directories: inc,
   c_args: pargs
 )

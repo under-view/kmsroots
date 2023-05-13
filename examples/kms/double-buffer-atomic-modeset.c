@@ -15,13 +15,13 @@
 #define MAX_EPOLL_EVENTS 2
 
 struct app_kms {
-	struct uvr_kms_node uvr_kms_node;
-	struct uvr_kms_node_display_output_chain uvr_kms_node_display_output_chain;
-	struct uvr_kms_node_atomic_request uvr_kms_node_atomic_request;
-	struct uvr_buffer uvr_buffer;
-	struct uvr_input uvr_input;
+	struct kmr_kms_node kmr_kms_node;
+	struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain;
+	struct kmr_kms_node_atomic_request kmr_kms_node_atomic_request;
+	struct kmr_buffer kmr_buffer;
+	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
-	struct uvr_session *uvr_session;
+	struct kmr_session *kmr_session;
 #endif
 };
 
@@ -67,7 +67,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
  * Library implementation is as such
  * 1. Prepare properties for submitting to DRM core. The KMS primary plane object property FB_ID value
  *    is set before "render" function is called. @fbid value is initially set to
- *    uvr_buffer.bufferObjects[cbuf=0].fbid (102). This is done when we created the first
+ *    kmr_buffer.bufferObjects[cbuf=0].fbid (102). This is done when we created the first
  *    KMS atomic request.
  * 2. "render" function implementation is called. Application must update fbid value (updated number is 103).
  *    This value won't be submitted to DRM core until a page-flip event occurs.
@@ -80,8 +80,8 @@ void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 	struct app_kms_pass *passData = (struct app_kms_pass *) data;
 	struct app_kms *app = passData->app;
 
-	unsigned int width = app->uvr_kms_node_display_output_chain.width;
-	unsigned int height = app->uvr_kms_node_display_output_chain.height;
+	unsigned int width = app->kmr_kms_node_display_output_chain.width;
+	unsigned int height = app->kmr_kms_node_display_output_chain.height;
 	unsigned int bytesPerPixel = 4, offset = 0;
 	unsigned int stride = width * bytesPerPixel;
 	bool r_up = true, g_up = true, b_up = true;
@@ -104,8 +104,8 @@ void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 	*cbuf ^= 1;
 
 	// Write to back buffer
-	*fbid = app->uvr_buffer.bufferObjects[*cbuf].fbid;
-	gbm_bo_write(app->uvr_buffer.bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
+	*fbid = app->kmr_buffer.bufferObjects[*cbuf].fbid;
+	gbm_bo_write(app->kmr_buffer.bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
 
 	*running = prun;
 }
@@ -117,17 +117,17 @@ void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 int main(void)
 {
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
 		return 1;
 	}
 
 	if (signal(SIGABRT, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
 		return 1;
 	}
 
 	if (signal(SIGTERM, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
 		return 1;
 	}
 
@@ -157,70 +157,70 @@ int main(void)
 	static uint8_t cbuf = 0;
 	static bool running = true;
 
-	kmsfd = kms.uvr_kms_node_display_output_chain.kmsfd;
-	fbid = kms.uvr_buffer.bufferObjects[cbuf].fbid;
+	kmsfd = kms.kmr_kms_node_display_output_chain.kmsfd;
+	fbid = kms.kmr_buffer.bufferObjects[cbuf].fbid;
 
-	struct uvr_kms_node_atomic_request_create_info atomicRequestInfo;
+	struct kmr_kms_node_atomic_request_create_info atomicRequestInfo;
 	atomicRequestInfo.kmsfd = kmsfd;
-	atomicRequestInfo.displayOutputChain = &kms.uvr_kms_node_display_output_chain;
+	atomicRequestInfo.displayOutputChain = &kms.kmr_kms_node_display_output_chain;
 	atomicRequestInfo.renderer = &render;
 	atomicRequestInfo.rendererRunning = &running;
 	atomicRequestInfo.rendererCurrentBuffer = &cbuf;
 	atomicRequestInfo.rendererFbId = &fbid;
 	atomicRequestInfo.rendererData = &passData;
 
-	kms.uvr_kms_node_atomic_request = uvr_kms_node_atomic_request_create(&atomicRequestInfo);
-	if (!kms.uvr_kms_node_atomic_request.atomicRequest)
+	kms.kmr_kms_node_atomic_request = kmr_kms_node_atomic_request_create(&atomicRequestInfo);
+	if (!kms.kmr_kms_node_atomic_request.atomicRequest)
 		goto exit_error;
 	
-	struct uvr_input_create_info inputInfo;
+	struct kmr_input_create_info inputInfo;
 #ifdef INCLUDE_LIBSEAT
-	inputInfo.session = kms.uvr_session;
+	inputInfo.session = kms.kmr_session;
 #endif
 
-	kms.uvr_input = uvr_input_create(&inputInfo);
-	if (!kms.uvr_input.input)
+	kms.kmr_input = kmr_input_create(&inputInfo);
+	if (!kms.kmr_input.input)
 		goto exit_error;
 
-	inputfd = kms.uvr_input.inputfd;
+	inputfd = kms.kmr_input.inputfd;
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] epoll_create1: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] epoll_create1: %s", strerror(errno));
 		goto exit_error;
 	}
 
 	event.events = EPOLLIN;
 	event.data.fd = kmsfd;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, kmsfd, &event) == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
 		goto exit_error;
 	}
 
 	event.events = EPOLLIN;
 	event.data.fd = inputfd;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, inputfd, &event) == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
 		goto exit_error;
 	}
 
-	struct uvr_kms_node_handle_drm_event_info drmEventInfo;
+	struct kmr_kms_node_handle_drm_event_info drmEventInfo;
 	drmEventInfo.kmsfd = kmsfd;
 	
 	uint64_t inputReturnCode;
-	struct uvr_input_handle_input_event_info inputEventInfo;
-	inputEventInfo.input = kms.uvr_input;
+	struct kmr_input_handle_input_event_info inputEventInfo;
+	inputEventInfo.input = kms.kmr_input;
 
 	while (running) {
 		nfds = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, -1);
 		if (nfds == -1) {
-			uvr_utils_log(UVR_DANGER, "[x] epoll_wait: %s", strerror(errno));
+			kmr_utils_log(KMR_DANGER, "[x] epoll_wait: %s", strerror(errno));
 			goto exit_error;
 		}
 
 		for (n = 0; n < nfds; n++) {
 			if (events[n].data.fd == inputfd) {
-				inputReturnCode = uvr_input_handle_input_event(&inputEventInfo);
+				inputReturnCode = kmr_input_handle_input_event(&inputEventInfo);
 
 				/*
 				 * input-event-codes.h
@@ -233,15 +233,15 @@ int main(void)
 			}
 
 			if (events[n].data.fd == kmsfd) {
-				uvr_kms_node_handle_drm_event(&drmEventInfo);
+				kmr_kms_node_handle_drm_event(&drmEventInfo);
 			}
 		}
 	}
 
 exit_error:
-	struct uvr_kms_node_destroy kmsdevd;
-	struct uvr_buffer_destroy kmsbuffsd;
-	struct uvr_input_destroy kmsinputd;
+	struct kmr_kms_node_destroy kmsdevd;
+	struct kmr_buffer_destroy kmsbuffsd;
+	struct kmr_input_destroy kmsinputd;
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 	memset(&kmsinputd, 0, sizeof(kmsinputd));
@@ -252,20 +252,20 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	kmsbuffsd.uvr_buffer_cnt = 1;
-	kmsbuffsd.uvr_buffer = &kms.uvr_buffer;
-	uvr_buffer_destroy(&kmsbuffsd);
+	kmsbuffsd.kmr_buffer_cnt = 1;
+	kmsbuffsd.kmr_buffer = &kms.kmr_buffer;
+	kmr_buffer_destroy(&kmsbuffsd);
 
-	kmsinputd.uvr_input = kms.uvr_input;	
-	uvr_input_destroy(&kmsinputd);
+	kmsinputd.kmr_input = kms.kmr_input;
+	kmr_input_destroy(&kmsinputd);
 
-	kmsdevd.uvr_kms_node = kms.uvr_kms_node;
-	kmsdevd.uvr_kms_node_display_output_chain = kms.uvr_kms_node_display_output_chain;
-	kmsdevd.uvr_kms_node_atomic_request = kms.uvr_kms_node_atomic_request;
-	uvr_kms_node_destroy(&kmsdevd);
+	kmsdevd.kmr_kms_node = kms.kmr_kms_node;
+	kmsdevd.kmr_kms_node_display_output_chain = kms.kmr_kms_node_display_output_chain;
+	kmsdevd.kmr_kms_node_atomic_request = kms.kmr_kms_node_atomic_request;
+	kmr_kms_node_destroy(&kmsdevd);
 
 #ifdef INCLUDE_LIBSEAT
-	uvr_session_destroy(kms.uvr_session);
+	kmr_session_destroy(kms.kmr_session);
 #endif
 	return 0;
 }
@@ -273,28 +273,28 @@ exit_error:
 
 int create_kms_instance(struct app_kms *kms)
 {
-	struct uvr_kms_node_create_info kmsNodeCreateInfo;
+	struct kmr_kms_node_create_info kmsNodeCreateInfo;
 
 #ifdef INCLUDE_LIBSEAT
-	kms->uvr_session = uvr_session_create();
-	if (!kms->uvr_session->seat)
+	kms->kmr_session = kmr_session_create();
+	if (!kms->kmr_session->seat)
 		return -1;
 
-	kmsNodeCreateInfo.session = kms->uvr_session;
+	kmsNodeCreateInfo.session = kms->kmr_session;
 #endif
 
 	kmsNodeCreateInfo.kmsNode = NULL;
-	kms->uvr_kms_node = uvr_kms_node_create(&kmsNodeCreateInfo);
-	if (kms->uvr_kms_node.kmsfd == -1)
+	kms->kmr_kms_node = kmr_kms_node_create(&kmsNodeCreateInfo);
+	if (kms->kmr_kms_node.kmsfd == -1)
 		return -1;
 
-	struct uvr_kms_node_display_output_chain_create_info dochainCreateInfo;
-	dochainCreateInfo.kmsfd = kms->uvr_kms_node.kmsfd;
+	struct kmr_kms_node_display_output_chain_create_info dochainCreateInfo;
+	dochainCreateInfo.kmsfd = kms->kmr_kms_node.kmsfd;
 
-	kms->uvr_kms_node_display_output_chain = uvr_kms_node_display_output_chain_create(&dochainCreateInfo);
-	if (!kms->uvr_kms_node_display_output_chain.connector.propsData ||
-	    !kms->uvr_kms_node_display_output_chain.crtc.propsData      ||
-	    !kms->uvr_kms_node_display_output_chain.plane.propsData)
+	kms->kmr_kms_node_display_output_chain = kmr_kms_node_display_output_chain_create(&dochainCreateInfo);
+	if (!kms->kmr_kms_node_display_output_chain.connector.propsData ||
+	    !kms->kmr_kms_node_display_output_chain.crtc.propsData      ||
+	    !kms->kmr_kms_node_display_output_chain.plane.propsData)
 	{
 		return -1;
 	}
@@ -305,12 +305,12 @@ int create_kms_instance(struct app_kms *kms)
 
 int create_kms_gbm_buffers(struct app_kms *kms)
 {
-	struct uvr_buffer_create_info gbmBufferInfo;
-	gbmBufferInfo.bufferType = UVR_BUFFER_GBM_BUFFER;
-	gbmBufferInfo.kmsfd = kms->uvr_kms_node.kmsfd;
+	struct kmr_buffer_create_info gbmBufferInfo;
+	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
+	gbmBufferInfo.kmsfd = kms->kmr_kms_node.kmsfd;
 	gbmBufferInfo.bufferCount = 2;
-	gbmBufferInfo.width = kms->uvr_kms_node_display_output_chain.width;
-	gbmBufferInfo.height = kms->uvr_kms_node_display_output_chain.height;
+	gbmBufferInfo.width = kms->kmr_kms_node_display_output_chain.width;
+	gbmBufferInfo.height = kms->kmr_kms_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
 	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
@@ -318,8 +318,8 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	gbmBufferInfo.modifiers = NULL;
 	gbmBufferInfo.modifierCount = 0;
 
-	kms->uvr_buffer = uvr_buffer_create(&gbmBufferInfo);
-	if (!kms->uvr_buffer.gbmDevice)
+	kms->kmr_buffer = kmr_buffer_create(&gbmBufferInfo);
+	if (!kms->kmr_buffer.gbmDevice)
 		return -1;
 
 	return 0;
@@ -328,12 +328,12 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 
 int create_kms_set_crtc(struct app_kms *app)
 {
-	struct uvr_kms_node_display_mode_info nextImageInfo;
+	struct kmr_kms_node_display_mode_info nextImageInfo;
 
-	for (uint8_t i = 0; i < app->uvr_buffer.bufferCount; i++) {
-		nextImageInfo.fbid = app->uvr_buffer.bufferObjects[0].fbid;
-		nextImageInfo.displayChain = &app->uvr_kms_node_display_output_chain;
-		if (uvr_kms_node_display_mode_set(&nextImageInfo))
+	for (uint8_t i = 0; i < app->kmr_buffer.bufferCount; i++) {
+		nextImageInfo.fbid = app->kmr_buffer.bufferObjects[0].fbid;
+		nextImageInfo.displayChain = &app->kmr_kms_node_display_output_chain;
+		if (kmr_kms_node_display_mode_set(&nextImageInfo))
 			return -1;
 	}
 
@@ -345,14 +345,14 @@ int create_kms_pixel_buffer(struct app_kms_pass *passData)
 {
 	struct app_kms *app = passData->app;
 
-	unsigned int width = app->uvr_kms_node_display_output_chain.width;
-	unsigned int height = app->uvr_kms_node_display_output_chain.height;
+	unsigned int width = app->kmr_kms_node_display_output_chain.width;
+	unsigned int height = app->kmr_kms_node_display_output_chain.height;
 	unsigned int bytesPerPixel = 4;
 	unsigned int pixelBufferSize = width * height * bytesPerPixel;
 
-	uint8_t *pixelBuffer = mmap(NULL, pixelBufferSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, app->uvr_buffer.bufferObjects[0].offsets[0]);
+	uint8_t *pixelBuffer = mmap(NULL, pixelBufferSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, app->kmr_buffer.bufferObjects[0].offsets[0]);
 	if (pixelBuffer == MAP_FAILED) {
-		uvr_utils_log(UVR_DANGER, "[x] mmap: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] mmap: %s", strerror(errno));
 		return -1;
 	}
 

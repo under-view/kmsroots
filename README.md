@@ -1,12 +1,12 @@
-# libunderview-renderer
+# kmsroots
 
-Library used to assists in building applications that require vulkan renderers. These renderers can display vulkan render pass
-final framebuffers directly to display via KMS atomic API or to one of the other linux display server clients (xcb,wayland). May also assists
-any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositors build their [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
+Library used to assists in building applications that require vulkan renderers. This implementation assists in displaying vulkan render pass
+final framebuffers either directly to display via KMS atomic API or to one of the other linux display server clients (xcb, wayland). May also assists
+any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositor build their [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
 compatible out-of-tree vulkan renderers.
 
-**NOTE:** libunderview-renderer KMS atomic implementation will only support a single output device (i.e. kiosk).
-If more output devices required libunderview-renderer may be used in conjunction with [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots).
+**NOTE:** kmsroots KMS atomic page-flip implementation will only support a single output device (useful for kiosk's).
+If more output devices required kmsroots may be used in conjunction with [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots).
 
 For better dependency version control underview builds all packages required from source. Follow
 [build-underview-depends](https://github.com/under-view/build-underview-depends) repo README to get
@@ -53,10 +53,10 @@ $ meson compile -C build
 
 **Running Examples**
 ```sh
-# Examples can exit with CTRL-C, ESC, or Q
-$ ./build/examples/xcb/underview-renderer-xcb-client-*
-$ ./build/examples/wayland/underview-renderer-wayland-client-*
-$ ./build/examples/wayland/underview-renderer-kms-*
+# Examples can exit with either CTRL-C, ESC, or Q.
+$ ./build/examples/xcb/kmsroots-xcb-client-*
+$ ./build/examples/wayland/kmsroots-wayland-client-*
+$ ./build/examples/wayland/kmsroots-kms-*
 
 # https://github.com/swaywm/wlroots/wiki/DRM-Debugging
 # Enable verbose DRM logging

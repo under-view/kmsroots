@@ -6,7 +6,7 @@
 #include "xclient.h"
 
 
-struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *uvrxcb)
+struct kmr_xcb_window kmr_xcb_window_create(struct kmr_xcb_window_create_info *kmsxcb)
 {
 	xcb_connection_t *conn = NULL;
 	xcb_window_t window;
@@ -15,18 +15,18 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 	xcb_screen_t *screen = NULL;
 
 	/* Connect to Xserver */
-	conn = xcb_connect(uvrxcb->display, uvrxcb->screen);
+	conn = xcb_connect(kmsxcb->display, kmsxcb->screen);
 	if (xcb_connection_has_error(conn)) {
-		uvr_utils_log(UVR_DANGER, "[x] xcb_connect: xcb_connect Failed");
-		if (!uvrxcb->display)
-			uvr_utils_log(UVR_INFO, "Try setting the DISPLAY environment variable");
+		kmr_utils_log(KMR_DANGER, "[x] xcb_connect: xcb_connect Failed");
+		if (!kmsxcb->display)
+			kmr_utils_log(KMR_INFO, "Try setting the DISPLAY environment variable");
 		goto error_exit_xcb_window_create;
 	}
 
 	/* access properties of the X server and its display environment */
 	xcbsetup = xcb_get_setup(conn);
 	if (!xcbsetup) {
-		uvr_utils_log(UVR_DANGER, "[x] xcb_get_setup: Failed to access properties of the X server and its display environment");
+		kmr_utils_log(KMR_DANGER, "[x] xcb_get_setup: Failed to access properties of the X server and its display environment");
 		goto error_exit_xcb_window_disconnect;
 	}
 
@@ -41,7 +41,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 	 */
 	screen = xcb_setup_roots_iterator(xcbsetup).data;
 	if (!screen) {
-		uvr_utils_log(UVR_DANGER, "[x] xcb_setup_roots_iterator: Failed to retrieve connected screen");
+		kmr_utils_log(KMR_DANGER, "[x] xcb_setup_roots_iterator: Failed to retrieve connected screen");
 		goto error_exit_xcb_window_destroy;
 	}
 
@@ -50,20 +50,20 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 	uint32_t prop_value[2] = { screen->black_pixel, XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_KEY_PRESS };
 
 	xcb_create_window(conn, screen->root_depth, window, screen->root, 0,
-	                  0, uvrxcb->width, uvrxcb->height, 0,
+	                  0, kmsxcb->width, kmsxcb->height, 0,
 	                  XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
 	                  prop_name, prop_value);
 
 	/* Change window property name */
 	xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, XCB_ATOM_WM_NAME,
-			    XCB_ATOM_STRING, 8, strnlen(uvrxcb->appName, 60), uvrxcb->appName);
+			    XCB_ATOM_STRING, 8, strnlen(kmsxcb->appName, 60), kmsxcb->appName);
 
 	/* Change window property to make fullscreen */
-	if (uvrxcb->fullscreen) {
+	if (kmsxcb->fullscreen) {
 		xcb_ewmh_connection_t xcbewmh = {};
 		xcb_intern_atom_cookie_t *cookie = xcb_ewmh_init_atoms(conn, &xcbewmh);
 		if (!xcb_ewmh_init_atoms_replies(&xcbewmh, cookie, NULL)) {
-			uvr_utils_log(UVR_DANGER, "[x] xcb_ewmh_init_atoms_replies: Failed");
+			kmr_utils_log(KMR_DANGER, "[x] xcb_ewmh_init_atoms_replies: Failed");
 			goto error_exit_xcb_window_destroy;
 		}
 
@@ -73,7 +73,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 	}
 
 	/* Change window property to make window fully transparent */
-	if (uvrxcb->transparent) {
+	if (kmsxcb->transparent) {
 		uint32_t opacity = -1 * 0xffffffff;
 		xcb_intern_atom_cookie_t winopacity = xcb_intern_atom(conn, 0, strlen("_NET_WM_WINDOW_OPACITY"), "_NET_WM_WINDOW_OPACITY");
 		xcb_intern_atom_reply_t *winopacityreply = xcb_intern_atom_reply(conn, winopacity, NULL);
@@ -89,7 +89,7 @@ struct uvr_xcb_window uvr_xcb_window_create(struct uvr_xcb_window_create_info *u
 	xcb_change_property(conn, XCB_PROP_MODE_REPLACE, window, winprotosreply->atom, 4, 32, 1, &windeletereply->atom);
 	free(winprotosreply);
 
-	return (struct uvr_xcb_window) { .conn = conn, .window = window, .delWindow = windeletereply };
+	return (struct kmr_xcb_window) { .conn = conn, .window = window, .delWindow = windeletereply };
 
 error_exit_xcb_window_destroy:
 	if (window)
@@ -98,22 +98,22 @@ error_exit_xcb_window_disconnect:
 	if (conn)
 		xcb_disconnect(conn);
 error_exit_xcb_window_create:
-	return (struct uvr_xcb_window) { .conn = NULL, .window = 0, .delWindow = 0 };
+	return (struct kmr_xcb_window) { .conn = NULL, .window = 0, .delWindow = 0 };
 }
 
 
-void uvr_xcb_window_make_visible(struct uvr_xcb_window *uvrxcb)
+void kmr_xcb_window_make_visible(struct kmr_xcb_window *kmsxcb)
 {
-	xcb_map_window(uvrxcb->conn, uvrxcb->window);
-	xcb_flush(uvrxcb->conn);
+	xcb_map_window(kmsxcb->conn, kmsxcb->window);
+	xcb_flush(kmsxcb->conn);
 }
 
 
-int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
+int kmr_xcb_window_handle_event(struct kmr_xcb_window_handle_event_info *kmsxcb)
 {
 	xcb_generic_event_t *event = NULL;
 
-	event = xcb_poll_for_event(uvrxcb->xcbWindowObject->conn);
+	event = xcb_poll_for_event(kmsxcb->xcbWindowObject->conn);
 	if (!event) {
 		goto exit_xcb_window_event_loop;
 	}
@@ -122,10 +122,10 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
 		case XCB_KEY_PRESS:
 		{
 			xcb_key_press_event_t *press = (xcb_key_press_event_t *) event;
-			//uvr_utils_log(UVR_INFO, "uvr_xcb_window_wait_for_event: Key pressed %d", press->detail);
+			//kmr_utils_log(KMR_INFO, "kmr_xcb_window_wait_for_event: Key pressed %d", press->detail);
 			/* ESCAPE key, Q key */
 			if (press->detail == 9 || press->detail == 24) {
-				uvrxcb->rendererRunning = false;
+				kmsxcb->rendererRunning = false;
 				goto error_exit_xcb_window_event_loop;
 			}
 			break;
@@ -133,8 +133,8 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
 		case XCB_CLIENT_MESSAGE:
 		{
 			xcb_client_message_event_t *message = (xcb_client_message_event_t *) event;
-			if (message->data.data32[0] == uvrxcb->xcbWindowObject->delWindow->atom) {
-				uvrxcb->rendererRunning = false;
+			if (message->data.data32[0] == kmsxcb->xcbWindowObject->delWindow->atom) {
+				kmsxcb->rendererRunning = false;
 				goto error_exit_xcb_window_event_loop;
 			}
 			break;
@@ -145,7 +145,7 @@ int uvr_xcb_window_handle_event(struct uvr_xcb_window_handle_event_info *uvrxcb)
 
 exit_xcb_window_event_loop:
 	/* Execute application defined renderer */
-	uvrxcb->renderer(uvrxcb->rendererRunning, uvrxcb->rendererCurrentBuffer, uvrxcb->rendererData);
+	kmsxcb->renderer(kmsxcb->rendererRunning, kmsxcb->rendererCurrentBuffer, kmsxcb->rendererData);
 	free(event);
 	return 1;
 
@@ -155,11 +155,11 @@ error_exit_xcb_window_event_loop:
 }
 
 
-void uvr_xcb_destroy(struct uvr_xcb_destroy *uvrxcb)
+void kmr_xcb_destroy(struct kmr_xcb_destroy *kmsxcb)
 {
-	free(uvrxcb->uvr_xcb_window.delWindow);
-	if (uvrxcb->uvr_xcb_window.window)
-		xcb_destroy_window(uvrxcb->uvr_xcb_window.conn, uvrxcb->uvr_xcb_window.window);
-	if (uvrxcb->uvr_xcb_window.conn)
-		xcb_disconnect(uvrxcb->uvr_xcb_window.conn);
+	free(kmsxcb->kmr_xcb_window.delWindow);
+	if (kmsxcb->kmr_xcb_window.window)
+		xcb_destroy_window(kmsxcb->kmr_xcb_window.conn, kmsxcb->kmr_xcb_window.window);
+	if (kmsxcb->kmr_xcb_window.conn)
+		xcb_disconnect(kmsxcb->kmr_xcb_window.conn);
 }

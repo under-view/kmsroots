@@ -20,14 +20,14 @@
 
 static void handle_enable_seat(struct libseat UNUSED *seat, void *data)
 {
-	struct uvr_session *session = (struct uvr_session *) data;
+	struct kmr_session *session = (struct kmr_session *) data;
 	session->active = true;
 }
 
 
 static void handle_disable_seat(struct libseat *seat, void *data)
 {
-	struct uvr_session *session = (struct uvr_session *) data;
+	struct kmr_session *session = (struct kmr_session *) data;
 	session->active = false;
 
 	libseat_disable_seat(seat);
@@ -41,63 +41,63 @@ static struct libseat_seat_listener seat_listener = {
 
 
 /* Create logind session to access devices without being root */
-struct uvr_session *uvr_session_create()
+struct kmr_session *kmr_session_create()
 {
-	struct uvr_session *session = NULL;
+	struct kmr_session *session = NULL;
 
 	// libseat will take care of updating the logind state if necessary
 	setenv("XDG_SESSION_TYPE", "wayland", 1);
 
-	session = calloc(1, sizeof(struct uvr_session));
+	session = calloc(1, sizeof(struct kmr_session));
 	if (!session) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_uvr_session_create;
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_kmr_session_create;
 	}
 
 	session->seat = libseat_open_seat(&seat_listener, session);
 	if (!session->seat) {
-		uvr_utils_log(UVR_DANGER, "[x] libseat_open_seat: Unable to create seat");
-		goto exit_uvr_session_create_free_session;
+		kmr_utils_log(KMR_DANGER, "[x] libseat_open_seat: Unable to create seat");
+		goto exit_kmr_session_create_free_session;
 	}
 
 	while (session->active == 0) {
 		if (libseat_dispatch(session->seat, -1) == -1) {
-			uvr_utils_log(UVR_DANGER, "[x] libseat_dispatch: %s\n", strerror(errno));
-			goto exit_uvr_session_create_close_seat;
+			kmr_utils_log(KMR_DANGER, "[x] libseat_dispatch: %s\n", strerror(errno));
+			goto exit_kmr_session_create_close_seat;
 		}
 	}
 
-	uvr_utils_log(UVR_SUCCESS, "Session created with libseat established!");
+	kmr_utils_log(KMR_SUCCESS, "Session created with libseat established!");
 
 	session->seatName = libseat_seat_name(session->seat);
 	if (!session->seatName) {
-		uvr_utils_log(UVR_DANGER, "[x] libseat_seat_name: Unable to acquire seat name");
-		goto exit_uvr_session_create_close_seat;
+		kmr_utils_log(KMR_DANGER, "[x] libseat_seat_name: Unable to acquire seat name");
+		goto exit_kmr_session_create_close_seat;
 	}
 
-	uvr_utils_log(UVR_INFO, "seatName: %s", session->seatName);
+	kmr_utils_log(KMR_INFO, "seatName: %s", session->seatName);
 
 	session->seatFd = libseat_get_fd(session->seat);
 	if (session->seatFd == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] libseat_get_fd: %s", strerror(errno));
-		goto exit_uvr_session_create_close_seat;
+		kmr_utils_log(KMR_DANGER, "[x] libseat_get_fd: %s", strerror(errno));
+		goto exit_kmr_session_create_close_seat;
 	}
 
-	uvr_utils_log(UVR_INFO, "libseat instance pollable fd: %d", session->seatFd);
+	kmr_utils_log(KMR_INFO, "libseat instance pollable fd: %d", session->seatFd);
 
 	return session;
 
-exit_uvr_session_create_close_seat:
+exit_kmr_session_create_close_seat:
 	if (session->seat)
 		libseat_close_seat(session->seat);
-exit_uvr_session_create_free_session:
+exit_kmr_session_create_free_session:
 	free(session);
-exit_uvr_session_create:
+exit_kmr_session_create:
 	return NULL;
 }
 
 
-int uvr_session_switch_vt(struct uvr_session *session, unsigned int vt)
+int kmr_session_switch_vt(struct kmr_session *session, unsigned int vt)
 {
 	if (!session)
 		return -1;
@@ -106,30 +106,30 @@ int uvr_session_switch_vt(struct uvr_session *session, unsigned int vt)
 }
 
 
-int uvr_session_take_control_of_device(struct uvr_session *session, const char *devpath)
+int kmr_session_take_control_of_device(struct kmr_session *session, const char *devpath)
 {
 	int fd;
 
 	if (libseat_open_device(session->seat, devpath, &fd) == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] libseat_open_device: %s\n", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] libseat_open_device: %s\n", strerror(errno));
 		return -1;
 	}
 
-	uvr_utils_log(UVR_INFO, "libseat_open_device(seat: %p, path: %s, fd: %p) = %d",
+	kmr_utils_log(KMR_INFO, "libseat_open_device(seat: %p, path: %s, fd: %p) = %d",
 	                        (void*) session->seat, devpath, (void*) &fd, fd);
 
 	return fd;
 }
 
 
-void uvr_session_release_device(struct uvr_session *session, int fd)
+void kmr_session_release_device(struct kmr_session *session, int fd)
 {
 	libseat_close_device(session->seat, fd);
 	close(fd);
 }
 
 
-void uvr_session_destroy(struct uvr_session *session)
+void kmr_session_destroy(struct kmr_session *session)
 {
 	if (session->seat)
 		libseat_close_seat(session->seat);

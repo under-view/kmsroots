@@ -1,5 +1,5 @@
-#ifndef UVR_BUFFER_H
-#define UVR_BUFFER_H
+#ifndef KMR_BUFFER_H
+#define KMR_BUFFER_H
 
 #include "utils.h"
 
@@ -12,19 +12,19 @@
 
 
 /*
- * enum uvr_buffer_type (Underview Renderer Buffer Type)
+ * enum kmr_buffer_type (kmsroots Buffer Type)
  *
- * Buffer allocation options used by uvr_buffer_create
+ * Buffer allocation options used by kmr_buffer_create
  */
-enum uvr_buffer_type {
-	UVR_BUFFER_DUMP_BUFFER               = 0,
-	UVR_BUFFER_GBM_BUFFER                = 1,
-	UVR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2
+enum kmr_buffer_type {
+	KMR_BUFFER_DUMP_BUFFER               = 0,
+	KMR_BUFFER_GBM_BUFFER                = 1,
+	KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2
 };
 
 
 /*
- * struct uvr_buffer_object (Underview Renderer Buffer Object)
+ * struct kmr_buffer_object (kmsroots Buffer Object)
  *
  * members:
  * @bo           - Handle to some GEM allocated buffer. Used to get GEM handles, DMA buffer fds (fd associate with GEM buffer),
@@ -45,7 +45,7 @@ enum uvr_buffer_type {
  * @dmaBufferFds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware
  * @kmsfd        - File descriptor to open DRI device
  */
-struct uvr_buffer_object {
+struct kmr_buffer_object {
 	struct gbm_bo *bo;
 	unsigned      fbid;
 	unsigned      format;
@@ -60,7 +60,7 @@ struct uvr_buffer_object {
 
 
 /*
- * struct uvr_buffer (Underview Renderer Buffer)
+ * struct kmr_buffer (kmsroots Buffer)
  *
  * members:
  * @gbmDevice     - A handle used to allocate gbm buffers & surfaces
@@ -68,15 +68,15 @@ struct uvr_buffer_object {
  * @bufferObjects - Stores an array of gbm_bo's and corresponding information
  *                  about the individual buffer.
  */
-struct uvr_buffer {
+struct kmr_buffer {
 	struct gbm_device        *gbmDevice;
 	unsigned int             bufferCount;
-	struct uvr_buffer_object *bufferObjects;
+	struct kmr_buffer_object *bufferObjects;
 };
 
 
 /*
- * struct uvr_buffer_create_info (Underview Renderer Buffer Create Information)
+ * struct kmr_buffer_create_info (kmsroots Buffer Create Information)
  *
  * members:
  * @bufferType    - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
@@ -97,8 +97,8 @@ struct uvr_buffer {
  * @modifiers     - List of drm format modifier
  * @modifierCount - Number of drm format modifiers passed
  */
-struct uvr_buffer_create_info {
-	enum uvr_buffer_type bufferType;
+struct kmr_buffer_create_info {
+	enum kmr_buffer_type bufferType;
 	unsigned int         kmsfd;
 	unsigned int         bufferCount;
 	unsigned int         width;
@@ -113,45 +113,45 @@ struct uvr_buffer_create_info {
 
 
 /*
- * uvr_buffer_create: Function creates multiple buffers that can store
+ * kmr_buffer_create: Function creates multiple buffers that can store
  *
  * args:
- * @uvrbuff - Pointer to a struct uvrbuff_create_info
+ * @kmsbuff - Pointer to a struct kmsbuff_create_info
  * return:
- *	on success struct uvr_buffer
- *	on failure struct uvr_buffer { with members nulled }
+ *	on success struct kmr_buffer
+ *	on failure struct kmr_buffer { with members nulled }
  */
-struct uvr_buffer uvr_buffer_create(struct uvr_buffer_create_info *uvrbuff);
+struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff);
 
 
 /*
- * struct uvr_buffer_destroy (Underview Renderer Buffer Destroy)
+ * struct kmr_buffer_destroy (kmsroots Buffer Destroy)
  *
  * members:
- * @uvr_buffer_cnt - Must pass the amount of elements in struct uvr_buffer array
- * @uvr_buffer     - Must pass an array of valid struct uvr_buffer
+ * @kmr_buffer_cnt - Must pass the amount of elements in struct kmr_buffer array
+ * @kmr_buffer     - Must pass an array of valid struct kmr_buffer
  *                   {
  *                      free'd members:
  *                               struct gbm_device reference
- *                               struct uvr_buffer_object reference
+ *                               struct kmr_buffer_object reference
  *                               int dmaBufferFds[4] - GEM handles closed
  *                               struct gbm_bo reference
  *                               unsigned fbid - KMS fd removed
  *                   }
  */
-struct uvr_buffer_destroy {
-	unsigned          uvr_buffer_cnt;
-	struct uvr_buffer *uvr_buffer;
+struct kmr_buffer_destroy {
+	unsigned          kmr_buffer_cnt;
+	struct kmr_buffer *kmr_buffer;
 };
 
 
 /*
- * uvr_buffer_destroy: Function free's all allocate objects associated with a given buffer
+ * kmr_buffer_destroy: Function free's all allocate objects associated with a given buffer
  *
  * args:
- * @uvrbuff - Pointer to a struct uvr_buffer_destroy
+ * @kmsbuff - Pointer to a struct kmr_buffer_destroy
  */
-void uvr_buffer_destroy(struct uvr_buffer_destroy *uvrbuff);
+void kmr_buffer_destroy(struct kmr_buffer_destroy *kmsbuff);
 
 
 #endif

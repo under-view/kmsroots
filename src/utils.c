@@ -22,43 +22,43 @@
 #include "utils.h"
 
 
-struct uvr_utils_aligned_buffer uvr_utils_aligned_buffer_create(struct uvr_utils_aligned_buffer_create_info *uvrutils)
+struct kmr_utils_aligned_buffer kmr_utils_aligned_buffer_create(struct kmr_utils_aligned_buffer_create_info *kmsutils)
 {
 	uint32_t bufferAlignment = 0, alignedBufferSize = 0;
 	void *alignedBufferMemory = NULL;
 
-	int64_t bitMask = ~(uvrutils->bufferAlignment - 1);
-	bufferAlignment = (uvrutils->bytesToAlign + uvrutils->bufferAlignment - 1) & bitMask;
+	int64_t bitMask = ~(kmsutils->bufferAlignment - 1);
+	bufferAlignment = (kmsutils->bytesToAlign + kmsutils->bufferAlignment - 1) & bitMask;
 
-	alignedBufferSize = bufferAlignment * uvrutils->bytesToAlignCount;
+	alignedBufferSize = bufferAlignment * kmsutils->bytesToAlignCount;
 	alignedBufferMemory = aligned_alloc(bufferAlignment, alignedBufferSize);
 	if (!alignedBufferMemory) {
-		uvr_utils_log(UVR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] aligned_alloc: %s", strerror(errno));
 		goto exit_error_utils_aligned_buffer;
 	}
 
-	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
+	return (struct kmr_utils_aligned_buffer) { .bufferAlignment = bufferAlignment, .alignedBufferSize = alignedBufferSize, .alignedBufferMemory = alignedBufferMemory };
 
 exit_error_utils_aligned_buffer:
-	return (struct uvr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
+	return (struct kmr_utils_aligned_buffer) { .bufferAlignment = 0, .alignedBufferSize = 0, .alignedBufferMemory = NULL };
 }
 
 
-struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_image_buffer_create_info *uvrutils)
+struct kmr_utils_image_buffer kmr_utils_image_buffer_create(struct kmr_utils_image_buffer_create_info *kmsutils)
 {
 	char *imageFile = NULL;
 	uint8_t bitsPerPixel = 8;
 	uint8_t *pixels = NULL;
 	int imageWidth = 0, imageHeight = 0, imageChannels = 0;
 	int imageSize = 0, requestedImageChannels = 0;
-	struct uvr_utils_file loadedImageFile;
+	struct kmr_utils_file loadedImageFile;
 
 	/* Choosing to load image into memory using custom function versus using stbi_load */
-	imageFile = uvr_utils_concat_file_to_dir(uvrutils->directory, uvrutils->filename, uvrutils->maxStrLen);
+	imageFile = kmr_utils_concat_file_to_dir(kmsutils->directory, kmsutils->filename, kmsutils->maxStrLen);
 	if (!imageFile)
 		goto exit_error_utils_image_buffer;
 
-	loadedImageFile = uvr_utils_file_load(imageFile);
+	loadedImageFile = kmr_utils_file_load(imageFile);
 	if (!loadedImageFile.bytes)
 		goto exit_error_utils_image_buffer_free_imageFile;
 
@@ -95,7 +95,7 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 		pixels = (uint8_t *) stbi_load_from_memory(loadedImageFile.bytes, loadedImageFile.byteSize, &imageWidth, &imageHeight, &imageChannels, requestedImageChannels);
 
 	if (!pixels) {
-		uvr_utils_log(UVR_DANGER, "[x] stbi_load_from_memory: Unknown image format. STB cannot decode image data for %s", imageFile);
+		kmr_utils_log(KMR_DANGER, "[x] stbi_load_from_memory: Unknown image format. STB cannot decode image data for %s", imageFile);
 		goto exit_error_utils_image_buffer_free_loadedImageFileBytes;
 	}
 
@@ -104,7 +104,7 @@ struct uvr_utils_image_buffer uvr_utils_image_buffer_create(struct uvr_utils_ima
 
 	imageSize += (imageWidth * imageHeight) * requestedImageChannels;
 
-	return (struct uvr_utils_image_buffer) { .pixels = pixels, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight,
+	return (struct kmr_utils_image_buffer) { .pixels = pixels, .bitsPerPixel = bitsPerPixel, .imageWidth = imageWidth, .imageHeight = imageHeight,
 	                                         .imageChannels = imageChannels, .imageSize = imageSize, .imageBufferOffset = 0 };
 
 //exit_error_utils_image_buffer_free_stbdata:
@@ -114,11 +114,11 @@ exit_error_utils_image_buffer_free_loadedImageFileBytes:
 exit_error_utils_image_buffer_free_imageFile:
 	free(imageFile);
 exit_error_utils_image_buffer:
-	return (struct uvr_utils_image_buffer) { .pixels = NULL, .bitsPerPixel = 0, .imageWidth = 0, .imageHeight = 0, .imageChannels = 0, .imageSize = 0, .imageBufferOffset = 0 };
+	return (struct kmr_utils_image_buffer) { .pixels = NULL, .bitsPerPixel = 0, .imageWidth = 0, .imageHeight = 0, .imageChannels = 0, .imageSize = 0, .imageBufferOffset = 0 };
 }
 
 
-struct uvr_utils_file uvr_utils_file_load(const char *filename)
+struct kmr_utils_file kmr_utils_file_load(const char *filename)
 {
 	FILE *stream = NULL;
 	unsigned char *bytes = NULL;
@@ -127,14 +127,14 @@ struct uvr_utils_file uvr_utils_file_load(const char *filename)
 	/* Open the file in binary mode */
 	stream = fopen(filename, "rb");
 	if (!stream) {
-		uvr_utils_log(UVR_DANGER, "[x] fopen(%s): %s", filename, strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] fopen(%s): %s", filename, strerror(errno));
 		goto exit_error_utils_file_load;
 	}
 
 	/* Go to the end of the file */
 	bsize = fseek(stream, 0, SEEK_END);
 	if (bsize == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] fseek: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] fseek: %s", strerror(errno));
 		goto exit_error_utils_file_load_fclose;
 	}
 
@@ -146,7 +146,7 @@ struct uvr_utils_file uvr_utils_file_load(const char *filename)
 	 */
 	bsize = ftell(stream);
 	if (bsize == -1) {
-		uvr_utils_log(UVR_DANGER, "[x] ftell: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] ftell: %s", strerror(errno));
 		goto exit_error_utils_file_load_fclose;
 	}
 
@@ -155,31 +155,31 @@ struct uvr_utils_file uvr_utils_file_load(const char *filename)
 
 	bytes = (unsigned char *) calloc(bsize, sizeof(unsigned char));
 	if (!bytes) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_utils_file_load_fclose;
 	}
 
 	/* Read in the entire file */
 	if (fread(bytes, bsize, 1, stream) == 0) {
-		uvr_utils_log(UVR_DANGER, "[x] fread: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] fread: %s", strerror(errno));
 		goto exit_error_utils_file_load_free_bytes;
 	}
 
 	fclose(stream);
 
-	return (struct uvr_utils_file) { .bytes = bytes, .byteSize = bsize };
+	return (struct kmr_utils_file) { .bytes = bytes, .byteSize = bsize };
 
 exit_error_utils_file_load_free_bytes:
 	free(bytes);
 exit_error_utils_file_load_fclose:
 	fclose(stream);
 exit_error_utils_file_load:
-	return (struct uvr_utils_file) { .bytes = NULL, .byteSize = 0 };
+	return (struct kmr_utils_file) { .bytes = NULL, .byteSize = 0 };
 }
 
 
 // https://www.roxlu.com/2014/047/high-resolution-timer-function-in-c-c--
-uint64_t uvr_utils_nanosecond(void)
+uint64_t kmr_utils_nanosecond(void)
 {
 	static uint64_t isInit = 0;
 	static struct timespec linux_rate;
@@ -197,20 +197,20 @@ uint64_t uvr_utils_nanosecond(void)
 }
 
 
-char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, uint16_t maxStrLen)
+char *kmr_utils_concat_file_to_dir(const char *directory, const char *filename, uint16_t maxStrLen)
 {
 	char *filepath = NULL;
 	struct stat s = {0};
 
 	filepath = calloc(maxStrLen, sizeof(char));
 	if (!filepath) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc: %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		return NULL;
 	}
 
 	if (filename) {
 		if (stat(directory, &s) == -1) {
-			uvr_utils_log(UVR_DANGER, "[x] stat: %s", strerror(errno));
+			kmr_utils_log(KMR_DANGER, "[x] stat: %s", strerror(errno));
 			free(filepath);
 			return NULL;
 		}
@@ -246,18 +246,18 @@ char *uvr_utils_concat_file_to_dir(const char *directory, const char *filename, 
 }
 
 
-int uvr_utils_update_fd_flags(int fd, int flags) {
+int kmr_utils_update_fd_flags(int fd, int flags) {
 	int opt;
 
 	opt = fcntl(fd, F_GETFL);
 	if (fd < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] fcntl(F_GETFL): %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] fcntl(F_GETFL): %s", strerror(errno));
 		return -1;
 	}
 
 	opt |= flags;
 	if (fcntl(fd, F_SETFL, opt) < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] fcntl(F_SETFL): %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] fcntl(F_SETFL): %s", strerror(errno));
 		return -1;
 	}
 
@@ -282,7 +282,7 @@ static int create_shm_file(void)
 {
 	int retries = 100;
 	do {
-		char name[] = "/uvr-XXXXXX";
+		char name[] = "/kms-XXXXXX";
 		randname(name + sizeof(name) - 7);
 		--retries;
 		int fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -318,17 +318,17 @@ int allocate_shm_file(size_t size)
 
 /* ANSI Escape Codes */
 static const char *term_colors[] = {
-	[UVR_NONE]    = "",
-	[UVR_SUCCESS] = "\e[32;1m",
-	[UVR_DANGER]  = "\e[31;1m",
-	[UVR_INFO]    = "\e[35;1m",
-	[UVR_WARNING] = "\e[33;1m",
-	[UVR_RESET]   = "\x1b[0m"
+	[KMR_NONE]    = "",
+	[KMR_SUCCESS] = "\e[32;1m",
+	[KMR_DANGER]  = "\e[31;1m",
+	[KMR_INFO]    = "\e[35;1m",
+	[KMR_WARNING] = "\e[33;1m",
+	[KMR_RESET]   = "\x1b[0m"
 };
 
 
 /* Modified version of what was in wlroots/util/log.c */
-const char *_uvr_utils_strip_path(const char *filepath)
+const char *_kmr_utils_strip_path(const char *filepath)
 {
 	if (*filepath == '.')
 		while (*filepath == '.' || *filepath == '/')
@@ -337,7 +337,7 @@ const char *_uvr_utils_strip_path(const char *filepath)
 }
 
 
-void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt, ...)
+void _kmr_utils_log(enum kmr_utils_log_type type, FILE *stream, const char *fmt, ...)
 {
 	char buffer[26];
 	va_list args; /* type that holds variable arguments */
@@ -354,7 +354,7 @@ void _uvr_utils_log(enum uvr_utils_log_type type, FILE *stream, const char *fmt,
 	va_start(args, fmt);
 	vfprintf(stream, fmt, args);
 	va_end(args); /* Reset terminal color */
-	fprintf(stream, "%s", term_colors[UVR_RESET]);
+	fprintf(stream, "%s", term_colors[KMR_RESET]);
 
 	/* Flush buffer */
 	fprintf(stream, "\n");

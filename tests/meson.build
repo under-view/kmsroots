@@ -28,8 +28,8 @@ foreach p : progs
   endif
 
   exec = executable(exec_name, p,
-                    link_with: lib_underview_renderer,
-                    dependencies: lib_uvr_deps,
+                    link_with: lib_kmsroots,
+                    dependencies: lib_kmr_deps,
                     include_directories: [inc],
                     c_args: pargs,
                     install: false)

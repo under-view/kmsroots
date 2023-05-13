@@ -30,9 +30,9 @@ if wayland_client.found()
       ]
     endif
 
-    exec_name = 'underview-renderer-wayland-client-' + p.substring(0,-2) # remove .c extension from name
+    exec_name = 'kmsroots-wayland-client-' + p.substring(0,-2) # remove .c extension from name
     executable(exec_name, p,
-               link_with: lib_underview_renderer,
+               link_with: lib_kmsroots,
                dependencies: example_deps,
                include_directories: [inc],
                c_args: pargs,

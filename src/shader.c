@@ -20,7 +20,7 @@ static const unsigned int shader_map_table[] = {
 
 
 /* Compiles a shader to a SPIR-V binary */
-struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spirv_create_info *uvrshader)
+struct kmr_shader_spirv kmr_shader_compile_buffer_to_spirv(struct kmr_shader_spirv_create_info *kmsshader)
 {
 	const unsigned char *bytes = NULL;
 	unsigned long byteSize = 0;
@@ -29,36 +29,36 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
 	shaderc_compile_options_t options = NULL;
 	shaderc_compilation_result_t result = NULL;
 
-	if (!uvrshader->source) {
-		uvr_utils_log(UVR_DANGER, "[x] uvr_shader_compile_bytes_to_spirv(uvrshader->source): Must pass character buffer with shader code");
+	if (!kmsshader->source) {
+		kmr_utils_log(KMR_DANGER, "[x] kmr_shader_compile_bytes_to_spirv(kmsshader->source): Must pass character buffer with shader code");
 		goto exit_error_shader_compile_bytes_to_spirv;
 	}
 
 	compiler = shaderc_compiler_initialize();
 	if (!compiler) {
-		uvr_utils_log(UVR_DANGER, "[x] shaderc_compiler_initialize: Failed initialize shaderc_compiler_t");
+		kmr_utils_log(KMR_DANGER, "[x] shaderc_compiler_initialize: Failed initialize shaderc_compiler_t");
 		goto exit_error_shader_compile_bytes_to_spirv;
 	}
 
 	options = shaderc_compile_options_initialize();
 	if (!options) {
-		uvr_utils_log(UVR_DANGER, "[x] shaderc_compiler_initialize: Failed initialize shaderc_compile_options_t");
+		kmr_utils_log(KMR_DANGER, "[x] shaderc_compiler_initialize: Failed initialize shaderc_compile_options_t");
 		goto exit_error_shader_compile_bytes_to_spirv_compiler_release;
 	}
 
 	shaderc_compile_options_set_optimization_level(options, shaderc_optimization_level_size);
 
-	result = shaderc_compile_into_spv(compiler, uvrshader->source, strlen(uvrshader->source),
-	                                  shader_map_table[uvrshader->kind], uvrshader->filename,
-	                                  uvrshader->entryPoint, options);
+	result = shaderc_compile_into_spv(compiler, kmsshader->source, strlen(kmsshader->source),
+	                                  shader_map_table[kmsshader->kind], kmsshader->filename,
+	                                  kmsshader->entryPoint, options);
 
 	if (!result) {
-		uvr_utils_log(UVR_DANGER, "[x] shaderc_compile_into_spv: %s", shaderc_result_get_error_message(result));
+		kmr_utils_log(KMR_DANGER, "[x] shaderc_compile_into_spv: %s", shaderc_result_get_error_message(result));
 		goto exit_error_shader_compile_bytes_to_spirv_release_result;
 	}
 
 	if (shaderc_result_get_compilation_status(result) != shaderc_compilation_status_success) {
-		uvr_utils_log(UVR_DANGER, "[x] shaderc_result_get_compilation_status: %s", shaderc_result_get_error_message(result));
+		kmr_utils_log(KMR_DANGER, "[x] shaderc_result_get_compilation_status: %s", shaderc_result_get_error_message(result));
 		goto exit_error_shader_compile_bytes_to_spirv_release_result;
 	}
 
@@ -69,7 +69,7 @@ struct uvr_shader_spirv uvr_shader_compile_buffer_to_spirv(struct uvr_shader_spi
 	shaderc_compile_options_release(options);
 	shaderc_compiler_release(compiler);
 
-	return (struct uvr_shader_spirv) { .result = result, .bytes = bytes, .byteSize = byteSize };
+	return (struct kmr_shader_spirv) { .result = result, .bytes = bytes, .byteSize = byteSize };
 
 exit_error_shader_compile_bytes_to_spirv_release_result:
 	if (result)
@@ -80,15 +80,15 @@ exit_error_shader_compile_bytes_to_spirv_compiler_release:
 	if (compiler)
 		shaderc_compiler_release(compiler);
 exit_error_shader_compile_bytes_to_spirv:
-	return (struct uvr_shader_spirv) { .result = NULL, .bytes = NULL, .byteSize = 0 };
+	return (struct kmr_shader_spirv) { .result = NULL, .bytes = NULL, .byteSize = 0 };
 }
 
 
-void uvr_shader_destroy(struct uvr_shader_destroy *uvrshader)
+void kmr_shader_destroy(struct kmr_shader_destroy *kmsshader)
 {
 	uint32_t i;
-	for (i = 0; i < uvrshader->uvr_shader_spirv_cnt; i++) {
-		if (uvrshader->uvr_shader_spirv[i].result)
-			shaderc_result_release(uvrshader->uvr_shader_spirv[i].result);
+	for (i = 0; i < kmsshader->kmr_shader_spirv_cnt; i++) {
+		if (kmsshader->kmr_shader_spirv[i].result)
+			shaderc_result_release(kmsshader->kmr_shader_spirv[i].result);
 	}
 }

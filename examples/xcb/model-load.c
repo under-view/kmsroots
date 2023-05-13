@@ -21,32 +21,32 @@
 
 struct app_vk {
 	VkInstance instance;
-	struct uvr_vk_phdev uvr_vk_phdev;
-	struct uvr_vk_lgdev uvr_vk_lgdev;
-	struct uvr_vk_queue uvr_vk_queue;
+	struct kmr_vk_phdev kmr_vk_phdev;
+	struct kmr_vk_lgdev kmr_vk_lgdev;
+	struct kmr_vk_queue kmr_vk_queue;
 
 	VkSurfaceKHR surface;
-	struct uvr_vk_swapchain uvr_vk_swapchain;
+	struct kmr_vk_swapchain kmr_vk_swapchain;
 
 	/*
 	 * 0. Swapchain Images
 	 * 1. Depth Image
 	 * 2. Texture Images
 	 */
-	struct uvr_vk_image uvr_vk_image[3];
+	struct kmr_vk_image kmr_vk_image[3];
 
 	/*
 	 * 0. Vertex Shader Model
 	 * 1. Fragment Shader Model
 	 */
-	struct uvr_vk_shader_module uvr_vk_shader_module[2];
+	struct kmr_vk_shader_module kmr_vk_shader_module[2];
 
-	struct uvr_vk_pipeline_layout uvr_vk_pipeline_layout;
-	struct uvr_vk_render_pass uvr_vk_render_pass;
-	struct uvr_vk_graphics_pipeline uvr_vk_graphics_pipeline;
-	struct uvr_vk_framebuffer uvr_vk_framebuffer;
-	struct uvr_vk_command_buffer uvr_vk_command_buffer;
-	struct uvr_vk_sync_obj uvr_vk_sync_obj;
+	struct kmr_vk_pipeline_layout kmr_vk_pipeline_layout;
+	struct kmr_vk_render_pass kmr_vk_render_pass;
+	struct kmr_vk_graphics_pipeline kmr_vk_graphics_pipeline;
+	struct kmr_vk_framebuffer kmr_vk_framebuffer;
+	struct kmr_vk_command_buffer kmr_vk_command_buffer;
+	struct kmr_vk_sync_obj kmr_vk_sync_obj;
 
 	/*
 	 * 0. CPU visible vertex buffer that stores: (index + vertices) [Used as primary buffer if physical device CPU/INTEGRATED]
@@ -54,28 +54,28 @@ struct app_vk {
 	 * 2. CPU visible uniform buffer
 	 * 3. CPU visible transfer buffer (stores image pixel data)
 	 */
-	struct uvr_vk_buffer uvr_vk_buffer[4];
+	struct kmr_vk_buffer kmr_vk_buffer[4];
 
-	struct uvr_vk_descriptor_set_layout uvr_vk_descriptor_set_layout;
-	struct uvr_vk_descriptor_set uvr_vk_descriptor_set;
+	struct kmr_vk_descriptor_set_layout kmr_vk_descriptor_set_layout;
+	struct kmr_vk_descriptor_set kmr_vk_descriptor_set;
 
 	/*
 	 * Texture samplers
 	 */
-	struct uvr_vk_sampler uvr_vk_sampler;
+	struct kmr_vk_sampler kmr_vk_sampler;
 
 	/*
 	 * Keep track of data related to FlightHelmet.gltf
 	 */
-	struct uvr_gltf_loader_mesh uvr_gltf_loader_mesh;
-	struct uvr_gltf_loader_texture_image uvr_gltf_loader_texture_image;
-	struct uvr_gltf_loader_material uvr_gltf_loader_material;
+	struct kmr_gltf_loader_mesh kmr_gltf_loader_mesh;
+	struct kmr_gltf_loader_texture_image kmr_gltf_loader_texture_image;
+	struct kmr_gltf_loader_material kmr_gltf_loader_material;
 
 	/*
 	 * Other required data needed for draw operations
 	 */
 	uint32_t indexBufferOffset;
-	struct uvr_utils_aligned_buffer modelTransferSpace;
+	struct kmr_utils_aligned_buffer modelTransferSpace;
 
 	// A primitive contains the data for a single draw call
 	uint32_t meshCount;
@@ -89,7 +89,7 @@ struct app_vk {
 
 
 struct app_vk_xcb {
-	struct uvr_xcb_window *uvr_xcb_window;
+	struct kmr_xcb_window *kmr_xcb_window;
 	struct app_vk *app_vk;
 };
 
@@ -126,7 +126,7 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct uvr_xcb_window *xc);
+int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window *xc);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -152,18 +152,18 @@ void render(bool *running, uint32_t *imageIndex, void *data)
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_xcb *vkxcb = (struct app_vk_xcb *) data;
 	struct app_vk *app = vkxcb->app_vk;
-	struct uvr_xcb_window UNUSED *xc = vkxcb->uvr_xcb_window;
+	struct kmr_xcb_window UNUSED *xc = vkxcb->kmr_xcb_window;
 
-	if (!app->uvr_vk_sync_obj.fenceHandles || !app->uvr_vk_sync_obj.semaphoreHandles)
+	if (!app->kmr_vk_sync_obj.fenceHandles || !app->kmr_vk_sync_obj.semaphoreHandles)
 		return;
 
-	VkFence imageFence = app->uvr_vk_sync_obj.fenceHandles[0].fence;
-	VkSemaphore imageSemaphore = app->uvr_vk_sync_obj.semaphoreHandles[0].semaphore;
-	VkSemaphore renderSemaphore = app->uvr_vk_sync_obj.semaphoreHandles[1].semaphore;
+	VkFence imageFence = app->kmr_vk_sync_obj.fenceHandles[0].fence;
+	VkSemaphore imageSemaphore = app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore;
+	VkSemaphore renderSemaphore = app->kmr_vk_sync_obj.semaphoreHandles[1].semaphore;
 
-	vkWaitForFences(app->uvr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->uvr_vk_lgdev.logicalDevice, app->uvr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
+	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
 
 	record_vk_draw_commands(app, *imageIndex, extent2D);
 	update_uniform_buffer(app, *imageIndex, extent2D);
@@ -179,14 +179,14 @@ void render(bool *running, uint32_t *imageIndex, void *data)
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+	submitInfo.pCommandBuffers = &app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 	submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	vkResetFences(app->uvr_vk_lgdev.logicalDevice, 1, &imageFence);
+	vkResetFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence);
 
 	/* Submit draw command */
-	vkQueueSubmit(app->uvr_vk_queue.queue, 1, &submitInfo, imageFence);
+	vkQueueSubmit(app->kmr_vk_queue.queue, 1, &submitInfo, imageFence);
 
 	VkPresentInfoKHR presentInfo;
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -194,11 +194,11 @@ void render(bool *running, uint32_t *imageIndex, void *data)
 	presentInfo.waitSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &app->uvr_vk_swapchain.swapchain;
+	presentInfo.pSwapchains = &app->kmr_vk_swapchain.swapchain;
 	presentInfo.pImageIndices = imageIndex;
 	presentInfo.pResults = NULL;
 
-	vkQueuePresentKHR(app->uvr_vk_queue.queue, &presentInfo);
+	vkQueuePresentKHR(app->kmr_vk_queue.queue, &presentInfo);
 
 	*running = prun;
 }
@@ -210,27 +210,27 @@ void render(bool *running, uint32_t *imageIndex, void *data)
 int main(void)
 {
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
 		return 1;
 	}
 
 	if (signal(SIGABRT, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
 		return 1;
 	}
 
 	if (signal(SIGTERM, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
 		return 1;
 	}
 
 	struct app_vk app;
-	struct uvr_vk_destroy appd;
+	struct kmr_vk_destroy appd;
 	memset(&app, 0, sizeof(app));
 	memset(&appd, 0, sizeof(appd));
 
-	struct uvr_xcb_window xc;
-	struct uvr_xcb_destroy xcd;
+	struct kmr_xcb_window xc;
+	struct kmr_xcb_destroy xcd;
 	memset(&xc, 0, sizeof(xc));
 	memset(&xcd, 0, sizeof(xcd));
 
@@ -290,23 +290,23 @@ int main(void)
 		goto exit_error;
 
 	/* Map the window to the screen */
-	uvr_xcb_window_make_visible(&xc);
+	kmr_xcb_window_make_visible(&xc);
 
 	static uint32_t cbuf = 0;
 	static bool running = true;
 
 	static struct app_vk_xcb vkxc;
-	vkxc.uvr_xcb_window = &xc;
+	vkxc.kmr_xcb_window = &xc;
 	vkxc.app_vk = &app;
 
-	struct uvr_xcb_window_handle_event_info eventInfo;
+	struct kmr_xcb_window_handle_event_info eventInfo;
 	eventInfo.xcbWindowObject = &xc;
 	eventInfo.renderer = render;
 	eventInfo.rendererData = &vkxc;
 	eventInfo.rendererCurrentBuffer = &cbuf;
 	eventInfo.rendererRunning = &running;
 
-	while (uvr_xcb_window_handle_event(&eventInfo) && running) {
+	while (kmr_xcb_window_handle_event(&eventInfo) && running) {
 		// Initentionally left blank
 	}
 
@@ -320,48 +320,48 @@ exit_error:
 	 */
 	appd.instance = app.instance;
 	appd.surface = app.surface;
-	appd.uvr_vk_lgdev_cnt = 1;
-	appd.uvr_vk_lgdev = &app.uvr_vk_lgdev;
-	appd.uvr_vk_swapchain_cnt = 1;
-	appd.uvr_vk_swapchain = &app.uvr_vk_swapchain;
-	appd.uvr_vk_image_cnt = ARRAY_LEN(app.uvr_vk_image);
-	appd.uvr_vk_image = app.uvr_vk_image;
-	appd.uvr_vk_shader_module_cnt = ARRAY_LEN(app.uvr_vk_shader_module);
-	appd.uvr_vk_shader_module = app.uvr_vk_shader_module;
-	appd.uvr_vk_pipeline_layout_cnt = 1;
-	appd.uvr_vk_pipeline_layout = &app.uvr_vk_pipeline_layout;
-	appd.uvr_vk_render_pass_cnt = 1;
-	appd.uvr_vk_render_pass = &app.uvr_vk_render_pass;
-	appd.uvr_vk_graphics_pipeline_cnt = 1;
-	appd.uvr_vk_graphics_pipeline = &app.uvr_vk_graphics_pipeline;
-	appd.uvr_vk_framebuffer_cnt = 1;
-	appd.uvr_vk_framebuffer = &app.uvr_vk_framebuffer;
-	appd.uvr_vk_command_buffer_cnt = 1;
-	appd.uvr_vk_command_buffer = &app.uvr_vk_command_buffer;
-	appd.uvr_vk_sync_obj_cnt = 1;
-	appd.uvr_vk_sync_obj = &app.uvr_vk_sync_obj;
-	appd.uvr_vk_buffer_cnt = ARRAY_LEN(app.uvr_vk_buffer);
-	appd.uvr_vk_buffer = app.uvr_vk_buffer;
-	appd.uvr_vk_descriptor_set_layout_cnt = 1;
-	appd.uvr_vk_descriptor_set_layout = &app.uvr_vk_descriptor_set_layout;
-	appd.uvr_vk_descriptor_set_cnt = 1;
-	appd.uvr_vk_descriptor_set = &app.uvr_vk_descriptor_set;
-	appd.uvr_vk_sampler_cnt = 1;
-	appd.uvr_vk_sampler = &app.uvr_vk_sampler;
-	uvr_vk_destroy(&appd);
+	appd.kmr_vk_lgdev_cnt = 1;
+	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
+	appd.kmr_vk_swapchain_cnt = 1;
+	appd.kmr_vk_swapchain = &app.kmr_vk_swapchain;
+	appd.kmr_vk_image_cnt = ARRAY_LEN(app.kmr_vk_image);
+	appd.kmr_vk_image = app.kmr_vk_image;
+	appd.kmr_vk_shader_module_cnt = ARRAY_LEN(app.kmr_vk_shader_module);
+	appd.kmr_vk_shader_module = app.kmr_vk_shader_module;
+	appd.kmr_vk_pipeline_layout_cnt = 1;
+	appd.kmr_vk_pipeline_layout = &app.kmr_vk_pipeline_layout;
+	appd.kmr_vk_render_pass_cnt = 1;
+	appd.kmr_vk_render_pass = &app.kmr_vk_render_pass;
+	appd.kmr_vk_graphics_pipeline_cnt = 1;
+	appd.kmr_vk_graphics_pipeline = &app.kmr_vk_graphics_pipeline;
+	appd.kmr_vk_framebuffer_cnt = 1;
+	appd.kmr_vk_framebuffer = &app.kmr_vk_framebuffer;
+	appd.kmr_vk_command_buffer_cnt = 1;
+	appd.kmr_vk_command_buffer = &app.kmr_vk_command_buffer;
+	appd.kmr_vk_sync_obj_cnt = 1;
+	appd.kmr_vk_sync_obj = &app.kmr_vk_sync_obj;
+	appd.kmr_vk_buffer_cnt = ARRAY_LEN(app.kmr_vk_buffer);
+	appd.kmr_vk_buffer = app.kmr_vk_buffer;
+	appd.kmr_vk_descriptor_set_layout_cnt = 1;
+	appd.kmr_vk_descriptor_set_layout = &app.kmr_vk_descriptor_set_layout;
+	appd.kmr_vk_descriptor_set_cnt = 1;
+	appd.kmr_vk_descriptor_set = &app.kmr_vk_descriptor_set;
+	appd.kmr_vk_sampler_cnt = 1;
+	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
+	kmr_vk_destroy(&appd);
 
-	xcd.uvr_xcb_window = xc;
-	uvr_xcb_destroy(&xcd);
+	xcd.kmr_xcb_window = xc;
+	kmr_xcb_destroy(&xcd);
 	return 0;
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct uvr_xcb_window *xc)
+int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window *xc)
 {
 	/*
 	 * Create xcb client
 	 */
-	struct uvr_xcb_window_create_info xcbWindowCreateInfo;
+	struct kmr_xcb_window_create_info xcbWindowCreateInfo;
 	xcbWindowCreateInfo.display = NULL;
 	xcbWindowCreateInfo.screen = NULL;
 	xcbWindowCreateInfo.appName = "GLTF Model Loading Example App";
@@ -370,20 +370,20 @@ int create_xcb_vk_surface(struct app_vk *app, struct uvr_xcb_window *xc)
 	xcbWindowCreateInfo.fullscreen = false;
 	xcbWindowCreateInfo.transparent = false;
 
-	*xc = uvr_xcb_window_create(&xcbWindowCreateInfo);
+	*xc = kmr_xcb_window_create(&xcbWindowCreateInfo);
 	if (!xc->conn)
 		return -1;
 
 	/*
 	 * Create Vulkan Surface
 	 */
-	struct uvr_vk_surface_create_info vkSurfaceCreateInfo;
-	vkSurfaceCreateInfo.surfaceType = UVR_SURFACE_XCB_CLIENT;
+	struct kmr_vk_surface_create_info vkSurfaceCreateInfo;
+	vkSurfaceCreateInfo.surfaceType = KMR_SURFACE_XCB_CLIENT;
 	vkSurfaceCreateInfo.instance = app->instance;
 	vkSurfaceCreateInfo.display = xc->conn;
 	vkSurfaceCreateInfo.window = xc->window;
 
-	app->surface = uvr_vk_surface_create(&vkSurfaceCreateInfo);
+	app->surface = kmr_vk_surface_create(&vkSurfaceCreateInfo);
 	if (!app->surface)
 		return -1;
 
@@ -411,7 +411,7 @@ int create_vk_instance(struct app_vk *app)
 		"VK_EXT_debug_utils"
 	};
 
-	struct uvr_vk_instance_create_info instanceCreateInfo;
+	struct kmr_vk_instance_create_info instanceCreateInfo;
 	instanceCreateInfo.appName = "GLTF Model Loading Example App";
 	instanceCreateInfo.engineName = "No Engine";
 	instanceCreateInfo.enabledLayerCount = ARRAY_LEN(validationLayers);
@@ -419,7 +419,7 @@ int create_vk_instance(struct app_vk *app)
 	instanceCreateInfo.enabledExtensionCount = ARRAY_LEN(instanceExtensions);
 	instanceCreateInfo.enabledExtensionNames = instanceExtensions;
 
-	app->instance = uvr_vk_instance_create(&instanceCreateInfo);
+	app->instance = kmr_vk_instance_create(&instanceCreateInfo);
 	if (!app->instance)
 		return -1;
 
@@ -433,43 +433,43 @@ int create_vk_device(struct app_vk *app)
 		"VK_KHR_swapchain"
 	};
 
-	struct uvr_vk_phdev_create_info phdevCreateInfo;
+	struct kmr_vk_phdev_create_info phdevCreateInfo;
 	phdevCreateInfo.instance = app->instance;
 	phdevCreateInfo.deviceType = VK_PHYSICAL_DEVICE_TYPE;
 #ifdef INCLUDE_KMS
 	phdevCreateInfo.kmsfd = -1;
 #endif
 
-	app->uvr_vk_phdev = uvr_vk_phdev_create(&phdevCreateInfo);
-	if (!app->uvr_vk_phdev.physDevice)
+	app->kmr_vk_phdev = kmr_vk_phdev_create(&phdevCreateInfo);
+	if (!app->kmr_vk_phdev.physDevice)
 		return -1;
 
-	struct uvr_vk_queue_create_info queueCreateInfo;
-	queueCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+	struct kmr_vk_queue_create_info queueCreateInfo;
+	queueCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
-	app->uvr_vk_queue = uvr_vk_queue_create(&queueCreateInfo);
-	if (app->uvr_vk_queue.familyIndex == -1)
+	app->kmr_vk_queue = kmr_vk_queue_create(&queueCreateInfo);
+	if (app->kmr_vk_queue.familyIndex == -1)
 		return -1;
 
 	/*
 	 * Can Hardset features prior
 	 * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-	 * app->uvr_vk_phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
+	 * app->kmr_vk_phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
 	 */
-	app->uvr_vk_phdev.physDeviceFeatures.samplerAnisotropy = VK_TRUE;
+	app->kmr_vk_phdev.physDeviceFeatures.samplerAnisotropy = VK_TRUE;
 
-	struct uvr_vk_lgdev_create_info lgdevCreateInfo;
+	struct kmr_vk_lgdev_create_info lgdevCreateInfo;
 	lgdevCreateInfo.instance = app->instance;
-	lgdevCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
-	lgdevCreateInfo.enabledFeatures = &app->uvr_vk_phdev.physDeviceFeatures;
+	lgdevCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev.physDeviceFeatures;
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(deviceExtensions);
 	lgdevCreateInfo.enabledExtensionNames = deviceExtensions;
 	lgdevCreateInfo.queueCount = 1;
-	lgdevCreateInfo.queues = &app->uvr_vk_queue;
+	lgdevCreateInfo.queues = &app->kmr_vk_queue;
 
-	app->uvr_vk_lgdev = uvr_vk_lgdev_create(&lgdevCreateInfo);
-	if (!app->uvr_vk_lgdev.logicalDevice)
+	app->kmr_vk_lgdev = kmr_vk_lgdev_create(&lgdevCreateInfo);
+	if (!app->kmr_vk_lgdev.logicalDevice)
 		return -1;
 
 	return 0;
@@ -482,9 +482,9 @@ int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 	uint32_t i;
 	VkPresentModeKHR presentMode;
 
-	VkSurfaceCapabilitiesKHR surfaceCapabilities = uvr_vk_get_surface_capabilities(app->uvr_vk_phdev.physDevice, app->surface);
-	struct uvr_vk_surface_format surfaceFormats = uvr_vk_get_surface_formats(app->uvr_vk_phdev.physDevice, app->surface);
-	struct uvr_vk_surface_present_mode surfacePresentModes = uvr_vk_get_surface_present_modes(app->uvr_vk_phdev.physDevice, app->surface);
+	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev.physDevice, app->surface);
+	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev.physDevice, app->surface);
+	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev.physDevice, app->surface);
 
 	/* Choose surface format based */
 	for (i = 0; i < surfaceFormats.surfaceFormatCount; i++) {
@@ -502,8 +502,8 @@ int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 	free(surfaceFormats.surfaceFormats); surfaceFormats.surfaceFormats = NULL;
 	free(surfacePresentModes.presentModes); surfacePresentModes.presentModes = NULL;
 
-	struct uvr_vk_swapchain_create_info swapchainCreateInfo;
-	swapchainCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_swapchain_create_info swapchainCreateInfo;
+	swapchainCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	swapchainCreateInfo.surface = app->surface;
 	swapchainCreateInfo.surfaceCapabilities = surfaceCapabilities;
 	swapchainCreateInfo.surfaceFormat = *surfaceFormat;
@@ -518,8 +518,8 @@ int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 	swapchainCreateInfo.clipped = VK_TRUE;
 	swapchainCreateInfo.oldSwapChain = VK_NULL_HANDLE;
 
-	app->uvr_vk_swapchain = uvr_vk_swapchain_create(&swapchainCreateInfo);
-	if (!app->uvr_vk_swapchain.swapchain)
+	app->kmr_vk_swapchain = kmr_vk_swapchain_create(&swapchainCreateInfo);
+	if (!app->kmr_vk_swapchain.swapchain)
 		return -1;
 
 	return 0;
@@ -528,7 +528,7 @@ int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 
 int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
-	struct uvr_vk_image_view_create_info imageViewCreateInfo;
+	struct kmr_vk_image_view_create_info imageViewCreateInfo;
 	imageViewCreateInfo.imageViewflags = 0;
 	imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 	imageViewCreateInfo.imageViewFormat = surfaceFormat->format;
@@ -542,9 +542,9 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 	imageViewCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
 	imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
 
-	struct uvr_vk_image_create_info swapchainImagesInfo;
-	swapchainImagesInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	swapchainImagesInfo.swapchain = app->uvr_vk_swapchain.swapchain;
+	struct kmr_vk_image_create_info swapchainImagesInfo;
+	swapchainImagesInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	swapchainImagesInfo.swapchain = app->kmr_vk_swapchain.swapchain;
 	swapchainImagesInfo.imageCount = 0;                                                    // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
 	swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
 	/* Not creating images manually so rest of struct members can be safely ignored */
@@ -552,8 +552,8 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 	swapchainImagesInfo.imageCreateInfos = NULL;
 	swapchainImagesInfo.memPropertyFlags = 0;
 
-	app->uvr_vk_image[0] = uvr_vk_image_create(&swapchainImagesInfo);
-	if (!app->uvr_vk_image[0].imageViewHandles[0].view)
+	app->kmr_vk_image[0] = kmr_vk_image_create(&swapchainImagesInfo);
+	if (!app->kmr_vk_image[0].imageViewHandles[0].view)
 		return -1;
 
 	return 0;
@@ -565,7 +565,7 @@ VkFormat choose_depth_image_format(struct app_vk *app, VkImageTiling imageTiling
 	VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
 	VkFormat format = VK_FORMAT_UNDEFINED;
 
-	struct uvr_vk_phdev_format_prop physDeviceFormatProps = uvr_vk_get_phdev_format_properties(app->uvr_vk_phdev.physDevice, formats, ARRAY_LEN(formats));
+	struct kmr_vk_phdev_format_prop physDeviceFormatProps = kmr_vk_get_phdev_format_properties(app->kmr_vk_phdev.physDevice, formats, ARRAY_LEN(formats));
 	for (uint32_t fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
 		if (imageTiling == VK_IMAGE_TILING_OPTIMAL && (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags) {
 			format = formats[fp];
@@ -590,7 +590,7 @@ int create_vk_depth_image(struct app_vk *app)
 	if (imageFormat == VK_FORMAT_UNDEFINED)
 		return -1;
 
-	struct uvr_vk_image_view_create_info imageViewCreateInfo;
+	struct kmr_vk_image_view_create_info imageViewCreateInfo;
 	imageViewCreateInfo.imageViewflags = 0;
 	imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 	imageViewCreateInfo.imageViewFormat = imageFormat;
@@ -601,7 +601,7 @@ int create_vk_depth_image(struct app_vk *app)
 	imageViewCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;
 	imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;
 
-	struct uvr_vk_vimage_create_info vimageCreateInfo;
+	struct kmr_vk_vimage_create_info vimageCreateInfo;
 	vimageCreateInfo.imageflags = 0;
 	vimageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 	vimageCreateInfo.imageFormat = imageFormat;
@@ -616,17 +616,17 @@ int create_vk_depth_image(struct app_vk *app)
 	vimageCreateInfo.imageQueueFamilyIndices = NULL;
 	vimageCreateInfo.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	struct uvr_vk_image_create_info imageCreateInfo;
-	imageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_image_create_info imageCreateInfo;
+	imageCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	imageCreateInfo.swapchain = VK_NULL_HANDLE;
 	imageCreateInfo.imageCount = 1;
 	imageCreateInfo.imageViewCreateInfos = &imageViewCreateInfo;
 	imageCreateInfo.imageCreateInfos = &vimageCreateInfo;
-	imageCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+	imageCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	imageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-	app->uvr_vk_image[1] = uvr_vk_image_create(&imageCreateInfo);
-	if (!app->uvr_vk_image[1].imageHandles[0].image && !app->uvr_vk_image[1].imageViewHandles[0].view)
+	app->kmr_vk_image[1] = kmr_vk_image_create(&imageCreateInfo);
+	if (!app->kmr_vk_image[1].imageHandles[0].image && !app->kmr_vk_image[1].imageViewHandles[0].view)
 		return -1;
 
 	return 0;
@@ -695,13 +695,13 @@ int create_vk_shader_modules(struct app_vk *app)
 		"	outColor = vec4(diffuse * color.rgb + specular, 1.0);\n"
 		"}";
 
-	struct uvr_shader_spirv_create_info vertexShaderCreateInfo;
+	struct kmr_shader_spirv_create_info vertexShaderCreateInfo;
 	vertexShaderCreateInfo.kind = VK_SHADER_STAGE_VERTEX_BIT;
 	vertexShaderCreateInfo.source = vertexShader;
 	vertexShaderCreateInfo.filename = "vert.spv";
 	vertexShaderCreateInfo.entryPoint = "main";
 
-	struct uvr_shader_spirv_create_info fragmentShaderCreateInfo;
+	struct kmr_shader_spirv_create_info fragmentShaderCreateInfo;
 	fragmentShaderCreateInfo.kind = VK_SHADER_STAGE_FRAGMENT_BIT;
 	fragmentShaderCreateInfo.source = fragmentShader;
 	fragmentShaderCreateInfo.filename = "frag.spv";
@@ -711,28 +711,28 @@ int create_vk_shader_modules(struct app_vk *app)
 	 * 0. Vertex Shader
 	 * 1. Fragment Shader
 	 */
-	struct uvr_shader_spirv uvr_shader[2];
-	memset(uvr_shader, 0, sizeof(uvr_shader));
+	struct kmr_shader_spirv kmr_shader[2];
+	memset(kmr_shader, 0, sizeof(kmr_shader));
 
-	uvr_shader[0] = uvr_shader_compile_buffer_to_spirv(&vertexShaderCreateInfo);
-	if (!uvr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	kmr_shader[0] = kmr_shader_compile_buffer_to_spirv(&vertexShaderCreateInfo);
+	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
 
-	uvr_shader[1] = uvr_shader_compile_buffer_to_spirv(&fragmentShaderCreateInfo);
-	if (!uvr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	kmr_shader[1] = kmr_shader_compile_buffer_to_spirv(&fragmentShaderCreateInfo);
+	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
 
 #else
 	/*
 	 * 0. Vertex Shader
 	 * 1. Fragment Shader
 	 */
-	struct uvr_utils_file uvr_shader[2];
-	memset(uvr_shader, 0, sizeof(uvr_shader));
+	struct kmr_utils_file kmr_shader[2];
+	memset(kmr_shader, 0, sizeof(kmr_shader));
 
-	uvr_shader[0] = uvr_utils_file_load(VERTEX_SHADER_SPIRV);
-	if (!uvr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	kmr_shader[0] = kmr_utils_file_load(VERTEX_SHADER_SPIRV);
+	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
 
-	uvr_shader[1] = uvr_utils_file_load(FRAGMENT_SHADER_SPIRV);
-	if (!uvr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	kmr_shader[1] = kmr_utils_file_load(FRAGMENT_SHADER_SPIRV);
+	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
 
 #endif
 
@@ -740,27 +740,27 @@ int create_vk_shader_modules(struct app_vk *app)
 		"vertex", "fragment"
 	};
 
-	struct uvr_vk_shader_module_create_info shaderModuleCreateInfo;
-	for (uint32_t currentShader = 0; currentShader < ARRAY_LEN(uvr_shader); currentShader++) {
-		shaderModuleCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-		shaderModuleCreateInfo.sprivByteSize = uvr_shader[currentShader].byteSize;
-		shaderModuleCreateInfo.sprivBytes = uvr_shader[currentShader].bytes;
+	struct kmr_vk_shader_module_create_info shaderModuleCreateInfo;
+	for (uint32_t currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
+		shaderModuleCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+		shaderModuleCreateInfo.sprivByteSize = kmr_shader[currentShader].byteSize;
+		shaderModuleCreateInfo.sprivBytes = kmr_shader[currentShader].bytes;
 		shaderModuleCreateInfo.shaderName = shaderModuleNames[currentShader];
 
-		app->uvr_vk_shader_module[currentShader] = uvr_vk_shader_module_create(&shaderModuleCreateInfo);
-		if (!app->uvr_vk_shader_module[currentShader].shaderModule) { ret = -1 ; goto exit_distroy_shader ; }
+		app->kmr_vk_shader_module[currentShader] = kmr_vk_shader_module_create(&shaderModuleCreateInfo);
+		if (!app->kmr_vk_shader_module[currentShader].shaderModule) { ret = -1 ; goto exit_distroy_shader ; }
 	}
 
 exit_distroy_shader:
 #ifdef INCLUDE_SHADERC
-	struct uvr_shader_destroy shaderd;
+	struct kmr_shader_destroy shaderd;
 	memset(&shaderd, 0, sizeof(shaderd));
-	shaderd.uvr_shader_spirv_cnt = ARRAY_LEN(uvr_shader);
-	shaderd.uvr_shader_spirv = uvr_shader;
-	uvr_shader_destroy(&shaderd);
+	shaderd.kmr_shader_spirv_cnt = ARRAY_LEN(kmr_shader);
+	shaderd.kmr_shader_spirv = kmr_shader;
+	kmr_shader_destroy(&shaderd);
 #else
-	free(uvr_shader[0].bytes);
-	free(uvr_shader[1].bytes);
+	free(kmr_shader[0].bytes);
+	free(kmr_shader[1].bytes);
 #endif
 	return ret;
 }
@@ -768,13 +768,13 @@ exit_distroy_shader:
 
 int create_vk_command_buffers(struct app_vk *app)
 {
-	struct uvr_vk_command_buffer_create_info commandBufferCreateInfo;
-	commandBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	commandBufferCreateInfo.queueFamilyIndex = app->uvr_vk_queue.familyIndex;
+	struct kmr_vk_command_buffer_create_info commandBufferCreateInfo;
+	commandBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	commandBufferCreateInfo.queueFamilyIndex = app->kmr_vk_queue.familyIndex;
 	commandBufferCreateInfo.commandBufferCount = 1;
 
-	app->uvr_vk_command_buffer = uvr_vk_command_buffer_create(&commandBufferCreateInfo);
-	if (!app->uvr_vk_command_buffer.commandPool)
+	app->kmr_vk_command_buffer = kmr_vk_command_buffer_create(&commandBufferCreateInfo);
+	if (!app->kmr_vk_command_buffer.commandPool)
 		return -1;
 
 	return 0;
@@ -791,10 +791,10 @@ int create_vk_buffers(struct app_vk *app)
 	uint32_t vertexBufferDataSize = 0, indexBufferDataSize = 0;
 	uint32_t curVertexBufferIndex = 0, curIndexBufferIndex = 0, index;
 
-	for (m = 0; m < app->uvr_gltf_loader_mesh.meshDataCount; m++) {
+	for (m = 0; m < app->kmr_gltf_loader_mesh.meshDataCount; m++) {
 		app->meshData[m].bufferOffset += vertexBufferDataSize;
-		vertexBufferDataSize += app->uvr_gltf_loader_mesh.meshData[m].vertexBufferDataSize;
-		indexBufferDataSize += app->uvr_gltf_loader_mesh.meshData[m].indexBufferDataSize;
+		vertexBufferDataSize += app->kmr_gltf_loader_mesh.meshData[m].vertexBufferDataSize;
+		indexBufferDataSize += app->kmr_gltf_loader_mesh.meshData[m].indexBufferDataSize;
 	}
 
 	vertexBufferData = alloca(vertexBufferDataSize);		
@@ -802,47 +802,47 @@ int create_vk_buffers(struct app_vk *app)
 	app->indexBufferOffset = vertexBufferDataSize;
 
 	/*
-	 * Application must take vertex + index buffer arrays created in uvr_gltf_loader_mesh_create(3)
+	 * Application must take vertex + index buffer arrays created in kmr_gltf_loader_mesh_create(3)
 	 * and populate it's local array before creating and copying buffer into VkBuffer
 	 */
-	for (m = 0; m < app->uvr_gltf_loader_mesh.meshDataCount; m++) {
-		// uvr_utils_log(UVR_INFO, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
-		for (v = 0; v < app->uvr_gltf_loader_mesh.meshData[m].vertexBufferDataCount; v++) {
+	for (m = 0; m < app->kmr_gltf_loader_mesh.meshDataCount; m++) {
+		// kmr_utils_log(KMR_INFO, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
+		for (v = 0; v < app->kmr_gltf_loader_mesh.meshData[m].vertexBufferDataCount; v++) {
 			index = curVertexBufferIndex + v;
-			vertexBufferData[index].pos[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[0];
-			vertexBufferData[index].pos[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[1];
-			vertexBufferData[index].pos[2] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[2];
+			vertexBufferData[index].pos[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[0];
+			vertexBufferData[index].pos[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[1];
+			vertexBufferData[index].pos[2] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[2];
 			
-			vertexBufferData[index].color[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[0];
-			vertexBufferData[index].color[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[1];
-			vertexBufferData[index].color[2] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[2];
+			vertexBufferData[index].color[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[0];
+			vertexBufferData[index].color[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[1];
+			vertexBufferData[index].color[2] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[2];
 			
-			vertexBufferData[index].normal[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[0];
-			vertexBufferData[index].normal[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[1];
-			vertexBufferData[index].normal[2] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[2];
+			vertexBufferData[index].normal[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[0];
+			vertexBufferData[index].normal[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[1];
+			vertexBufferData[index].normal[2] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[2];
 			
-			vertexBufferData[index].texCoord[0] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[0];
-			vertexBufferData[index].texCoord[1] = app->uvr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[1];
+			vertexBufferData[index].texCoord[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[0];
+			vertexBufferData[index].texCoord[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[1];
 		}
 
-		for (v = 0; v < app->uvr_gltf_loader_mesh.meshData[m].indexBufferDataCount; v++) {
-			indexBufferData[curIndexBufferIndex + v] = app->uvr_gltf_loader_mesh.meshData[m].indexBufferData[v];
+		for (v = 0; v < app->kmr_gltf_loader_mesh.meshData[m].indexBufferDataCount; v++) {
+			indexBufferData[curIndexBufferIndex + v] = app->kmr_gltf_loader_mesh.meshData[m].indexBufferData[v];
 		}
 
-		curIndexBufferIndex += app->uvr_gltf_loader_mesh.meshData[m].indexBufferDataCount;
-		curVertexBufferIndex += app->uvr_gltf_loader_mesh.meshData[m].vertexBufferDataCount;
-		// uvr_utils_log(UVR_WARNING, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
+		curIndexBufferIndex += app->kmr_gltf_loader_mesh.meshData[m].indexBufferDataCount;
+		curVertexBufferIndex += app->kmr_gltf_loader_mesh.meshData[m].vertexBufferDataCount;
+		// kmr_utils_log(KMR_WARNING, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
 	}
 
-	// Free'ing uvr_gltf_loader_mesh no longer required
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_mesh_cnt = 1, .uvr_gltf_loader_mesh = &app->uvr_gltf_loader_mesh });
+	// Free'ing kmr_gltf_loader_mesh no longer required
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_mesh_cnt = 1, .kmr_gltf_loader_mesh = &app->kmr_gltf_loader_mesh });
 
 	/*
 	 * Create CPU visible buffer [vertex + index]
 	 */
-	struct uvr_vk_buffer_create_info vkVertexBufferCreateInfo;
-	vkVertexBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	vkVertexBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+	struct kmr_vk_buffer_create_info vkVertexBufferCreateInfo;
+	vkVertexBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkVertexBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	vkVertexBufferCreateInfo.bufferFlags = 0;
 	vkVertexBufferCreateInfo.bufferSize = vertexBufferDataSize + indexBufferDataSize;
 	vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
@@ -852,29 +852,29 @@ int create_vk_buffers(struct app_vk *app)
 	vkVertexBufferCreateInfo.queueFamilyIndices = NULL;
 	vkVertexBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-	app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferCreateInfo);
-	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
+	app->kmr_vk_buffer[cpuVisibleBuffer] = kmr_vk_buffer_create(&vkVertexBufferCreateInfo);
+	if (!app->kmr_vk_buffer[cpuVisibleBuffer].buffer || !app->kmr_vk_buffer[cpuVisibleBuffer].deviceMemory)
 		return -1;
 
 	// Copy GLTF buffer into Vulkan API created CPU visible buffer memory
-	struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
-	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory;
+	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleBuffer].deviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = 0;
 	deviceMemoryCopyInfo.memoryBufferSize = vertexBufferDataSize;
 	deviceMemoryCopyInfo.bufferData = vertexBufferData;
-	uvr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_map_memory(&deviceMemoryCopyInfo);
 
 	deviceMemoryCopyInfo.deviceMemoryOffset = app->indexBufferOffset;
 	deviceMemoryCopyInfo.memoryBufferSize = indexBufferDataSize;
 	deviceMemoryCopyInfo.bufferData = indexBufferData;
-	uvr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_map_memory(&deviceMemoryCopyInfo);
 
 	if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 		// Create GPU visible vertex buffer
-		struct uvr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
-		vkVertexBufferGPUCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-		vkVertexBufferGPUCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+		struct kmr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
+		vkVertexBufferGPUCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 		vkVertexBufferGPUCreateInfo.bufferFlags = 0;
 		vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
 		vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -883,8 +883,8 @@ int create_vk_buffers(struct app_vk *app)
 		vkVertexBufferGPUCreateInfo.queueFamilyIndices = NULL;
 		vkVertexBufferGPUCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-		app->uvr_vk_buffer[gpuVisibleBuffer] = uvr_vk_buffer_create(&vkVertexBufferGPUCreateInfo);
-		if (!app->uvr_vk_buffer[gpuVisibleBuffer].buffer || !app->uvr_vk_buffer[gpuVisibleBuffer].deviceMemory)
+		app->kmr_vk_buffer[gpuVisibleBuffer] = kmr_vk_buffer_create(&vkVertexBufferGPUCreateInfo);
+		if (!app->kmr_vk_buffer[gpuVisibleBuffer].buffer || !app->kmr_vk_buffer[gpuVisibleBuffer].deviceMemory)
 			return -1;
 
 		VkBufferCopy copyRegion;
@@ -893,36 +893,36 @@ int create_vk_buffers(struct app_vk *app)
 		copyRegion.size = vkVertexBufferCreateInfo.bufferSize;
 
 		// Copy contents from CPU visible buffer over to GPU visible buffer
-		struct uvr_vk_resource_copy_info bufferCopyInfo;
-		bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_BUFFER;
-		bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-		bufferCopyInfo.queue = app->uvr_vk_queue.queue;
-		bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleBuffer].buffer;
-		bufferCopyInfo.dstResource = app->uvr_vk_buffer[gpuVisibleBuffer].buffer;
+		struct kmr_vk_resource_copy_info bufferCopyInfo;
+		bufferCopyInfo.resourceCopyType = KMR_VK_COPY_VK_BUFFER_TO_VK_BUFFER;
+		bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+		bufferCopyInfo.queue = app->kmr_vk_queue.queue;
+		bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleBuffer].buffer;
+		bufferCopyInfo.dstResource = app->kmr_vk_buffer[gpuVisibleBuffer].buffer;
 		bufferCopyInfo.bufferCopyInfo = &copyRegion;
 		bufferCopyInfo.bufferImageCopyInfo = NULL;
 		bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		if (uvr_vk_resource_copy(&bufferCopyInfo) == -1)
+		if (kmr_vk_resource_copy(&bufferCopyInfo) == -1)
 			return -1;
 	}
 
 	cpuVisibleBuffer+=2;
 	gpuVisibleBuffer+=2;
 
-	struct uvr_utils_aligned_buffer_create_info modelUniformBufferAlignment;
+	struct kmr_utils_aligned_buffer_create_info modelUniformBufferAlignment;
 	modelUniformBufferAlignment.bytesToAlign = sizeof(struct app_uniform_buffer_scene_model);
 	modelUniformBufferAlignment.bytesToAlignCount = app->meshCount;
-	modelUniformBufferAlignment.bufferAlignment = app->uvr_vk_phdev.physDeviceProperties.limits.minUniformBufferOffsetAlignment;
+	modelUniformBufferAlignment.bufferAlignment = app->kmr_vk_phdev.physDeviceProperties.limits.minUniformBufferOffsetAlignment;
 
-	app->modelTransferSpace = uvr_utils_aligned_buffer_create(&modelUniformBufferAlignment);
+	app->modelTransferSpace = kmr_utils_aligned_buffer_create(&modelUniformBufferAlignment);
 	if (!app->modelTransferSpace.alignedBufferMemory)
 		return -1;
 
 	// Create CPU visible uniform buffer to store (view projection matrices in first have) (Dynamic uniform buffer (model matrix) in second half)
-	struct uvr_vk_buffer_create_info vkUniformBufferCreateInfo;
-	vkUniformBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	vkUniformBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+	struct kmr_vk_buffer_create_info vkUniformBufferCreateInfo;
+	vkUniformBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkUniformBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	vkUniformBufferCreateInfo.bufferFlags = 0;
 	vkUniformBufferCreateInfo.bufferSize = (sizeof(struct app_uniform_buffer_scene) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE) + \
 	                                       (app->modelTransferSpace.bufferAlignment * app->meshCount);
@@ -932,8 +932,8 @@ int create_vk_buffers(struct app_vk *app)
 	vkUniformBufferCreateInfo.queueFamilyIndices = NULL;
 	vkUniformBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-	app->uvr_vk_buffer[cpuVisibleBuffer] = uvr_vk_buffer_create(&vkUniformBufferCreateInfo);
-	if (!app->uvr_vk_buffer[cpuVisibleBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleBuffer].deviceMemory)
+	app->kmr_vk_buffer[cpuVisibleBuffer] = kmr_vk_buffer_create(&vkUniformBufferCreateInfo);
+	if (!app->kmr_vk_buffer[cpuVisibleBuffer].buffer || !app->kmr_vk_buffer[cpuVisibleBuffer].deviceMemory)
 		return -1;
 
 	return 0;
@@ -942,43 +942,43 @@ int create_vk_buffers(struct app_vk *app)
 
 int create_vk_texture_images(struct app_vk *app)
 {
-	struct uvr_utils_image_buffer *imageData = NULL;
+	struct kmr_utils_image_buffer *imageData = NULL;
 	uint32_t curImage, imageCount = 0;
 	uint8_t textureImageIndex = 2, cpuVisibleImageBuffer = 3;
 
-	imageCount = app->uvr_gltf_loader_texture_image.imageCount;
-	imageData = app->uvr_gltf_loader_texture_image.imageData;
+	imageCount = app->kmr_gltf_loader_texture_image.imageCount;
+	imageData = app->kmr_gltf_loader_texture_image.imageData;
 
 	// Create CPU visible buffer to store pixel data
-	struct uvr_vk_buffer_create_info vkTextureBufferCreateInfo;
-	vkTextureBufferCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	vkTextureBufferCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+	struct kmr_vk_buffer_create_info vkTextureBufferCreateInfo;
+	vkTextureBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkTextureBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	vkTextureBufferCreateInfo.bufferFlags = 0;
-	vkTextureBufferCreateInfo.bufferSize = app->uvr_gltf_loader_texture_image.totalBufferSize;
+	vkTextureBufferCreateInfo.bufferSize = app->kmr_gltf_loader_texture_image.totalBufferSize;
 	vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	vkTextureBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	vkTextureBufferCreateInfo.queueFamilyIndexCount = 0;
 	vkTextureBufferCreateInfo.queueFamilyIndices = NULL;
 	vkTextureBufferCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-	app->uvr_vk_buffer[cpuVisibleImageBuffer] = uvr_vk_buffer_create(&vkTextureBufferCreateInfo);
-	if (!app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer || !app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory) {
-		uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+	app->kmr_vk_buffer[cpuVisibleImageBuffer] = kmr_vk_buffer_create(&vkTextureBufferCreateInfo);
+	if (!app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer || !app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory) {
+		kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
 		return -1;
 	}
 
 	/* Map all GLTF texture images into CPU Visible buffer memory */
-	struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
-	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
-	deviceMemoryCopyInfo.deviceMemory = app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
+	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
 
-	struct uvr_vk_image_view_create_info imageViewCreateInfos[imageCount];
-	struct uvr_vk_vimage_create_info vimageCreateInfos[imageCount];
+	struct kmr_vk_image_view_create_info imageViewCreateInfos[imageCount];
+	struct kmr_vk_vimage_create_info vimageCreateInfos[imageCount];
 	for (curImage = 0; curImage < imageCount; curImage++) {
 		deviceMemoryCopyInfo.deviceMemoryOffset = imageData[curImage].imageBufferOffset;
 		deviceMemoryCopyInfo.memoryBufferSize = imageData[curImage].imageSize;
 		deviceMemoryCopyInfo.bufferData = imageData[curImage].pixels;
-		uvr_vk_map_memory(&deviceMemoryCopyInfo);
+		kmr_vk_map_memory(&deviceMemoryCopyInfo);
 
 		imageViewCreateInfos[curImage].imageViewflags = 0;
 		imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -1006,19 +1006,19 @@ int create_vk_texture_images(struct app_vk *app)
 	}
 
 	/* Create a VkImage/VkImageView for each texture */
-	struct uvr_vk_image_create_info vkImageCreateInfo;
-	vkImageCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_image_create_info vkImageCreateInfo;
+	vkImageCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                      // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
 	vkImageCreateInfo.imageCount = imageCount;                         // Creating @imageCount amount of VkImage(VkDeviceMemory)/VkImageView resource's to store pixel data
 	vkImageCreateInfo.imageViewCreateInfos = imageViewCreateInfos;
 	vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;
-	vkImageCreateInfo.physDevice = app->uvr_vk_phdev.physDevice;
+	vkImageCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	vkImageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-	uvr_utils_log(UVR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", imageCount);
-	app->uvr_vk_image[textureImageIndex] = uvr_vk_image_create(&vkImageCreateInfo);
-	if (!app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->uvr_vk_image[textureImageIndex].imageViewHandles[curImage].view) {
-		uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+	kmr_utils_log(KMR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", imageCount);
+	app->kmr_vk_image[textureImageIndex] = kmr_vk_image_create(&vkImageCreateInfo);
+	if (!app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->kmr_vk_image[textureImageIndex].imageViewHandles[curImage].view) {
+		kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
 		return -1;
 	}
 
@@ -1026,20 +1026,20 @@ int create_vk_texture_images(struct app_vk *app)
 	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	imageMemoryBarrier.pNext = NULL;
 
-	struct uvr_vk_resource_pipeline_barrier_info pipelineBarrierInfo;
-	pipelineBarrierInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-	pipelineBarrierInfo.queue = app->uvr_vk_queue.queue;
+	struct kmr_vk_resource_pipeline_barrier_info pipelineBarrierInfo;
+	pipelineBarrierInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+	pipelineBarrierInfo.queue = app->kmr_vk_queue.queue;
 
 	VkBufferImageCopy copyRegion;
 	copyRegion.bufferRowLength = 0;
 	copyRegion.bufferImageHeight = 0;
 
 	/* Copy VkImage resource to VkBuffer resource */
-	struct uvr_vk_resource_copy_info bufferCopyInfo;
-	bufferCopyInfo.resourceCopyType = UVR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
-	bufferCopyInfo.commandBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-	bufferCopyInfo.queue = app->uvr_vk_queue.queue;
-	bufferCopyInfo.srcResource = app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer;
+	struct kmr_vk_resource_copy_info bufferCopyInfo;
+	bufferCopyInfo.resourceCopyType = KMR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
+	bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+	bufferCopyInfo.queue = app->kmr_vk_queue.queue;
+	bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer;
 
 	for (curImage = 0; curImage < imageCount; curImage++) {
 		imageMemoryBarrier.srcAccessMask = 0;
@@ -1048,7 +1048,7 @@ int create_vk_texture_images(struct app_vk *app)
 		imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageMemoryBarrier.image = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
+		imageMemoryBarrier.image = app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image;
 		imageMemoryBarrier.subresourceRange.aspectMask = imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask;
 		imageMemoryBarrier.subresourceRange.baseMipLevel = imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel;
 		imageMemoryBarrier.subresourceRange.levelCount = imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount;
@@ -1062,8 +1062,8 @@ int create_vk_texture_images(struct app_vk *app)
 		pipelineBarrierInfo.bufferMemoryBarrier = NULL;
 		pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 
-		if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
-			uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+		if (kmr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
+			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
 			return -1;
 		}
 
@@ -1076,13 +1076,13 @@ int create_vk_texture_images(struct app_vk *app)
 		copyRegion.imageExtent = vimageCreateInfos[curImage].imageExtent3D;
 		copyRegion.bufferOffset = imageData[curImage].imageBufferOffset;
 
-		bufferCopyInfo.dstResource = app->uvr_vk_image[textureImageIndex].imageHandles[curImage].image;
+		bufferCopyInfo.dstResource = app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image;
 		bufferCopyInfo.bufferCopyInfo = NULL;
 		bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
 		bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-		if (uvr_vk_resource_copy(&bufferCopyInfo) == -1) {
-			uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+		if (kmr_vk_resource_copy(&bufferCopyInfo) == -1) {
+			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
 			return -1;
 		}
 
@@ -1094,20 +1094,20 @@ int create_vk_texture_images(struct app_vk *app)
 		pipelineBarrierInfo.srcPipelineStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
-		if (uvr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
-			uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+		if (kmr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
+			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
 			return -1;
 		}
 	}
 
 	/* Free up memory after everything is copied */
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
-	vkDestroyBuffer(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer, NULL);
-	vkFreeMemory(app->uvr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, NULL);
-	app->uvr_vk_buffer[cpuVisibleImageBuffer].buffer = VK_NULL_HANDLE;
-	app->uvr_vk_buffer[cpuVisibleImageBuffer].deviceMemory = VK_NULL_HANDLE;
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+	vkDestroyBuffer(app->kmr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer, NULL);
+	vkFreeMemory(app->kmr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, NULL);
+	app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer = VK_NULL_HANDLE;
+	app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory = VK_NULL_HANDLE;
 
-	uvr_utils_log(UVR_SUCCESS, "Successfully created VkImage objects for GLTF texture assets");
+	kmr_utils_log(KMR_SUCCESS, "Successfully created VkImage objects for GLTF texture assets");
 
 	return 0;
 }
@@ -1115,50 +1115,50 @@ int create_vk_texture_images(struct app_vk *app)
 
 int create_gltf_load_required_data(struct app_vk *app)
 {
-	struct uvr_gltf_loader_file gltfLoaderFile;
+	struct kmr_gltf_loader_file gltfLoaderFile;
 
-	struct uvr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
+	struct kmr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
 	gltfLoaderFileLoadInfo.fileName = GLTF_MODEL;
 
-	gltfLoaderFile = uvr_gltf_loader_file_load(&gltfLoaderFileLoadInfo);
+	gltfLoaderFile = kmr_gltf_loader_file_load(&gltfLoaderFileLoadInfo);
 	if (!gltfLoaderFile.gltfData)
 		return -1;
 
-	struct uvr_gltf_loader_mesh_create_info gltfMeshInfo;
+	struct kmr_gltf_loader_mesh_create_info gltfMeshInfo;
 	gltfMeshInfo.gltfLoaderFile = gltfLoaderFile;
 	gltfMeshInfo.bufferIndex = 0;
 
-	app->uvr_gltf_loader_mesh = uvr_gltf_loader_mesh_create(&gltfMeshInfo);
-	if (!app->uvr_gltf_loader_mesh.meshData)
+	app->kmr_gltf_loader_mesh = kmr_gltf_loader_mesh_create(&gltfMeshInfo);
+	if (!app->kmr_gltf_loader_mesh.meshData)
 		goto exit_create_gltf_loader_file_free_gltf_data;
 
-	struct uvr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
+	struct kmr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
 	gltfTextureImagesInfo.gltfLoaderFile = gltfLoaderFile;
 	gltfTextureImagesInfo.directory = gltfLoaderFileLoadInfo.fileName;
 
-	app->uvr_gltf_loader_texture_image = uvr_gltf_loader_texture_image_create(&gltfTextureImagesInfo);
-	if (!app->uvr_gltf_loader_texture_image.imageData)
+	app->kmr_gltf_loader_texture_image = kmr_gltf_loader_texture_image_create(&gltfTextureImagesInfo);
+	if (!app->kmr_gltf_loader_texture_image.imageData)
 		goto exit_create_gltf_loader_file_free_gltf_vertex;
 
-	struct uvr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
+	struct kmr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
 	gltfLoaderFileNodeInfo.gltfLoaderFile = gltfLoaderFile;
 	gltfLoaderFileNodeInfo.sceneIndex = 0;
 
-	struct uvr_gltf_loader_node gltfLoaderFileNodes = uvr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
+	struct kmr_gltf_loader_node gltfLoaderFileNodes = kmr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
 	if (!gltfLoaderFileNodes.nodeData)
 		goto exit_create_gltf_loader_file_free_gltf_texture_image;
 
-	struct uvr_gltf_loader_material_create_info gltfLoaderMaterialInfo;
+	struct kmr_gltf_loader_material_create_info gltfLoaderMaterialInfo;
 	gltfLoaderMaterialInfo.gltfLoaderFile = gltfLoaderFile;
 
-	app->uvr_gltf_loader_material = uvr_gltf_loader_material_create(&gltfLoaderMaterialInfo);
-	if (!app->uvr_gltf_loader_material.materialData)
+	app->kmr_gltf_loader_material = kmr_gltf_loader_material_create(&gltfLoaderMaterialInfo);
+	if (!app->kmr_gltf_loader_material.materialData)
 		goto exit_create_gltf_loader_file_free_gltf_node;
 
-	app->meshCount = app->uvr_gltf_loader_mesh.meshDataCount;
+	app->meshCount = app->kmr_gltf_loader_mesh.meshDataCount;
 	app->meshData = calloc(app->meshCount, sizeof(struct mesh_data));
 	if (!app->meshData) {
-		uvr_utils_log(UVR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
+		kmr_utils_log(KMR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
 		return -1;
 	}
 
@@ -1166,31 +1166,31 @@ int create_gltf_load_required_data(struct app_vk *app)
 	for (uint32_t meshIndex = 0; meshIndex < gltfLoaderFileNodes.nodeDataCount; meshIndex++) {
 		// glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
 		memcpy(app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix, gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, sizeof(mat4));
-		app->meshData[meshIndex].firstIndex = app->uvr_gltf_loader_mesh.meshData[meshIndex].firstIndex;
-		app->meshData[meshIndex].indexCount = app->uvr_gltf_loader_mesh.meshData[meshIndex].indexBufferDataCount;
+		app->meshData[meshIndex].firstIndex = app->kmr_gltf_loader_mesh.meshData[meshIndex].firstIndex;
+		app->meshData[meshIndex].indexCount = app->kmr_gltf_loader_mesh.meshData[meshIndex].indexBufferDataCount;
 	}
 
 	// Have everything we need free memory created
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfLoaderFile });
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfLoaderFileNodes });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_file_cnt = 1, .kmr_gltf_loader_file = &gltfLoaderFile });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_node_cnt = 1, .kmr_gltf_loader_node = &gltfLoaderFileNodes });
 	return 0;
 
 exit_create_gltf_loader_file_free_gltf_node:
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_node_cnt = 1, .uvr_gltf_loader_node = &gltfLoaderFileNodes });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_node_cnt = 1, .kmr_gltf_loader_node = &gltfLoaderFileNodes });
 exit_create_gltf_loader_file_free_gltf_texture_image:
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_texture_image_cnt = 1, .uvr_gltf_loader_texture_image = &app->uvr_gltf_loader_texture_image });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
 exit_create_gltf_loader_file_free_gltf_vertex:
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_mesh_cnt = 1, .uvr_gltf_loader_mesh = &app->uvr_gltf_loader_mesh });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_mesh_cnt = 1, .kmr_gltf_loader_mesh = &app->kmr_gltf_loader_mesh });
 exit_create_gltf_loader_file_free_gltf_data:
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_file_cnt = 1, .uvr_gltf_loader_file = &gltfLoaderFile });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_file_cnt = 1, .kmr_gltf_loader_file = &gltfLoaderFile });
 	return -1;
 }
 
 
 int create_vk_image_sampler(struct app_vk *app)
 {
-	struct uvr_vk_sampler_create_info vkSamplerCreateInfo;
-	vkSamplerCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_sampler_create_info vkSamplerCreateInfo;
+	vkSamplerCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	vkSamplerCreateInfo.samplerFlags = 0;
 	vkSamplerCreateInfo.samplerMagFilter = VK_FILTER_LINEAR;                  // Close to texture: 50/50 sample of two pixels if camera inbetween to pixels
 	vkSamplerCreateInfo.samplerMinFilter = VK_FILTER_LINEAR;                  // Away from texture
@@ -1205,11 +1205,11 @@ int create_vk_image_sampler(struct app_vk *app)
 	vkSamplerCreateInfo.samplerUnnormalizedCoordinates = VK_FALSE;
 	vkSamplerCreateInfo.samplerBorderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	vkSamplerCreateInfo.samplerAnisotropyEnable = VK_TRUE;
-	vkSamplerCreateInfo.samplerMaxAnisotropy = app->uvr_vk_phdev.physDeviceProperties.limits.maxSamplerAnisotropy;
+	vkSamplerCreateInfo.samplerMaxAnisotropy = app->kmr_vk_phdev.physDeviceProperties.limits.maxSamplerAnisotropy;
 	vkSamplerCreateInfo.samplerCompareEnable = VK_FALSE;
 
-	app->uvr_vk_sampler = uvr_vk_sampler_create(&vkSamplerCreateInfo);
-	if (!app->uvr_vk_sampler.sampler)
+	app->kmr_vk_sampler = kmr_vk_sampler_create(&vkSamplerCreateInfo);
+	if (!app->kmr_vk_sampler.sampler)
 		return -1;
 
 	return 0;
@@ -1222,13 +1222,13 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	VkDescriptorSetLayoutBinding descSetLayoutBindings[3]; // Amount of descriptors in the set
 	uint32_t descriptorBindingCount = ARRAY_LEN(descSetLayoutBindings);
 
-	uint32_t materialCount = app->uvr_gltf_loader_material.materialDataCount;
-	struct uvr_gltf_loader_material_data *materialData = app->uvr_gltf_loader_material.materialData;
+	uint32_t materialCount = app->kmr_gltf_loader_material.materialDataCount;
+	struct kmr_gltf_loader_material_data *materialData = app->kmr_gltf_loader_material.materialData;
 
 	// Uniform descriptor
 	descSetLayoutBindings[0].binding = 0;
 	descSetLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	// See struct uvr_vk_descriptor_set_handle for more information in this
+	// See struct kmr_vk_descriptor_set_handle for more information in this
 	descSetLayoutBindings[0].descriptorCount = 1;
 	descSetLayoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	descSetLayoutBindings[0].pImmutableSamplers = NULL;
@@ -1236,7 +1236,7 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	// Dynamic Uniform descriptor
 	descSetLayoutBindings[1].binding = 1;
 	descSetLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-	// See struct uvr_vk_descriptor_set_handle for more information in this
+	// See struct kmr_vk_descriptor_set_handle for more information in this
 	descSetLayoutBindings[1].descriptorCount = 1;
 	descSetLayoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	descSetLayoutBindings[1].pImmutableSamplers = NULL;
@@ -1244,19 +1244,19 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	// Combinded Image Sampler descriptor
 	descSetLayoutBindings[2].binding = 2;
 	descSetLayoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	// See struct uvr_vk_descriptor_set_handle for more information in this
+	// See struct kmr_vk_descriptor_set_handle for more information in this
 	descSetLayoutBindings[2].descriptorCount = materialCount;
 	descSetLayoutBindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	descSetLayoutBindings[2].pImmutableSamplers = NULL;
 
-	struct uvr_vk_descriptor_set_layout_create_info descriptorCreateInfo;
-	descriptorCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_descriptor_set_layout_create_info descriptorCreateInfo;
+	descriptorCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	descriptorCreateInfo.descriptorSetLayoutCreateflags = 0;
 	descriptorCreateInfo.descriptorSetLayoutBindingCount = ARRAY_LEN(descSetLayoutBindings);
 	descriptorCreateInfo.descriptorSetLayoutBindings = descSetLayoutBindings;
 
-	app->uvr_vk_descriptor_set_layout = uvr_vk_descriptor_set_layout_create(&descriptorCreateInfo);
-	if (!app->uvr_vk_descriptor_set_layout.descriptorSetLayout)
+	app->kmr_vk_descriptor_set_layout = kmr_vk_descriptor_set_layout_create(&descriptorCreateInfo);
+	if (!app->kmr_vk_descriptor_set_layout.descriptorSetLayout)
 		return -1;
 
 	/*
@@ -1271,24 +1271,24 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	}
 
 	// Should allocate one pool. With one set containing multiple descriptors
-	struct uvr_vk_descriptor_set_create_info descriptorSetsCreateInfo;
-	descriptorSetsCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_descriptor_set_create_info descriptorSetsCreateInfo;
+	descriptorSetsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	descriptorSetsCreateInfo.descriptorPoolInfos = descriptorPoolInfos;
 	descriptorSetsCreateInfo.descriptorPoolInfoCount = ARRAY_LEN(descriptorPoolInfos);
-	descriptorSetsCreateInfo.descriptorSetLayouts = &app->uvr_vk_descriptor_set_layout.descriptorSetLayout;
+	descriptorSetsCreateInfo.descriptorSetLayouts = &app->kmr_vk_descriptor_set_layout.descriptorSetLayout;
 	descriptorSetsCreateInfo.descriptorSetLayoutCount = 1;
 	descriptorSetsCreateInfo.descriptorPoolCreateflags = 0;
 
-	app->uvr_vk_descriptor_set = uvr_vk_descriptor_set_create(&descriptorSetsCreateInfo);
-	if (!app->uvr_vk_descriptor_set.descriptorPool || !app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet)
+	app->kmr_vk_descriptor_set = kmr_vk_descriptor_set_create(&descriptorSetsCreateInfo);
+	if (!app->kmr_vk_descriptor_set.descriptorPool || !app->kmr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet)
 		return -1;
 
 	VkDescriptorBufferInfo bufferInfos[descriptorBindingCount];
-	bufferInfos[0].buffer = app->uvr_vk_buffer[2].buffer; // CPU visible uniform buffer
+	bufferInfos[0].buffer = app->kmr_vk_buffer[2].buffer; // CPU visible uniform buffer
 	bufferInfos[0].offset = 0;
 	bufferInfos[0].range = sizeof(struct app_uniform_buffer_scene);
 
-	bufferInfos[1].buffer = app->uvr_vk_buffer[2].buffer; // CPU visible uniform buffer dynamic buffer
+	bufferInfos[1].buffer = app->kmr_vk_buffer[2].buffer; // CPU visible uniform buffer dynamic buffer
 	bufferInfos[1].offset = sizeof(struct app_uniform_buffer_scene) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
 	bufferInfos[1].range = app->modelTransferSpace.bufferAlignment;
 
@@ -1298,19 +1298,19 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	for (i = 0; i < materialCount; i++) {
 		baseColorTextureImageIndex = materialData[i].pbrMetallicRoughness.baseColorTexture.imageIndex;
 		imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[i].imageView = app->uvr_vk_image[2].imageViewHandles[baseColorTextureImageIndex].view; // created in create_vk_texture_image
-		imageInfos[i].sampler = app->uvr_vk_sampler.sampler;                                              // created in create_vk_image_sampler
+		imageInfos[i].imageView = app->kmr_vk_image[2].imageViewHandles[baseColorTextureImageIndex].view; // created in create_vk_texture_image
+		imageInfos[i].sampler = app->kmr_vk_sampler.sampler;                                              // created in create_vk_image_sampler
 	}
 
 	// Remove material data no longer required
-	uvr_gltf_loader_destroy(&(struct uvr_gltf_loader_destroy) { .uvr_gltf_loader_material_cnt = 1, .uvr_gltf_loader_material = &app->uvr_gltf_loader_material });
+	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_material_cnt = 1, .kmr_gltf_loader_material = &app->kmr_gltf_loader_material });
 
 	/* Binds multiple descriptors and their objects to the same set */
 	VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
 	for (i = 0; i < ARRAY_LEN(descriptorWrites); i++) {
 		descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[i].pNext = NULL;
-		descriptorWrites[i].dstSet = app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet;
+		descriptorWrites[i].dstSet = app->kmr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet;
 		descriptorWrites[i].dstBinding = descSetLayoutBindings[i].binding;
 		descriptorWrites[i].dstArrayElement = 0;
 		descriptorWrites[i].descriptorType = descSetLayoutBindings[i].descriptorType;
@@ -1320,7 +1320,7 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 		descriptorWrites[i].pTexelBufferView = NULL;
 	}
 
-	vkUpdateDescriptorSets(app->uvr_vk_lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
+	vkUpdateDescriptorSets(app->kmr_vk_lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
 
 	return 0;
 }
@@ -1331,13 +1331,13 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = app->uvr_vk_shader_module[0].shaderModule;
+	vertShaderStageInfo.module = app->kmr_vk_shader_module[0].shaderModule;
 	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = app->uvr_vk_shader_module[1].shaderModule;
+	fragShaderStageInfo.module = app->kmr_vk_shader_module[1].shaderModule;
 	fragShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo shaderStages[2] = {vertShaderStageInfo, fragShaderStageInfo};
@@ -1494,17 +1494,17 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	pushConstantRange.size = sizeof(uniform_buffer_model); // sizeof data to pass
 	*/
 
-	struct uvr_vk_pipeline_layout_create_info graphicsPipelineLayoutCreateInfo;
-	graphicsPipelineLayoutCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_pipeline_layout_create_info graphicsPipelineLayoutCreateInfo;
+	graphicsPipelineLayoutCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	graphicsPipelineLayoutCreateInfo.descriptorSetLayoutCount = 1;
-	graphicsPipelineLayoutCreateInfo.descriptorSetLayouts = &app->uvr_vk_descriptor_set_layout.descriptorSetLayout;
+	graphicsPipelineLayoutCreateInfo.descriptorSetLayouts = &app->kmr_vk_descriptor_set_layout.descriptorSetLayout;
 	graphicsPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
 	graphicsPipelineLayoutCreateInfo.pushConstantRanges = NULL;
 	// graphicsPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
 	// graphicsPipelineLayoutCreateInfo.pushConstantRanges = &pushConstantRange;
 
-	app->uvr_vk_pipeline_layout = uvr_vk_pipeline_layout_create(&graphicsPipelineLayoutCreateInfo);
-	if (!app->uvr_vk_pipeline_layout.pipelineLayout)
+	app->kmr_vk_pipeline_layout = kmr_vk_pipeline_layout_create(&graphicsPipelineLayoutCreateInfo);
+	if (!app->kmr_vk_pipeline_layout.pipelineLayout)
 		return -1;
 
 	/*
@@ -1574,8 +1574,8 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	subpassDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 	subpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-	struct uvr_vk_render_pass_create_info renderPassInfo;
-	renderPassInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_render_pass_create_info renderPassInfo;
+	renderPassInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	renderPassInfo.attachmentDescriptionCount = ARRAY_LEN(attachmentDescriptions);
 	renderPassInfo.attachmentDescriptions = attachmentDescriptions;
 	renderPassInfo.subpassDescriptionCount = 1;
@@ -1583,12 +1583,12 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	renderPassInfo.subpassDependencyCount = ARRAY_LEN(subpassDependencies);
 	renderPassInfo.subpassDependencies = subpassDependencies;
 
-	app->uvr_vk_render_pass = uvr_vk_render_pass_create(&renderPassInfo);
-	if (!app->uvr_vk_render_pass.renderPass)
+	app->kmr_vk_render_pass = kmr_vk_render_pass_create(&renderPassInfo);
+	if (!app->kmr_vk_render_pass.renderPass)
 		return -1;
 
-	struct uvr_vk_graphics_pipeline_create_info graphicsPipelineInfo;
-	graphicsPipelineInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_graphics_pipeline_create_info graphicsPipelineInfo;
+	graphicsPipelineInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	graphicsPipelineInfo.shaderStageCount = ARRAY_LEN(shaderStages);
 	graphicsPipelineInfo.shaderStages = shaderStages;
 	graphicsPipelineInfo.vertexInputState = &vertexInputInfo;
@@ -1600,12 +1600,12 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 	graphicsPipelineInfo.depthStencilState = &depthStencilInfo;
 	graphicsPipelineInfo.colorBlendState = &colorBlending;
 	graphicsPipelineInfo.dynamicState = &dynamicState;
-	graphicsPipelineInfo.pipelineLayout = app->uvr_vk_pipeline_layout.pipelineLayout;
-	graphicsPipelineInfo.renderPass = app->uvr_vk_render_pass.renderPass;
+	graphicsPipelineInfo.pipelineLayout = app->kmr_vk_pipeline_layout.pipelineLayout;
+	graphicsPipelineInfo.renderPass = app->kmr_vk_render_pass.renderPass;
 	graphicsPipelineInfo.subpass = 0;
 
-	app->uvr_vk_graphics_pipeline = uvr_vk_graphics_pipeline_create(&graphicsPipelineInfo);
-	if (!app->uvr_vk_graphics_pipeline.graphicsPipeline)
+	app->kmr_vk_graphics_pipeline = kmr_vk_graphics_pipeline_create(&graphicsPipelineInfo);
+	if (!app->kmr_vk_graphics_pipeline.graphicsPipeline)
 		return -1;
 
 	return 0;
@@ -1614,26 +1614,26 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 
 int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 {
-	uint8_t framebufferCount = app->uvr_vk_image[0].imageCount;
-	struct uvr_vk_framebuffer_images framebufferImages[framebufferCount];
+	uint8_t framebufferCount = app->kmr_vk_image[0].imageCount;
+	struct kmr_vk_framebuffer_images framebufferImages[framebufferCount];
 
 	for (uint8_t i = 0; i < framebufferCount; i++) {
-		framebufferImages[i].imageAttachments[0] = app->uvr_vk_image[0].imageViewHandles[i].view; // VkImageView->VkImage for color image attachment
-		framebufferImages[i].imageAttachments[1] = app->uvr_vk_image[1].imageViewHandles[0].view; // VkImageView->VkImage for depth buffer image attachment
+		framebufferImages[i].imageAttachments[0] = app->kmr_vk_image[0].imageViewHandles[i].view; // VkImageView->VkImage for color image attachment
+		framebufferImages[i].imageAttachments[1] = app->kmr_vk_image[1].imageViewHandles[0].view; // VkImageView->VkImage for depth buffer image attachment
 	}
 
-	struct uvr_vk_framebuffer_create_info framebufferInfo;
-	framebufferInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_framebuffer_create_info framebufferInfo;
+	framebufferInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	framebufferInfo.framebufferCount = framebufferCount;      // Amount of framebuffers to create
 	framebufferInfo.framebufferImageAttachmentCount = 2;
 	framebufferInfo.framebufferImages = framebufferImages;    // image attachments per framebuffer
-	framebufferInfo.renderPass = app->uvr_vk_render_pass.renderPass;
+	framebufferInfo.renderPass = app->kmr_vk_render_pass.renderPass;
 	framebufferInfo.width = extent2D.width;
 	framebufferInfo.height = extent2D.height;
 	framebufferInfo.layers = 1;
 
-	app->uvr_vk_framebuffer = uvr_vk_framebuffer_create(&framebufferInfo);
-	if (!app->uvr_vk_framebuffer.framebufferHandles[0].framebuffer)
+	app->kmr_vk_framebuffer = kmr_vk_framebuffer_create(&framebufferInfo);
+	if (!app->kmr_vk_framebuffer.framebufferHandles[0].framebuffer)
 		return -1;
 
 	return 0;
@@ -1642,14 +1642,14 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 
 int create_vk_sync_objs(struct app_vk *app)
 {
-	struct uvr_vk_sync_obj_create_info syncObjsCreateInfo;
-	syncObjsCreateInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_sync_obj_create_info syncObjsCreateInfo;
+	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_BINARY;
 	syncObjsCreateInfo.semaphoreCount = 2;
 	syncObjsCreateInfo.fenceCount = 1;
 
-	app->uvr_vk_sync_obj = uvr_vk_sync_obj_create(&syncObjsCreateInfo);
-	if (!app->uvr_vk_sync_obj.fenceHandles[0].fence && !app->uvr_vk_sync_obj.semaphoreHandles[0].semaphore)
+	app->kmr_vk_sync_obj = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
+	if (!app->kmr_vk_sync_obj.fenceHandles[0].fence && !app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore)
 		return -1;
 
 	return 0;
@@ -1658,15 +1658,15 @@ int create_vk_sync_objs(struct app_vk *app)
 
 int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D)
 {
-	struct uvr_vk_command_buffer_record_info commandBufferRecordInfo;
-	commandBufferRecordInfo.commandBufferCount = app->uvr_vk_command_buffer.commandBufferCount;
-	commandBufferRecordInfo.commandBufferHandles = app->uvr_vk_command_buffer.commandBufferHandles;
+	struct kmr_vk_command_buffer_record_info commandBufferRecordInfo;
+	commandBufferRecordInfo.commandBufferCount = app->kmr_vk_command_buffer.commandBufferCount;
+	commandBufferRecordInfo.commandBufferHandles = app->kmr_vk_command_buffer.commandBufferHandles;
 	commandBufferRecordInfo.commandBufferUsageflags = 0;
 
-	if (uvr_vk_command_buffer_record_begin(&commandBufferRecordInfo) == -1)
+	if (kmr_vk_command_buffer_record_begin(&commandBufferRecordInfo) == -1)
 		return -1;
 
-	VkCommandBuffer cmdBuffer = app->uvr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+	VkCommandBuffer cmdBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 
 	VkRect2D renderArea = {};
 	renderArea.offset.x = 0;
@@ -1705,8 +1705,8 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 	VkRenderPassBeginInfo renderPassInfo;
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.pNext = NULL;
-	renderPassInfo.renderPass = app->uvr_vk_render_pass.renderPass;
-	renderPassInfo.framebuffer = app->uvr_vk_framebuffer.framebufferHandles[swapchainImageIndex].framebuffer;
+	renderPassInfo.renderPass = app->kmr_vk_render_pass.renderPass;
+	renderPassInfo.framebuffer = app->kmr_vk_framebuffer.framebufferHandles[swapchainImageIndex].framebuffer;
 	renderPassInfo.renderArea = renderArea;
 	renderPassInfo.clearValueCount = ARRAY_LEN(clearColors);
 	renderPassInfo.pClearValues = clearColors;
@@ -1715,11 +1715,11 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 	 * 0. CPU visible vertex buffer
 	 * 1. GPU visible vertex buffer
 	 */
-	VkBuffer vertexBuffer = app->uvr_vk_buffer[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].buffer;
+	VkBuffer vertexBuffer = app->kmr_vk_buffer[(VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 0 : 1].buffer;
 
 	vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_graphics_pipeline.graphicsPipeline);
+	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->kmr_vk_graphics_pipeline.graphicsPipeline);
 	vkCmdBindIndexBuffer(cmdBuffer, vertexBuffer, app->indexBufferOffset, VK_INDEX_TYPE_UINT16);
 
 	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
@@ -1730,15 +1730,15 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 	for (uint32_t mesh = 0; mesh < app->meshCount; mesh++) {
 		offset = app->meshData[mesh].bufferOffset;
 		dynamicUniformBufferOffset = mesh * app->modelTransferSpace.bufferAlignment;
-		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->uvr_vk_pipeline_layout.pipelineLayout, 0, 1,
-		                        &app->uvr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, app->kmr_vk_pipeline_layout.pipelineLayout, 0, 1,
+		                        &app->kmr_vk_descriptor_set.descriptorSetHandles[0].descriptorSet, 1, &dynamicUniformBufferOffset);
 		vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &offset);
 		vkCmdDrawIndexed(cmdBuffer, app->meshData[mesh].indexCount, 1, app->meshData[mesh].firstIndex, 0, 0);
 	}
 
 	vkCmdEndRenderPass(cmdBuffer);
 
-	if (uvr_vk_command_buffer_record_end(&commandBufferRecordInfo) == -1)
+	if (kmr_vk_command_buffer_record_end(&commandBufferRecordInfo) == -1)
 		return -1;
 
 	return 0;
@@ -1747,7 +1747,7 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 
 void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D)
 {
-	VkDeviceMemory uniformBufferDeviceMemory = app->uvr_vk_buffer[2].deviceMemory;
+	VkDeviceMemory uniformBufferDeviceMemory = app->kmr_vk_buffer[2].deviceMemory;
 
 	struct app_uniform_buffer_scene ubo = {};
 	uint32_t uboSize = sizeof(ubo);
@@ -1779,13 +1779,13 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	ubo.projection[1][1] *= -1;
 
 	// Copy UBO Scene data
-	struct uvr_vk_map_memory_info deviceMemoryCopyInfo;
-	deviceMemoryCopyInfo.logicalDevice = app->uvr_vk_lgdev.logicalDevice;
+	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = uniformBufferDeviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = swapchainImageIndex * uboSize;
 	deviceMemoryCopyInfo.memoryBufferSize = uboSize;
 	deviceMemoryCopyInfo.bufferData = &ubo;
-	uvr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_map_memory(&deviceMemoryCopyInfo);
 
 	// Spin model about the X-axis
 	static float angle = 0.0f;
@@ -1796,7 +1796,7 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	float deltaTime = 0.0f;
 	vec3 axis = {0.0f, 1.0f, 0.0f};
 
-	now = (float) (uvr_utils_nanosecond() / 10000000ULL);
+	now = (float) (kmr_utils_nanosecond() / 10000000ULL);
 	deltaTime = now - lastTime;
 	lastTime = now;
 
@@ -1818,5 +1818,5 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	deviceMemoryCopyInfo.deviceMemoryOffset = uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
 	deviceMemoryCopyInfo.memoryBufferSize = app->modelTransferSpace.bufferAlignment * app->meshCount;
 	deviceMemoryCopyInfo.bufferData = app->modelTransferSpace.alignedBufferMemory;
-	uvr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_map_memory(&deviceMemoryCopyInfo);
 }

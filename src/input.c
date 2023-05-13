@@ -18,7 +18,7 @@ static int open_restricted(const char *path, int UNUSED flags, void UNUSED *data
 {
 	int fd;
 #ifdef INCLUDE_LIBSEAT
-	fd = uvr_session_take_control_of_device((struct uvr_session *) data, path);
+	fd = kmr_session_take_control_of_device((struct kmr_session *) data, path);
 #else
 	fd = open(path, flags);
 #endif
@@ -29,7 +29,7 @@ static int open_restricted(const char *path, int UNUSED flags, void UNUSED *data
 static void close_restricted(int fd, void UNUSED *data)
 {
 #ifdef INCLUDE_LIBSEAT
-	uvr_session_release_device((struct uvr_session *) data, fd);
+	kmr_session_release_device((struct kmr_session *) data, fd);
 #else
 	close(fd);
 #endif
@@ -42,57 +42,57 @@ static const struct libinput_interface libinput_interface_impl = {
 };
 
 
-struct uvr_input uvr_input_create(struct uvr_input_create_info UNUSED *uvrinp)
+struct kmr_input kmr_input_create(struct kmr_input_create_info UNUSED *kmsinp)
 {
 	struct udev *udev = NULL;
 	struct libinput *input = NULL;
-	struct uvr_session *session = NULL;
+	struct kmr_session *session = NULL;
 	int inputfd = -1;
 
 #ifdef INCLUDE_LIBSEAT
-	session = uvrinp->session;
+	session = kmsinp->session;
 #endif
 
 	udev = udev_new();
 	if (!udev) {
-		uvr_utils_log(UVR_DANGER, "[x] udev_new: failed to create udev context.");
-		goto exit_error_uvr_input_create;
+		kmr_utils_log(KMR_DANGER, "[x] udev_new: failed to create udev context.");
+		goto exit_error_kmr_input_create;
 	}
 
 	input = libinput_udev_create_context(&libinput_interface_impl, session, udev);
 	if (!input) {
-	    uvr_utils_log(UVR_DANGER, "[x] libinput_udev_create_context: failed to create libinput context\n");
-	    goto exit_error_uvr_udev_unref;
+	    kmr_utils_log(KMR_DANGER, "[x] libinput_udev_create_context: failed to create libinput context\n");
+	    goto exit_error_kmr_udev_unref;
 	}
 
 	const char *seatName = NULL;
 #ifdef INCLUDE_LIBSEAT
-	seatName = uvrinp->session->seatName;
+	seatName = kmsinp->session->seatName;
 #else
 	seatName = "seat0";
 #endif
 
 	if (libinput_udev_assign_seat(input, seatName) < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] libinput_udev_assign_seat: failed to assign udev seat to libinput instance");
-		goto exit_error_uvr_libinput_unref;
+		kmr_utils_log(KMR_DANGER, "[x] libinput_udev_assign_seat: failed to assign udev seat to libinput instance");
+		goto exit_error_kmr_libinput_unref;
 	}
 	
 	udev_unref(udev);
 
 	inputfd = libinput_get_fd(input);
 
-	return (struct uvr_input) { .input = input, .inputfd = inputfd };
+	return (struct kmr_input) { .input = input, .inputfd = inputfd };
 
-exit_error_uvr_libinput_unref:
+exit_error_kmr_libinput_unref:
 	libinput_unref(input);
-exit_error_uvr_udev_unref:
+exit_error_kmr_udev_unref:
 	udev_unref(udev);
-exit_error_uvr_input_create:
-	return (struct uvr_input) { .input = NULL, .inputfd = -1 };
+exit_error_kmr_input_create:
+	return (struct kmr_input) { .input = NULL, .inputfd = -1 };
 }
 
 
-uint64_t uvr_input_handle_input_event(struct uvr_input_handle_input_event_info *uvrinp)
+uint64_t kmr_input_handle_input_event(struct kmr_input_handle_input_event_info *kmsinp)
 {
 	struct libinput *input = NULL;
 	struct libinput_event *event = NULL;
@@ -100,7 +100,7 @@ uint64_t uvr_input_handle_input_event(struct uvr_input_handle_input_event_info *
 
 	uint64_t code = 0;
 
-	input = uvrinp->input.input;
+	input = kmsinp->input.input;
 	libinput_dispatch(input);
 
 	event = libinput_get_event(input);
@@ -126,8 +126,8 @@ uint64_t uvr_input_handle_input_event(struct uvr_input_handle_input_event_info *
 }
 
 
-void uvr_input_destroy(struct uvr_input_destroy *uvrinp)
+void kmr_input_destroy(struct kmr_input_destroy *kmsinp)
 {
-	if (uvrinp->uvr_input.input)
-		libinput_unref(uvrinp->uvr_input.input);
+	if (kmsinp->kmr_input.input)
+		libinput_unref(kmsinp->kmr_input.input);
 }

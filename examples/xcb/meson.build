@@ -30,9 +30,9 @@ if libxcb.found() and libxcbewmh.found()
       ]
     endif
 
-    exec_name = 'underview-renderer-xcb-client-' + p.substring(0,-2) # remove .c extension from name
+    exec_name = 'kmsroots-xcb-client-' + p.substring(0,-2) # remove .c extension from name
     executable(exec_name, p,
-               link_with: lib_underview_renderer,
+               link_with: lib_kmsroots,
                dependencies: example_deps,
                include_directories: [inc],
                c_args: pargs,

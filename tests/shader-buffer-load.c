@@ -9,7 +9,7 @@ int main(void)
 {
 	int ret = 0;
 
-	struct uvr_shader_destroy shaderd;
+	struct kmr_shader_destroy shaderd;
 	memset(&shaderd, 0, sizeof(shaderd));
 
 	const char vertexShader[] =
@@ -30,13 +30,13 @@ int main(void)
 		"layout(location = 0) out vec4 outColor;\n"
 		"void main() { outColor = vec4(inColor, 1.0); }";
 
-	struct uvr_shader_spirv_create_info vertexShaderCreateInfo;
+	struct kmr_shader_spirv_create_info vertexShaderCreateInfo;
 	vertexShaderCreateInfo.kind = VK_SHADER_STAGE_VERTEX_BIT;
 	vertexShaderCreateInfo.source = vertexShader;
 	vertexShaderCreateInfo.filename = "vert.spv";
 	vertexShaderCreateInfo.entryPoint = "main";
 
-	struct uvr_shader_spirv_create_info fragmentShaderCreateInfo;
+	struct kmr_shader_spirv_create_info fragmentShaderCreateInfo;
 	fragmentShaderCreateInfo.kind = VK_SHADER_STAGE_FRAGMENT_BIT;
 	fragmentShaderCreateInfo.source = fragmentShader;
 	fragmentShaderCreateInfo.filename = "frag.spv";
@@ -46,24 +46,24 @@ int main(void)
 	 * 0. Vertex Shader
 	 * 1. Fragment Shader
 	 */
-	struct uvr_shader_spirv uvr_shader[2];
+	struct kmr_shader_spirv kmr_shader[2];
 
-	uvr_utils_log(UVR_WARNING, "LOADING VERTEX SHADER");
+	kmr_utils_log(KMR_WARNING, "LOADING VERTEX SHADER");
 	fprintf(stdout, "%s\n\n", vertexShader);
 
-	uvr_shader[0] = uvr_shader_compile_buffer_to_spirv(&vertexShaderCreateInfo);
-	if (!uvr_shader[0].bytes) { ret = 1 ; goto exit_distroy_shader ; }
+	kmr_shader[0] = kmr_shader_compile_buffer_to_spirv(&vertexShaderCreateInfo);
+	if (!kmr_shader[0].bytes) { ret = 1 ; goto exit_distroy_shader ; }
 
-	uvr_utils_log(UVR_WARNING, "LOADING FRAGMENT SHADER");
+	kmr_utils_log(KMR_WARNING, "LOADING FRAGMENT SHADER");
 	fprintf(stdout, "%s\n", fragmentShader);
 
-	uvr_shader[1] = uvr_shader_compile_buffer_to_spirv(&fragmentShaderCreateInfo);
-	if (!uvr_shader[1].bytes) { ret = 1 ; goto exit_distroy_shader ; }
+	kmr_shader[1] = kmr_shader_compile_buffer_to_spirv(&fragmentShaderCreateInfo);
+	if (!kmr_shader[1].bytes) { ret = 1 ; goto exit_distroy_shader ; }
 
 exit_distroy_shader:
-	shaderd.uvr_shader_spirv_cnt = ARRAY_LEN(uvr_shader);
-	shaderd.uvr_shader_spirv = uvr_shader;
-	uvr_shader_destroy(&shaderd);
+	shaderd.kmr_shader_spirv_cnt = ARRAY_LEN(kmr_shader);
+	shaderd.kmr_shader_spirv = kmr_shader;
+	kmr_shader_destroy(&shaderd);
 
 	return ret;
 }

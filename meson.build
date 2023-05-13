@@ -1,5 +1,5 @@
 project(
-  'underview-renderer',
+  'kmsroots',
   'c',
   version: '0.0.1',
   license: 'MIT',
@@ -24,10 +24,10 @@ inc = include_directories('include', 'external/include')
 subdir('include')
 subdir('src')
 
-lib_underview_renderer = library(
+lib_kmsroots = library(
   meson.project_name(),
   version: '.'.join(so_version),
-  link_whole: lib_underview_renderer_static,
+  link_whole: lib_kmsroots_static,
   include_directories: inc,
   c_args: pargs,
   install: true

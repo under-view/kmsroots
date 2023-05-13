@@ -11,9 +11,9 @@
 
 
 struct app_wc {
-	struct uvr_wc_core_interface uvr_wc_core_interface;
-	struct uvr_wc_surface uvr_wc_surface;
-	struct uvr_wc_buffer uvr_wc_buffer;
+	struct kmr_wc_core_interface kmr_wc_core_interface;
+	struct kmr_wc_surface kmr_wc_surface;
+	struct kmr_wc_buffer kmr_wc_buffer;
 };
 
 
@@ -57,8 +57,8 @@ void render(bool *running, uint32_t *cbuf, void *data)
 	for (unsigned int x = 0; x < WIDTH; x++) {
 		for (unsigned int y = 0; y < HEIGHT; y++) {
 			offset = (x * bytes_per_pixel) + (y * stride);
-			if (wc->uvr_wc_buffer.shmBufferObjects[*cbuf].shmPoolSize <= offset) break;
-			*(uint32_t *) &wc->uvr_wc_buffer.shmBufferObjects[*cbuf].shmPoolData[offset] = (r << 16) | (g << 8) | b;
+			if (wc->kmr_wc_buffer.shmBufferObjects[*cbuf].shmPoolSize <= offset) break;
+			*(uint32_t *) &wc->kmr_wc_buffer.shmBufferObjects[*cbuf].shmPoolData[offset] = (r << 16) | (g << 8) | b;
 		}
 	}
 
@@ -72,52 +72,52 @@ void render(bool *running, uint32_t *cbuf, void *data)
 int main(void)
 {
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
 		return 1;
 	}
 
 	if (signal(SIGABRT, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGABRT signal handler.");
 		return 1;
 	}
 
 	if (signal(SIGTERM, run_stop) == SIG_ERR) {
-		uvr_utils_log(UVR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
+		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGTERM signal handler.");
 		return 1;
 	}
 
 	struct app_wc wc;
-	struct uvr_wc_destroy wcd;
+	struct kmr_wc_destroy wcd;
 	memset(&wcd, 0, sizeof(wcd));
 	memset(&wc, 0, sizeof(wc));
 
-	struct uvr_wc_core_interface_create_info wcInterfaceCreateInfo;
+	struct kmr_wc_core_interface_create_info wcInterfaceCreateInfo;
 	wcInterfaceCreateInfo.displayName = NULL;
-	wcInterfaceCreateInfo.iType = UVR_WC_INTERFACE_WL_COMPOSITOR | UVR_WC_INTERFACE_XDG_WM_BASE |
-	                              UVR_WC_INTERFACE_WL_SHM| UVR_WC_INTERFACE_WL_SEAT | UVR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1;
+	wcInterfaceCreateInfo.iType = KMR_WC_INTERFACE_WL_COMPOSITOR | KMR_WC_INTERFACE_XDG_WM_BASE |
+	                              KMR_WC_INTERFACE_WL_SHM| KMR_WC_INTERFACE_WL_SEAT | KMR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1;
 
-	wc.uvr_wc_core_interface = uvr_wc_core_interface_create(&wcInterfaceCreateInfo);
-	if (!wc.uvr_wc_core_interface.wlDisplay || !wc.uvr_wc_core_interface.wlRegistry || !wc.uvr_wc_core_interface.wlCompositor)
+	wc.kmr_wc_core_interface = kmr_wc_core_interface_create(&wcInterfaceCreateInfo);
+	if (!wc.kmr_wc_core_interface.wlDisplay || !wc.kmr_wc_core_interface.wlRegistry || !wc.kmr_wc_core_interface.wlCompositor)
 		goto exit_error;
 
-	struct uvr_wc_buffer_create_info wcBufferCreateInfo;
-	wcBufferCreateInfo.coreInterface = &wc.uvr_wc_core_interface;
+	struct kmr_wc_buffer_create_info wcBufferCreateInfo;
+	wcBufferCreateInfo.coreInterface = &wc.kmr_wc_core_interface;
 	wcBufferCreateInfo.bufferCount = 2;
 	wcBufferCreateInfo.width = WIDTH;
 	wcBufferCreateInfo.height = HEIGHT;
 	wcBufferCreateInfo.bytesPerPixel = 4;
 	wcBufferCreateInfo.pixelFormat = WL_SHM_FORMAT_XRGB8888;
 
-	wc.uvr_wc_buffer = uvr_wc_buffer_create(&wcBufferCreateInfo);
-	if (!wc.uvr_wc_buffer.shmBufferObjects || !wc.uvr_wc_buffer.wlBufferHandles)
+	wc.kmr_wc_buffer = kmr_wc_buffer_create(&wcBufferCreateInfo);
+	if (!wc.kmr_wc_buffer.shmBufferObjects || !wc.kmr_wc_buffer.wlBufferHandles)
 		goto exit_error;
 
 	static uint32_t cbuf = 0;
 	static bool running = true;
 
-	struct uvr_wc_surface_create_info wcSurfaceCreateInfo;
-	wcSurfaceCreateInfo.coreInterface = &wc.uvr_wc_core_interface;
-	wcSurfaceCreateInfo.wcBufferObject = &wc.uvr_wc_buffer;
+	struct kmr_wc_surface_create_info wcSurfaceCreateInfo;
+	wcSurfaceCreateInfo.coreInterface = &wc.kmr_wc_core_interface;
+	wcSurfaceCreateInfo.wcBufferObject = &wc.kmr_wc_buffer;
 	wcSurfaceCreateInfo.appName = "WL SHM Example Window";
 	wcSurfaceCreateInfo.fullscreen = false;
 	wcSurfaceCreateInfo.renderer = &render;
@@ -125,18 +125,18 @@ int main(void)
 	wcSurfaceCreateInfo.rendererCurrentBuffer = &cbuf;
 	wcSurfaceCreateInfo.rendererRunning = &running;
 
-	wc.uvr_wc_surface = uvr_wc_surface_create(&wcSurfaceCreateInfo);
-	if (!wc.uvr_wc_surface.wlSurface)
+	wc.kmr_wc_surface = kmr_wc_surface_create(&wcSurfaceCreateInfo);
+	if (!wc.kmr_wc_surface.wlSurface)
 		goto exit_error;
 
-	while (wl_display_dispatch(wc.uvr_wc_core_interface.wlDisplay) != -1 && running) {
+	while (wl_display_dispatch(wc.kmr_wc_core_interface.wlDisplay) != -1 && running) {
 		// Leave blank
 	}
 
 exit_error:
-	wcd.uvr_wc_core_interface = wc.uvr_wc_core_interface;
-	wcd.uvr_wc_buffer = wc.uvr_wc_buffer;
-	wcd.uvr_wc_surface = wc.uvr_wc_surface;
-	uvr_wc_destroy(&wcd);
+	wcd.kmr_wc_core_interface = wc.kmr_wc_core_interface;
+	wcd.kmr_wc_buffer = wc.kmr_wc_buffer;
+	wcd.kmr_wc_surface = wc.kmr_wc_surface;
+	kmr_wc_destroy(&wcd);
 	return 0;
 }

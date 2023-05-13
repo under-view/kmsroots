@@ -12,7 +12,7 @@ if debuging.enabled()
 endif
 
 examples_dir = meson.current_source_dir()
-example_deps = [lib_uvr_deps]
+example_deps = [lib_kmr_deps]
 
 if shaderc.disabled()
   subdir('shaders')
