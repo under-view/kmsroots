@@ -10,6 +10,7 @@
 #include <sys/vt.h>
 #include <sys/kd.h>
 #include <linux/major.h>
+#include <libudev.h>
 
 #include "kms-node.h"
 
@@ -73,10 +74,13 @@ enum uvr_kms_node_plane_prop_type {
 
 struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 {
-	int deviceCount = 0, err = 0, kmsfd = -1;
-	char *kmsNode = NULL;
-	drmDevice **devices = NULL;
-	drmDevice *device = NULL;
+	int err = 0, kmsfd = -1;
+	const char *kmsNode = NULL;
+
+	struct udev *udev = NULL;
+	struct udev_enumerate *udevEnum = NULL;
+	struct udev_list_entry *entry = NULL;
+	struct udev_device *device = NULL;
 
 	/* If the const char *kmsnode member is defined attempt to open it */
 	if (uvrkms->kmsNode) {
@@ -84,38 +88,40 @@ struct uvr_kms_node uvr_kms_node_create(struct uvr_kms_node_create_info *uvrkms)
 		goto kms_node_create_open_drm_device;
 	}
 
-	/* Query list of available kms nodes (GPU) to get the amount available */
-	deviceCount = drmGetDevices2(0, NULL, deviceCount);
-	if (deviceCount <= 0) {
-		uvr_utils_log(UVR_DANGER, "[x] drmGetDevices2: no KMS devices available");
-		goto exit_error_kms_node_create_free_kms_dev;
+	udev = udev_new();
+	if (!udev) {
+		uvr_utils_log(UVR_DANGER, "[x] udev_new: failed to create udev context.");
+		goto exit_error_kms_node_create;
 	}
 
-	unsigned int deviceAllocSize = deviceCount * sizeof(*devices) + 1;
-	devices = alloca(deviceAllocSize); devices[deviceCount] = 0;
-
-	/* Query list of available kms nodes (GPU) to get information about it */
-	deviceCount = drmGetDevices2(0, devices, deviceCount);
-	if (deviceCount < 0) {
-		uvr_utils_log(UVR_DANGER, "[x] no KMS devices available");
-		goto exit_error_kms_node_create_free_kms_dev;
+	udevEnum = udev_enumerate_new(udev);
+	if (!udevEnum) {
+		uvr_utils_log(UVR_DANGER, "[x] udev_enumerate_new: failed");
+		goto exit_error_kms_node_create_unref_udev;
 	}
 
-	uvr_utils_log(UVR_INFO, "%d KMS devices available", deviceCount);
+	udev_enumerate_add_match_subsystem(udevEnum, "drm");
+	udev_enumerate_add_match_sysname(udevEnum, DRM_PRIMARY_MINOR_NAME "[0-9]*");
 
-	for (int i = 0; i < deviceCount; i++) {
-		device = devices[i];
-		kmsNode = (uvrkms->kmsNode) ? (char*) uvrkms->kmsNode : device->nodes[DRM_NODE_PRIMARY];
+	if (udev_enumerate_scan_devices(udevEnum) != 0) {
+		uvr_utils_log(UVR_DANGER, "[x] udev_enumerate_scan_devices: failed");
+		goto exit_error_kms_node_create_unref_udev_enumerate;
+	}
 
-		/*
-		 * TAKEN FROM Daniel Stone (gitlab/kms-quads)
-		 * We need /dev/dri/cardN nodes for modesetting, not render
-		 * nodes; render nodes are only used for GPU rendering, and
-		 * control nodes are totally useless. Primary nodes are the
-		 * only ones which let us control KMS.
-		 */
-		if (!(device->available_nodes & (1 << DRM_NODE_PRIMARY)))
+	udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(udevEnum)) {
+		device = udev_device_new_from_syspath(udev, udev_list_entry_get_name(entry));
+		if (!device)
 			continue;
+
+		kmsNode = udev_device_get_devnode(device);
+		if (!kmsNode) {
+			uvr_utils_log(UVR_WARNING, "udev_device_get_devnode: unable to acquire path to KMS node");
+			udev_device_unref(device); device = NULL;
+			continue;
+		}
+
+		udev_enumerate_unref(udevEnum); udevEnum = NULL;
+		udev_unref(udev); udev = NULL;
 
 kms_node_create_open_drm_device:
 #ifdef INCLUDE_LIBSEAT
@@ -128,9 +134,8 @@ kms_node_create_open_drm_device:
 			continue;
 		}
 
+		udev_device_unref(device); device = NULL;
 		uvr_utils_log(UVR_SUCCESS, "Opened KMS node '%s' associated fd is %d", kmsNode, kmsfd);
-
-		drmFreeDevices(devices, deviceCount); devices = NULL;
 
 		struct uvr_kms_node_device_capabilites deviceCap;
 		deviceCap = uvr_kms_node_get_device_capabilities(kmsfd);
@@ -197,9 +202,11 @@ exit_error_kms_node_create_free_kms_dev:
 		close(kmsfd);
 #endif
 	}
-	if (devices)
-		drmFreeDevices(devices, deviceCount);
-
+exit_error_kms_node_create_unref_udev_enumerate:
+	udev_enumerate_unref(udevEnum);
+exit_error_kms_node_create_unref_udev:
+	udev_unref(udev);
+exit_error_kms_node_create:
 	return (struct uvr_kms_node) { .kmsfd = -1
 #ifdef INCLUDE_LIBSEAT
 		                       , .session = NULL
