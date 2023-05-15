@@ -5,16 +5,6 @@
 #include "gltf-loader.h"
 
 
-/* TODO: move upstream in cglm */
-static inline void glm_mat4_make(float *vec, mat4 dest)
-{
-	dest[0][0] = vec[0];  dest[0][1] = vec[1];   dest[0][2] = vec[2];  dest[0][3] = vec[3];
-	dest[1][0] = vec[4];  dest[1][1] = vec[5];   dest[1][2] = vec[6];  dest[1][3] = vec[7];
-	dest[2][0] = vec[8];  dest[2][1] = vec[9];   dest[2][2] = vec[10]; dest[2][3] = vec[11];
-	dest[3][0] = vec[12]; dest[3][1] = vec[13];  dest[3][2] = vec[14]; dest[3][3] = vec[15];
-}
-
-
 struct kmr_gltf_loader_file kmr_gltf_loader_file_load(struct kmr_gltf_loader_file_load_info *kmsgltf)
 {
 	cgltf_result res = cgltf_result_max_enum;
