@@ -4,12 +4,14 @@
 #include <stddef.h> // For offsetof(3)
 #include <errno.h>
 #include <signal.h>
+#include <sys/epoll.h>
 
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
 #include "kms-node.h"
 #include "buffer.h"
+#include "input.h"
 #include "vulkan.h"
 #include "shader.h"
 #include "gltf-loader.h"
@@ -19,6 +21,7 @@
 #define WIDTH 1920
 #define HEIGHT 1080
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
+#define MAX_EPOLL_EVENTS 2
 
 struct app_vk {
 	VkInstance instance;
@@ -92,7 +95,9 @@ struct app_vk {
 struct app_kms {
 	struct kmr_kms_node kmr_kms_node;
 	struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain;
+	struct kmr_kms_node_atomic_request kmr_kms_node_atomic_request;
 	struct kmr_buffer kmr_buffer;
+	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
 #endif
@@ -139,6 +144,8 @@ static void run_stop(int UNUSED signum)
 
 int create_kms_instance(struct app_kms *kms);
 int create_kms_gbm_buffers(struct app_kms *kms);
+int create_kms_set_crtc(struct app_kms *kms);
+int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, bool *running);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -159,11 +166,23 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
-void render(bool *running, uint32_t *imageIndex, void *data)
+/*
+ * Library implementation is as such
+ * 1. Prepare properties for submitting to DRM core. The KMS primary plane object property FB_ID value
+ *    is set before "render" function is called. @fbid value is initially set to
+ *    kmr_buffer.bufferObjects[cbuf=0].fbid (102). This is done when we created the first
+ *    KMS atomic request.
+ * 2. "render" function implementation is called. Application must update fbid value (updated number is 103).
+ *    This value won't be submitted to DRM core until a page-flip event occurs.
+ * 3. Prepared properties from step 1 are sent to DRM core and the driver performs an atomic commit.
+ *    Which leads to a page-flip. When submitted the @fbid is set to 102.
+ * 4. Redo steps 1-3. Using the now rendered into framebuffer.
+ */
+void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
 {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
-	struct app_vk_kms *vkkms = (struct app_vk_kms *) data;
-	struct app_vk *app = vkkms->app_vk;
+	struct app_vk_kms *passData = (struct app_vk_kms *) data;
+	struct app_vk *app = passData->app_vk;
 
 	if (!app->kmr_vk_sync_obj.fenceHandles || !app->kmr_vk_sync_obj.semaphoreHandles)
 		return;
@@ -174,10 +193,10 @@ void render(bool *running, uint32_t *imageIndex, void *data)
 
 	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
+	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*)imageIndex);
 
-	record_vk_draw_commands(app, *imageIndex, extent2D);
-	update_uniform_buffer(app, *imageIndex, extent2D);
+	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
+	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
 
 	VkSemaphore waitSemaphores[1] = { imageSemaphore };
 	VkSemaphore signalSemaphores[1] = { renderSemaphore };
@@ -206,7 +225,7 @@ void render(bool *running, uint32_t *imageIndex, void *data)
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &app->kmr_vk_swapchain.swapchain;
-	presentInfo.pImageIndices = imageIndex;
+	presentInfo.pImageIndices = (uint32_t *) imageIndex;
 	presentInfo.pResults = NULL;
 
 	vkQueuePresentKHR(app->kmr_vk_queue.queue, &presentInfo);
@@ -259,6 +278,9 @@ int main(void)
 	if (create_kms_gbm_buffers(&kms) == -1)
 		goto exit_error;
 
+	if (create_kms_set_crtc(&kms) == -1)
+		goto exit_error;
+
 	/*
 	 * Create Vulkan Physical Device Handle, After Window Surface
 	 * so that it doesn't effect VkPhysicalDevice selection
@@ -305,12 +327,85 @@ int main(void)
 	if (create_vk_sync_objs(&app) == -1)
 		goto exit_error;
 
-	static uint32_t UNUSED cbuf = 0;
-	static bool UNUSED running = true;
+	static int fbid = 0;
+	static uint8_t cbuf = 0;
+	static bool running = true;
 
-	static struct app_vk_kms UNUSED kmsvk;
-	kmsvk.app_kms = &kms;
-	kmsvk.app_vk = &app;
+	static struct app_vk_kms passData;
+	passData.app_kms = &kms;
+	passData.app_vk = &app;
+
+	if (create_kms_atomic_request_instance(&passData, &cbuf, &fbid, &running) == -1)
+		goto exit_error;
+
+	struct epoll_event event, events[MAX_EPOLL_EVENTS];
+	int nfds = -1, epollfd = -1, kmsfd = -1, inputfd = -1, n;
+
+	struct kmr_input_create_info inputInfo;
+#ifdef INCLUDE_LIBSEAT
+	inputInfo.session = kms.kmr_session;
+#endif
+
+	kms.kmr_input = kmr_input_create(&inputInfo);
+	if (!kms.kmr_input.input)
+		goto exit_error;
+
+	inputfd = kms.kmr_input.inputfd;
+	kmsfd = kms.kmr_kms_node.kmsfd;
+
+	epollfd = epoll_create1(0);
+	if (epollfd == -1) {
+		kmr_utils_log(KMR_DANGER, "[x] epoll_create1: %s", strerror(errno));
+		goto exit_error;
+	}
+
+	event.events = EPOLLIN;
+	event.data.fd = kmsfd;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, kmsfd, &event) == -1) {
+		kmr_utils_log(KMR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+		goto exit_error;
+	}
+
+	event.events = EPOLLIN;
+	event.data.fd = inputfd;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, inputfd, &event) == -1) {
+		kmr_utils_log(KMR_DANGER, "[x] epoll_ctl: %s", strerror(errno));
+		goto exit_error;
+	}
+
+	struct kmr_kms_node_handle_drm_event_info drmEventInfo;
+	drmEventInfo.kmsfd = kmsfd;
+
+	uint64_t inputReturnCode;
+	struct kmr_input_handle_input_event_info inputEventInfo;
+	inputEventInfo.input = kms.kmr_input;
+
+	while (running) {
+		nfds = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, -1);
+		if (nfds == -1) {
+			kmr_utils_log(KMR_DANGER, "[x] epoll_wait: %s", strerror(errno));
+			goto exit_error;
+		}
+
+		for (n = 0; n < nfds; n++) {
+			if (events[n].data.fd == inputfd) {
+				inputReturnCode = kmr_input_handle_input_event(&inputEventInfo);
+
+				/*
+				 * input-event-codes.h
+				 * 1 == KEY_ESC
+				 * 16 = KEY_Q
+				 */
+				if (inputReturnCode == 1 || inputReturnCode == 16) {
+					goto exit_error;
+				}
+			}
+
+			if (events[n].data.fd == kmsfd) {
+				kmr_kms_node_handle_drm_event(&drmEventInfo);
+			}
+		}
+	}
 
 exit_error:
 	free(app.modelTransferSpace.alignedBufferMemory);
@@ -357,6 +452,7 @@ exit_error:
 
 	kmsdevd.kmr_kms_node = kms.kmr_kms_node;
 	kmsdevd.kmr_kms_node_display_output_chain = kms.kmr_kms_node_display_output_chain;
+	kmsdevd.kmr_kms_node_atomic_request = kms.kmr_kms_node_atomic_request;
 	kmr_kms_node_destroy(&kmsdevd);
 #ifdef INCLUDE_LIBSEAT
 	kmr_session_destroy(kms.kmr_session);
@@ -414,6 +510,44 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 
 	kms->kmr_buffer = kmr_buffer_create(&gbmBufferInfo);
 	if (!kms->kmr_buffer.gbmDevice)
+		return -1;
+
+	return 0;
+}
+
+
+int create_kms_set_crtc(struct app_kms *kms)
+{
+	struct kmr_kms_node_display_mode_info nextImageInfo;
+
+	for (uint8_t i = 0; i < kms->kmr_buffer.bufferCount; i++) {
+		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[0].fbid;
+		nextImageInfo.displayChain = &kms->kmr_kms_node_display_output_chain;
+		if (kmr_kms_node_display_mode_set(&nextImageInfo))
+			return -1;
+	}
+
+	return 0;
+}
+
+
+int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, bool *running)
+{
+	struct app_kms *kms = passData->app_kms;
+
+	*fbid = kms->kmr_buffer.bufferObjects[*cbuf].fbid;
+
+	struct kmr_kms_node_atomic_request_create_info atomicRequestInfo;
+	atomicRequestInfo.kmsfd = kms->kmr_kms_node_display_output_chain.kmsfd;
+	atomicRequestInfo.displayOutputChain = &kms->kmr_kms_node_display_output_chain;
+	atomicRequestInfo.renderer = &render;
+	atomicRequestInfo.rendererRunning = running;
+	atomicRequestInfo.rendererCurrentBuffer = cbuf;
+	atomicRequestInfo.rendererFbId = fbid;
+	atomicRequestInfo.rendererData = passData;
+
+	kms->kmr_kms_node_atomic_request = kmr_kms_node_atomic_request_create(&atomicRequestInfo);
+	if (!kms->kmr_kms_node_atomic_request.atomicRequest)
 		return -1;
 
 	return 0;
