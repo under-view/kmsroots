@@ -269,7 +269,7 @@ typedef struct cgltf_buffer
 {
 	char* name;
 	cgltf_size size;
-	cgltf_int index;
+	cgltf_int buffer_index;
 	char* uri;
 	void* data; /* loaded by cgltf_load_buffers */
 	cgltf_data_free_method data_free_method;
@@ -396,7 +396,7 @@ typedef struct cgltf_sampler
 typedef struct cgltf_texture
 {
 	char* name;
-	cgltf_int image_index;
+	cgltf_int source;
 	cgltf_image* image;
 	cgltf_sampler* sampler;
 	cgltf_bool has_basisu;
@@ -418,7 +418,7 @@ typedef struct cgltf_texture_transform
 typedef struct cgltf_texture_view
 {
 	cgltf_texture* texture;
-	cgltf_int index;
+	cgltf_int accessor_index;
 	cgltf_int texcoord;
 	cgltf_float scale; /* equivalent to strength for occlusion_texture */
 	cgltf_bool has_transform;
@@ -570,7 +570,7 @@ typedef struct cgltf_mesh_gpu_instancing {
 
 typedef struct cgltf_primitive {
 	cgltf_primitive_type type;
-	cgltf_int indices_index;
+	cgltf_int accessor_index;
 	cgltf_accessor* indices;
 	cgltf_material* material;
 	cgltf_attribute* attributes;
@@ -2227,7 +2227,7 @@ static cgltf_size cgltf_component_read_index(const void* in, cgltf_component_typ
 		case cgltf_component_type_r_32u:
 			return *((const uint32_t*) in);
 		case cgltf_component_type_r_32f:
-			return (cgltf_size)*((const float*) in);
+			return (cgltf_size)((cgltf_ssize)*((const float*) in));
 		case cgltf_component_type_r_8u:
 			return *((const uint8_t*) in);
 		default:
@@ -3070,8 +3070,8 @@ static int cgltf_parse_json_primitive(cgltf_options* options, jsmntok_t const* t
 		else if (cgltf_json_strcmp(tokens+i, json_chunk, "indices") == 0)
 		{
 			++i;
-			out_prim->indices_index = cgltf_json_to_int(tokens + i, json_chunk);
-			out_prim->indices = CGLTF_PTRINDEX(cgltf_accessor, out_prim->indices_index);
+			out_prim->accessor_index = cgltf_json_to_int(tokens + i, json_chunk);
+			out_prim->indices = CGLTF_PTRINDEX(cgltf_accessor, out_prim->accessor_index);
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens+i, json_chunk, "material") == 0)
@@ -3269,7 +3269,7 @@ static int cgltf_parse_json_meshes(cgltf_options* options, jsmntok_t const* toke
 
 	for (cgltf_size j = 0; j < out_data->meshes_count; ++j)
 	{
-		out_data->meshes[j].mesh_index = j;
+		out_data->meshes[j].mesh_index = (cgltf_int) j;
 		i = cgltf_parse_json_mesh(options, tokens, i, json_chunk, &out_data->meshes[j]);
 		if (i < 0)
 		{
@@ -3619,9 +3619,8 @@ static int cgltf_parse_json_texture_view(cgltf_options* options, jsmntok_t const
 		if (cgltf_json_strcmp(tokens + i, json_chunk, "index") == 0)
 		{
 			++i;
-			cgltf_int index = cgltf_json_to_int(tokens + i, json_chunk);
-			out_texture_view->index = index;
-			out_texture_view->texture = CGLTF_PTRINDEX(cgltf_texture, index);
+			out_texture_view->accessor_index = cgltf_json_to_int(tokens + i, json_chunk);
+			out_texture_view->texture = CGLTF_PTRINDEX(cgltf_texture, out_texture_view->accessor_index);
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "texCoord") == 0)
@@ -4285,8 +4284,8 @@ static int cgltf_parse_json_texture(cgltf_options* options, jsmntok_t const* tok
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "source") == 0) 
 		{
 			++i;
-			out_texture->image_index = cgltf_json_to_int(tokens + i, json_chunk);
-			out_texture->image = CGLTF_PTRINDEX(cgltf_image, out_texture->image_index);
+			out_texture->source = cgltf_json_to_int(tokens + i, json_chunk);
+			out_texture->image = CGLTF_PTRINDEX(cgltf_image, out_texture->source);
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "extras") == 0)
@@ -4892,6 +4891,7 @@ static int cgltf_parse_json_buffer(cgltf_options* options, jsmntok_t const* toke
 	for (int j = 0; j < size; ++j)
 	{
 		CGLTF_CHECK_KEY(tokens[i]);
+
 		if (cgltf_json_strcmp(tokens + i, json_chunk, "name") == 0)
 		{
 			i = cgltf_parse_json_string(options, tokens, i + 1, json_chunk, &out_buffer->name);
@@ -4939,7 +4939,7 @@ static int cgltf_parse_json_buffers(cgltf_options* options, jsmntok_t const* tok
 
 	for (cgltf_size j = 0; j < out_data->buffers_count; ++j)
 	{
-		out_data->buffers[j].index = j;
+		out_data->buffers[j].buffer_index = (cgltf_int) j;
 		i = cgltf_parse_json_buffer(options, tokens, i, json_chunk, &out_data->buffers[j]);
 		if (i < 0)
 		{
@@ -5024,7 +5024,7 @@ static int cgltf_parse_json_skins(cgltf_options* options, jsmntok_t const* token
 
 	for (cgltf_size j = 0; j < out_data->skins_count; ++j)
 	{
-		out_data->skins[j].skin_index = j;
+		out_data->skins[j].skin_index = (cgltf_int) j;
 		i = cgltf_parse_json_skin(options, tokens, i, json_chunk, &out_data->skins[j]);
 		if (i < 0)
 		{
@@ -5201,7 +5201,7 @@ static int cgltf_parse_json_cameras(cgltf_options* options, jsmntok_t const* tok
 
 	for (cgltf_size j = 0; j < out_data->cameras_count; ++j)
 	{
-		out_data->cameras[j].camera_index = j;
+		out_data->cameras[j].camera_index = (cgltf_int) j;
 		i = cgltf_parse_json_camera(options, tokens, i, json_chunk, &out_data->cameras[j]);
 		if (i < 0)
 		{
@@ -5529,7 +5529,7 @@ static int cgltf_parse_json_nodes(cgltf_options* options, jsmntok_t const* token
 
 	for (cgltf_size j = 0; j < out_data->nodes_count; ++j)
 	{
-		out_data->nodes[j].node_index = j;
+		out_data->nodes[j].node_index = (cgltf_int) j;
 		i = cgltf_parse_json_node(options, tokens, i, json_chunk, &out_data->nodes[j]);
 		if (i < 0)
 		{

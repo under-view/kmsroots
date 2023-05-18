@@ -252,12 +252,12 @@ struct kmr_gltf_loader_material kmr_gltf_loader_material_create(struct kmr_gltf_
 			       strnlen(material->name, STRUCT_MEMBER_SIZE(struct kmr_gltf_loader_material_data, materialName)));
 
 			/* Physically-Based Rendering Metallic Roughness Model */
-			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.textureIndex = material->pbr_metallic_roughness.base_color_texture.index;
-			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.imageIndex = material->pbr_metallic_roughness.base_color_texture.texture->image_index;
+			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.textureIndex = material->pbr_metallic_roughness.base_color_texture.accessor_index;
+			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.imageIndex = material->pbr_metallic_roughness.base_color_texture.texture->source;
 			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.scale = material->pbr_metallic_roughness.base_color_texture.scale;
 
-			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = material->pbr_metallic_roughness.metallic_roughness_texture.index;
-			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = material->pbr_metallic_roughness.metallic_roughness_texture.texture->image_index;
+			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = material->pbr_metallic_roughness.metallic_roughness_texture.accessor_index;
+			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = material->pbr_metallic_roughness.metallic_roughness_texture.texture->source;
 			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.scale = material->pbr_metallic_roughness.metallic_roughness_texture.scale;
 
 			materialData[materialCount].pbrMetallicRoughness.metallicFactor = material->pbr_metallic_roughness.metallic_factor;
@@ -265,12 +265,12 @@ struct kmr_gltf_loader_material kmr_gltf_loader_material_create(struct kmr_gltf_
 			memcpy(materialData[materialCount].pbrMetallicRoughness.baseColorFactor, material->pbr_metallic_roughness.base_color_factor,
 			       STRUCT_MEMBER_SIZE(struct kmr_gltf_loader_cgltf_pbr_metallic_roughness, baseColorFactor));
 
-			materialData[materialCount].normalTexture.textureIndex = material->normal_texture.index;
-			materialData[materialCount].normalTexture.imageIndex = material->normal_texture.texture->image_index;
+			materialData[materialCount].normalTexture.textureIndex = material->normal_texture.accessor_index;
+			materialData[materialCount].normalTexture.imageIndex = material->normal_texture.texture->source;
 			materialData[materialCount].normalTexture.scale = material->normal_texture.scale;
 
-			materialData[materialCount].occlusionTexture.textureIndex = material->occlusion_texture.index;
-			materialData[materialCount].occlusionTexture.imageIndex = material->occlusion_texture.texture->image_index;
+			materialData[materialCount].occlusionTexture.textureIndex = material->occlusion_texture.accessor_index;
+			materialData[materialCount].occlusionTexture.imageIndex = material->occlusion_texture.texture->source;
 			materialData[materialCount].occlusionTexture.scale = material->occlusion_texture.scale;
 
 			materialData[materialCount].meshIndex = i;
