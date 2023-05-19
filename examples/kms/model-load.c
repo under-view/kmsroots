@@ -29,9 +29,6 @@ struct app_vk {
 	struct kmr_vk_lgdev kmr_vk_lgdev;
 	struct kmr_vk_queue kmr_vk_queue;
 
-	VkSurfaceKHR surface;
-	struct kmr_vk_swapchain kmr_vk_swapchain;
-
 	/*
 	 * 0. Swapchain Images
 	 * 1. Depth Image
@@ -148,7 +145,6 @@ int create_kms_set_crtc(struct app_kms *kms);
 int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, bool *running);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
-int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_depth_image(struct app_vk *app);
 int create_vk_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
@@ -193,7 +189,7 @@ void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
 
 	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*)imageIndex);
+	// vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*)imageIndex);
 
 	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
 	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
@@ -224,7 +220,7 @@ void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
 	presentInfo.waitSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &app->kmr_vk_swapchain.swapchain;
+	presentInfo.pSwapchains = NULL;
 	presentInfo.pImageIndices = (uint32_t *) imageIndex;
 	presentInfo.pResults = NULL;
 
@@ -286,9 +282,6 @@ int main(void)
 	 * so that it doesn't effect VkPhysicalDevice selection
 	 */
 	if (create_vk_device(&app, &kms) == -1)
-		goto exit_error;
-
-	if (create_vk_swapchain(&app, &surfaceFormat, extent2D) == -1)
 		goto exit_error;
 
 	if (create_vk_swapchain_images(&app, &surfaceFormat) == -1)
@@ -415,11 +408,8 @@ exit_error:
 	 * Let the api know of what addresses to free and fd's to close
 	 */
 	appd.instance = app.instance;
-	appd.surface = app.surface;
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
-	appd.kmr_vk_swapchain_cnt = 1;
-	appd.kmr_vk_swapchain = &app.kmr_vk_swapchain;
 	appd.kmr_vk_image_cnt = ARRAY_LEN(app.kmr_vk_image);
 	appd.kmr_vk_image = app.kmr_vk_image;
 	appd.kmr_vk_shader_module_cnt = ARRAY_LEN(app.kmr_vk_shader_module);
@@ -641,56 +631,6 @@ int create_vk_device(struct app_vk *app, struct app_kms *kms)
 }
 
 
-/* choose swap chain surface format & present mode */
-int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D)
-{
-	uint32_t i;
-	VkPresentModeKHR presentMode;
-
-	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev.physDevice, app->surface);
-	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev.physDevice, app->surface);
-	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev.physDevice, app->surface);
-
-	/* Choose surface format based */
-	for (i = 0; i < surfaceFormats.surfaceFormatCount; i++) {
-		if (surfaceFormats.surfaceFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB && surfaceFormats.surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-			*surfaceFormat = surfaceFormats.surfaceFormats[i];
-		}
-	}
-
-	for (i = 0; i < surfacePresentModes.presentModeCount; i++) {
-		if (surfacePresentModes.presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-			presentMode = surfacePresentModes.presentModes[i];
-		}
-	}
-
-	free(surfaceFormats.surfaceFormats); surfaceFormats.surfaceFormats = NULL;
-	free(surfacePresentModes.presentModes); surfacePresentModes.presentModes = NULL;
-
-	struct kmr_vk_swapchain_create_info swapchainCreateInfo;
-	swapchainCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	swapchainCreateInfo.surface = app->surface;
-	swapchainCreateInfo.surfaceCapabilities = surfaceCapabilities;
-	swapchainCreateInfo.surfaceFormat = *surfaceFormat;
-	swapchainCreateInfo.extent2D = extent2D;
-	swapchainCreateInfo.imageArrayLayers = 1;
-	swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	swapchainCreateInfo.queueFamilyIndexCount = 0;
-	swapchainCreateInfo.queueFamilyIndices = NULL;
-	swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	swapchainCreateInfo.presentMode = presentMode;
-	swapchainCreateInfo.clipped = VK_TRUE;
-	swapchainCreateInfo.oldSwapChain = VK_NULL_HANDLE;
-
-	app->kmr_vk_swapchain = kmr_vk_swapchain_create(&swapchainCreateInfo);
-	if (!app->kmr_vk_swapchain.swapchain)
-		return -1;
-
-	return 0;
-}
-
-
 int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
 {
 	struct kmr_vk_image_view_create_info imageViewCreateInfo;
@@ -709,7 +649,7 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 
 	struct kmr_vk_image_create_info swapchainImagesInfo;
 	swapchainImagesInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	swapchainImagesInfo.swapchain = app->kmr_vk_swapchain.swapchain;
+	swapchainImagesInfo.swapchain = VK_NULL_HANDLE;
 	swapchainImagesInfo.imageCount = 0;                                                    // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
 	swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
 	/* Not creating images manually so rest of struct members can be safely ignored */
