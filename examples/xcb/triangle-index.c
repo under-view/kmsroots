@@ -619,20 +619,20 @@ int create_vk_buffers(struct app_vk *app)
 		return -1;
 
 	// Copy index data into CPU visible index buffer
-	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleBuffer].deviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = 0;
 	deviceMemoryCopyInfo.memoryBufferSize = singleIndexBufferSize;
 	deviceMemoryCopyInfo.bufferData = indices;
-	kmr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 	// Copy vertex data into CPU visible vertex buffer
 	deviceMemoryCopyInfo.memoryBufferSize = singleMeshSize;
 	for (uint32_t currentVertexData = 0; currentVertexData < 2; currentVertexData++) {
 		deviceMemoryCopyInfo.deviceMemoryOffset = singleIndexBufferSize + (singleMeshSize * currentVertexData);
 		deviceMemoryCopyInfo.bufferData = meshData[currentVertexData];
-		kmr_vk_map_memory(&deviceMemoryCopyInfo);
+		kmr_vk_memory_map(&deviceMemoryCopyInfo);
 	}
 
 	if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {

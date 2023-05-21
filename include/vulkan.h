@@ -1369,39 +1369,6 @@ struct kmr_vk_sampler kmr_vk_sampler_create(struct kmr_vk_sampler_create_info *k
 
 
 /*
- * struct kmr_vk_map_memory_info (kmsroots Vulkan Map Memory Information)
- *
- * members:
- * @logicalDevice      - Must pass a valid VkDevice handle (Logical Device). The device associated with @deviceMemory.
- * @deviceMemory       - Pointer to Vulkan API created memory associated with @logicalDevice
- * @deviceMemoryOffset - Byte offset within @deviceMemory buffer
- * @memoryBufferSize   - Byte size of the data to copy over.
- * @bufferData         - Pointer to memory to copy into @deviceMemory at @deviceMemoryOffset
- */
-struct kmr_vk_map_memory_info {
-	VkDevice       logicalDevice;
-	VkDeviceMemory deviceMemory;
-	VkDeviceSize   deviceMemoryOffset;
-	VkDeviceSize   memoryBufferSize;
-	const void     *bufferData;
-};
-
-
-/*
- * kmr_vk_map_memory: Function maps bytes of buffer data from application generated buffer
- *                    to Vulkan generated buffer. So, that the Vulkan api can have better
- *                    understanding and control over data it utilizes.
- *                    NOTE:
- *                    Use sparingly as consistently mapping and unmapping memory is very inefficient.
- *                    Try to avoid utilizing in render loops. Although that's how it's written
- *                    in multiple examples in this repo.
- * args:
- * @kmsvk - pointer to a struct kmr_vk_map_memory_info
- */
-void kmr_vk_map_memory(struct kmr_vk_map_memory_info *kmsvk);
-
-
-/*
  * enum kmr_vk_copy_info (kmsroots Vulkan Copy Type)
  *
  * ENUM Used by kmr_vk_copy_info to specify type of source
@@ -1635,6 +1602,39 @@ struct kmr_vk_memory_export_external_fd_info {
  *	on failure -1
  */
 int kmr_vk_memory_export_external_fd(struct kmr_vk_memory_export_external_fd_info *kmrvk);
+
+
+/*
+ * struct kmr_vk_memory_map_info (kmsroots Vulkan Map Memory Information)
+ *
+ * members:
+ * @logicalDevice      - Must pass a valid VkDevice handle (Logical Device). The device associated with @deviceMemory.
+ * @deviceMemory       - Pointer to Vulkan API created memory associated with @logicalDevice
+ * @deviceMemoryOffset - Byte offset within @deviceMemory buffer
+ * @memoryBufferSize   - Byte size of the data to copy over.
+ * @bufferData         - Pointer to memory to copy into @deviceMemory at @deviceMemoryOffset
+ */
+struct kmr_vk_memory_map_info {
+	VkDevice       logicalDevice;
+	VkDeviceMemory deviceMemory;
+	VkDeviceSize   deviceMemoryOffset;
+	VkDeviceSize   memoryBufferSize;
+	const void     *bufferData;
+};
+
+
+/*
+ * kmr_vk_memory_map: Function maps bytes of buffer data from application generated buffer
+ *                    to Vulkan generated buffer. So, that the Vulkan api can have better
+ *                    understanding and control over data it utilizes.
+ *                    NOTE:
+ *                    Use sparingly as consistently mapping and unmapping memory is very inefficient.
+ *                    Try to avoid utilizing in render loops. Although that's how it's written
+ *                    in multiple examples in this repo.
+ * args:
+ * @kmsvk - pointer to a struct kmr_vk_memory_map_info
+ */
+void kmr_vk_memory_map(struct kmr_vk_memory_map_info *kmsvk);
 
 
 /*

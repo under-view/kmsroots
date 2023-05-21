@@ -1558,7 +1558,7 @@ int kmr_vk_memory_export_external_fd(struct kmr_vk_memory_export_external_fd_inf
 }
 
 
-void kmr_vk_map_memory(struct kmr_vk_map_memory_info *kmsvk)
+void kmr_vk_memory_map(struct kmr_vk_memory_map_info *kmsvk)
 {
 	void *data = NULL;
 	vkMapMemory(kmsvk->logicalDevice, kmsvk->deviceMemory, kmsvk->deviceMemoryOffset, kmsvk->memoryBufferSize, 0, &data);

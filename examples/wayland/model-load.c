@@ -859,18 +859,18 @@ int create_vk_buffers(struct app_vk *app)
 		return -1;
 
 	// Copy GLTF buffer into Vulkan API created CPU visible buffer memory
-	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleBuffer].deviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = 0;
 	deviceMemoryCopyInfo.memoryBufferSize = vertexBufferDataSize;
 	deviceMemoryCopyInfo.bufferData = vertexBufferData;
-	kmr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 	deviceMemoryCopyInfo.deviceMemoryOffset = app->indexBufferOffset;
 	deviceMemoryCopyInfo.memoryBufferSize = indexBufferDataSize;
 	deviceMemoryCopyInfo.bufferData = indexBufferData;
-	kmr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 	if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 		// Create GPU visible vertex buffer
@@ -970,7 +970,7 @@ int create_vk_texture_images(struct app_vk *app)
 	}
 
 	/* Map all GLTF texture images into CPU Visible buffer memory */
-	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
 
@@ -980,7 +980,7 @@ int create_vk_texture_images(struct app_vk *app)
 		deviceMemoryCopyInfo.deviceMemoryOffset = imageData[curImage].imageBufferOffset;
 		deviceMemoryCopyInfo.memoryBufferSize = imageData[curImage].imageSize;
 		deviceMemoryCopyInfo.bufferData = imageData[curImage].pixels;
-		kmr_vk_map_memory(&deviceMemoryCopyInfo);
+		kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 		imageViewCreateInfos[curImage].imageViewflags = 0;
 		imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -1781,13 +1781,13 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	ubo.projection[1][1] *= -1;
 
 	// Copy UBO Scene data
-	struct kmr_vk_map_memory_info deviceMemoryCopyInfo;
+	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
 	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = uniformBufferDeviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = swapchainImageIndex * uboSize;
 	deviceMemoryCopyInfo.memoryBufferSize = uboSize;
 	deviceMemoryCopyInfo.bufferData = &ubo;
-	kmr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 	// Spin model about the X-axis
 	static float angle = 0.0f;
@@ -1820,5 +1820,5 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	deviceMemoryCopyInfo.deviceMemoryOffset = uboSize * PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
 	deviceMemoryCopyInfo.memoryBufferSize = app->modelTransferSpace.bufferAlignment * app->meshCount;
 	deviceMemoryCopyInfo.bufferData = app->modelTransferSpace.alignedBufferMemory;
-	kmr_vk_map_memory(&deviceMemoryCopyInfo);
+	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 }
