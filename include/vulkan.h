@@ -968,7 +968,7 @@ struct kmr_vk_semaphore_handle {
 
 
 /*
- * struct kmr_vk_sync_obj (kmsroots Vulkan Synchronization Objects)
+ * struct kmr_vk_sync_obj (kmsroots Vulkan Synchronization Object)
  *
  * members:
  * @logicalDevice    - VkDevice handle (Logical Device) associated with @fenceCount VkFence objects
@@ -988,7 +988,7 @@ struct kmr_vk_sync_obj {
 
 
 /*
- * struct kmr_vk_sync_obj_create_info (kmsroots Vulkan Command Buffer Create Information)
+ * struct kmr_vk_sync_obj_create_info (kmsroots Vulkan Synchronization Object Create Information)
  *
  * members:
  * @logicalDevice  - Must pass a valid VkDevice handle (Logical Device)
@@ -1018,6 +1018,88 @@ struct kmr_vk_sync_obj_create_info {
  *	on failure struct kmr_vk_sync_obj { with member nulled }
  */
 struct kmr_vk_sync_obj kmr_vk_sync_obj_create(struct kmr_vk_sync_obj_create_info *kmsvk);
+
+
+/*
+ * enum kmr_vk_sync_obj_type (kmsroots Vulkan Synchronization Object Type)
+ */
+typedef enum _kmr_vk_sync_obj_type {
+	KMR_VK_SYNC_OBJ_FENCE = 0,
+	KMR_VK_SYNC_OBJ_SEMAPHORE = 1
+} kmr_vk_sync_obj_type;
+
+
+/*
+ * union kmr_vk_sync_obj_handle (kmsroots Vulkan Synchronization Object Handles)
+ *
+ * Lessens memory as only one type of Vulkan synchronization primitive is used
+ * at a given time.
+ */
+typedef union _kmr_vk_sync_obj_handle {
+	VkFence     fence;
+	VkSemaphore semaphore;
+} kmr_vk_sync_obj_handle;
+
+
+/*
+ * struct kmr_vk_sync_obj_import_external_sync_fd_info (kmsroots Vulkan Synchronization Object Import External Synchronization File Descriptor Information)
+ *
+ * members:
+ * @logicalDevice - Must pass a valid VkDevice handle (Logical Device)
+ * @syncFd        - External Posix file descriptor to import and associate with Vulkan sync object.
+ * @syncType      - Specifies the type of Vulkan sync object to bind to.
+ * @syncHandle    - Must pass one valid Vulkan sync object @fence or @semaphore.
+ */
+struct kmr_vk_sync_obj_import_external_sync_fd_info {
+	VkDevice               logicalDevice;
+	int                    syncFd;
+	kmr_vk_sync_obj_type   syncType;
+	kmr_vk_sync_obj_handle syncHandle;
+};
+
+
+/*
+ * kmr_vk_sync_obj_import_external_sync_fd: From external POSIX DMA-BUF synchronization file descriptor bind to choosen Vulkan
+ *                                          synchronization object. The file descriptors can be acquired via a call to
+ *                                          kmr_dma_buf_export_sync_file_create(3).
+ *
+ * args:
+ * @kmrvk - pointer to a struct kmr_vk_sync_obj_import_external_sync_fd_info
+ * return:
+ *	on success 0
+ *	on failure -1
+ */
+int kmr_vk_sync_obj_import_external_sync_fd(struct kmr_vk_sync_obj_import_external_sync_fd_info *kmrvk);
+
+
+/*
+ * struct kmr_vk_sync_obj_export_external_sync_fd_info (kmsroots Vulkan Synchronization Object Export External Synchronization File Descriptor Information)
+ *
+ * members:
+ * @logicalDevice - Must pass a valid VkDevice handle (Logical Device)
+ * @syncType      - Specifies the type of Vulkan sync object to bind to.
+ * @syncHandle    - Must pass one valid Vulkan sync object @fence or @semaphore.
+ */
+struct kmr_vk_sync_obj_export_external_sync_fd_info {
+	VkDevice               logicalDevice;
+	kmr_vk_sync_obj_type   syncType;
+	kmr_vk_sync_obj_handle syncHandle;
+};
+
+
+/*
+ * kmr_vk_sync_obj_export_external_sync_fd: Creates POSIX file descriptor associated with Vulkan synchronization object.
+ *                                          This file descriptor can later be associated with a DMA-BUF fd via
+ *                                          kmr_dma_buf_import_sync_file_create(3).
+ *
+ * args:
+ * @kmrvk - pointer to a struct kmr_vk_sync_obj_export_external_sync_fd_info
+ * return:
+ *	on success posix file descriptor associated
+ *	           with Vulkan sync object
+ *	on failure -1
+ */
+int kmr_vk_sync_obj_export_external_sync_fd(struct kmr_vk_sync_obj_export_external_sync_fd_info *kmrvk);
 
 
 /*

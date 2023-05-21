@@ -984,7 +984,7 @@ struct kmr_vk_sync_obj kmr_vk_sync_obj_create(struct kmr_vk_sync_obj_create_info
 	semaphoreHandles = calloc(kmsvk->semaphoreCount, sizeof(struct kmr_vk_semaphore_handle));
 	if (!semaphoreHandles) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_vk_sync_obj_free_vk_fence;
+		goto exit_vk_sync_obj_free_vk_sync_handles;
 	}
 
 	VkFenceCreateInfo fenceCreateInfo = {};
@@ -1030,13 +1030,118 @@ exit_vk_sync_obj_destroy_vk_fence:
 	for (currentSyncObject = 0; currentSyncObject < kmsvk->fenceCount; currentSyncObject++)
 		if (fenceHandles[currentSyncObject].fence)
 			vkDestroyFence(kmsvk->logicalDevice, fenceHandles[currentSyncObject].fence, NULL);
-//exit_vk_sync_obj_free_vk_semaphore:
+exit_vk_sync_obj_free_vk_sync_handles:
 	free(semaphoreHandles);
-exit_vk_sync_obj_free_vk_fence:
 	free(fenceHandles);
 exit_vk_sync_obj:
 	return (struct kmr_vk_sync_obj) { .logicalDevice = VK_NULL_HANDLE, .fenceCount = 0, .fenceHandles = NULL, .semaphoreCount = 0, .semaphoreHandles = NULL };
 };
+
+
+int kmr_vk_sync_obj_import_external_sync_fd(struct kmr_vk_sync_obj_import_external_sync_fd_info *kmrvk)
+{
+	VkResult res;
+
+	switch (kmrvk->syncType) {
+		case KMR_VK_SYNC_OBJ_SEMAPHORE:
+		{
+			VkImportSemaphoreFdInfoKHR importSyncInfo;
+			importSyncInfo.sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHR;
+			importSyncInfo.pNext = NULL;
+			importSyncInfo.semaphore = kmrvk->syncHandle.semaphore;
+			importSyncInfo.flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT;
+			importSyncInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT;
+			importSyncInfo.fd = kmrvk->syncFd;
+
+			PFN_vkImportSemaphoreFdKHR vkImportSemaphoreFdKHR;
+			KMR_VK_DEVICE_PROC_ADDR(kmrvk->logicalDevice, vkImportSemaphoreFdKHR, ImportSemaphoreFdKHR);
+
+			res = vkImportSemaphoreFdKHR(kmrvk->logicalDevice, &importSyncInfo);
+			if (res) {
+				kmr_utils_log(KMR_DANGER, "[x] vkImportSemaphoreFdKHR: %s", vkres_msg(res));
+				return -1;
+			}
+
+		}
+			break;
+		case KMR_VK_SYNC_OBJ_FENCE:
+		{
+			VkImportFenceFdInfoKHR importSyncInfo;
+			importSyncInfo.sType = VK_STRUCTURE_TYPE_IMPORT_FENCE_FD_INFO_KHR;
+			importSyncInfo.pNext = NULL;
+			importSyncInfo.fence = kmrvk->syncHandle.fence;
+			importSyncInfo.flags = VK_FENCE_IMPORT_TEMPORARY_BIT;
+			importSyncInfo.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
+			importSyncInfo.fd = kmrvk->syncFd;
+
+			PFN_vkImportFenceFdKHR vkImportFenceFdKHR;
+			KMR_VK_DEVICE_PROC_ADDR(kmrvk->logicalDevice, vkImportFenceFdKHR, ImportFenceFdKHR);
+
+			res = vkImportFenceFdKHR(kmrvk->logicalDevice, &importSyncInfo);
+			if (res) {
+				kmr_utils_log(KMR_DANGER, "[x] vkImportFenceFdKHR: %s", vkres_msg(res));
+				return -1;
+			}
+		}
+			break;
+		default:
+			kmr_utils_log(KMR_DANGER, "[x] kmr_vk_sync_obj_import_external_sync_fd: Did you correctly specify @syncType");
+			return -1;
+	}
+	return 0;
+}
+
+
+int kmr_vk_sync_obj_export_external_sync_fd(struct kmr_vk_sync_obj_export_external_sync_fd_info *kmrvk)
+{
+	VkResult res;
+	int fd = -1;
+
+	switch (kmrvk->syncType) {
+		case KMR_VK_SYNC_OBJ_SEMAPHORE:
+		{
+			VkSemaphoreGetFdInfoKHR exportSyncInfo;
+			exportSyncInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR;
+			exportSyncInfo.pNext = NULL;
+			exportSyncInfo.semaphore = kmrvk->syncHandle.semaphore;
+			exportSyncInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT;
+
+			PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR;
+			KMR_VK_DEVICE_PROC_ADDR(kmrvk->logicalDevice, vkGetSemaphoreFdKHR, GetSemaphoreFdKHR);
+
+			// Note: vkGetSemaphoreFdKHR implicitly resets the semaphore
+			res = vkGetSemaphoreFdKHR(kmrvk->logicalDevice, &exportSyncInfo, &fd);
+			if (res) {
+				kmr_utils_log(KMR_DANGER, "[x] vkGetSemaphoreFdKHR: %s", vkres_msg(res));
+				return -1;
+			}
+		}
+			break;
+		case KMR_VK_SYNC_OBJ_FENCE:
+		{
+			VkFenceGetFdInfoKHR exportSyncInfo;
+			exportSyncInfo.sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR;
+			exportSyncInfo.pNext = NULL;
+			exportSyncInfo.fence = kmrvk->syncHandle.fence;
+			exportSyncInfo.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
+
+			PFN_vkGetFenceFdKHR vkGetFenceFdKHR;
+			KMR_VK_DEVICE_PROC_ADDR(kmrvk->logicalDevice, vkGetFenceFdKHR, GetFenceFdKHR);
+
+			res = vkGetFenceFdKHR(kmrvk->logicalDevice, &exportSyncInfo, &fd);
+			if (res) {
+				kmr_utils_log(KMR_DANGER, "[x] vkGetFenceFdKHR: %s", vkres_msg(res));
+				return -1;
+			}
+		}
+			break;
+		default:
+			kmr_utils_log(KMR_DANGER, "[x] kmr_vk_sync_obj_export_external_sync_fd: Did you correctly specify @syncType");
+			return -1;
+	}
+
+	return fd;
+}
 
 
 struct kmr_vk_buffer kmr_vk_buffer_create(struct kmr_vk_buffer_create_info *kmsvk)
