@@ -1607,6 +1607,37 @@ VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysica
 
 
 /*
+ * struct kmr_vk_memory_export_external_fd_info (kmsroots Vulkan Device Memory Export External File Descriptor Information)
+ *
+ * members:
+ * @logicalDevice - Must pass a valid VkDevice handle (Logical Device)
+ * @deviceMemory  - Must pass a valid VkDeviceMemory handle to retrieve POSIX file descriptor.
+ * @handleType    - Type of file descriptor to create from @deviceMemory.
+ */
+struct kmr_vk_memory_export_external_fd_info {
+	VkDevice                           logicalDevice;
+	VkDeviceMemory                     deviceMemory;
+	VkExternalMemoryHandleTypeFlagBits handleType;
+};
+
+
+/*
+ * kmr_vk_memory_export_external_fd: Creates POSIX file descriptor associated with a VkDeviceMemory object.
+ *                                   VkDeviceMemory objects are associated with the actual memory whether
+ *                                   CPU or GPU visible. VkBuffer,VkImage headers need to be backed by
+ *                                   VkDeviceMemory. Application must call close(2) on resulting file
+ *                                   descriptor.
+ *
+ * args:
+ * @kmrvk - pointer to a struct kmr_vk_memory_export_external_fd_info
+ * return:
+ *	on success POSIX file descriptor associated with VkDeviceMemory
+ *	on failure -1
+ */
+int kmr_vk_memory_export_external_fd(struct kmr_vk_memory_export_external_fd_info *kmrvk);
+
+
+/*
  * struct kmr_vk_destroy (kmsroots Vulkan Destroy)
  *
  * members:

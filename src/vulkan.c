@@ -1534,6 +1534,30 @@ VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysica
 }
 
 
+int kmr_vk_memory_export_external_fd(struct kmr_vk_memory_export_external_fd_info *kmrvk)
+{
+	VkResult res;
+	int fd = -1;
+
+	VkMemoryGetFdInfoKHR exportMemoryInfo;
+	exportMemoryInfo.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR;
+	exportMemoryInfo.pNext = NULL;
+	exportMemoryInfo.memory = kmrvk->deviceMemory;
+	exportMemoryInfo.handleType = kmrvk->handleType;
+
+	PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR;
+	KMR_VK_DEVICE_PROC_ADDR(kmrvk->logicalDevice, vkGetMemoryFdKHR, GetMemoryFdKHR);
+
+	res = vkGetMemoryFdKHR(kmrvk->logicalDevice, &exportMemoryInfo, &fd);
+	if (res) {
+		kmr_utils_log(KMR_DANGER, "[x] vkGetMemoryFdKHR: %s", vkres_msg(res));
+		return -1;
+	}
+
+	return fd;
+}
+
+
 void kmr_vk_map_memory(struct kmr_vk_map_memory_info *kmsvk)
 {
 	void *data = NULL;
