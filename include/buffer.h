@@ -36,12 +36,11 @@ enum kmr_buffer_type {
  * @modifier     - The modifier details information on how pixels should be within a buffer for different types
  *                 operations such as scan out or rendering. (i.e linear, tiled, compressed, etc...)
  *                 https://01.org/linuxgraphics/Linux-Window-Systems-with-DRM
- * @planeCount   - Number of Planer Formats
+ * @planeCount   - Number of Planer Formats. The number of @dmaBufferFds, @offsets, @pitches retrieved per plane.
  *                 More information can be found https://en.wikipedia.org/wiki/Planar_(computer_graphics)
- * @pitches      - pitch for each plane
+ * @pitches      - width in bytes for each plane
  * @offsets      - offset of each plane
  *                 More information can be found https://gitlab.freedesktop.org/mesa/drm/-/blob/main/include/drm/drm_mode.h#L589
- * @gemHandles   - Stores GEM handles per plane used to query a DMA buf fd
  * @dmaBufferFds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware
  * @kmsfd        - File descriptor to open DRI device
  */
@@ -53,7 +52,6 @@ struct kmr_buffer_object {
 	unsigned      planeCount;
 	unsigned      pitches[4];
 	unsigned      offsets[4];
-	unsigned      gemHandles[4];
 	int           dmaBufferFds[4];
 	int           kmsfd;
 };

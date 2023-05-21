@@ -54,10 +54,14 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 		}
 	}
 
+	// Stores GEM handles per plane used to retrieve an FD to a DMA-BUF
+	// and retrieve a KMS framebuffer ID for modesetting purposes.
+	unsigned gemHandles[4];
 	for (currentBuffer = 0; currentBuffer < kmsbuff->bufferCount; currentBuffer++) {
 		bufferObjects[currentBuffer].planeCount = gbm_bo_get_plane_count(bufferObjects[currentBuffer].bo);
 		bufferObjects[currentBuffer].modifier = gbm_bo_get_modifier(bufferObjects[currentBuffer].bo);
 		bufferObjects[currentBuffer].format = gbm_bo_get_format(bufferObjects[currentBuffer].bo);
+		memset(gemHandles, 0, sizeof(gemHandles));
 
 		for (currentPlane = 0; currentPlane < bufferObjects[currentBuffer].planeCount; currentPlane++) {
 			union gbm_bo_handle boHandle;
@@ -69,7 +73,7 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 				goto exit_error_buffer_gbm_bo_detroy;
 			}
 
-			bufferObjects[currentBuffer].gemHandles[currentPlane] = boHandle.u32;
+			gemHandles[currentPlane] = boHandle.u32;
 
 			bufferObjects[currentBuffer].pitches[currentPlane] = gbm_bo_get_stride_for_plane(bufferObjects[currentBuffer].bo, currentPlane);
 			if (!bufferObjects[currentBuffer].pitches[currentPlane]) {
@@ -79,11 +83,10 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 
 			bufferObjects[currentBuffer].offsets[currentPlane] = gbm_bo_get_offset(bufferObjects[currentBuffer].bo, currentPlane);
 
-			struct drm_prime_handle drmPrimeRequest = {
-				.handle = bufferObjects[currentBuffer].gemHandles[currentPlane],
-				.flags  = DRM_RDWR,
-				.fd     = -1
-			};
+			struct drm_prime_handle drmPrimeRequest;
+			drmPrimeRequest.handle = gemHandles[currentPlane];
+			drmPrimeRequest.flags  = DRM_RDWR;
+			drmPrimeRequest.fd     = -1;
 
 			/*
 			 * Retrieve a DMA-BUF fd (PRIME fd) for a given GEM buffer via the GEM handle.
@@ -127,7 +130,7 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 			framebuffer.width  = kmsbuff->width;
 			framebuffer.height = kmsbuff->height;
 			framebuffer.pitch  = bufferObjects[currentBuffer].pitches[0];
-			framebuffer.handle = bufferObjects[currentBuffer].gemHandles[0];
+			framebuffer.handle = gemHandles[0];
 			bufferObjects[currentBuffer].fbid = 0;
 
 			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB, &framebuffer) == -1) {
@@ -147,7 +150,7 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 			framebuffer.pixel_format = bufferObjects[currentBuffer].format;
 			framebuffer.flags = DRM_MODE_FB_MODIFIERS;
 
-			memcpy(framebuffer.handles, bufferObjects[currentBuffer].gemHandles, sizeof(framebuffer.handles));
+			memcpy(framebuffer.handles, gemHandles, sizeof(framebuffer.handles));
 			memcpy(framebuffer.pitches, bufferObjects[currentBuffer].pitches, sizeof(framebuffer.pitches));
 			memcpy(framebuffer.offsets, bufferObjects[currentBuffer].offsets, sizeof(framebuffer.offsets));
 			memcpy(framebuffer.modifier, kmsbuff->modifiers, sizeof(framebuffer.modifier));
@@ -198,13 +201,14 @@ void kmr_buffer_destroy(struct kmr_buffer_destroy *kmsbuff)
 				ioctl(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, DRM_IOCTL_MODE_RMFB, &kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].fbid);
 			if (kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].bo)
 				gbm_bo_destroy(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].bo);
-		for (j = 0; j < kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].planeCount; j++)  {
-			if (kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j] != -1)
-				drmCloseBufferHandle(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j]);
+
+			for (j = 0; j < kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].planeCount; j++)  {
+				if (kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j] != -1)
+					drmCloseBufferHandle(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j]);
+			}
 		}
-	}
-	free(kmsbuff->kmr_buffer[currentIndex].bufferObjects);
-	if (kmsbuff->kmr_buffer[currentIndex].gbmDevice)
-		gbm_device_destroy(kmsbuff->kmr_buffer[currentIndex].gbmDevice);
+		free(kmsbuff->kmr_buffer[currentIndex].bufferObjects);
+		if (kmsbuff->kmr_buffer[currentIndex].gbmDevice)
+			gbm_device_destroy(kmsbuff->kmr_buffer[currentIndex].gbmDevice);
 	}
 }
