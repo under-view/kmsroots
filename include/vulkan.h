@@ -1574,6 +1574,22 @@ VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysica
 
 
 /*
+ * kmr_vk_get_external_fd_memory_properties: Get Properties of External Memory File Descriptors
+ *
+ * args:
+ * @logicalDevice   - Must pass a valid VkDevice handle (Logical Device)
+ * @extenalMemoryFd - File descriptor to externally create memory.
+ * @handleType      - Describes the type of file descriptor @externalMemoryFd is.
+ * return:
+ *	on success VkMemoryFdPropertiesKHR { member: @memoryTypeBits }
+ *	on failure UINT32_MAX
+ */
+uint32_t kmr_vk_get_external_fd_memory_properties(VkDevice logicalDevice,
+                                                  int externalMemoryFd,
+                                                  VkExternalMemoryHandleTypeFlagBits handleType);
+
+
+/*
  * struct kmr_vk_memory_export_external_fd_info (kmsroots Vulkan Device Memory Export External File Descriptor Information)
  *
  * members:
