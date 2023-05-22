@@ -467,6 +467,7 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 	swapchainImagesInfo.physDevice = VK_NULL_HANDLE;
 	swapchainImagesInfo.imageCreateInfos = NULL;
 	swapchainImagesInfo.memPropertyFlags = 0;
+	swapchainImagesInfo.useExternalDmaBuffer = false;
 
 	app->kmr_vk_image = kmr_vk_image_create(&swapchainImagesInfo);
 	if (!app->kmr_vk_image.imageViewHandles[0].view)

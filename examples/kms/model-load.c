@@ -656,6 +656,7 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 	swapchainImagesInfo.physDevice = VK_NULL_HANDLE;
 	swapchainImagesInfo.imageCreateInfos = NULL;
 	swapchainImagesInfo.memPropertyFlags = 0;
+	swapchainImagesInfo.useExternalDmaBuffer = false;
 
 	app->kmr_vk_image[0] = kmr_vk_image_create(&swapchainImagesInfo);
 	if (!app->kmr_vk_image[0].imageViewHandles[0].view)
@@ -729,6 +730,7 @@ int create_vk_depth_image(struct app_vk *app)
 	imageCreateInfo.imageCreateInfos = &vimageCreateInfo;
 	imageCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	imageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	imageCreateInfo.useExternalDmaBuffer = false;
 
 	app->kmr_vk_image[1] = kmr_vk_image_create(&imageCreateInfo);
 	if (!app->kmr_vk_image[1].imageHandles[0].image && !app->kmr_vk_image[1].imageViewHandles[0].view)
@@ -1119,6 +1121,7 @@ int create_vk_texture_images(struct app_vk *app)
 	vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;
 	vkImageCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	vkImageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	vkImageCreateInfo.useExternalDmaBuffer = false;
 
 	kmr_utils_log(KMR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", imageCount);
 	app->kmr_vk_image[textureImageIndex] = kmr_vk_image_create(&vkImageCreateInfo);
