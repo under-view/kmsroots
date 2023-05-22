@@ -12,7 +12,7 @@
 #endif
 
 #include <vulkan/vulkan.h>
-
+#include <stdbool.h>
 
 /*
  * Due to Vulkan not directly exposing functions for all platforms.
@@ -375,10 +375,16 @@ struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_i
  *
  * @image        - Represents actual image itself. May be a texture, etc...
  * @deviceMemory - Actual memory whether CPU or GPU visible associate with VkImage object
+ * @offsets      - The array of byte memory offsets in @deviceMemory. Each DMA-BUF will be
+ *                 added to a single VkDeviceMemory (@deviceMemory) object. Then binded to
+ *                 a single VkImage resource.
+ * @offsetsCount - The amount of DMA-BUF fds (drmFormatModifierPlaneCount) per VkImage Resource.
  */
 struct kmr_vk_image_handle {
 	VkImage        image;
 	VkDeviceMemory deviceMemory;
+	uint32_t       offsets[4];
+	uint8_t        offsetsCount;
 };
 
 
@@ -445,35 +451,52 @@ struct kmr_vk_image_view_create_info {
  *
  * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html for more info on bellow members
  *
- * @imageflags                 - Bits used to specify additional parameters for a given VkImage.
- * @imageType                  - Coordinate system the pixels in the image will use when being addressed.
- * @imageFormat                - Image Format (Bits per color channel, the color channel ordering, etc...).
- * @imageExtent3D              - Dimension (i.e. width, height, and depth) of the given image(s).
- * @imageMipLevels             - The number of levels of detail available for minified sampling of the image.
- * @imageArrayLayers           - The number of layers in the image
- * @imageSamples               - Bitmask specifying sample counts supported for an image used for storage operations
- * @imageTiling                - Specifies the tiling arrangement (image layout) of data in an image (linear, optimal)
- * @imageUsage                 - Describes to vulkan the intended usage for the VkImage
- * @imageSharingMode           - Vulkan image may be owned by one device queue family or shared by multiple device queue families.
- *                               Sets whether images can only be accessed by a single queue or multiple queues
- * @imageQueueFamilyIndexCount - Array size of @imageQueueFamilyIndices. Amount of queue families may own given vulkan image.
- * @imageQueueFamilyIndices    - Pointer to an array of queue families to associate/own a given vulkan image.
- * @imageInitialLayout         - Set the inital memory layout of a VkImage
+ * @imageflags                     - Bits used to specify additional parameters for a given VkImage.
+ * @imageType                      - Coordinate system the pixels in the image will use when being addressed.
+ * @imageFormat                    - Image Format (Bits per color channel, the color channel ordering, etc...).
+ * @imageExtent3D                  - Dimension (i.e. width, height, and depth) of the given image(s).
+ * @imageMipLevels                 - The number of levels of detail available for minified sampling of the image.
+ * @imageArrayLayers               - The number of layers in the image
+ * @imageSamples                   - Bitmask specifying sample counts supported for an image used for storage operations
+ * @imageTiling                    - Specifies the tiling arrangement (image layout) of data in an image (linear, optimal)
+ * @imageUsage                     - Describes to vulkan the intended usage for the VkImage
+ * @imageSharingMode               - Vulkan image may be owned by one device queue family or shared by multiple device queue families.
+ *                                   Sets whether images can only be accessed by a single queue or multiple queues
+ * @imageQueueFamilyIndexCount     - Array size of @imageQueueFamilyIndices. Amount of queue families may own given vulkan image.
+ * @imageQueueFamilyIndices        - Pointer to an array of queue families to associate/own a given vulkan image.
+ * @imageInitialLayout             - Set the inital memory layout of a VkImage
+ * @imageDmaBufferFormatModifier   - A 64-bit, vendor-prefixed, semi-opaque unsigned integer describing vendor-specific details of
+ *                                   an image’s memory layout. Acquired when a call to kmr_buffer_create(3) is made and stored in
+ *                                   kmr_buffer.bufferObjects[0].modifier.
+ * @imageDmaBufferCount            - Amount of elements in @imageDmaBufferFds, @imageDmaBufferResourceInfo, and @imageDmaBufferMemPropertyFlags.
+ *                                   Value should be struct kmr_buffer.bufferObjects[0].planeCount.
+ * @imageDmaBufferFds              - Array of DMA-BUF fds. Acqiored when a call to kmr_buffer_create(3) is made and stored in
+ *                                   kmr_buffer.bufferObjects[0].dmaBufferFds[4].
+ * @imageDmaBufferResourceInfo     - Info about the DMA-BUF including offset, size, pitch, etc. Most of which is
+ *                                   acquired after a call to kmr_buffer_create(3) is made and stored in
+ *                                   kmr_buffer.bufferObjects[0].{pitches[4], offsets[4], etc..}
+ * @imageDmaBufferMemTypeBits      - Array of VkMemoryRequirements.memoryTypeBits that can be acquired after a call to
+ *                                   kmr_vk_get_external_fd_memory_properties(3).
  */
 struct kmr_vk_vimage_create_info {
-	VkImageCreateFlags       imageflags;
-	VkImageType              imageType;
-	VkFormat                 imageFormat;
-	VkExtent3D               imageExtent3D;
-	uint32_t                 imageMipLevels;
-	uint32_t                 imageArrayLayers;
-	VkSampleCountFlagBits    imageSamples;
-	VkImageTiling            imageTiling;
-	VkImageUsageFlags        imageUsage;
-	VkSharingMode            imageSharingMode;
-	uint32_t                 imageQueueFamilyIndexCount;
-	const uint32_t           *imageQueueFamilyIndices;
-	VkImageLayout            imageInitialLayout;
+	VkImageCreateFlags        imageflags;
+	VkImageType               imageType;
+	VkFormat                  imageFormat;
+	VkExtent3D                imageExtent3D;
+	uint32_t                  imageMipLevels;
+	uint32_t                  imageArrayLayers;
+	VkSampleCountFlagBits     imageSamples;
+	VkImageTiling             imageTiling;
+	VkImageUsageFlags         imageUsage;
+	VkSharingMode             imageSharingMode;
+	uint32_t                  imageQueueFamilyIndexCount;
+	const uint32_t            *imageQueueFamilyIndices;
+	VkImageLayout             imageInitialLayout;
+	uint64_t                  imageDmaBufferFormatModifier;
+	uint32_t                  imageDmaBufferCount;
+	int                       *imageDmaBufferFds;
+	const VkSubresourceLayout *imageDmaBufferResourceInfo;
+	uint32_t                  *imageDmaBufferMemTypeBits;
 };
 
 
@@ -494,6 +517,7 @@ struct kmr_vk_vimage_create_info {
  *                               If imageCount given array size must be @imageCount. If not given array size must equal 1.
  * @physDevice                 - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
  * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
+ * @useExternalDmaBuffer       - Set to true if VkImage Resources created need to be associated with an external DMA-BUF created by GBM.
  */
 struct kmr_vk_image_create_info {
 	VkDevice                             logicalDevice;
@@ -503,6 +527,7 @@ struct kmr_vk_image_create_info {
 	struct kmr_vk_vimage_create_info     *imageCreateInfos;
 	VkPhysicalDevice                     physDevice;
 	VkMemoryPropertyFlagBits             memPropertyFlags;
+	bool                                 useExternalDmaBuffer;
 };
 
 
