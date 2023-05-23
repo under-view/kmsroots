@@ -550,7 +550,14 @@ VkFormat choose_depth_image_format(struct app_vk *app, VkImageTiling imageTiling
 	VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
 	VkFormat format = VK_FORMAT_UNDEFINED;
 
-	struct kmr_vk_phdev_format_prop physDeviceFormatProps = kmr_vk_get_phdev_format_properties(app->kmr_vk_phdev.physDevice, formats, ARRAY_LEN(formats));
+	struct kmr_vk_phdev_format_prop_info formatPropsInfo;
+	formatPropsInfo.physDev = app->kmr_vk_phdev.physDevice;
+	formatPropsInfo.formats = formats;
+	formatPropsInfo.formatCount = ARRAY_LEN(formats);
+	formatPropsInfo.modifierProperties = NULL;
+	formatPropsInfo.modifierCount = 0;
+
+	struct kmr_vk_phdev_format_prop physDeviceFormatProps = kmr_vk_get_phdev_format_properties(&formatPropsInfo);
 	for (uint32_t fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
 		if (imageTiling == VK_IMAGE_TILING_OPTIMAL && (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags) {
 			format = formats[fp];
