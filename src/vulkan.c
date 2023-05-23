@@ -558,7 +558,7 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 	uint32_t imageCount = 0, curImage = 0, i, p;
 	VkImage *vkImages = NULL;
 	VkDeviceMemory *deviceMemories = NULL;
-	uint32_t **offsets = NULL;
+	//uint32_t **offsets = NULL;
 
 	struct kmr_vk_image_handle *imageHandles = NULL;
 	struct kmr_vk_image_view_handle *imageViewHandles = NULL;
@@ -583,7 +583,7 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 		imageCount = kmsvk->imageCount;
 		vkImages = alloca(imageCount * sizeof(VkImage));
 		deviceMemories = alloca(imageCount * sizeof(VkDeviceMemory));
-		offsets = alloca(imageCount * (sizeof(uint32_t) * 4)); // 4 Max number of planes
+		// offsets = alloca(imageCount * (sizeof(uint32_t) * 4)); // 4 Max number of planes
 
 		memset(vkImages, 0, imageCount * sizeof(VkImage));
 		memset(deviceMemories, 0, imageCount * sizeof(VkDeviceMemory));
@@ -651,13 +651,14 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 			for (p = 0; p < imageModifierInfo.drmFormatModifierPlaneCount; p++) {
 				planeMemoryRequirementsInfo.planeAspect |= choose_memory_plane_aspect(p);
 				memoryTypeBits |= kmsvk->imageCreateInfos[curImage].imageDmaBufferMemTypeBits[p];
-				offsets[i][p] = 0;
+				//offsets[i][p] = 0;
 			}
 
 			vkGetImageMemoryRequirements2(kmsvk->logicalDevice, &imageMemoryRequirementsInfo, &memoryRequirements2);
 
 			allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
-			allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmsvk->physDevice, memoryRequirements2.memoryRequirements.memoryTypeBits, memPropertyFlags);
+			memoryTypeBits = (kmsvk->useExternalDmaBuffer) ? memoryRequirements2.memoryRequirements.memoryTypeBits & memoryTypeBits : memoryRequirements2.memoryRequirements.memoryTypeBits;
+			allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmsvk->physDevice, memoryTypeBits, memPropertyFlags);
 
 			res = vkAllocateMemory(kmsvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i]);
 			if (res) {
@@ -700,9 +701,9 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 		if (deviceMemories) {
 			if (deviceMemories[i]) {
 				imageHandles[i].deviceMemory = deviceMemories[i];
-				imageHandles[i].offsetsCount = kmsvk->imageCreateInfos[i].imageDmaBufferCount;
-				for (p = 0; p < imageHandles[i].offsetsCount; p++)
-					imageHandles[i].offsets[p] = offsets[i][p];
+				//imageHandles[i].offsetsCount = kmsvk->imageCreateInfos[i].imageDmaBufferCount;
+				//for (p = 0; p < imageHandles[i].offsetsCount; p++)
+					//imageHandles[i].offsets[p] = offsets[i][p];
 			}
 		}
 
