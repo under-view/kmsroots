@@ -145,7 +145,7 @@ int create_kms_set_crtc(struct app_kms *kms);
 int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, bool *running);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
-int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
+int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_depth_image(struct app_vk *app);
 int create_vk_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct app_vk *app);
@@ -284,7 +284,7 @@ int main(void)
 	if (create_vk_device(&app, &kms) == -1)
 		goto exit_error;
 
-	if (create_vk_swapchain_images(&app, &surfaceFormat) == -1)
+	if (create_vk_swapchain_images(&app, &kms, &surfaceFormat) == -1)
 		goto exit_error;
 
 	if (create_vk_depth_image(&app) == -1)
@@ -488,7 +488,7 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
 	gbmBufferInfo.kmsfd = kms->kmr_kms_node.kmsfd;
-	gbmBufferInfo.bufferCount = 2;
+	gbmBufferInfo.bufferCount = 3;
 	gbmBufferInfo.width = kms->kmr_kms_node_display_output_chain.width;
 	gbmBufferInfo.height = kms->kmr_kms_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
@@ -627,42 +627,88 @@ int create_vk_device(struct app_vk *app, struct app_kms *kms)
 	if (!app->kmr_vk_lgdev.logicalDevice)
 		return -1;
 
-	return -1;
+	return 0;
 }
 
 
-int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
+int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat)
 {
-	struct kmr_vk_image_view_create_info imageViewCreateInfo;
-	imageViewCreateInfo.imageViewflags = 0;
-	imageViewCreateInfo.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-	imageViewCreateInfo.imageViewFormat = surfaceFormat->format;
-	imageViewCreateInfo.imageViewComponents.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	imageViewCreateInfo.imageViewComponents.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	imageViewCreateInfo.imageViewComponents.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	imageViewCreateInfo.imageViewComponents.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-	imageViewCreateInfo.imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;  // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-	imageViewCreateInfo.imageViewSubresourceRange.baseMipLevel = 0;                        // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-	imageViewCreateInfo.imageViewSubresourceRange.levelCount = 1;                          // Number of mipmap levels to view
-	imageViewCreateInfo.imageViewSubresourceRange.baseArrayLayer = 0;                      // Start array level to view from
-	imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;                          // Number of array levels to view
+	uint16_t width, height;
+	struct kmr_buffer bufferHandle = kms->kmr_buffer;
+	struct kmr_kms_node_display_output_chain displayOutputHandle = kms->kmr_kms_node_display_output_chain;
+
+	uint8_t curImage, plane, imageCount = bufferHandle.bufferCount;
+	VkSubresourceLayout *imageDmaBufferResourceInfos = NULL;
+	uint32_t *imageDmaBufferMemTypeBits = NULL;
+
+	surfaceFormat->format = VK_FORMAT_B8G8R8A8_SRGB; // For now
+	width = displayOutputHandle.width;
+	height = displayOutputHandle.height;
+
+	struct kmr_vk_image_view_create_info imageViewCreateInfos[imageCount];
+	struct kmr_vk_vimage_create_info imageCreateInfos[imageCount];
+	for (curImage = 0; curImage < imageCount; curImage++) {
+		imageViewCreateInfos[curImage].imageViewflags = 0;
+		imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageViewCreateInfos[curImage].imageViewFormat = surfaceFormat->format;
+		imageViewCreateInfos[curImage].imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel = 0;                       // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount = 1;                         // Number of mipmap levels to view
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer = 0;                     // Start array level to view from
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount = 1;                         // Number of array levels to view
+
+		imageCreateInfos[curImage].imageflags = 0;
+		imageCreateInfos[curImage].imageType = VK_IMAGE_TYPE_2D;
+		imageCreateInfos[curImage].imageFormat = surfaceFormat->format;
+		imageCreateInfos[curImage].imageExtent3D = (VkExtent3D) { .width = width, .height = height, .depth = 1 };
+		imageCreateInfos[curImage].imageMipLevels = 1;
+		imageCreateInfos[curImage].imageArrayLayers = 1;
+		imageCreateInfos[curImage].imageSamples = VK_SAMPLE_COUNT_1_BIT;
+		imageCreateInfos[curImage].imageTiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+		imageCreateInfos[curImage].imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		imageCreateInfos[curImage].imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageCreateInfos[curImage].imageQueueFamilyIndexCount = 0;
+		imageCreateInfos[curImage].imageQueueFamilyIndices = NULL;
+		imageCreateInfos[curImage].imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageCreateInfos[curImage].imageDmaBufferFormatModifier = bufferHandle.bufferObjects[curImage].modifier;
+		imageCreateInfos[curImage].imageDmaBufferCount = bufferHandle.bufferObjects[curImage].planeCount;
+		imageCreateInfos[curImage].imageDmaBufferFds = bufferHandle.bufferObjects[curImage].dmaBufferFds;
+
+		imageDmaBufferMemTypeBits = alloca(imageCreateInfos[curImage].imageDmaBufferCount * sizeof(uint32_t));
+		imageDmaBufferResourceInfos = alloca(imageCreateInfos[curImage].imageDmaBufferCount * sizeof(VkSubresourceLayout));
+
+		for (plane = 0; plane < imageCreateInfos[curImage].imageDmaBufferCount; plane++) {
+			imageDmaBufferMemTypeBits[plane] = kmr_vk_get_external_fd_memory_properties(app->kmr_vk_lgdev.logicalDevice,
+			                                                                            bufferHandle.bufferObjects[curImage].dmaBufferFds[plane],
+												    VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
+
+			imageDmaBufferResourceInfos[plane].offset = bufferHandle.bufferObjects[curImage].offsets[plane];
+			imageDmaBufferResourceInfos[plane].rowPitch = bufferHandle.bufferObjects[curImage].pitches[plane];
+			imageDmaBufferResourceInfos[plane].size = 0;
+			imageDmaBufferResourceInfos[plane].arrayPitch = 0;
+			imageDmaBufferResourceInfos[plane].depthPitch = 0;
+		}
+
+		imageCreateInfos[curImage].imageDmaBufferResourceInfo = imageDmaBufferResourceInfos;
+		imageCreateInfos[curImage].imageDmaBufferMemTypeBits = imageDmaBufferMemTypeBits;
+	}
 
 	struct kmr_vk_image_create_info swapchainImagesInfo;
 	swapchainImagesInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	swapchainImagesInfo.swapchain = VK_NULL_HANDLE;
-	swapchainImagesInfo.imageCount = 0;                                                    // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
-	swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
-	/* Not creating images manually so rest of struct members can be safely ignored */
-	swapchainImagesInfo.physDevice = VK_NULL_HANDLE;
-	swapchainImagesInfo.imageCreateInfos = NULL;
-	swapchainImagesInfo.memPropertyFlags = 0;
-	swapchainImagesInfo.useExternalDmaBuffer = false;
+	swapchainImagesInfo.imageCount = imageCount;
+	swapchainImagesInfo.imageViewCreateInfos = imageViewCreateInfos;
+	swapchainImagesInfo.imageCreateInfos = imageCreateInfos;
+	swapchainImagesInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	swapchainImagesInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	swapchainImagesInfo.useExternalDmaBuffer = true;
 
 	app->kmr_vk_image[0] = kmr_vk_image_create(&swapchainImagesInfo);
 	if (!app->kmr_vk_image[0].imageViewHandles[0].view)
 		return -1;
 
-	return 0;
+	return -1;
 }
 
 
