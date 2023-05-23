@@ -11,6 +11,7 @@
 
 #include "kms-node.h"
 #include "buffer.h"
+#include "pixel-format.h"
 #include "input.h"
 #include "vulkan.h"
 #include "shader.h"
@@ -641,9 +642,11 @@ int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfac
 	VkSubresourceLayout *imageDmaBufferResourceInfos = NULL;
 	uint32_t *imageDmaBufferMemTypeBits = NULL;
 
-	surfaceFormat->format = VK_FORMAT_B8G8R8A8_SRGB; // For now
 	width = displayOutputHandle.width;
 	height = displayOutputHandle.height;
+	surfaceFormat->format = kmr_pixel_format_convert_name(KMR_PIXEL_FORMAT_CONV_GBM_TO_DRM, bufferHandle.bufferObjects[0].format);
+	if (surfaceFormat->format == UINT32_MAX)
+		return -1;
 
 	struct kmr_vk_image_view_create_info imageViewCreateInfos[imageCount];
 	struct kmr_vk_vimage_create_info imageCreateInfos[imageCount];

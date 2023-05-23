@@ -57,6 +57,9 @@ if libinput.found()
   fs += ['input.c']
 endif
 
+if libgbm.found() and libdrm.found() and vulkan.found()
+  fs += ['pixel-format.c']
+endif
 
 ################################################################################
 # X11 libs, files, & extra compiler args
