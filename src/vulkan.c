@@ -1545,23 +1545,33 @@ exit_vk_surface_present_modes:
 }
 
 
-struct kmr_vk_phdev_format_prop kmr_vk_get_phdev_format_properties(VkPhysicalDevice physDev,
-                                                                   VkFormat *formats,
-                                                                   uint32_t formatCount)
+struct kmr_vk_phdev_format_prop kmr_vk_get_phdev_format_properties(struct kmr_vk_phdev_format_prop_info *kmrvk)
 {
 	VkFormatProperties *formatProperties = NULL;
 
-	formatProperties = (VkFormatProperties *) calloc(formatCount, sizeof(VkFormatProperties));
+	VkDrmFormatModifierPropertiesListEXT modPropsList;
+	modPropsList.sType = VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT;
+	modPropsList.pNext = NULL;
+	modPropsList.drmFormatModifierCount = kmrvk->modifierCount;
+	modPropsList.pDrmFormatModifierProperties = kmrvk->modifierProperties;
+
+	VkFormatProperties2 formatProps2;
+	formatProps2.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
+	formatProps2.pNext = (kmrvk->modifierCount) ? &modPropsList : NULL;
+
+	formatProperties = (VkFormatProperties *) calloc(kmrvk->formatCount, sizeof(VkFormatProperties));
 	if (!formatProperties) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_get_phdev_format_properties;
 	}
 
-	for (uint32_t f = 0; f < formatCount; f++) {
-		vkGetPhysicalDeviceFormatProperties(physDev, formats[f], &formatProperties[f]);
+	for (uint32_t f = 0; f < kmrvk->formatCount; f++) {
+		vkGetPhysicalDeviceFormatProperties2(kmrvk->physDev, kmrvk->formats[f], &formatProps2);
+		memcpy(&formatProperties[f], &formatProps2.formatProperties, sizeof(formatProps2.formatProperties));
+		memset(&formatProps2.formatProperties, 0, sizeof(formatProps2.formatProperties));
 	}
 
-	return (struct kmr_vk_phdev_format_prop) { .formatProperties = formatProperties, .formatPropertyCount = formatCount };
+	return (struct kmr_vk_phdev_format_prop) { .formatProperties = formatProperties, .formatPropertyCount = kmrvk->formatCount };
 
 exit_get_phdev_format_properties:
 	free(formatProperties);

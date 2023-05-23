@@ -1557,7 +1557,7 @@ struct kmr_vk_surface_present_mode kmr_vk_get_surface_present_modes(VkPhysicalDe
 
 
 /*
- * struct kmr_vk_phdev_format_prop (kmsroots Vulkan Surface Present Mode)
+ * struct kmr_vk_phdev_format_prop (kmsroots Vulkan Physical Device Format Properties)
  *
  * members:
  * @formatProperties    - Pointer to an array of type (VkFormatProperties) specifying a given image format (VkFormat) properties
@@ -1565,27 +1565,46 @@ struct kmr_vk_surface_present_mode kmr_vk_get_surface_present_modes(VkPhysicalDe
  */
 struct kmr_vk_phdev_format_prop {
 	VkFormatProperties *formatProperties;
-	uint32_t           formatPropertyCount;
+	uint32_t            formatPropertyCount;
+};
+
+
+/*
+ * struct kmr_vk_phdev_format_prop_info (kmsroots Vulkan Physical Device Format Properties Information)
+ *
+ * members:
+ * @physDev            - Must pass a valid VkPhysicalDevice handle
+ * @formats            - Must pass a pointer to an array of type VkFormat to get VkFormatProperties from
+ * @formatCount        - Must pass the amount of elements in @formats array
+ * @modifierProperties - The properties of a format when combined with a DRM format modifier
+ *                       kmr_buffer_create(3) and stored in kmr_buffer.bufferObjects[0].modifier
+ * @modifierCount      - Array size of @modifierProperties. Value may be acquired after a call to
+ *                       kmr_buffer_create(3) and stored in kmr_buffer.bufferObjects[0].planeCount
+ */
+struct kmr_vk_phdev_format_prop_info {
+	VkPhysicalDevice                 physDev;
+	VkFormat                         *formats;
+	uint32_t                         formatCount;
+	VkDrmFormatModifierPropertiesEXT *modifierProperties;
+	uint32_t                         modifierCount;
 };
 
 
 /*
  * kmr_vk_get_phdev_format_properties: Queries a given physical device supported format properties
- *                                     Application must free struct kmr_vk_phdev_format_prop { member: formatProperties }
+ *                                     Application must free struct kmr_vk_phdev_format_prop { member: @formatProperties }
  *
  * args:
- * @physDev     - Must pass a valid VkPhysicalDevice handle
- * @formats     - Must pass a pointer to an array of type VkFormat to get VkFormatProperties from
- * @formatCount - Must pass the amount of elements in @formats array
+ * @kmrvk - Pointer to a struct kmr_vk_phdev_format_prop_info
  * return:
  *	on success struct kmr_vk_phdev_format_prop
- *	on failure struct kmr_vk_phdev_format_prop { with member nulled }
+ *	on failure struct kmr_vk_phdev_format_prop { with members nulled }
  */
-struct kmr_vk_phdev_format_prop kmr_vk_get_phdev_format_properties(VkPhysicalDevice physDev, VkFormat *formats, uint32_t formatCount);
+struct kmr_vk_phdev_format_prop kmr_vk_get_phdev_format_properties(struct kmr_vk_phdev_format_prop_info *kmrvk);
 
 
 /*
- * kmr_vk_get_external_semaphore_properties:
+ * kmr_vk_get_external_semaphore_properties: Function returns a given physical device external semaphore handle capabilities.
  *
  *
  * args:
