@@ -162,6 +162,27 @@ static const struct kmr_pixel_format formats[] = {
 };
 
 
+static const char *vkFormatNames[] = {
+	[VK_FORMAT_R8_SRGB] = "VK_FORMAT_R8_SRGB",
+	[VK_FORMAT_R8G8_SRGB] = "VK_FORMAT_R8G8_SRGB",
+	[VK_FORMAT_B8G8R8_SRGB] = "VK_FORMAT_B8G8R8_SRGB",
+	[VK_FORMAT_R8G8B8_SRGB] = "VK_FORMAT_R8G8B8_SRGB",
+	[VK_FORMAT_B8G8R8A8_SRGB] = "VK_FORMAT_B8G8R8A8_SRGB",
+	[VK_FORMAT_R8G8B8A8_SRGB] = "VK_FORMAT_R8G8B8A8_SRGB",
+	[VK_FORMAT_R4G4B4A4_UNORM_PACK16] = "VK_FORMAT_R4G4B4A4_UNORM_PACK16",
+	[VK_FORMAT_B4G4R4A4_UNORM_PACK16] = "VK_FORMAT_B4G4R4A4_UNORM_PACK16",
+	[VK_FORMAT_R5G6B5_UNORM_PACK16] = "VK_FORMAT_R5G6B5_UNORM_PACK16",
+	[VK_FORMAT_B5G6R5_UNORM_PACK16] = "VK_FORMAT_B5G6R5_UNORM_PACK16",
+	[VK_FORMAT_R5G5B5A1_UNORM_PACK16] = "VK_FORMAT_R5G5B5A1_UNORM_PACK16",
+	[VK_FORMAT_B5G5R5A1_UNORM_PACK16] = "VK_FORMAT_B5G5R5A1_UNORM_PACK16",
+	[VK_FORMAT_A1R5G5B5_UNORM_PACK16] = "VK_FORMAT_A1R5G5B5_UNORM_PACK16",
+	[VK_FORMAT_A2R10G10B10_UNORM_PACK32] = "VK_FORMAT_A2R10G10B10_UNORM_PACK32",
+	[VK_FORMAT_A2B10G10R10_UNORM_PACK32] = "VK_FORMAT_A2B10G10R10_UNORM_PACK32",
+	[VK_FORMAT_R16G16B16A16_UNORM] = "VK_FORMAT_R16G16B16A16_UNORM",
+	[VK_FORMAT_R16G16B16A16_SFLOAT] = "VK_FORMAT_R16G16B16A16_SFLOAT",
+};
+
+
 uint32_t kmr_pixel_format_convert_name(kmr_pixel_format_conv_type conv, uint32_t format)
 {
 	for (uint8_t i = 0; i < ARRAY_LEN(formats); i++) {
@@ -199,3 +220,16 @@ uint32_t kmr_pixel_format_convert_name(kmr_pixel_format_conv_type conv, uint32_t
 	return UINT32_MAX;
 }
 
+
+const char *kmr_pixel_format_get_name(kmr_pixel_format_type formatType, uint32_t format)
+{
+	switch (formatType) {
+		case KMR_PIXEL_FORMAT_VK:
+			return vkFormatNames[format];
+		default:
+			kmr_utils_log(KMR_DANGER, "[x] kmr_pixel_format_get_name: Must specify correct kmr_pixel_format_type value");
+			return NULL;
+	}
+
+	return NULL;
+}
