@@ -622,9 +622,17 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 		for (i = 0; i < imageCount; i++) {
 			curImage = (kmsvk->imageCount) ? i : 0;
 
-			imageModifierInfo.drmFormatModifier = kmsvk->imageCreateInfos[curImage].imageDmaBufferFormatModifier;
-			imageModifierInfo.drmFormatModifierPlaneCount = kmsvk->imageCreateInfos[curImage].imageDmaBufferCount;
-			imageModifierInfo.pPlaneLayouts = kmsvk->imageCreateInfos[curImage].imageDmaBufferResourceInfo;
+			if (kmsvk->useExternalDmaBuffer) {
+				imageModifierInfo.drmFormatModifier = kmsvk->imageCreateInfos[curImage].imageDmaBufferFormatModifier;
+				imageModifierInfo.drmFormatModifierPlaneCount = kmsvk->imageCreateInfos[curImage].imageDmaBufferCount;
+				imageModifierInfo.pPlaneLayouts = kmsvk->imageCreateInfos[curImage].imageDmaBufferResourceInfo;
+
+				for (p = 0; p < imageModifierInfo.drmFormatModifierPlaneCount; p++) {
+					planeMemoryRequirementsInfo.planeAspect |= choose_memory_plane_aspect(p);
+					memoryTypeBits |= kmsvk->imageCreateInfos[curImage].imageDmaBufferMemTypeBits[p];
+					//offsets[i][p] = 0;
+				}
+			}
 
 			imageCreateInfo.flags = kmsvk->imageCreateInfos[curImage].imageflags;
 			imageCreateInfo.imageType = kmsvk->imageCreateInfos[curImage].imageType;
@@ -648,16 +656,10 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 
 			imageMemoryRequirementsInfo.image = vkImages[i];
 
-			for (p = 0; p < imageModifierInfo.drmFormatModifierPlaneCount; p++) {
-				planeMemoryRequirementsInfo.planeAspect |= choose_memory_plane_aspect(p);
-				memoryTypeBits |= kmsvk->imageCreateInfos[curImage].imageDmaBufferMemTypeBits[p];
-				//offsets[i][p] = 0;
-			}
-
 			vkGetImageMemoryRequirements2(kmsvk->logicalDevice, &imageMemoryRequirementsInfo, &memoryRequirements2);
 
 			allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
-			memoryTypeBits = (kmsvk->useExternalDmaBuffer) ? memoryRequirements2.memoryRequirements.memoryTypeBits & memoryTypeBits : memoryRequirements2.memoryRequirements.memoryTypeBits;
+			memoryTypeBits = (kmsvk->useExternalDmaBuffer) ? memoryRequirements2.memoryRequirements.memoryTypeBits | memoryTypeBits : memoryRequirements2.memoryRequirements.memoryTypeBits;
 			allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmsvk->physDevice, memoryTypeBits, memPropertyFlags);
 
 			res = vkAllocateMemory(kmsvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i]);

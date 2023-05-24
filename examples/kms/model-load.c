@@ -713,7 +713,7 @@ int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfac
 	if (!app->kmr_vk_image[0].imageViewHandles[0].view)
 		return -1;
 
-	return -1;
+	return 0;
 }
 
 
@@ -779,6 +779,9 @@ int create_vk_depth_image(struct app_vk *app)
 	vimageCreateInfo.imageQueueFamilyIndexCount = 0;
 	vimageCreateInfo.imageQueueFamilyIndices = NULL;
 	vimageCreateInfo.imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	vimageCreateInfo.imageDmaBufferFormatModifier = 0;
+	vimageCreateInfo.imageDmaBufferCount = 0;
+	vimageCreateInfo.imageDmaBufferResourceInfo = NULL;
 
 	struct kmr_vk_image_create_info imageCreateInfo;
 	imageCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
@@ -1802,7 +1805,7 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 	if (!app->kmr_vk_framebuffer.framebufferHandles[0].framebuffer)
 		return -1;
 
-	return 0;
+	return -1;
 }
 
 
