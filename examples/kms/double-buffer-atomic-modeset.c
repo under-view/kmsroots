@@ -266,7 +266,7 @@ int create_kms_instance(struct app_kms *kms)
 
 #ifdef INCLUDE_LIBSEAT
 	kms->kmr_session = kmr_session_create();
-	if (!kms->kmr_session->seat)
+	if (!kms->kmr_session)
 		return -1;
 
 	kmsNodeCreateInfo.session = kms->kmr_session;
@@ -320,7 +320,7 @@ int create_kms_set_crtc(struct app_kms *kms)
 	struct kmr_kms_node_display_mode_info nextImageInfo;
 
 	for (uint8_t i = 0; i < kms->kmr_buffer.bufferCount; i++) {
-		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[0].fbid;
+		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[i].fbid;
 		nextImageInfo.displayChain = &kms->kmr_kms_node_display_output_chain;
 		if (kmr_kms_node_display_mode_set(&nextImageInfo))
 			return -1;

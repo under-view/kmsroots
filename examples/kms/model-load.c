@@ -17,10 +17,6 @@
 #include "shader.h"
 #include "gltf-loader.h"
 
-//#define WIDTH 3840
-//#define HEIGHT 2160
-#define WIDTH 1920
-#define HEIGHT 1080
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
 #define MAX_EPOLL_EVENTS 2
 
@@ -147,7 +143,7 @@ int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbu
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
 int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat);
-int create_vk_depth_image(struct app_vk *app);
+int create_vk_depth_image(struct app_vk *app, VkExtent2D extent2D);
 int create_vk_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct app_vk *app);
 int create_vk_command_buffers(struct app_vk *app);
@@ -177,9 +173,13 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
  */
 void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
 {
-	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_kms *passData = (struct app_vk_kms *) data;
 	struct app_vk *app = passData->app_vk;
+	struct app_kms *kms = passData->app_kms;
+
+	VkExtent2D extent2D;
+	extent2D.width = kms->kmr_kms_node_display_output_chain.width;
+	extent2D.height = kms->kmr_kms_node_display_output_chain.height;
 
 	if (!app->kmr_vk_sync_obj.fenceHandles || !app->kmr_vk_sync_obj.semaphoreHandles)
 		return;
@@ -263,8 +263,8 @@ int main(void)
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 
+	VkExtent2D extent2D;
 	VkSurfaceFormatKHR surfaceFormat;
-	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 
 	if (create_vk_instance(&app) == -1)
 		goto exit_error;
@@ -278,6 +278,9 @@ int main(void)
 	if (create_kms_set_crtc(&kms) == -1)
 		goto exit_error;
 
+	extent2D.width = kms.kmr_kms_node_display_output_chain.width;
+	extent2D.height = kms.kmr_kms_node_display_output_chain.height;
+
 	/*
 	 * Create Vulkan Physical Device Handle, After Window Surface
 	 * so that it doesn't effect VkPhysicalDevice selection
@@ -288,7 +291,7 @@ int main(void)
 	if (create_vk_swapchain_images(&app, &kms, &surfaceFormat) == -1)
 		goto exit_error;
 
-	if (create_vk_depth_image(&app) == -1)
+	if (create_vk_depth_image(&app, extent2D) == -1)
 		goto exit_error;
 
 	if (create_vk_shader_modules(&app) == -1)
@@ -458,7 +461,7 @@ int create_kms_instance(struct app_kms *kms)
 
 #ifdef INCLUDE_LIBSEAT
 	kms->kmr_session = kmr_session_create();
-	if (!kms->kmr_session->seat)
+	if (!kms->kmr_session)
 		return -1;
 
 	kmsNodeCreateInfo.session = kms->kmr_session;
@@ -512,7 +515,7 @@ int create_kms_set_crtc(struct app_kms *kms)
 	struct kmr_kms_node_display_mode_info nextImageInfo;
 
 	for (uint8_t i = 0; i < kms->kmr_buffer.bufferCount; i++) {
-		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[0].fbid;
+		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[i].fbid;
 		nextImageInfo.displayChain = &kms->kmr_kms_node_display_output_chain;
 		if (kmr_kms_node_display_mode_set(&nextImageInfo))
 			return -1;
@@ -746,7 +749,7 @@ exit_choose_depth_image_format:
 }
 
 
-int create_vk_depth_image(struct app_vk *app)
+int create_vk_depth_image(struct app_vk *app, VkExtent2D extent2D)
 {
 	VkImageTiling imageTiling = VK_IMAGE_TILING_OPTIMAL;
 
@@ -769,7 +772,7 @@ int create_vk_depth_image(struct app_vk *app)
 	vimageCreateInfo.imageflags = 0;
 	vimageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 	vimageCreateInfo.imageFormat = imageFormat;
-	vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = WIDTH, .height = HEIGHT, .depth = 1 }; // depth describes how deep the image goes (1 because no 3D aspect)
+	vimageCreateInfo.imageExtent3D = (VkExtent3D) { .width = extent2D.width, .height = extent2D.height, .depth = 1 }; // depth describes how deep the image goes (1 because no 3D aspect)
 	vimageCreateInfo.imageMipLevels = 1;
 	vimageCreateInfo.imageArrayLayers = 1;
 	vimageCreateInfo.imageSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -1805,7 +1808,7 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 	if (!app->kmr_vk_framebuffer.framebufferHandles[0].framebuffer)
 		return -1;
 
-	return -1;
+	return 0;
 }
 
 
@@ -1821,7 +1824,7 @@ int create_vk_sync_objs(struct app_vk *app)
 	if (!app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore)
 		return -1;
 
-	return 0;
+	return -1;
 }
 
 
