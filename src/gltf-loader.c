@@ -252,12 +252,12 @@ struct kmr_gltf_loader_material kmr_gltf_loader_material_create(struct kmr_gltf_
 			       strnlen(material->name, STRUCT_MEMBER_SIZE(struct kmr_gltf_loader_material_data, materialName)));
 
 			/* Physically-Based Rendering Metallic Roughness Model */
-			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.textureIndex = material->pbr_metallic_roughness.base_color_texture.texture_index;
-			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.imageIndex = material->pbr_metallic_roughness.base_color_texture.texture->source;
+			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.textureIndex = cgltf_texture_index(gltfData, material->pbr_metallic_roughness.base_color_texture.texture);
+			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.imageIndex = cgltf_image_index(gltfData, material->pbr_metallic_roughness.base_color_texture.texture->image);
 			materialData[materialCount].pbrMetallicRoughness.baseColorTexture.scale = material->pbr_metallic_roughness.base_color_texture.scale;
 
-			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = material->pbr_metallic_roughness.metallic_roughness_texture.texture_index;
-			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = material->pbr_metallic_roughness.metallic_roughness_texture.texture->source;
+			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = cgltf_texture_index(gltfData, material->pbr_metallic_roughness.metallic_roughness_texture.texture);
+			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = cgltf_image_index(gltfData, material->pbr_metallic_roughness.metallic_roughness_texture.texture->image);
 			materialData[materialCount].pbrMetallicRoughness.metallicRoughnessTexture.scale = material->pbr_metallic_roughness.metallic_roughness_texture.scale;
 
 			materialData[materialCount].pbrMetallicRoughness.metallicFactor = material->pbr_metallic_roughness.metallic_factor;
@@ -265,12 +265,12 @@ struct kmr_gltf_loader_material kmr_gltf_loader_material_create(struct kmr_gltf_
 			memcpy(materialData[materialCount].pbrMetallicRoughness.baseColorFactor, material->pbr_metallic_roughness.base_color_factor,
 			       STRUCT_MEMBER_SIZE(struct kmr_gltf_loader_cgltf_pbr_metallic_roughness, baseColorFactor));
 
-			materialData[materialCount].normalTexture.textureIndex = material->normal_texture.texture_index;
-			materialData[materialCount].normalTexture.imageIndex = material->normal_texture.texture->source;
+			materialData[materialCount].normalTexture.textureIndex = cgltf_texture_index(gltfData, material->normal_texture.texture);
+			materialData[materialCount].normalTexture.imageIndex = cgltf_image_index(gltfData, material->normal_texture.texture->image);
 			materialData[materialCount].normalTexture.scale = material->normal_texture.scale;
 
-			materialData[materialCount].occlusionTexture.textureIndex = material->occlusion_texture.texture_index;
-			materialData[materialCount].occlusionTexture.imageIndex = material->occlusion_texture.texture->source;
+			materialData[materialCount].occlusionTexture.textureIndex = cgltf_texture_index(gltfData, material->occlusion_texture.texture);
+			materialData[materialCount].occlusionTexture.imageIndex = cgltf_image_index(gltfData, material->occlusion_texture.texture->image);
 			materialData[materialCount].occlusionTexture.scale = material->occlusion_texture.scale;
 
 			materialData[materialCount].meshIndex = i;
@@ -405,21 +405,21 @@ struct kmr_gltf_loader_node kmr_gltf_loader_node_create(struct kmr_gltf_loader_n
 			memcpy(nodeData[nodeDataCount].matrixTransform, childNodeMatrix, sizeof(childNodeMatrix));
 
 			if (childNode->skin) {
-				nodeData[nodeDataCount].objectIndex = childNode->skin->skin_index;
+				nodeData[nodeDataCount].objectIndex = cgltf_skin_index(gltfData, childNode->skin);
 				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_SKIN;
 			} else if (childNode->mesh) {
-				nodeData[nodeDataCount].objectIndex = childNode->mesh->mesh_index;
+				nodeData[nodeDataCount].objectIndex = cgltf_mesh_index(gltfData, childNode->mesh);
 				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_MESH;
 			} else if (childNode->camera) {
-				nodeData[nodeDataCount].objectIndex = childNode->camera->camera_index;
+				nodeData[nodeDataCount].objectIndex = cgltf_camera_index(gltfData, childNode->camera);
 				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_CAMERA;
 			} else {
-				nodeData[nodeDataCount].objectIndex = childNode->node_index;
+				nodeData[nodeDataCount].objectIndex = cgltf_node_index(gltfData, childNode);
 				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_NODE;
 			}
 
-			nodeData[nodeDataCount].parentNodeIndex = parentNode->node_index;
-			nodeData[nodeDataCount].nodeIndex = childNode->node_index;
+			nodeData[nodeDataCount].parentNodeIndex = cgltf_node_index(gltfData, parentNode);
+			nodeData[nodeDataCount].nodeIndex = cgltf_node_index(gltfData, childNode);
 			nodeDataCount++;
 		}
 	}

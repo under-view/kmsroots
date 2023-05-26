@@ -269,7 +269,6 @@ typedef struct cgltf_buffer
 {
 	char* name;
 	cgltf_size size;
-	cgltf_int buffer_index;
 	char* uri;
 	void* data; /* loaded by cgltf_load_buffers */
 	cgltf_data_free_method data_free_method;
@@ -366,7 +365,6 @@ typedef struct cgltf_attribute
 	char* name;
 	cgltf_attribute_type type;
 	cgltf_int index;
-	cgltf_int accessor_index;
 	cgltf_accessor* data;
 } cgltf_attribute;
 
@@ -396,7 +394,6 @@ typedef struct cgltf_sampler
 typedef struct cgltf_texture
 {
 	char* name;
-	cgltf_int source;
 	cgltf_image* image;
 	cgltf_sampler* sampler;
 	cgltf_bool has_basisu;
@@ -418,7 +415,6 @@ typedef struct cgltf_texture_transform
 typedef struct cgltf_texture_view
 {
 	cgltf_texture* texture;
-	cgltf_int texture_index;
 	cgltf_int texcoord;
 	cgltf_float scale; /* equivalent to strength for occlusion_texture */
 	cgltf_bool has_transform;
@@ -508,6 +504,13 @@ typedef struct cgltf_iridescence
 	cgltf_texture_view iridescence_thickness_texture;
 } cgltf_iridescence;
 
+typedef struct cgltf_anisotropy
+{
+	cgltf_float anisotropy_strength;
+	cgltf_float anisotropy_rotation;
+	cgltf_texture_view anisotropy_texture;
+} cgltf_anisotropy;
+
 typedef struct cgltf_material
 {
 	char* name;
@@ -521,6 +524,7 @@ typedef struct cgltf_material
 	cgltf_bool has_sheen;
 	cgltf_bool has_emissive_strength;
 	cgltf_bool has_iridescence;
+	cgltf_bool has_anisotropy;
 	cgltf_pbr_metallic_roughness pbr_metallic_roughness;
 	cgltf_pbr_specular_glossiness pbr_specular_glossiness;
 	cgltf_clearcoat clearcoat;
@@ -531,6 +535,7 @@ typedef struct cgltf_material
 	cgltf_volume volume;
 	cgltf_emissive_strength emissive_strength;
 	cgltf_iridescence iridescence;
+	cgltf_anisotropy anisotropy;
 	cgltf_texture_view normal_texture;
 	cgltf_texture_view occlusion_texture;
 	cgltf_texture_view emissive_texture;
@@ -563,14 +568,12 @@ typedef struct cgltf_draco_mesh_compression {
 } cgltf_draco_mesh_compression;
 
 typedef struct cgltf_mesh_gpu_instancing {
-	cgltf_buffer_view* buffer_view;
 	cgltf_attribute* attributes;
 	cgltf_size attributes_count;
 } cgltf_mesh_gpu_instancing;
 
 typedef struct cgltf_primitive {
 	cgltf_primitive_type type;
-	cgltf_int accessor_index;
 	cgltf_accessor* indices;
 	cgltf_material* material;
 	cgltf_attribute* attributes;
@@ -588,7 +591,6 @@ typedef struct cgltf_primitive {
 
 typedef struct cgltf_mesh {
 	char* name;
-	cgltf_int mesh_index;
 	cgltf_primitive* primitives;
 	cgltf_size primitives_count;
 	cgltf_float* weights;
@@ -604,7 +606,6 @@ typedef struct cgltf_node cgltf_node;
 
 typedef struct cgltf_skin {
 	char* name;
-	cgltf_int skin_index;
 	cgltf_node** joints;
 	cgltf_size joints_count;
 	cgltf_node* skeleton;
@@ -634,7 +635,6 @@ typedef struct cgltf_camera_orthographic {
 
 typedef struct cgltf_camera {
 	char* name;
-	cgltf_int camera_index;
 	cgltf_camera_type type;
 	union {
 		cgltf_camera_perspective perspective;
@@ -658,7 +658,6 @@ typedef struct cgltf_light {
 
 struct cgltf_node {
 	char* name;
-	cgltf_int node_index;
 	cgltf_node* parent;
 	cgltf_node** children;
 	cgltf_size children_count;
@@ -855,6 +854,23 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
 /* this function is deprecated and will be removed in the future; use cgltf_extras::data instead */
 cgltf_result cgltf_copy_extras_json(const cgltf_data* data, const cgltf_extras* extras, char* dest, cgltf_size* dest_size);
 
+cgltf_size cgltf_mesh_index(const cgltf_data* data, const cgltf_mesh* object);
+cgltf_size cgltf_material_index(const cgltf_data* data, const cgltf_material* object);
+cgltf_size cgltf_accessor_index(const cgltf_data* data, const cgltf_accessor* object);
+cgltf_size cgltf_buffer_view_index(const cgltf_data* data, const cgltf_buffer_view* object);
+cgltf_size cgltf_buffer_index(const cgltf_data* data, const cgltf_buffer* object);
+cgltf_size cgltf_image_index(const cgltf_data* data, const cgltf_image* object);
+cgltf_size cgltf_texture_index(const cgltf_data* data, const cgltf_texture* object);
+cgltf_size cgltf_sampler_index(const cgltf_data* data, const cgltf_sampler* object);
+cgltf_size cgltf_skin_index(const cgltf_data* data, const cgltf_skin* object);
+cgltf_size cgltf_camera_index(const cgltf_data* data, const cgltf_camera* object);
+cgltf_size cgltf_light_index(const cgltf_data* data, const cgltf_light* object);
+cgltf_size cgltf_node_index(const cgltf_data* data, const cgltf_node* object);
+cgltf_size cgltf_scene_index(const cgltf_data* data, const cgltf_scene* object);
+cgltf_size cgltf_animation_index(const cgltf_data* data, const cgltf_animation* object);
+cgltf_size cgltf_animation_sampler_index(const cgltf_animation* animation, const cgltf_animation_sampler* object);
+cgltf_size cgltf_animation_channel_index(const cgltf_animation* animation, const cgltf_animation_channel* object);
+
 #ifdef __cplusplus
 }
 #endif
@@ -875,6 +891,7 @@ cgltf_result cgltf_copy_extras_json(const cgltf_data* data, const cgltf_extras* 
 
 #ifdef CGLTF_IMPLEMENTATION
 
+#include <assert.h> /* For assert */
 #include <string.h> /* For strncpy */
 #include <stdio.h>  /* For fopen */
 #include <limits.h> /* For UINT_MAX etc */
@@ -882,10 +899,6 @@ cgltf_result cgltf_copy_extras_json(const cgltf_data* data, const cgltf_extras* 
 
 #if !defined(CGLTF_MALLOC) || !defined(CGLTF_FREE) || !defined(CGLTF_ATOI) || !defined(CGLTF_ATOF) || !defined(CGLTF_ATOLL)
 #include <stdlib.h> /* For malloc, free, atoi, atof */
-#endif
-
-#if CGLTF_VALIDATE_ENABLE_ASSERTS
-#include <assert.h>
 #endif
 
 /* JSMN_PARENT_LINKS is necessary to make parsing large structures linear in input size */
@@ -1948,6 +1961,10 @@ void cgltf_free(cgltf_data* data)
 			cgltf_free_texture_view(data, &data->materials[i].iridescence.iridescence_texture);
 			cgltf_free_texture_view(data, &data->materials[i].iridescence.iridescence_thickness_texture);
 		}
+		if (data->materials[i].has_anisotropy)
+		{
+			cgltf_free_texture_view(data, &data->materials[i].anisotropy.anisotropy_texture);
+		}
 
 		cgltf_free_texture_view(data, &data->materials[i].normal_texture);
 		cgltf_free_texture_view(data, &data->materials[i].occlusion_texture);
@@ -2497,6 +2514,102 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size 
 	return cgltf_component_read_index(element, accessor->component_type);
 }
 
+cgltf_size cgltf_mesh_index(const cgltf_data* data, const cgltf_mesh* object)
+{
+	assert(object && (cgltf_size)(object - data->meshes) < data->meshes_count);
+	return (cgltf_size)(object - data->meshes);
+}
+
+cgltf_size cgltf_material_index(const cgltf_data* data, const cgltf_material* object)
+{
+	assert(object && (cgltf_size)(object - data->materials) < data->materials_count);
+	return (cgltf_size)(object - data->materials);
+}
+
+cgltf_size cgltf_accessor_index(const cgltf_data* data, const cgltf_accessor* object)
+{
+	assert(object && (cgltf_size)(object - data->accessors) < data->accessors_count);
+	return (cgltf_size)(object - data->accessors);
+}
+
+cgltf_size cgltf_buffer_view_index(const cgltf_data* data, const cgltf_buffer_view* object)
+{
+	assert(object && (cgltf_size)(object - data->buffer_views) < data->buffer_views_count);
+	return (cgltf_size)(object - data->buffer_views);
+}
+
+cgltf_size cgltf_buffer_index(const cgltf_data* data, const cgltf_buffer* object)
+{
+	assert(object && (cgltf_size)(object - data->buffers) < data->buffers_count);
+	return (cgltf_size)(object - data->buffers);
+}
+
+cgltf_size cgltf_image_index(const cgltf_data* data, const cgltf_image* object)
+{
+	assert(object && (cgltf_size)(object - data->images) < data->images_count);
+	return (cgltf_size)(object - data->images);
+}
+
+cgltf_size cgltf_texture_index(const cgltf_data* data, const cgltf_texture* object)
+{
+	assert(object && (cgltf_size)(object - data->textures) < data->textures_count);
+	return (cgltf_size)(object - data->textures);
+}
+
+cgltf_size cgltf_sampler_index(const cgltf_data* data, const cgltf_sampler* object)
+{
+	assert(object && (cgltf_size)(object - data->samplers) < data->samplers_count);
+	return (cgltf_size)(object - data->samplers);
+}
+
+cgltf_size cgltf_skin_index(const cgltf_data* data, const cgltf_skin* object)
+{
+	assert(object && (cgltf_size)(object - data->skins) < data->skins_count);
+	return (cgltf_size)(object - data->skins);
+}
+
+cgltf_size cgltf_camera_index(const cgltf_data* data, const cgltf_camera* object)
+{
+	assert(object && (cgltf_size)(object - data->cameras) < data->cameras_count);
+	return (cgltf_size)(object - data->cameras);
+}
+
+cgltf_size cgltf_light_index(const cgltf_data* data, const cgltf_light* object)
+{
+	assert(object && (cgltf_size)(object - data->lights) < data->lights_count);
+	return (cgltf_size)(object - data->lights);
+}
+
+cgltf_size cgltf_node_index(const cgltf_data* data, const cgltf_node* object)
+{
+	assert(object && (cgltf_size)(object - data->nodes) < data->nodes_count);
+	return (cgltf_size)(object - data->nodes);
+}
+
+cgltf_size cgltf_scene_index(const cgltf_data* data, const cgltf_scene* object)
+{
+	assert(object && (cgltf_size)(object - data->scenes) < data->scenes_count);
+	return (cgltf_size)(object - data->scenes);
+}
+
+cgltf_size cgltf_animation_index(const cgltf_data* data, const cgltf_animation* object)
+{
+	assert(object && (cgltf_size)(object - data->animations) < data->animations_count);
+	return (cgltf_size)(object - data->animations);
+}
+
+cgltf_size cgltf_animation_sampler_index(const cgltf_animation* animation, const cgltf_animation_sampler* object)
+{
+	assert(object && (cgltf_size)(object - animation->samplers) < animation->samplers_count);
+	return (cgltf_size)(object - animation->samplers);
+}
+
+cgltf_size cgltf_animation_channel_index(const cgltf_animation* animation, const cgltf_animation_channel* object)
+{
+	assert(object && (cgltf_size)(object - animation->channels) < animation->channels_count);
+	return (cgltf_size)(object - animation->channels);
+}
+
 #define CGLTF_ERROR_JSON -1
 #define CGLTF_ERROR_NOMEM -2
 #define CGLTF_ERROR_LEGACY -3
@@ -2748,8 +2861,8 @@ static int cgltf_parse_json_attribute_list(cgltf_options* options, jsmntok_t con
 		}
 
 		cgltf_parse_attribute_type((*out_attributes)[j].name, &(*out_attributes)[j].type, &(*out_attributes)[j].index);
-		(*out_attributes)[j].accessor_index = cgltf_json_to_int(tokens + i, json_chunk);
-		(*out_attributes)[j].data = CGLTF_PTRINDEX(cgltf_accessor, (*out_attributes)[j].accessor_index);
+
+		(*out_attributes)[j].data = CGLTF_PTRINDEX(cgltf_accessor, cgltf_json_to_int(tokens + i, json_chunk));
 		++i;
 	}
 
@@ -2873,6 +2986,10 @@ static int cgltf_parse_json_draco_mesh_compression(cgltf_options* options, jsmnt
 			out_draco_mesh_compression->buffer_view = CGLTF_PTRINDEX(cgltf_buffer_view, cgltf_json_to_int(tokens + i, json_chunk));
 			++i;
 		}
+		else
+		{
+			i = cgltf_skip_json(tokens, i+1);
+		}
 
 		if (i < 0)
 		{
@@ -2898,11 +3015,9 @@ static int cgltf_parse_json_mesh_gpu_instancing(cgltf_options* options, jsmntok_
 		{
 			i = cgltf_parse_json_attribute_list(options, tokens, i + 1, json_chunk, &out_mesh_gpu_instancing->attributes, &out_mesh_gpu_instancing->attributes_count);
 		}
-		else if (cgltf_json_strcmp(tokens + i, json_chunk, "bufferView") == 0)
+		else
 		{
-			++i;
-			out_mesh_gpu_instancing->buffer_view = CGLTF_PTRINDEX(cgltf_buffer_view, cgltf_json_to_int(tokens + i, json_chunk));
-			++i;
+			i = cgltf_skip_json(tokens, i+1);
 		}
 
 		if (i < 0)
@@ -3070,8 +3185,7 @@ static int cgltf_parse_json_primitive(cgltf_options* options, jsmntok_t const* t
 		else if (cgltf_json_strcmp(tokens+i, json_chunk, "indices") == 0)
 		{
 			++i;
-			out_prim->accessor_index = cgltf_json_to_int(tokens + i, json_chunk);
-			out_prim->indices = CGLTF_PTRINDEX(cgltf_accessor, out_prim->accessor_index);
+			out_prim->indices = CGLTF_PTRINDEX(cgltf_accessor, cgltf_json_to_int(tokens + i, json_chunk));
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens+i, json_chunk, "material") == 0)
@@ -3269,7 +3383,6 @@ static int cgltf_parse_json_meshes(cgltf_options* options, jsmntok_t const* toke
 
 	for (cgltf_size j = 0; j < out_data->meshes_count; ++j)
 	{
-		out_data->meshes[j].mesh_index = (cgltf_int) j;
 		i = cgltf_parse_json_mesh(options, tokens, i, json_chunk, &out_data->meshes[j]);
 		if (i < 0)
 		{
@@ -3619,8 +3732,7 @@ static int cgltf_parse_json_texture_view(cgltf_options* options, jsmntok_t const
 		if (cgltf_json_strcmp(tokens + i, json_chunk, "index") == 0)
 		{
 			++i;
-			out_texture_view->texture_index = cgltf_json_to_int(tokens + i, json_chunk);
-			out_texture_view->texture = CGLTF_PTRINDEX(cgltf_texture, out_texture_view->texture_index);
+			out_texture_view->texture = CGLTF_PTRINDEX(cgltf_texture, cgltf_json_to_int(tokens + i, json_chunk));
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "texCoord") == 0)
@@ -4140,6 +4252,47 @@ static int cgltf_parse_json_iridescence(cgltf_options* options, jsmntok_t const*
 	return i;
 }
 
+static int cgltf_parse_json_anisotropy(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_anisotropy* out_anisotropy)
+{
+	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+	int size = tokens[i].size;
+	++i;
+
+
+	for (int j = 0; j < size; ++j)
+	{
+		CGLTF_CHECK_KEY(tokens[i]);
+
+		if (cgltf_json_strcmp(tokens + i, json_chunk, "anisotropyStrength") == 0)
+		{
+			++i;
+			out_anisotropy->anisotropy_strength = cgltf_json_to_float(tokens + i, json_chunk);
+			++i;
+		}
+		else if (cgltf_json_strcmp(tokens + i, json_chunk, "anisotropyRotation") == 0)
+		{
+			++i;
+			out_anisotropy->anisotropy_rotation = cgltf_json_to_float(tokens + i, json_chunk);
+			++i;
+		}
+		else if (cgltf_json_strcmp(tokens + i, json_chunk, "anisotropyTexture") == 0)
+		{
+			i = cgltf_parse_json_texture_view(options, tokens, i + 1, json_chunk, &out_anisotropy->anisotropy_texture);
+		}
+		else
+		{
+			i = cgltf_skip_json(tokens, i + 1);
+		}
+
+		if (i < 0)
+		{
+			return i;
+		}
+	}
+
+	return i;
+}
+
 static int cgltf_parse_json_image(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_image* out_image)
 {
 	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
@@ -4284,8 +4437,7 @@ static int cgltf_parse_json_texture(cgltf_options* options, jsmntok_t const* tok
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "source") == 0) 
 		{
 			++i;
-			out_texture->source = cgltf_json_to_int(tokens + i, json_chunk);
-			out_texture->image = CGLTF_PTRINDEX(cgltf_image, out_texture->source);
+			out_texture->image = CGLTF_PTRINDEX(cgltf_image, cgltf_json_to_int(tokens + i, json_chunk));
 			++i;
 		}
 		else if (cgltf_json_strcmp(tokens + i, json_chunk, "extras") == 0)
@@ -4528,6 +4680,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
 				{
 					out_material->has_iridescence = 1;
 					i = cgltf_parse_json_iridescence(options, tokens, i + 1, json_chunk, &out_material->iridescence);
+				}
+				else if (cgltf_json_strcmp(tokens + i, json_chunk, "KHR_materials_anisotropy") == 0)
+				{
+					out_material->has_anisotropy = 1;
+					i = cgltf_parse_json_anisotropy(options, tokens, i + 1, json_chunk, &out_material->anisotropy);
 				}
 				else
 				{
@@ -4939,7 +5096,6 @@ static int cgltf_parse_json_buffers(cgltf_options* options, jsmntok_t const* tok
 
 	for (cgltf_size j = 0; j < out_data->buffers_count; ++j)
 	{
-		out_data->buffers[j].buffer_index = (cgltf_int) j;
 		i = cgltf_parse_json_buffer(options, tokens, i, json_chunk, &out_data->buffers[j]);
 		if (i < 0)
 		{
@@ -5024,7 +5180,6 @@ static int cgltf_parse_json_skins(cgltf_options* options, jsmntok_t const* token
 
 	for (cgltf_size j = 0; j < out_data->skins_count; ++j)
 	{
-		out_data->skins[j].skin_index = (cgltf_int) j;
 		i = cgltf_parse_json_skin(options, tokens, i, json_chunk, &out_data->skins[j]);
 		if (i < 0)
 		{
@@ -5201,7 +5356,6 @@ static int cgltf_parse_json_cameras(cgltf_options* options, jsmntok_t const* tok
 
 	for (cgltf_size j = 0; j < out_data->cameras_count; ++j)
 	{
-		out_data->cameras[j].camera_index = (cgltf_int) j;
 		i = cgltf_parse_json_camera(options, tokens, i, json_chunk, &out_data->cameras[j]);
 		if (i < 0)
 		{
@@ -5529,7 +5683,6 @@ static int cgltf_parse_json_nodes(cgltf_options* options, jsmntok_t const* token
 
 	for (cgltf_size j = 0; j < out_data->nodes_count; ++j)
 	{
-		out_data->nodes[j].node_index = (cgltf_int) j;
 		i = cgltf_parse_json_node(options, tokens, i, json_chunk, &out_data->nodes[j]);
 		if (i < 0)
 		{
@@ -6384,6 +6537,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
 
 		CGLTF_PTRFIXUP(data->materials[i].iridescence.iridescence_texture.texture, data->textures, data->textures_count);
 		CGLTF_PTRFIXUP(data->materials[i].iridescence.iridescence_thickness_texture.texture, data->textures, data->textures_count);
+
+		CGLTF_PTRFIXUP(data->materials[i].anisotropy.anisotropy_texture.texture, data->textures, data->textures_count);
 	}
 
 	for (cgltf_size i = 0; i < data->buffer_views_count; ++i)
@@ -6428,7 +6583,6 @@ static int cgltf_fixup_pointers(cgltf_data* data)
 
 		if (data->nodes[i].has_mesh_gpu_instancing)
 		{
-			CGLTF_PTRFIXUP_REQ(data->nodes[i].mesh_gpu_instancing.buffer_view, data->buffer_views, data->buffer_views_count);
 			for (cgltf_size m = 0; m < data->nodes[i].mesh_gpu_instancing.attributes_count; ++m)
 			{
 				CGLTF_PTRFIXUP_REQ(data->nodes[i].mesh_gpu_instancing.attributes[m].data, data->accessors, data->accessors_count);
