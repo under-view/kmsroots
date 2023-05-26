@@ -96,7 +96,7 @@ int kmr_dma_buf_import_sync_file_create(struct kmr_dma_buf_import_sync_file_crea
 {
 	struct dma_buf_import_sync_file data;
 
-	if (dmabuf_check_sync_file_import_export()) {
+	if (dmabuf_check_sync_file_import_export() == false) {
 		kmr_utils_log(KMR_DANGER, "[x] kmr_dma_buf_import_sync_file_create: importing external fd used in synchronization to DMA-BUF fds not supported.");
 		return -1;
 	}
@@ -123,7 +123,7 @@ struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file_create(struct k
 	uint8_t syncFileFdsCount, i;
 	struct dma_buf_export_sync_file data;
 
-	if (dmabuf_check_sync_file_import_export()) {
+	if (dmabuf_check_sync_file_import_export() == false) {
 		kmr_utils_log(KMR_DANGER, "[x] kmr_dma_buf_export_sync_file_create: exporting fds used for synchronization from DMA-BUF fds not supported.");
 		goto exit_error_kmr_dma_buf_export_sync_file;
 	}
