@@ -373,18 +373,16 @@ struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_i
 /*
  * struct kmr_vk_image_handle (kmsroots Vulkan Image Handle)
  *
- * @image        - Represents actual image itself. May be a texture, etc...
- * @deviceMemory - Actual memory whether CPU or GPU visible associate with VkImage object
- * @offsets      - The array of byte memory offsets in @deviceMemory. Each DMA-BUF will be
- *                 added to a single VkDeviceMemory (@deviceMemory) object. Then binded to
- *                 a single VkImage resource.
- * @offsetsCount - The amount of DMA-BUF fds (drmFormatModifierPlaneCount) per VkImage Resource.
+ * @image             - Represents actual image itself. May be a texture, etc...
+ * @deviceMemory      - Actual memory whether CPU or GPU visible associate with VkImage object.
+ *                      If @useExternalDmaBuffer set to true @deviceMemory represents Vulkan API
+ *                      usable memory associated with external DMA-BUFS.
+ * @deviceMemoryCount - The amount of DMA-BUF fds (drmFormatModifierPlaneCount) per VkImage Resource.
  */
 struct kmr_vk_image_handle {
 	VkImage        image;
-	VkDeviceMemory deviceMemory;
-	uint32_t       offsets[4];
-	uint8_t        offsetsCount;
+	VkDeviceMemory deviceMemory[4];
+	uint8_t        deviceMemoryCount;
 };
 
 
