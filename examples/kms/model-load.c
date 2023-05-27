@@ -11,6 +11,7 @@
 
 #include "kms-node.h"
 #include "buffer.h"
+#include "dma-buf.h"
 #include "pixel-format.h"
 #include "input.h"
 #include "vulkan.h"
@@ -27,7 +28,7 @@ struct app_vk {
 	struct kmr_vk_queue kmr_vk_queue;
 
 	/*
-	 * 0. Swapchain Images
+	 * 0. Swapchain Images (DMA-BUF's -> VkImage's->VkDeviceMemory's)
 	 * 1. Depth Image
 	 * 2. Texture Images
 	 */
@@ -44,7 +45,7 @@ struct app_vk {
 	struct kmr_vk_graphics_pipeline kmr_vk_graphics_pipeline;
 	struct kmr_vk_framebuffer kmr_vk_framebuffer;
 	struct kmr_vk_command_buffer kmr_vk_command_buffer;
-	struct kmr_vk_sync_obj kmr_vk_sync_obj;
+	struct kmr_vk_sync_obj kmr_vk_sync_obj[2];
 
 	/*
 	 * 0. CPU visible vertex buffer that stores: (index + vertices) [Used as primary buffer if physical device CPU/INTEGRATED]
@@ -91,6 +92,7 @@ struct app_kms {
 	struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain;
 	struct kmr_kms_node_atomic_request kmr_kms_node_atomic_request;
 	struct kmr_buffer kmr_buffer;
+	struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
 	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
@@ -154,7 +156,7 @@ int create_vk_image_sampler(struct app_vk *app);
 int create_vk_resource_descriptor_sets(struct app_vk *app);
 int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D);
-int create_vk_sync_objs(struct app_vk *app);
+int create_vk_sync_objs(struct app_vk *app, struct app_kms *kms);
 int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
@@ -181,12 +183,12 @@ void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
 	extent2D.width = kms->kmr_kms_node_display_output_chain.width;
 	extent2D.height = kms->kmr_kms_node_display_output_chain.height;
 
-	if (!app->kmr_vk_sync_obj.fenceHandles || !app->kmr_vk_sync_obj.semaphoreHandles)
+	if (!app->kmr_vk_sync_obj[0].semaphoreHandles && app->kmr_vk_sync_obj[1].semaphoreHandles)
 		return;
 
-	VkFence imageFence = app->kmr_vk_sync_obj.fenceHandles[0].fence;
-	VkSemaphore imageSemaphore = app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore;
-	VkSemaphore renderSemaphore = app->kmr_vk_sync_obj.semaphoreHandles[1].semaphore;
+	VkSemaphore imageSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
+	VkSemaphore renderSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[1].semaphore;
+	VkFence imageFence = app->kmr_vk_sync_obj[0].fenceHandles[0].fence;
 
 	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
@@ -210,23 +212,12 @@ void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
 	submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	vkResetFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence);
-
 	/* Submit draw command */
-	vkQueueSubmit(app->kmr_vk_queue.queue, 1, &submitInfo, imageFence);
+	vkQueueSubmit(app->kmr_vk_queue.queue, 1, &submitInfo, VK_NULL_HANDLE);
 
-	VkPresentInfoKHR presentInfo;
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.pNext = NULL;
-	presentInfo.waitSemaphoreCount = ARRAY_LEN(signalSemaphores);
-	presentInfo.pWaitSemaphores = signalSemaphores;
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = NULL;
-	presentInfo.pImageIndices = (uint32_t *) imageIndex;
-	presentInfo.pResults = NULL;
+	sleep(5);
 
-	vkQueuePresentKHR(app->kmr_vk_queue.queue, &presentInfo);
-
+	prun = 0;
 	*running = prun;
 }
 
@@ -259,9 +250,11 @@ int main(void)
 	struct app_kms kms;
 	struct kmr_kms_node_destroy kmsdevd;
 	struct kmr_buffer_destroy kmsbuffsd;
+	struct kmr_dma_buf_destroy kmsdmabufd;
 	memset(&kms, 0, sizeof(kms));
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
+	memset(&kmsdmabufd, 0, sizeof(kmsdmabufd));
 
 	VkExtent2D extent2D;
 	VkSurfaceFormatKHR surfaceFormat;
@@ -321,7 +314,7 @@ int main(void)
 	if (create_vk_framebuffers(&app, extent2D) == -1)
 		goto exit_error;
 
-	if (create_vk_sync_objs(&app) == -1)
+	if (create_vk_sync_objs(&app, &kms) == -1)
 		goto exit_error;
 
 	static int fbid = 0;
@@ -428,8 +421,8 @@ exit_error:
 	appd.kmr_vk_framebuffer = &app.kmr_vk_framebuffer;
 	appd.kmr_vk_command_buffer_cnt = 1;
 	appd.kmr_vk_command_buffer = &app.kmr_vk_command_buffer;
-	appd.kmr_vk_sync_obj_cnt = 1;
-	appd.kmr_vk_sync_obj = &app.kmr_vk_sync_obj;
+	appd.kmr_vk_sync_obj_cnt = ARRAY_LEN(app.kmr_vk_sync_obj);
+	appd.kmr_vk_sync_obj = app.kmr_vk_sync_obj;
 	appd.kmr_vk_buffer_cnt = ARRAY_LEN(app.kmr_vk_buffer);
 	appd.kmr_vk_buffer = app.kmr_vk_buffer;
 	appd.kmr_vk_descriptor_set_layout_cnt = 1;
@@ -439,6 +432,10 @@ exit_error:
 	appd.kmr_vk_sampler_cnt = 1;
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
+
+	kmsdmabufd.kmr_dma_buf_export_sync_file_cnt = ARRAY_LEN(kms.kmr_dma_buf_export_sync_file);
+	kmsdmabufd.kmr_dma_buf_export_sync_file = kms.kmr_dma_buf_export_sync_file;
+	kmr_dma_buf_destroy(&kmsdmabufd);
 
 	kmsbuffsd.kmr_buffer_cnt = 1;
 	kmsbuffsd.kmr_buffer = &kms.kmr_buffer;
@@ -492,12 +489,12 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
 	gbmBufferInfo.kmsfd = kms->kmr_kms_node.kmsfd;
-	gbmBufferInfo.bufferCount = 3;
+	gbmBufferInfo.bufferCount = PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
 	gbmBufferInfo.width = kms->kmr_kms_node_display_output_chain.width;
 	gbmBufferInfo.height = kms->kmr_kms_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
-	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
+	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
 	gbmBufferInfo.pixelFormat = GBM_BO_FORMAT_XRGB8888;
 	gbmBufferInfo.modifiers = NULL;
 	gbmBufferInfo.modifierCount = 0;
@@ -1812,19 +1809,48 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 }
 
 
-int create_vk_sync_objs(struct app_vk *app)
+int create_vk_sync_objs(struct app_vk *app, struct app_kms *kms)
 {
+	struct kmr_buffer bufferHandle = kms->kmr_buffer;
+
 	struct kmr_vk_sync_obj_create_info syncObjsCreateInfo;
 	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_BINARY;
+	syncObjsCreateInfo.semaphoreCount = 2;
+	syncObjsCreateInfo.fenceCount = 1;
+
+	app->kmr_vk_sync_obj[0] = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
+	if (!app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore)
+		return -1;
+
 	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
 	syncObjsCreateInfo.semaphoreCount = 1;
 	syncObjsCreateInfo.fenceCount = 0;
-
-	app->kmr_vk_sync_obj = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
-	if (!app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore)
+	app->kmr_vk_sync_obj[1] = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
+	if (!app->kmr_vk_sync_obj[1].semaphoreHandles[0].semaphore)
 		return -1;
 
-	return -1;
+	struct kmr_dma_buf_export_sync_file_create_info syncFileCreateInfo;
+	struct kmr_vk_sync_obj_import_external_sync_fd_info importSyncFileInfo;
+
+	for (uint8_t b = 0; b < bufferHandle.bufferCount; b++) {
+		syncFileCreateInfo.dmaBufferFdsCount = bufferHandle.bufferObjects[b].planeCount;
+		syncFileCreateInfo.dmaBufferFds = bufferHandle.bufferObjects[b].dmaBufferFds;
+		syncFileCreateInfo.syncFlags = KMR_DMA_BUF_SYNC_RW;
+
+		kms->kmr_dma_buf_export_sync_file[b] = kmr_dma_buf_export_sync_file_create(&syncFileCreateInfo);
+		if (!kms->kmr_dma_buf_export_sync_file[b].syncFileFds)
+			return -1;
+
+		importSyncFileInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+		importSyncFileInfo.syncFd = kms->kmr_dma_buf_export_sync_file[b].syncFileFds[0];
+		importSyncFileInfo.syncType = KMR_VK_SYNC_OBJ_SEMAPHORE;
+		importSyncFileInfo.syncHandle.semaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
+		if (kmr_vk_sync_obj_import_external_sync_fd(&importSyncFileInfo) == -1)
+			return -1;
+	}
+
+	return 0;
 }
 
 
