@@ -763,11 +763,9 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 		imageViewCreateInfo.image = imageHandles[i].image = vkImages[i];
 
 		if (deviceMemories) {
-			if (deviceMemories[i].memory[0]) {
-				imageHandles[i].deviceMemoryCount = deviceMemories[i].memoryCount;
-				for (p = 0; p < imageHandles[i].deviceMemoryCount; p++)
-					imageHandles[i].deviceMemory[p] = deviceMemories[i].memory[p];
-			}
+			imageHandles[i].deviceMemoryCount = deviceMemories[i].memoryCount;
+			for (p = 0; p < imageHandles[i].deviceMemoryCount; p++)
+				imageHandles[i].deviceMemory[p] = deviceMemories[i].memory[p];
 		}
 
 		res = vkCreateImageView(kmsvk->logicalDevice, &imageViewCreateInfo, NULL, &imageViewHandles[i].view);
