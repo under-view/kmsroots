@@ -702,6 +702,8 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 					allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
 					memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits | kmsvk->imageCreateInfos[curImage].imageDmaBufferMemTypeBits[p];
 					allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmsvk->physDevice, memoryTypeBits, memPropertyFlags);
+					if (allocInfo.memoryTypeIndex == UINT32_MAX)
+						goto exit_vk_image_free_images;
 
 					res = vkAllocateMemory(kmsvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i].memory[p]);
 					if (res) {
@@ -718,6 +720,10 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 					bindImageMemoryInfos[p].image = vkImages[i];
 					bindImageMemoryInfos[p].memory = deviceMemories[i].memory[p];
 					bindImageMemoryInfos[p].memoryOffset = 0;
+
+					memoryRequirements2.memoryRequirements.memoryTypeBits = memoryTypeBits = 0;
+					memoryRequirements2.memoryRequirements.size = allocInfo.allocationSize = 0;
+					allocInfo.memoryTypeIndex = 0;
 				}
 			} else {
 				deviceMemories[i].memoryCount = 1;
@@ -727,6 +733,8 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 				allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
 				memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits;
 				allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmsvk->physDevice, memoryTypeBits, memPropertyFlags);
+				if (allocInfo.memoryTypeIndex == UINT32_MAX)
+					goto exit_vk_image_free_images;
 
 				res = vkAllocateMemory(kmsvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i].memory[0]);
 				if (res) {
@@ -739,6 +747,10 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk)
 				bindImageMemoryInfos[0].image = vkImages[i];
 				bindImageMemoryInfos[0].memory = deviceMemories[i].memory[0];
 				bindImageMemoryInfos[0].memoryOffset = 0;
+
+				memoryRequirements2.memoryRequirements.memoryTypeBits = memoryTypeBits = 0;
+				memoryRequirements2.memoryRequirements.size = allocInfo.allocationSize = 0;
+				allocInfo.memoryTypeIndex = 0;
 			}
 
 			vkBindImageMemory2(kmsvk->logicalDevice, deviceMemories[i].memoryCount, bindImageMemoryInfos);
@@ -1299,6 +1311,8 @@ struct kmr_vk_buffer kmr_vk_buffer_create(struct kmr_vk_buffer_create_info *kmsv
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memoryRequirements.size;
 	allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmsvk->physDevice, memoryRequirements.memoryTypeBits, kmsvk->memPropertyFlags);
+	if (allocInfo.memoryTypeIndex == UINT32_MAX)
+		goto exit_vk_buffer;
 
 	res = vkAllocateMemory(kmsvk->logicalDevice, &allocInfo, NULL, &deviceMemory);
 	if (res) {
