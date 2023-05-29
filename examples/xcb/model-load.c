@@ -1808,22 +1808,8 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 	// Spin model about the X-axis
-	static float angle = 0.0f;
-	static float lastTime = 0;
-
-	int angleDivisor = 0;
-	float now = 0.0f;
-	float deltaTime = 0.0f;
+	const float angle = 0.0025f;
 	vec3 axis = {0.0f, 1.0f, 0.0f};
-
-	now = (float) (kmr_utils_nanosecond() / 10000000ULL);
-	deltaTime = now - lastTime;
-	lastTime = now;
-
-	// Update model matrix
-	angleDivisor = (VK_PHYSICAL_DEVICE_TYPE != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 1000000 : 100000000;
-	angle += ((deltaTime * glm_rad(10.0f)) / angleDivisor);
-	if (angle > 360.0f) angle = 0.0f;
 
 	// Copy Model data
 	struct app_uniform_buffer_scene_model *sceneModel = NULL;
