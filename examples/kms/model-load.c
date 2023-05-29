@@ -173,51 +173,71 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
  *    Which leads to a page-flip. When submitted the @fbid is set to 102.
  * 4. Redo steps 1-3. Using the now rendered into framebuffer.
  */
-void render(bool *running, uint8_t *imageIndex, int UNUSED *fbid, void *data)
+void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 {
 	struct app_vk_kms *passData = (struct app_vk_kms *) data;
 	struct app_vk *app = passData->app_vk;
 	struct app_kms *kms = passData->app_kms;
 
+	if (!app->kmr_vk_sync_obj[0].semaphoreHandles && app->kmr_vk_sync_obj[1].semaphoreHandles)
+		return;
+
 	VkExtent2D extent2D;
 	extent2D.width = kms->kmr_kms_node_display_output_chain.width;
 	extent2D.height = kms->kmr_kms_node_display_output_chain.height;
 
-	if (!app->kmr_vk_sync_obj[0].semaphoreHandles && app->kmr_vk_sync_obj[1].semaphoreHandles)
-		return;
-
-	VkSemaphore imageSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
-	VkSemaphore renderSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[1].semaphore;
-	VkFence imageFence = app->kmr_vk_sync_obj[0].fenceHandles[0].fence;
-
-	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
-
-	// vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*)imageIndex);
-
 	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
 	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
 
-	VkSemaphore waitSemaphores[1] = { imageSemaphore };
-	VkSemaphore signalSemaphores[1] = { renderSemaphore };
+	const uint64_t waitValue = 0;
+	const uint64_t signalValue = 5;
+
+	VkSemaphore UNUSED renderSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
+	VkSemaphore timelineSemaphore = app->kmr_vk_sync_obj[1].semaphoreHandles[0].semaphore;
+	VkCommandBuffer commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+
 	VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSemaphore waitSemaphores[1] = { timelineSemaphore };
+	VkSemaphore signalSemaphores[1] = { timelineSemaphore };
+
+	VkTimelineSemaphoreSubmitInfo timelineInfo;
+	timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+	timelineInfo.pNext = NULL;
+	timelineInfo.waitSemaphoreValueCount = 1;
+	timelineInfo.pWaitSemaphoreValues = &waitValue;
+	timelineInfo.signalSemaphoreValueCount = 1;
+	timelineInfo.pSignalSemaphoreValues = &signalValue;
 
 	VkSubmitInfo submitInfo;
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.pNext = NULL;
+	submitInfo.pNext = &timelineInfo;
 	submitInfo.waitSemaphoreCount = ARRAY_LEN(waitSemaphores);
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
+	submitInfo.pCommandBuffers = &commandBuffer;
 	submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
 	/* Submit draw command */
 	vkQueueSubmit(app->kmr_vk_queue.queue, 1, &submitInfo, VK_NULL_HANDLE);
 
-	sleep(5);
+	VkSemaphoreWaitInfo waitInfo;
+	waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+	waitInfo.pNext = NULL;
+	waitInfo.flags = 0;
+	waitInfo.semaphoreCount = ARRAY_LEN(waitSemaphores);
+	waitInfo.pSemaphores = waitSemaphores;
+	waitInfo.pValues = &waitValue;
 
-	prun = 0;
+	vkWaitSemaphores(app->kmr_vk_lgdev.logicalDevice, &waitInfo, UINT64_MAX);
+
+	// acquire Next Image (TODO: Implement own version)
+	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer.bufferCount;
+
+	// Write to back buffer
+	*fbid = kms->kmr_buffer.bufferObjects[*imageIndex].fbid;
+
 	*running = prun;
 }
 
