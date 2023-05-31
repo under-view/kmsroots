@@ -799,14 +799,14 @@ static void handle_page_flip_event(int fd,
 {
 	struct kmr_kms_node_renderer_info *rendererInfo = (struct kmr_kms_node_renderer_info *) data;
 
+	/* Application updates @rendererFbId to the next displayable GBM[GEM]/DUMP buffer and renders into that buffer. This buffer is displayed when atomic commit is performed */
+	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
+
 	/* Pepare properties for DRM core and temporarily store them in @rendererAtomicRequest. @rendererFbId should be an already populated buffer. */
 	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *rendererInfo->rendererFbId, rendererInfo->displayOutputChain) == -1) {
 		kmr_utils_log(KMR_WARNING, "[x] modeset_atomic_prepare_commit: failed to prepare atomic commit");
 		return;
 	}
-
-	/* Application updates @rendererFbId to the next displayable GBM[GEM]/DUMP buffer and renders into that buffer as it's not the buffer going to be submitted to DRM core. */
-	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
 
 	/*
 	 * Send properties to DRM core and asks the driver to perform an atomic commit.
