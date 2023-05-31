@@ -13,6 +13,7 @@
 
 #include <vulkan/vulkan.h>
 #include <stdbool.h>
+#include <assert.h>
 
 /*
  * Due to Vulkan not directly exposing functions for all platforms.
@@ -22,6 +23,7 @@
 #define KMR_VK_INSTANCE_PROC_ADDR(inst, var, func) \
 	do { \
 		var = (PFN_vk##func) vkGetInstanceProcAddr(inst, "vk" #func); \
+		assert(var); \
 	} while(0);
 
 
@@ -33,6 +35,7 @@
 #define KMR_VK_DEVICE_PROC_ADDR(dev, var, func) \
 	do { \
 		var = (PFN_vk##func) vkGetDeviceProcAddr(dev, "vk" #func); \
+		assert(var); \
 	} while(0);
 
 
