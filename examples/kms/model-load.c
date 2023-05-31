@@ -18,7 +18,7 @@
 #include "shader.h"
 #include "gltf-loader.h"
 
-#define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
+#define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 2
 #define MAX_EPOLL_EVENTS 2
 
 struct app_vk {
@@ -45,7 +45,7 @@ struct app_vk {
 	struct kmr_vk_graphics_pipeline kmr_vk_graphics_pipeline;
 	struct kmr_vk_framebuffer kmr_vk_framebuffer;
 	struct kmr_vk_command_buffer kmr_vk_command_buffer;
-	struct kmr_vk_sync_obj kmr_vk_sync_obj[2];
+	struct kmr_vk_sync_obj kmr_vk_sync_obj[1];
 
 	/*
 	 * 0. CPU visible vertex buffer that stores: (index + vertices) [Used as primary buffer if physical device CPU/INTEGRATED]
@@ -163,15 +163,13 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 
 /*
  * Library implementation is as such
- * 1. Prepare properties for submitting to DRM core. The KMS primary plane object property FB_ID value
- *    is set before "render" function is called. @fbid value is initially set to
- *    kmr_buffer.bufferObjects[cbuf=0].fbid (102). This is done when we created the first
- *    KMS atomic request.
- * 2. "render" function implementation is called. Application must update fbid value (updated number is 103).
- *    This value won't be submitted to DRM core until a page-flip event occurs.
- * 3. Prepared properties from step 1 are sent to DRM core and the driver performs an atomic commit.
- *    Which leads to a page-flip. When submitted the @fbid is set to 102.
- * 4. Redo steps 1-3. Using the now rendered into framebuffer.
+ * 1. "render" function implementation is called. Application must update @fbid value (updated number is 103).
+ *    This value will be submitted to DRM core.
+ * 2. Prepare properties for submitting to DRM core. The new @fbid set by "render" will be used to
+ *    when performing a KMS atomic commit (i.e submitting data to DRM core).
+ * 3. Prepared properties from step 2 are sent to DRM core and the driver performs an atomic commit.
+ *    Which leads to a page-flip.
+ * 4. Update choosen buffer and Redo steps 1-3.
  */
 void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 {
@@ -179,26 +177,30 @@ void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 	struct app_vk *app = passData->app_vk;
 	struct app_kms *kms = passData->app_kms;
 
-	if (!app->kmr_vk_sync_obj[0].semaphoreHandles && app->kmr_vk_sync_obj[1].semaphoreHandles)
+	if (!app->kmr_vk_sync_obj[0].semaphoreHandles)
 		return;
 
 	VkExtent2D extent2D;
 	extent2D.width = kms->kmr_kms_node_display_output_chain.width;
 	extent2D.height = kms->kmr_kms_node_display_output_chain.height;
 
-	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
-	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
+	// Write to buffer that'll be displayed at function end
+	// acquire Next Image (TODO: Implement own version)
+	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer.bufferCount;
+	*fbid = kms->kmr_buffer.bufferObjects[*imageIndex].fbid;
 
 	const uint64_t waitValue = 0;
 	const uint64_t signalValue = 5;
 
-	VkSemaphore UNUSED renderSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
-	VkSemaphore timelineSemaphore = app->kmr_vk_sync_obj[1].semaphoreHandles[0].semaphore;
+	VkSemaphore timelineSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
 	VkCommandBuffer commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 
 	VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSemaphore waitSemaphores[1] = { timelineSemaphore };
 	VkSemaphore signalSemaphores[1] = { timelineSemaphore };
+
+	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
+	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
 
 	VkTimelineSemaphoreSubmitInfo timelineInfo;
 	timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
@@ -231,12 +233,6 @@ void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 	waitInfo.pValues = &waitValue;
 
 	vkWaitSemaphores(app->kmr_vk_lgdev.logicalDevice, &waitInfo, UINT64_MAX);
-
-	// acquire Next Image (TODO: Implement own version)
-	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer.bufferCount;
-
-	// Write to back buffer
-	*fbid = kms->kmr_buffer.bufferObjects[*imageIndex].fbid;
 
 	*running = prun;
 }
@@ -1829,27 +1825,19 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 }
 
 
-int create_vk_sync_objs(struct app_vk *app, struct app_kms *kms)
+int create_vk_sync_objs(struct app_vk *app, struct app_kms UNUSED *kms)
 {
-	struct kmr_buffer bufferHandle = kms->kmr_buffer;
-
 	struct kmr_vk_sync_obj_create_info syncObjsCreateInfo;
 	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_BINARY;
-	syncObjsCreateInfo.semaphoreCount = 2;
-	syncObjsCreateInfo.fenceCount = 1;
-
+	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+	syncObjsCreateInfo.semaphoreCount = 1;
+	syncObjsCreateInfo.fenceCount = 0;
 	app->kmr_vk_sync_obj[0] = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
 	if (!app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore)
 		return -1;
 
-	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-	syncObjsCreateInfo.semaphoreCount = 1;
-	syncObjsCreateInfo.fenceCount = 0;
-	app->kmr_vk_sync_obj[1] = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
-	if (!app->kmr_vk_sync_obj[1].semaphoreHandles[0].semaphore)
-		return -1;
-
+/*
+	struct kmr_buffer bufferHandle = kms->kmr_buffer;
 	struct kmr_dma_buf_export_sync_file_create_info syncFileCreateInfo;
 	struct kmr_vk_sync_obj_import_external_sync_fd_info importSyncFileInfo;
 
@@ -1869,6 +1857,7 @@ int create_vk_sync_objs(struct app_vk *app, struct app_kms *kms)
 		if (kmr_vk_sync_obj_import_external_sync_fd(&importSyncFileInfo) == -1)
 			return -1;
 	}
+*/
 
 	return 0;
 }

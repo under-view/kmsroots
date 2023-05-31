@@ -66,15 +66,13 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 
 /*
  * Library implementation is as such
- * 1. Prepare properties for submitting to DRM core. The KMS primary plane object property FB_ID value
- *    is set before "render" function is called. @fbid value is initially set to
- *    kmr_buffer.bufferObjects[cbuf=0].fbid (102). This is done when we created the first
- *    KMS atomic request.
- * 2. "render" function implementation is called. Application must update fbid value (updated number is 103).
- *    This value won't be submitted to DRM core until a page-flip event occurs.
- * 3. Prepared properties from step 1 are sent to DRM core and the driver performs an atomic commit.
- *    Which leads to a page-flip. When submitted the @fbid is set to 102.
- * 4. Redo steps 1-3. Using the now rendered into framebuffer.
+ * 1. "render" function implementation is called. Application must update @fbid value (updated number is 103).
+ *    This value will be submitted to DRM core.
+ * 2. Prepare properties for submitting to DRM core. The new @fbid set by "render" will be used to
+ *    when performing a KMS atomic commit (i.e submitting data to DRM core).
+ * 3. Prepared properties from step 2 are sent to DRM core and the driver performs an atomic commit.
+ *    Which leads to a page-flip.
+ * 4. Update choosen buffer and Redo steps 1-3.
  */
 void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 {
@@ -104,7 +102,7 @@ void render(bool *running, uint8_t *cbuf, int *fbid, void *data)
 
 	*cbuf ^= 1;
 
-	// Write to back buffer
+	// Write to buffer that'll be displayed at function end
 	*fbid = kms->kmr_buffer.bufferObjects[*cbuf].fbid;
 	gbm_bo_write(kms->kmr_buffer.bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
 
