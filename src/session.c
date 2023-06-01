@@ -131,7 +131,7 @@ void kmr_session_release_device(struct kmr_session *session, int fd)
 
 void kmr_session_destroy(struct kmr_session *session)
 {
-	if (session->seat)
+	if (session && session->seat)
 		libseat_close_seat(session->seat);
 	free(session);
 }

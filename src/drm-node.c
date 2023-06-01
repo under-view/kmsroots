@@ -856,7 +856,8 @@ void kmr_drm_node_destroy(struct kmr_drm_node_destroy *kmrdrm)
 		if (kmrdrm->kmr_drm_node_display_output_chain.modeData.id)
 			drmModeDestroyPropertyBlob(kmrdrm->kmr_drm_node.kmsfd, kmrdrm->kmr_drm_node_display_output_chain.modeData.id);
 #ifdef INCLUDE_LIBSEAT
-		kmr_session_release_device(kmrdrm->kmr_drm_node.session, kmrdrm->kmr_drm_node.kmsfd);
+		if (kmrdrm->kmr_drm_node.session)
+			kmr_session_release_device(kmrdrm->kmr_drm_node.session, kmrdrm->kmr_drm_node.kmsfd);
 #else
 		close(kmrdrm->kmr_drm_node.kmsfd);
 #endif
