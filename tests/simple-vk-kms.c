@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "vulkan.h"
-#include "kms-node.h"
+#include "drm-node.h"
 #include "buffer.h"
 
 struct app_vk {
@@ -14,8 +14,8 @@ struct app_vk {
 
 
 struct app_kms {
-	struct kmr_kms_node kmr_kms_node;
-	struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain;
+	struct kmr_drm_node kmr_drm_node;
+	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
 	struct kmr_buffer kmr_buffer;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
@@ -40,7 +40,7 @@ int main(void)
 	memset(&appd, 0, sizeof(appd));
 
 	struct app_kms kms;
-	struct kmr_kms_node_destroy kmsdevd;
+	struct kmr_drm_node_destroy kmsdevd;
 	struct kmr_buffer_destroy kmsbuffsd;
 	memset(&kms, 0, sizeof(kms));
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
@@ -71,9 +71,9 @@ exit_error:
 	kmsbuffsd.kmr_buffer = &kms.kmr_buffer;
 	kmr_buffer_destroy(&kmsbuffsd);
 
-	kmsdevd.kmr_kms_node = kms.kmr_kms_node;
-	kmsdevd.kmr_kms_node_display_output_chain = kms.kmr_kms_node_display_output_chain;
-	kmr_kms_node_destroy(&kmsdevd);
+	kmsdevd.kmr_drm_node = kms.kmr_drm_node;
+	kmsdevd.kmr_drm_node_display_output_chain = kms.kmr_drm_node_display_output_chain;
+	kmr_drm_node_destroy(&kmsdevd);
 #ifdef INCLUDE_LIBSEAT
 	kmr_session_destroy(kms.kmr_session);
 #endif
@@ -119,7 +119,7 @@ int create_vk_instance(struct app_vk *app)
 
 int create_kms_instance(struct app_kms *kms)
 {
-	struct kmr_kms_node_create_info kmsNodeCreateInfo;
+	struct kmr_drm_node_create_info kmsNodeCreateInfo;
 
 #ifdef INCLUDE_LIBSEAT
 	kms->kmr_session = kmr_session_create();
@@ -130,17 +130,17 @@ int create_kms_instance(struct app_kms *kms)
 #endif
 
 	kmsNodeCreateInfo.kmsNode = NULL;
-	kms->kmr_kms_node = kmr_kms_node_create(&kmsNodeCreateInfo);
-	if (kms->kmr_kms_node.kmsfd == -1)
+	kms->kmr_drm_node = kmr_drm_node_create(&kmsNodeCreateInfo);
+	if (kms->kmr_drm_node.kmsfd == -1)
 		return -1;
 
-	struct kmr_kms_node_display_output_chain_create_info dochainCreateInfo;
-	dochainCreateInfo.kmsfd = kms->kmr_kms_node.kmsfd;
+	struct kmr_drm_node_display_output_chain_create_info dochainCreateInfo;
+	dochainCreateInfo.kmsfd = kms->kmr_drm_node.kmsfd;
 
-	kms->kmr_kms_node_display_output_chain = kmr_kms_node_display_output_chain_create(&dochainCreateInfo);
-	if (!kms->kmr_kms_node_display_output_chain.connector.propsData ||
-	    !kms->kmr_kms_node_display_output_chain.crtc.propsData      ||
-	    !kms->kmr_kms_node_display_output_chain.plane.propsData)
+	kms->kmr_drm_node_display_output_chain = kmr_drm_node_display_output_chain_create(&dochainCreateInfo);
+	if (!kms->kmr_drm_node_display_output_chain.connector.propsData ||
+	    !kms->kmr_drm_node_display_output_chain.crtc.propsData      ||
+	    !kms->kmr_drm_node_display_output_chain.plane.propsData)
 	{
 		return -1;
 	}
@@ -153,10 +153,10 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 {
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
-	gbmBufferInfo.kmsfd = kms->kmr_kms_node.kmsfd;
+	gbmBufferInfo.kmsfd = kms->kmr_drm_node.kmsfd;
 	gbmBufferInfo.bufferCount = 2;
-	gbmBufferInfo.width = kms->kmr_kms_node_display_output_chain.width;
-	gbmBufferInfo.height = kms->kmr_kms_node_display_output_chain.height;
+	gbmBufferInfo.width = kms->kmr_drm_node_display_output_chain.width;
+	gbmBufferInfo.height = kms->kmr_drm_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
 	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
@@ -192,7 +192,7 @@ int create_vk_device(struct app_vk *app, struct app_kms *kms)
 	struct kmr_vk_phdev_create_info phdevCreateInfo;
 	phdevCreateInfo.instance = app->instance;
 	phdevCreateInfo.deviceType = VK_PHYSICAL_DEVICE_TYPE;
-	phdevCreateInfo.kmsfd = kms->kmr_kms_node.kmsfd;
+	phdevCreateInfo.kmsfd = kms->kmr_drm_node.kmsfd;
 
 	app->kmr_vk_phdev = kmr_vk_phdev_create(&phdevCreateInfo);
 	if (!app->kmr_vk_phdev.physDevice)

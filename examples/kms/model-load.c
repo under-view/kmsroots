@@ -9,7 +9,7 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
-#include "kms-node.h"
+#include "drm-node.h"
 #include "buffer.h"
 #include "dma-buf.h"
 #include "pixel-format.h"
@@ -88,9 +88,9 @@ struct app_vk {
 
 
 struct app_kms {
-	struct kmr_kms_node kmr_kms_node;
-	struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain;
-	struct kmr_kms_node_atomic_request kmr_kms_node_atomic_request;
+	struct kmr_drm_node kmr_drm_node;
+	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
+	struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request;
 	struct kmr_buffer kmr_buffer;
 	struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
 	struct kmr_input kmr_input;
@@ -181,8 +181,8 @@ void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 		return;
 
 	VkExtent2D extent2D;
-	extent2D.width = kms->kmr_kms_node_display_output_chain.width;
-	extent2D.height = kms->kmr_kms_node_display_output_chain.height;
+	extent2D.width = kms->kmr_drm_node_display_output_chain.width;
+	extent2D.height = kms->kmr_drm_node_display_output_chain.height;
 
 	// Write to buffer that'll be displayed at function end
 	// acquire Next Image (TODO: Implement own version)
@@ -264,7 +264,7 @@ int main(void)
 	memset(&appd, 0, sizeof(appd));
 
 	struct app_kms kms;
-	struct kmr_kms_node_destroy kmsdevd;
+	struct kmr_drm_node_destroy kmsdevd;
 	struct kmr_buffer_destroy kmsbuffsd;
 	struct kmr_dma_buf_destroy kmsdmabufd;
 	memset(&kms, 0, sizeof(kms));
@@ -287,8 +287,8 @@ int main(void)
 	if (create_kms_set_crtc(&kms) == -1)
 		goto exit_error;
 
-	extent2D.width = kms.kmr_kms_node_display_output_chain.width;
-	extent2D.height = kms.kmr_kms_node_display_output_chain.height;
+	extent2D.width = kms.kmr_drm_node_display_output_chain.width;
+	extent2D.height = kms.kmr_drm_node_display_output_chain.height;
 
 	/*
 	 * Create Vulkan Physical Device Handle, After Window Surface
@@ -357,7 +357,7 @@ int main(void)
 		goto exit_error;
 
 	inputfd = kms.kmr_input.inputfd;
-	kmsfd = kms.kmr_kms_node.kmsfd;
+	kmsfd = kms.kmr_drm_node.kmsfd;
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
@@ -379,7 +379,7 @@ int main(void)
 		goto exit_error;
 	}
 
-	struct kmr_kms_node_handle_drm_event_info drmEventInfo;
+	struct kmr_drm_node_handle_drm_event_info drmEventInfo;
 	drmEventInfo.kmsfd = kmsfd;
 
 	uint64_t inputReturnCode;
@@ -408,7 +408,7 @@ int main(void)
 			}
 
 			if (events[n].data.fd == kmsfd) {
-				kmr_kms_node_handle_drm_event(&drmEventInfo);
+				kmr_drm_node_handle_drm_event(&drmEventInfo);
 			}
 		}
 	}
@@ -457,10 +457,10 @@ exit_error:
 	kmsbuffsd.kmr_buffer = &kms.kmr_buffer;
 	kmr_buffer_destroy(&kmsbuffsd);
 
-	kmsdevd.kmr_kms_node = kms.kmr_kms_node;
-	kmsdevd.kmr_kms_node_display_output_chain = kms.kmr_kms_node_display_output_chain;
-	kmsdevd.kmr_kms_node_atomic_request = kms.kmr_kms_node_atomic_request;
-	kmr_kms_node_destroy(&kmsdevd);
+	kmsdevd.kmr_drm_node = kms.kmr_drm_node;
+	kmsdevd.kmr_drm_node_display_output_chain = kms.kmr_drm_node_display_output_chain;
+	kmsdevd.kmr_drm_node_atomic_request = kms.kmr_drm_node_atomic_request;
+	kmr_drm_node_destroy(&kmsdevd);
 #ifdef INCLUDE_LIBSEAT
 	kmr_session_destroy(kms.kmr_session);
 #endif
@@ -470,7 +470,7 @@ exit_error:
 
 int create_kms_instance(struct app_kms *kms)
 {
-	struct kmr_kms_node_create_info kmsNodeCreateInfo;
+	struct kmr_drm_node_create_info kmsNodeCreateInfo;
 
 #ifdef INCLUDE_LIBSEAT
 	kms->kmr_session = kmr_session_create();
@@ -481,17 +481,17 @@ int create_kms_instance(struct app_kms *kms)
 #endif
 
 	kmsNodeCreateInfo.kmsNode = NULL;
-	kms->kmr_kms_node = kmr_kms_node_create(&kmsNodeCreateInfo);
-	if (kms->kmr_kms_node.kmsfd == -1)
+	kms->kmr_drm_node = kmr_drm_node_create(&kmsNodeCreateInfo);
+	if (kms->kmr_drm_node.kmsfd == -1)
 		return -1;
 
-	struct kmr_kms_node_display_output_chain_create_info dochainCreateInfo;
-	dochainCreateInfo.kmsfd = kms->kmr_kms_node.kmsfd;
+	struct kmr_drm_node_display_output_chain_create_info dochainCreateInfo;
+	dochainCreateInfo.kmsfd = kms->kmr_drm_node.kmsfd;
 
-	kms->kmr_kms_node_display_output_chain = kmr_kms_node_display_output_chain_create(&dochainCreateInfo);
-	if (!kms->kmr_kms_node_display_output_chain.connector.propsData ||
-	    !kms->kmr_kms_node_display_output_chain.crtc.propsData      ||
-	    !kms->kmr_kms_node_display_output_chain.plane.propsData)
+	kms->kmr_drm_node_display_output_chain = kmr_drm_node_display_output_chain_create(&dochainCreateInfo);
+	if (!kms->kmr_drm_node_display_output_chain.connector.propsData ||
+	    !kms->kmr_drm_node_display_output_chain.crtc.propsData      ||
+	    !kms->kmr_drm_node_display_output_chain.plane.propsData)
 	{
 		return -1;
 	}
@@ -504,10 +504,10 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 {
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
-	gbmBufferInfo.kmsfd = kms->kmr_kms_node.kmsfd;
+	gbmBufferInfo.kmsfd = kms->kmr_drm_node.kmsfd;
 	gbmBufferInfo.bufferCount = PRECEIVED_SWAPCHAIN_IMAGE_SIZE;
-	gbmBufferInfo.width = kms->kmr_kms_node_display_output_chain.width;
-	gbmBufferInfo.height = kms->kmr_kms_node_display_output_chain.height;
+	gbmBufferInfo.width = kms->kmr_drm_node_display_output_chain.width;
+	gbmBufferInfo.height = kms->kmr_drm_node_display_output_chain.height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
 	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
@@ -525,12 +525,12 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 
 int create_kms_set_crtc(struct app_kms *kms)
 {
-	struct kmr_kms_node_display_mode_info nextImageInfo;
+	struct kmr_drm_node_display_mode_info nextImageInfo;
 
 	for (uint8_t i = 0; i < kms->kmr_buffer.bufferCount; i++) {
 		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[i].fbid;
-		nextImageInfo.displayChain = &kms->kmr_kms_node_display_output_chain;
-		if (kmr_kms_node_display_mode_set(&nextImageInfo))
+		nextImageInfo.displayChain = &kms->kmr_drm_node_display_output_chain;
+		if (kmr_drm_node_display_mode_set(&nextImageInfo))
 			return -1;
 	}
 
@@ -544,17 +544,17 @@ int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbu
 
 	*fbid = kms->kmr_buffer.bufferObjects[*cbuf].fbid;
 
-	struct kmr_kms_node_atomic_request_create_info atomicRequestInfo;
-	atomicRequestInfo.kmsfd = kms->kmr_kms_node_display_output_chain.kmsfd;
-	atomicRequestInfo.displayOutputChain = &kms->kmr_kms_node_display_output_chain;
+	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
+	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display_output_chain.kmsfd;
+	atomicRequestInfo.displayOutputChain = &kms->kmr_drm_node_display_output_chain;
 	atomicRequestInfo.renderer = &render;
 	atomicRequestInfo.rendererRunning = running;
 	atomicRequestInfo.rendererCurrentBuffer = cbuf;
 	atomicRequestInfo.rendererFbId = fbid;
 	atomicRequestInfo.rendererData = passData;
 
-	kms->kmr_kms_node_atomic_request = kmr_kms_node_atomic_request_create(&atomicRequestInfo);
-	if (!kms->kmr_kms_node_atomic_request.atomicRequest)
+	kms->kmr_drm_node_atomic_request = kmr_drm_node_atomic_request_create(&atomicRequestInfo);
+	if (!kms->kmr_drm_node_atomic_request.atomicRequest)
 		return -1;
 
 	return 0;
@@ -610,7 +610,7 @@ int create_vk_device(struct app_vk *app, struct app_kms *kms)
 	struct kmr_vk_phdev_create_info phdevCreateInfo;
 	phdevCreateInfo.instance = app->instance;
 	phdevCreateInfo.deviceType = VK_PHYSICAL_DEVICE_TYPE;
-	phdevCreateInfo.kmsfd = kms->kmr_kms_node.kmsfd;
+	phdevCreateInfo.kmsfd = kms->kmr_drm_node.kmsfd;
 
 	app->kmr_vk_phdev = kmr_vk_phdev_create(&phdevCreateInfo);
 	if (!app->kmr_vk_phdev.physDevice)
@@ -652,7 +652,7 @@ int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfac
 {
 	uint16_t width, height;
 	struct kmr_buffer bufferHandle = kms->kmr_buffer;
-	struct kmr_kms_node_display_output_chain displayOutputHandle = kms->kmr_kms_node_display_output_chain;
+	struct kmr_drm_node_display_output_chain displayOutputHandle = kms->kmr_drm_node_display_output_chain;
 
 	uint8_t curImage, plane, imageCount = bufferHandle.bufferCount;
 	VkSubresourceLayout *imageDmaBufferResourceInfos = NULL;
@@ -1995,7 +1995,7 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
 	kmr_vk_memory_map(&deviceMemoryCopyInfo);
 
 	// Spin model about the X-axis
-	const float angle = 0.25f;
+	const float angle = 0.80f;
 	vec3 axis = {0.0f, 1.0f, 0.0f};
 
 	// Copy Model data

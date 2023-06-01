@@ -12,14 +12,14 @@
 #include <linux/major.h>
 #include <libudev.h>
 
-#include "kms-node.h"
+#include "drm-node.h"
 
 
 /*
  * No guaranteed that each GPU's driver KMS objects (plane->crtc->connector)
  * will have properties in this exact order or these exact listed properties.
  */
-enum kmr_kms_node_connector_prop_type {
+enum kmr_drm_node_connector_prop_type {
 	KMR_KMS_NODE_CONNECTOR_PROP_EDID                = 0,
 	KMR_KMS_NODE_CONNECTOR_PROP_DPMS                = 1,
 	KMR_KMS_NODE_CONNECTOR_PROP_LINK_STATUS         = 2,
@@ -37,7 +37,7 @@ enum kmr_kms_node_connector_prop_type {
 };
 
 
-enum kmr_kms_node_crtc_prop_type {
+enum kmr_drm_node_crtc_prop_type {
 	KMR_KMS_NODE_CRTC_PROP_ACTIVE           = 0,
 	KMR_KMS_NODE_CRTC_PROP_MODE_ID          = 1,
 	KMR_KMS_NODE_CRTC_PROP_OUT_FENCE_PTR    = 2,
@@ -51,7 +51,7 @@ enum kmr_kms_node_crtc_prop_type {
 };
 
 
-enum kmr_kms_node_plane_prop_type {
+enum kmr_drm_node_plane_prop_type {
 	KMR_KMS_NODE_PLANE_PROP_TYPE           = 0,
 	KMR_KMS_NODE_PLANE_PROP_FB_ID          = 1,
 	KMR_KMS_NODE_PLANE_PROP_IN_FENCE_FD    = 2,
@@ -72,7 +72,7 @@ enum kmr_kms_node_plane_prop_type {
 };
 
 
-struct kmr_kms_node kmr_kms_node_create(struct kmr_kms_node_create_info *kmrkms)
+struct kmr_drm_node kmr_drm_node_create(struct kmr_drm_node_create_info *kmrdrm)
 {
 	int err = 0, kmsfd = -1;
 	char kmsNode[15]; // /dev/dri/card# = 14 characters
@@ -83,8 +83,8 @@ struct kmr_kms_node kmr_kms_node_create(struct kmr_kms_node_create_info *kmrkms)
 	struct udev_device *device = NULL;
 
 	/* If the const char *kmsnode member is defined attempt to open it */
-	if (kmrkms->kmsNode) {
-		memcpy(kmsNode, kmrkms->kmsNode, sizeof(kmsNode));
+	if (kmrdrm->kmsNode) {
+		memcpy(kmsNode, kmrdrm->kmsNode, sizeof(kmsNode));
 		goto kms_node_create_open_drm_device;
 	}
 
@@ -127,7 +127,7 @@ struct kmr_kms_node kmr_kms_node_create(struct kmr_kms_node_create_info *kmrkms)
 
 kms_node_create_open_drm_device:
 #ifdef INCLUDE_LIBSEAT
-		kmsfd = kmr_session_take_control_of_device(kmrkms->session, kmsNode);
+		kmsfd = kmr_session_take_control_of_device(kmrdrm->session, kmsNode);
 #else
 		kmsfd = open(kmsNode, O_RDWR | O_CLOEXEC, 0);
 #endif
@@ -138,8 +138,8 @@ kms_node_create_open_drm_device:
 
 		kmr_utils_log(KMR_SUCCESS, "Opened KMS node '%s' associated fd is %d", kmsNode, kmsfd);
 
-		struct kmr_kms_node_device_capabilites deviceCap;
-		deviceCap = kmr_kms_node_get_device_capabilities(kmsfd);
+		struct kmr_drm_node_device_capabilites deviceCap;
+		deviceCap = kmr_drm_node_get_device_capabilities(kmsfd);
 
 		if (!deviceCap.CAP_CRTC_IN_VBLANK_EVENT)
 			goto exit_error_kms_node_create_free_kms_dev;
@@ -188,9 +188,9 @@ kms_node_create_open_drm_device:
 			goto exit_error_kms_node_create_free_kms_dev;
 		}
 
-		return (struct kmr_kms_node) { .kmsfd = kmsfd
+		return (struct kmr_drm_node) { .kmsfd = kmsfd
 #ifdef INCLUDE_LIBSEAT
-		                               , .session = kmrkms->session
+		                               , .session = kmrdrm->session
 #endif
 		};
 	}
@@ -198,7 +198,7 @@ kms_node_create_open_drm_device:
 exit_error_kms_node_create_free_kms_dev:
 	if (kmsfd != -1) {
 #ifdef INCLUDE_LIBSEAT
-		kmr_session_release_device(kmrkms->session, kmsfd);
+		kmr_session_release_device(kmrdrm->session, kmsfd);
 #else
 		close(kmsfd);
 #endif
@@ -208,7 +208,7 @@ exit_error_kms_node_create_unref_udev_enumerate:
 exit_error_kms_node_create_unref_udev:
 	udev_unref(udev);
 exit_error_kms_node_create:
-	return (struct kmr_kms_node) { .kmsfd = -1
+	return (struct kmr_drm_node) { .kmsfd = -1
 #ifdef INCLUDE_LIBSEAT
 		                       , .session = NULL
 #endif
@@ -216,9 +216,9 @@ exit_error_kms_node_create:
 }
 
 
-struct kmr_kms_node_device_capabilites kmr_kms_node_get_device_capabilities(int kmsfd)
+struct kmr_drm_node_device_capabilites kmr_drm_node_get_device_capabilities(int kmsfd)
 {
-	struct kmr_kms_node_device_capabilites kmsNodeDeviceCapabilites;
+	struct kmr_drm_node_device_capabilites kmsNodeDeviceCapabilites;
 
 	bool supported = false;
 	uint64_t capabilites = 0, err = 0;
@@ -256,7 +256,7 @@ struct kmr_kms_node_device_capabilites kmr_kms_node_get_device_capabilities(int 
  * reside in @props->props. All we can do is account for as many as possible.
  * Function will only assign values and ids to properties we actually use for mode setting.
  */
-static int acquire_kms_object_properties(int fd, struct kmr_kms_node_object_props *obj, uint32_t type)
+static int acquire_kms_object_properties(int fd, struct kmr_drm_node_object_props *obj, uint32_t type)
 {
 	unsigned int i;
 	uint16_t propsDataCount = 0;
@@ -290,7 +290,7 @@ static int acquire_kms_object_properties(int fd, struct kmr_kms_node_object_prop
 	}
 
 	obj->propsDataCount = propsDataCount;
-	obj->propsData = calloc(obj->propsDataCount, sizeof(struct kmr_kms_node_object_props_data));
+	obj->propsData = calloc(obj->propsDataCount, sizeof(struct kmr_drm_node_object_props_data));
 	if (!obj->propsData) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_acquire_kms_object_properties;
@@ -410,23 +410,23 @@ exit_error_acquire_kms_object_properties:
 }
 
 
-struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_create(struct kmr_kms_node_display_output_chain_create_info *kmrkms)
+struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain_create(struct kmr_drm_node_display_output_chain_create_info *kmrdrm)
 {
 	drmModeRes *drmResources = NULL;
 	drmModePlaneRes *drmPlaneResources = NULL;
 	unsigned int p;
 
 	/* Query for connector->encoder->crtc KMS objecs */
-	drmResources = drmModeGetResources(kmrkms->kmsfd);
+	drmResources = drmModeGetResources(kmrdrm->kmsfd);
 	if (!drmResources) {
-		kmr_utils_log(KMR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", kmrkms->kmsfd);
+		kmr_utils_log(KMR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", kmrdrm->kmsfd);
 		goto exit_error_kms_node_doc_create;
 	}
 
 	/* Query for plane KMS objecs */
-	drmPlaneResources = drmModeGetPlaneResources(kmrkms->kmsfd);
+	drmPlaneResources = drmModeGetPlaneResources(kmrdrm->kmsfd);
 	if (!drmPlaneResources) {
-		kmr_utils_log(KMR_DANGER, "[x] KMS fd '%d' has no planes", kmrkms->kmsfd);
+		kmr_utils_log(KMR_DANGER, "[x] KMS fd '%d' has no planes", kmrdrm->kmsfd);
 		goto exit_error_kms_node_doc_create_drm_mode_free_resources;
 	}
 
@@ -436,7 +436,7 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 	    drmResources->count_encoders    <= 0 ||
 	    drmPlaneResources->count_planes <= 0)
 	{
-		kmr_utils_log(KMR_DANGER, "[x] KMS fd '%d' has no way of creating a display output chain", kmrkms->kmsfd);
+		kmr_utils_log(KMR_DANGER, "[x] KMS fd '%d' has no way of creating a display output chain", kmrdrm->kmsfd);
 		goto exit_error_kms_node_doc_create_drm_mode_free_plane_resources;
 	}
 
@@ -446,7 +446,7 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 	memset(planes, 0, planesCount * sizeof(drmModePlane));
 
 	for (p = 0; p < planesCount; p++) {
-		planes[p] = drmModeGetPlane(kmrkms->kmsfd, drmPlaneResources->planes[p]);
+		planes[p] = drmModeGetPlane(kmrdrm->kmsfd, drmPlaneResources->planes[p]);
 		if (!planes[p]) {
 			kmr_utils_log(KMR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
 			goto exit_error_kms_node_doc_create_drm_mode_free_planes;
@@ -464,10 +464,10 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 	drmModeCrtc *crtc = NULL;
 	drmModePlane *plane = NULL;
 
-	struct kmr_kms_node_display_mode_data modeData;
-	struct kmr_kms_node_object_props connectorProps;
-	struct kmr_kms_node_object_props crtcProps;
-	struct kmr_kms_node_object_props planeProps;
+	struct kmr_drm_node_display_mode_data modeData;
+	struct kmr_drm_node_object_props connectorProps;
+	struct kmr_drm_node_object_props crtcProps;
+	struct kmr_drm_node_object_props planeProps;
 
 	uint16_t width = 0, height = 0;
 
@@ -477,7 +477,7 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 	memset(&planeProps, 0, sizeof(planeProps));
 
 	for (int conn = 0; conn < drmResources->count_connectors; conn++) {
-		connector = drmModeGetConnector(kmrkms->kmsfd, drmResources->connectors[conn]);
+		connector = drmModeGetConnector(kmrdrm->kmsfd, drmResources->connectors[conn]);
 		if (!connector) {
 			kmr_utils_log(KMR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
 			goto exit_error_kms_node_doc_create_drm_mode_free_planes;
@@ -493,7 +493,7 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 		/* Find the encoder (a deprecated KMS object) for this connector. */
 		for (int e = 0; e < drmResources->count_encoders; e++) {
 			if (drmResources->encoders[e] == connector->encoder_id) {
-				encoder = drmModeGetEncoder(kmrkms->kmsfd, drmResources->encoders[e]);
+				encoder = drmModeGetEncoder(kmrdrm->kmsfd, drmResources->encoders[e]);
 				if (!encoder) {
 					kmr_utils_log(KMR_DANGER, "[x] drmModeGetEncoder: Failed to get encoder KMS object associated with connector id '%d'",connector->connector_id);
 					goto exit_error_kms_node_doc_create_drm_mode_free_connector;
@@ -510,7 +510,7 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 
 		for (int c = 0; c < drmResources->count_crtcs; c++) {
 			if (drmResources->crtcs[c] == encoder->crtc_id) {
-				crtc = drmModeGetCrtc(kmrkms->kmsfd, drmResources->crtcs[c]);
+				crtc = drmModeGetCrtc(kmrdrm->kmsfd, drmResources->crtcs[c]);
 				if (!crtc) {
 					kmr_utils_log(KMR_DANGER, "[x] drmModeGetCrtc: Failed to get crtc KMS object associated with encoder id '%d'", encoder->encoder_id);
 					goto exit_error_kms_node_doc_create_drm_mode_free_encoder;
@@ -545,21 +545,21 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 
 		// Stores mode id given to one of the displays resolution + refresh
 		memcpy(&modeData.modeInfo, &connector->modes[0], sizeof(drmModeModeInfo));
-		if (drmModeCreatePropertyBlob(kmrkms->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeData.id) != 0) {
+		if (drmModeCreatePropertyBlob(kmrdrm->kmsfd, &connector->modes[0], sizeof(connector->modes[0]), &modeData.id) != 0) {
 			kmr_utils_log(KMR_DANGER, "[x] drmModeCreatePropertyBlob: couldn't create a blob property");
 			goto exit_error_kms_node_doc_create_drm_mode_free_crtc;
 		}
 
 		connectorProps.id = connector->connector_id;
-		if (acquire_kms_object_properties(kmrkms->kmsfd, &connectorProps, DRM_MODE_OBJECT_CONNECTOR) == -1)
+		if (acquire_kms_object_properties(kmrdrm->kmsfd, &connectorProps, DRM_MODE_OBJECT_CONNECTOR) == -1)
 			goto exit_error_kms_node_doc_create_drm_mode_destroy_mode_id;
 
 		crtcProps.id = crtc->crtc_id;
-		if (acquire_kms_object_properties(kmrkms->kmsfd, &crtcProps, DRM_MODE_OBJECT_CRTC) == -1)
+		if (acquire_kms_object_properties(kmrdrm->kmsfd, &crtcProps, DRM_MODE_OBJECT_CRTC) == -1)
 			goto exit_error_kms_node_doc_create_free_kms_obj_props;
 
 		planeProps.id = plane->plane_id;
-		if (acquire_kms_object_properties(kmrkms->kmsfd, &planeProps, DRM_MODE_OBJECT_PLANE) == -1)
+		if (acquire_kms_object_properties(kmrdrm->kmsfd, &planeProps, DRM_MODE_OBJECT_PLANE) == -1)
 			goto exit_error_kms_node_doc_create_free_kms_obj_props;
 
 		width = connector->modes[0].hdisplay;
@@ -580,7 +580,7 @@ struct kmr_kms_node_display_output_chain kmr_kms_node_display_output_chain_creat
 		drmModeFreePlaneResources(drmPlaneResources);
 		drmModeFreeResources(drmResources);
 
-		return (struct kmr_kms_node_display_output_chain) { .kmsfd = kmrkms->kmsfd, .width = width, .height = height, .modeData = modeData,
+		return (struct kmr_drm_node_display_output_chain) { .kmsfd = kmrdrm->kmsfd, .width = width, .height = height, .modeData = modeData,
 								    .connector = connectorProps, .crtc = crtcProps, .plane = planeProps };
 	}
 
@@ -593,7 +593,7 @@ exit_error_kms_node_doc_create_free_kms_obj_props:
 	memset(&planeProps, 0, sizeof(planeProps));
 exit_error_kms_node_doc_create_drm_mode_destroy_mode_id:
 	if (modeData.id)
-		drmModeDestroyPropertyBlob(kmrkms->kmsfd, modeData.id);
+		drmModeDestroyPropertyBlob(kmrdrm->kmsfd, modeData.id);
 	memset(&modeData, 0, sizeof(modeData));
 exit_error_kms_node_doc_create_drm_mode_free_crtc:
 	if (crtc)
@@ -615,19 +615,19 @@ exit_error_kms_node_doc_create_drm_mode_free_resources:
 	if (drmResources)
 		drmModeFreeResources(drmResources);
 exit_error_kms_node_doc_create:
-	return (struct kmr_kms_node_display_output_chain) { .kmsfd = 0, .width = 0, .height = 0, .modeData = modeData,
+	return (struct kmr_drm_node_display_output_chain) { .kmsfd = 0, .width = 0, .height = 0, .modeData = modeData,
                                                             .connector = connectorProps, .crtc = crtcProps, .plane = planeProps };
 }
 
 
-int kmr_kms_node_display_mode_set(struct kmr_kms_node_display_mode_info *kmrkms)
+int kmr_drm_node_display_mode_set(struct kmr_drm_node_display_mode_info *kmrdrm)
 {
-	uint32_t connector = kmrkms->displayChain->connector.id;
-	uint32_t crtc = kmrkms->displayChain->crtc.id;
-	int kmsfd = kmrkms->displayChain->kmsfd;
-	drmModeModeInfo mode = kmrkms->displayChain->modeData.modeInfo;
+	uint32_t connector = kmrdrm->displayChain->connector.id;
+	uint32_t crtc = kmrdrm->displayChain->crtc.id;
+	int kmsfd = kmrdrm->displayChain->kmsfd;
+	drmModeModeInfo mode = kmrdrm->displayChain->modeData.modeInfo;
 
-	if (drmModeSetCrtc(kmsfd, crtc, kmrkms->fbid, 0, 0, &connector, 1, &mode)) {
+	if (drmModeSetCrtc(kmsfd, crtc, kmrdrm->fbid, 0, 0, &connector, 1, &mode)) {
 		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: %s", strerror(errno));
 		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: failed to set preferred display mode");
 		return -1;
@@ -637,10 +637,10 @@ int kmr_kms_node_display_mode_set(struct kmr_kms_node_display_mode_info *kmrkms)
 }
 
 
-int kmr_kms_node_display_mode_reset(struct kmr_kms_node_display_mode_info *kmrkms)
+int kmr_drm_node_display_mode_reset(struct kmr_drm_node_display_mode_info *kmrdrm)
 {
-	uint32_t crtc = kmrkms->displayChain->crtc.id;
-	int kmsfd = kmrkms->displayChain->kmsfd;
+	uint32_t crtc = kmrdrm->displayChain->crtc.id;
+	int kmsfd = kmrdrm->displayChain->kmsfd;
 
 	if (drmModeSetCrtc(kmsfd, crtc, 0, 0, 0, NULL, 0, NULL)) {
 		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: %s", strerror(errno));
@@ -658,7 +658,7 @@ int kmr_kms_node_display_mode_reset(struct kmr_kms_node_display_mode_info *kmrkm
  * in drmModeAtomicReq *atomicRequest until DRM core receives commit.
  */
 static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fbid,
-                                         struct kmr_kms_node_display_output_chain *displayOutputChain)
+                                         struct kmr_drm_node_display_output_chain *displayOutputChain)
 {
 	/* set id of the CRTC id that the connector is using */
 	if (drmModeAtomicAddProperty(atomicRequest, displayOutputChain->connector.id, displayOutputChain->connector.propsData[KMR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].id, displayOutputChain->crtc.id) < 0)
@@ -711,7 +711,7 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
 
 
 /*
- * struct kmr_kms_node_renderer_info (kmsroots KMS Node Renderer Information)
+ * struct kmr_drm_node_renderer_info (kmsroots KMS Node Renderer Information)
  *
  * members:
  * @displayOutputChain    - Pointer to a struct containing all plane->crtc->connector data used during
@@ -726,9 +726,9 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
  * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
  *                          Reference/Address passed depends on external renderer function.
  */
-struct kmr_kms_node_renderer_info {
-	struct kmr_kms_node_display_output_chain *displayOutputChain;
-	kmr_kms_node_renderer_impl               renderer;
+struct kmr_drm_node_renderer_info {
+	struct kmr_drm_node_display_output_chain *displayOutputChain;
+	kmr_drm_node_renderer_impl               renderer;
 	bool                                     *rendererRunning;
 	uint8_t                                  *rendererCurrentBuffer;
 	drmModeAtomicReq                         *rendererAtomicRequest;
@@ -737,56 +737,56 @@ struct kmr_kms_node_renderer_info {
 };
 
 
-struct kmr_kms_node_atomic_request kmr_kms_node_atomic_request_create(struct kmr_kms_node_atomic_request_create_info *kmrkms)
+struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request_create(struct kmr_drm_node_atomic_request_create_info *kmrdrm)
 {
 	int atomicRequestFlags = 0;
 	drmModeAtomicReq *atomicRequest = NULL;
-	struct kmr_kms_node_renderer_info *rendererInfo = NULL;
+	struct kmr_drm_node_renderer_info *rendererInfo = NULL;
 
 	atomicRequest = drmModeAtomicAlloc();
 	if (!atomicRequest)
-		goto exit_error_kmr_kms_node_atomic_request_create;
+		goto exit_error_kmr_drm_node_atomic_request_create;
 
-	rendererInfo = calloc(1, sizeof(struct kmr_kms_node_renderer_info));
+	rendererInfo = calloc(1, sizeof(struct kmr_drm_node_renderer_info));
 	if (!rendererInfo) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_kms_node_atomic_request_create_free_request;
+		goto exit_error_kmr_drm_node_atomic_request_create_free_request;
 	}
 
-	rendererInfo->displayOutputChain = kmrkms->displayOutputChain;
-	rendererInfo->renderer = kmrkms->renderer;
-	rendererInfo->rendererRunning = kmrkms->rendererRunning;
-	rendererInfo->rendererCurrentBuffer = kmrkms->rendererCurrentBuffer;
+	rendererInfo->displayOutputChain = kmrdrm->displayOutputChain;
+	rendererInfo->renderer = kmrdrm->renderer;
+	rendererInfo->rendererRunning = kmrdrm->rendererRunning;
+	rendererInfo->rendererCurrentBuffer = kmrdrm->rendererCurrentBuffer;
 	rendererInfo->rendererAtomicRequest = atomicRequest;
-	rendererInfo->rendererFbId = kmrkms->rendererFbId;
-	rendererInfo->rendererData = kmrkms->rendererData;
+	rendererInfo->rendererFbId = kmrdrm->rendererFbId;
+	rendererInfo->rendererData = kmrdrm->rendererData;
 
-	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *kmrkms->rendererFbId, kmrkms->displayOutputChain) == -1)
-		goto exit_error_kmr_kms_node_atomic_request_create_free_request;
+	if (modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest, *kmrdrm->rendererFbId, kmrdrm->displayOutputChain) == -1)
+		goto exit_error_kmr_drm_node_atomic_request_create_free_request;
 
 	/* perform test-only atomic commit */
 	atomicRequestFlags = DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET;
-	if (drmModeAtomicCommit(kmrkms->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
+	if (drmModeAtomicCommit(kmrdrm->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
 		kmr_utils_log(KMR_DANGER, "drmModeAtomicCommit: %s", strerror(errno));
-		goto exit_error_kmr_kms_node_atomic_request_create_free_rendererInfo;
+		goto exit_error_kmr_drm_node_atomic_request_create_free_rendererInfo;
 	}
 
 	/* initial modeset on all outputs */
 	atomicRequestFlags = DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT;
-	if (drmModeAtomicCommit(kmrkms->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
+	if (drmModeAtomicCommit(kmrdrm->kmsfd, rendererInfo->rendererAtomicRequest, atomicRequestFlags, rendererInfo) < 0) {
 		kmr_utils_log(KMR_DANGER, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
 		kmr_utils_log(KMR_DANGER, "[x] drmModeAtomicCommit: %s", strerror(errno));
-		goto exit_error_kmr_kms_node_atomic_request_create_free_rendererInfo;
+		goto exit_error_kmr_drm_node_atomic_request_create_free_rendererInfo;
 	}
 
-	return (struct kmr_kms_node_atomic_request) { .atomicRequest = rendererInfo->rendererAtomicRequest, .rendererInfo = rendererInfo };
+	return (struct kmr_drm_node_atomic_request) { .atomicRequest = rendererInfo->rendererAtomicRequest, .rendererInfo = rendererInfo };
 
-exit_error_kmr_kms_node_atomic_request_create_free_rendererInfo:
+exit_error_kmr_drm_node_atomic_request_create_free_rendererInfo:
 	free(rendererInfo);
-exit_error_kmr_kms_node_atomic_request_create_free_request:
+exit_error_kmr_drm_node_atomic_request_create_free_request:
 	drmModeAtomicFree(atomicRequest);
-exit_error_kmr_kms_node_atomic_request_create:
-	return (struct kmr_kms_node_atomic_request) { .atomicRequest = NULL, .rendererInfo = NULL };
+exit_error_kmr_drm_node_atomic_request_create:
+	return (struct kmr_drm_node_atomic_request) { .atomicRequest = NULL, .rendererInfo = NULL };
 }
 
 
@@ -797,7 +797,7 @@ static void handle_page_flip_event(int fd,
                                    unsigned int UNUSED crtc_id,
                                    void *data)
 {
-	struct kmr_kms_node_renderer_info *rendererInfo = (struct kmr_kms_node_renderer_info *) data;
+	struct kmr_drm_node_renderer_info *rendererInfo = (struct kmr_drm_node_renderer_info *) data;
 
 	/* Application updates @rendererFbId to the next displayable GBM[GEM]/DUMP buffer and renders into that buffer. This buffer is displayed when atomic commit is performed */
 	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
@@ -820,7 +820,7 @@ static void handle_page_flip_event(int fd,
 }
 
 
-int kmr_kms_node_handle_drm_event(struct kmr_kms_node_handle_drm_event_info *kmrkms)
+int kmr_drm_node_handle_drm_event(struct kmr_drm_node_handle_drm_event_info *kmrdrm)
 {
 	/*
 	 * Version 3 is the first version that allow us to use page_flip_handler2, which
@@ -835,7 +835,7 @@ int kmr_kms_node_handle_drm_event(struct kmr_kms_node_handle_drm_event_info *kmr
 	event.version = 3;
 	event.page_flip_handler2 = handle_page_flip_event;
 
-	if (drmHandleEvent(kmrkms->kmsfd, &event) != 0) {
+	if (drmHandleEvent(kmrdrm->kmsfd, &event) != 0) {
 		kmr_utils_log(KMR_DANGER, "[x] drmHandleEvent: failed");
 		return -1;
 	}
@@ -844,21 +844,21 @@ int kmr_kms_node_handle_drm_event(struct kmr_kms_node_handle_drm_event_info *kmr
 }
 
 
-void kmr_kms_node_destroy(struct kmr_kms_node_destroy *kmrkms)
+void kmr_drm_node_destroy(struct kmr_drm_node_destroy *kmrdrm)
 {
-	if (kmrkms->kmr_kms_node.kmsfd != -1) {
-		if (kmrkms->kmr_kms_node_atomic_request.atomicRequest)
-			drmModeAtomicFree(kmrkms->kmr_kms_node_atomic_request.atomicRequest);
-		free(kmrkms->kmr_kms_node_atomic_request.rendererInfo);
-		free(kmrkms->kmr_kms_node_display_output_chain.plane.propsData);
-		free(kmrkms->kmr_kms_node_display_output_chain.crtc.propsData);
-		free(kmrkms->kmr_kms_node_display_output_chain.connector.propsData);
-		if (kmrkms->kmr_kms_node_display_output_chain.modeData.id)
-			drmModeDestroyPropertyBlob(kmrkms->kmr_kms_node.kmsfd, kmrkms->kmr_kms_node_display_output_chain.modeData.id);
+	if (kmrdrm->kmr_drm_node.kmsfd != -1) {
+		if (kmrdrm->kmr_drm_node_atomic_request.atomicRequest)
+			drmModeAtomicFree(kmrdrm->kmr_drm_node_atomic_request.atomicRequest);
+		free(kmrdrm->kmr_drm_node_atomic_request.rendererInfo);
+		free(kmrdrm->kmr_drm_node_display_output_chain.plane.propsData);
+		free(kmrdrm->kmr_drm_node_display_output_chain.crtc.propsData);
+		free(kmrdrm->kmr_drm_node_display_output_chain.connector.propsData);
+		if (kmrdrm->kmr_drm_node_display_output_chain.modeData.id)
+			drmModeDestroyPropertyBlob(kmrdrm->kmr_drm_node.kmsfd, kmrdrm->kmr_drm_node_display_output_chain.modeData.id);
 #ifdef INCLUDE_LIBSEAT
-		kmr_session_release_device(kmrkms->kmr_kms_node.session, kmrkms->kmr_kms_node.kmsfd);
+		kmr_session_release_device(kmrdrm->kmr_drm_node.session, kmrdrm->kmr_drm_node.kmsfd);
 #else
-		close(kmrkms->kmr_kms_node.kmsfd);
+		close(kmrdrm->kmr_drm_node.kmsfd);
 #endif
 	}
 }

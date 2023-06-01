@@ -34,7 +34,7 @@ libudev = dependency('libudev', required: get_option('kms').enabled() or get_opt
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
   lib_kmr_deps += [libdrm]
-  fs += ['kms-node.c', 'dma-buf.c']
+  fs += ['drm-node.c', 'dma-buf.c']
 endif
 
 if libseat.found()

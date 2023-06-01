@@ -3,7 +3,7 @@ main_headers = [
 ]
 
 if get_option('kms').enabled()
-  main_headers += ['kms-node.h', 'buffer.h', 'dma-buf.h', 'pixel-format.h']
+  main_headers += ['drm-node.h', 'buffer.h', 'dma-buf.h', 'pixel-format.h']
 endif
 
 if get_option('libseat').enabled()
