@@ -73,12 +73,12 @@ struct kmr_vk_instance_create_info {
  *                         Client should enable those extensions inorder to gain access to those particular capabilities.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_instance_create_info
+ * @kmrvk - pointer to a struct kmr_vk_instance_create_info
  * return:
  *	on success VkInstance handle
  *	on failure VK_NULL_HANDLE
  */
-VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmsvk);
+VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk);
 
 
 /*
@@ -119,12 +119,12 @@ struct kmr_vk_surface_create_info {
  *                        if vulkan swapchain exists.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_surface_create_info
+ * @kmrvk - pointer to a struct kmr_vk_surface_create_info
  * return:
  *	on success VkSurfaceKHR handle
  *	on failure VK_NULL_HANDLE
  */
-VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmsvk);
+VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
 
 
 /*
@@ -181,12 +181,12 @@ struct kmr_vk_phdev {
  *                      Characteristics include @vkPhdevType and @kmsFd.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_phdev_create_info
+ * @kmrvk - pointer to a struct kmr_vk_phdev_create_info
  * return:
  *	on success struct kmr_vk_phdev
  *	on failure struct kmr_vk_phdev { with members nulled, int's set to -1 }
  */
-struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmsvk);
+struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk);
 
 
 /*
@@ -227,13 +227,13 @@ struct kmr_vk_queue_create_info {
  *                      are used in vulkan to submit commands up to the GPU.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_queue_create_info. Contains information on which queue family
+ * @kmrvk - pointer to a struct kmr_vk_queue_create_info. Contains information on which queue family
  *          we are trying to find and the physical device that supports said queue family.
  * return:
  *	on success struct kmr_vk_queue
  *	on failure struct kmr_vk_queue { with members nulled, int's set to -1 }
  */
-struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmsvk);
+struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk);
 
 
 /*
@@ -294,12 +294,12 @@ struct kmr_vk_lgdev_create_info {
  *                      requires a logical device handle.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_lgdev_create_info
+ * @kmrvk - pointer to a struct kmr_vk_lgdev_create_info
  * return:
  *	on success struct kmr_vk_lgdev
  *	on failure struct kmr_vk_lgdev { with members nulled, int's set to -1 }
  */
-struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmsvk);
+struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk);
 
 
 /*
@@ -365,12 +365,12 @@ struct kmr_vk_swapchain_create_info {
  *                          The swapchain can be defined as a set of images that can be drawn to and presented to a surface.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_swapchain_create_info
+ * @kmrvk - pointer to a struct kmr_vk_swapchain_create_info
  * return:
  *	on success struct kmr_vk_swapchain
  *	on failure struct kmr_vk_swapchain { with member nulled }
  */
-struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmsvk);
+struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk);
 
 
 /*
@@ -541,12 +541,12 @@ struct kmr_vk_image_create_info {
  *                      objects with images. Amount of images created it based upon @imageCount
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_image_create_info
+ * @kmrvk - pointer to a struct kmr_vk_image_create_info
  * return:
  *	on success struct kmr_vk_image
  *	on failure struct kmr_vk_image { with member nulled }
  */
-struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmsvk);
+struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmrvk);
 
 
 /*
@@ -585,12 +585,12 @@ struct kmr_vk_shader_module_create_info {
  * kmr_vk_shader_module_create: Function creates VkShaderModule from passed SPIR-V byte code.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_shader_module_create_info
+ * @kmrvk - pointer to a struct kmr_vk_shader_module_create_info
  * return:
  *	on success struct kmr_vk_shader_module
  *	on failure struct kmr_vk_shader_module { with member nulled }
  */
-struct kmr_vk_shader_module kmr_vk_shader_module_create(struct kmr_vk_shader_module_create_info *kmsvk);
+struct kmr_vk_shader_module kmr_vk_shader_module_create(struct kmr_vk_shader_module_create_info *kmrvk);
 
 
 /*
@@ -639,12 +639,12 @@ struct kmr_vk_pipeline_layout_create_info {
  *                                data that will be given to the pipeline for a single draw operation.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_pipeline_layout_create_info
+ * @kmrvk - pointer to a struct kmr_vk_pipeline_layout_create_info
  * return:
  *	on success struct kmr_vk_pipeline_layout
  *	on failure struct kmr_vk_pipeline_layout { with member nulled }
  */
-struct kmr_vk_pipeline_layout kmr_vk_pipeline_layout_create(struct kmr_vk_pipeline_layout_create_info *kmsvk);
+struct kmr_vk_pipeline_layout kmr_vk_pipeline_layout_create(struct kmr_vk_pipeline_layout_create_info *kmrvk);
 
 
 /*
@@ -701,12 +701,12 @@ struct kmr_vk_render_pass_create_info {
  *                            color in the center of a triangle. We want to give the appears of depth to an image.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_render_pass_create_info
+ * @kmrvk - pointer to a struct kmr_vk_render_pass_create_info
  * return:
  *	on success struct kmr_vk_render_pass
  *	on failure struct kmr_vk_render_pass { with member nulled }
  */
-struct kmr_vk_render_pass kmr_vk_render_pass_create(struct kmr_vk_render_pass_create_info *kmsvk);
+struct kmr_vk_render_pass kmr_vk_render_pass_create(struct kmr_vk_render_pass_create_info *kmrvk);
 
 
 /*
@@ -779,12 +779,12 @@ struct kmr_vk_graphics_pipeline_create_info {
  *                                  fragment shader to then color in.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_graphics_pipeline_create_info
+ * @kmrvk - pointer to a struct kmr_vk_graphics_pipeline_create_info
  * return:
  *	on success struct kmr_vk_graphics_pipeline
  *	on failure struct kmr_vk_graphics_pipeline { with member nulled }
  */
-struct kmr_vk_graphics_pipeline kmr_vk_graphics_pipeline_create(struct kmr_vk_graphics_pipeline_create_info *kmsvk);
+struct kmr_vk_graphics_pipeline kmr_vk_graphics_pipeline_create(struct kmr_vk_graphics_pipeline_create_info *kmrvk);
 
 
 /*
@@ -860,12 +860,12 @@ struct kmr_vk_framebuffer_create_info {
  *                            must have one VkImage for color and one VkImage for depth.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_framebuffer_create_info
+ * @kmrvk - pointer to a struct kmr_vk_framebuffer_create_info
  * return:
  *	on success struct kmr_vk_framebuffer
  *	on failure struct kmr_vk_framebuffer { with member nulled }
  */
-struct kmr_vk_framebuffer kmr_vk_framebuffer_create(struct kmr_vk_framebuffer_create_info *kmsvk);
+struct kmr_vk_framebuffer kmr_vk_framebuffer_create(struct kmr_vk_framebuffer_create_info *kmrvk);
 
 
 /*
@@ -918,12 +918,12 @@ struct kmr_vk_command_buffer_create_info {
  *                               VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_command_buffer_create_info
+ * @kmrvk - pointer to a struct kmr_vk_command_buffer_create_info
  * return:
  *	on success struct kmr_vk_command_buffer
  *	on failure struct kmr_vk_command_buffer { with member nulled }
  */
-struct kmr_vk_command_buffer kmr_vk_command_buffer_create(struct kmr_vk_command_buffer_create_info *kmsvk);
+struct kmr_vk_command_buffer kmr_vk_command_buffer_create(struct kmr_vk_command_buffer_create_info *kmrvk);
 
 
 /*
@@ -947,24 +947,24 @@ struct kmr_vk_command_buffer_record_info {
  *                                     are later put into a queue to be sent off to the GPU.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_command_buffer_record_info
+ * @kmrvk - pointer to a struct kmr_vk_command_buffer_record_info
  * return:
  *	on success 0
  *	on failure -1
  */
-int kmr_vk_command_buffer_record_begin(struct kmr_vk_command_buffer_record_info *kmsvk);
+int kmr_vk_command_buffer_record_begin(struct kmr_vk_command_buffer_record_info *kmrvk);
 
 
 /*
  * kmr_vk_command_buffer_record_end: Function stops command buffer to recording. Thus, ending each command buffers ability to accept commands.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_command_buffer_record_info
+ * @kmrvk - pointer to a struct kmr_vk_command_buffer_record_info
  * return:
  *	on success 0
  *	on failure -1
  */
-int kmr_vk_command_buffer_record_end(struct kmr_vk_command_buffer_record_info *kmsvk);
+int kmr_vk_command_buffer_record_end(struct kmr_vk_command_buffer_record_info *kmrvk);
 
 
 /*
@@ -1038,12 +1038,12 @@ struct kmr_vk_sync_obj_create_info {
  *                         happen after.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_sync_obj_create_info
+ * @kmrvk - pointer to a struct kmr_vk_sync_obj_create_info
  * return:
  *	on success struct kmr_vk_sync_obj
  *	on failure struct kmr_vk_sync_obj { with member nulled }
  */
-struct kmr_vk_sync_obj kmr_vk_sync_obj_create(struct kmr_vk_sync_obj_create_info *kmsvk);
+struct kmr_vk_sync_obj kmr_vk_sync_obj_create(struct kmr_vk_sync_obj_create_info *kmrvk);
 
 
 /*
@@ -1176,12 +1176,12 @@ struct kmr_vk_buffer_create_info {
  *                       allows host visible data (i.e vertex data) to be given to the GPU.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_buffer_create_info
+ * @kmrvk - pointer to a struct kmr_vk_buffer_create_info
  * return:
  *	on success struct kmr_vk_buffer
  *	on failure struct kmr_vk_buffer { with member nulled }
  */
-struct kmr_vk_buffer kmr_vk_buffer_create(struct kmr_vk_buffer_create_info *kmsvk);
+struct kmr_vk_buffer kmr_vk_buffer_create(struct kmr_vk_buffer_create_info *kmrvk);
 
 
 /*
@@ -1228,12 +1228,12 @@ struct kmr_vk_descriptor_set_layout_create_info {
  *                                      resources, and at what pipeline stage.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_descriptor_set_layout_create_info
+ * @kmrvk - pointer to a struct kmr_vk_descriptor_set_layout_create_info
  * return:
  *	on success struct kmr_vk_descriptor_set_layout
  *	on failure struct kmr_vk_descriptor_set_layout { with member nulled }
  */
-struct kmr_vk_descriptor_set_layout kmr_vk_descriptor_set_layout_create(struct kmr_vk_descriptor_set_layout_create_info *kmsvk);
+struct kmr_vk_descriptor_set_layout kmr_vk_descriptor_set_layout_create(struct kmr_vk_descriptor_set_layout_create_info *kmrvk);
 
 
 /*
@@ -1308,12 +1308,12 @@ struct kmr_vk_descriptor_set_create_info {
  *                   descriptor: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][     1     |     2     ]
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_descriptor_set_create_info
+ * @kmrvk - pointer to a struct kmr_vk_descriptor_set_create_info
  * return:
  *	on success struct kmr_vk_descriptor_set
  *	on failure struct kmr_vk_descriptor_set { with member nulled }
  */
-struct kmr_vk_descriptor_set kmr_vk_descriptor_set_create(struct kmr_vk_descriptor_set_create_info *kmsvk);
+struct kmr_vk_descriptor_set kmr_vk_descriptor_set_create(struct kmr_vk_descriptor_set_create_info *kmrvk);
 
 
 /*
@@ -1386,12 +1386,12 @@ struct kmr_vk_sampler_create_info {
  *                        Loaded images (png, jpg)-> VkImage -> Sampler interacts with the VkImage.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_sampler_create_info
+ * @kmrvk - pointer to a struct kmr_vk_sampler_create_info
  * return:
  *	on success struct kmr_vk_sampler
  *	on failure struct kmr_vk_sampler { with member nulled }
  */
-struct kmr_vk_sampler kmr_vk_sampler_create(struct kmr_vk_sampler_create_info *kmsvk);
+struct kmr_vk_sampler kmr_vk_sampler_create(struct kmr_vk_sampler_create_info *kmrvk);
 
 
 /*
@@ -1441,12 +1441,12 @@ struct kmr_vk_resource_copy_info {
  *                       GPU can acquire data (vertex data) more quickly.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_resource_copy_info
+ * @kmrvk - pointer to a struct kmr_vk_resource_copy_info
  * return:
  *	on success 0
  *	on failure -1
  */
-int kmr_vk_resource_copy(struct kmr_vk_resource_copy_info *kmsvk);
+int kmr_vk_resource_copy(struct kmr_vk_resource_copy_info *kmrvk);
 
 
 /*
@@ -1480,12 +1480,12 @@ struct kmr_vk_resource_pipeline_barrier_info {
  *                                   ensuring that a write to a resources finishes before reading from it.
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_resource_pipeline_barrier_info
+ * @kmrvk - pointer to a struct kmr_vk_resource_pipeline_barrier_info
  * return:
  *	on success 0
  *	on failure -1
  */
-int kmr_vk_resource_pipeline_barrier(struct kmr_vk_resource_pipeline_barrier_info *kmsvk);
+int kmr_vk_resource_pipeline_barrier(struct kmr_vk_resource_pipeline_barrier_info *kmrvk);
 
 
 /*
@@ -1693,9 +1693,9 @@ struct kmr_vk_memory_map_info {
  *                    Try to avoid utilizing in render loops. Although that's how it's written
  *                    in multiple examples in this repo.
  * args:
- * @kmsvk - pointer to a struct kmr_vk_memory_map_info
+ * @kmrvk - pointer to a struct kmr_vk_memory_map_info
  */
-void kmr_vk_memory_map(struct kmr_vk_memory_map_info *kmsvk);
+void kmr_vk_memory_map(struct kmr_vk_memory_map_info *kmrvk);
 
 
 /*
@@ -1785,9 +1785,9 @@ struct kmr_vk_destroy {
  * kmr_vk_destroy: frees any allocated memory defined by customer
  *
  * args:
- * @kmsvk - pointer to a struct kmr_vk_destroy contains all objects created during
+ * @kmrvk - pointer to a struct kmr_vk_destroy contains all objects created during
  *          application lifetime in need freeing
  */
-void kmr_vk_destroy(struct kmr_vk_destroy *kmsvk);
+void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk);
 
 #endif
