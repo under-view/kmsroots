@@ -314,7 +314,7 @@ struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
 	}
 
 	if (physDevice == VK_NULL_HANDLE) {
-		kmr_utils_log(KMR_DANGER, "[x] GPU that meets requirement not found!");
+		kmr_utils_log(KMR_DANGER, "[x] Failed to find GPU that meets requirement not found!");
 		goto exit_error_vk_phdev_create;
 	}
 
