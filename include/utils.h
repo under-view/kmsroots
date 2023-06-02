@@ -186,24 +186,38 @@ int kmr_utils_update_fd_flags(int fd, int flags);
 int allocate_shm_file(size_t size);
 
 
-/* Used to help determine which ANSI Escape Codes to use */
-enum kmr_utils_log_type {
-	KMR_NONE         = 0,
-	KMR_SUCCESS      = 1,
-	KMR_DANGER       = 2,
-	KMR_INFO         = 3,
-	KMR_WARNING      = 4,
-	KMR_RESET        = 5,
-	KMR_MAX_LOG_ENUM = 0xFFFFFFFF
-};
+/*
+ * enum kmr_utils_log_level_type (kmsroots Utils Log Level Type)
+ *
+ * Sets which messages of a given type to print and is used to
+ * help determine which ANSI Escape Codes to utilize.
+ */
+typedef enum _kmr_utils_log_type {
+	KMR_NONE     = 0x00000000,
+	KMR_SUCCESS  = 0x00000001,
+	KMR_DANGER   = 0x00000002,
+	KMR_INFO     = 0x00000004,
+	KMR_WARNING  = 0x00000008,
+	KMR_RESET    = 0x00000010,
+	KMR_ALL      = 0xFFFFFFFF
+} kmr_utils_log_type;
 
 
-void _kmr_utils_log(enum kmr_utils_log_type type, FILE *stream, const char *fmt, ...);
+void _kmr_utils_log(kmr_utils_log_type type, FILE *stream, const char *fmt, ...);
 const char *_kmr_utils_strip_path(const char *filepath);
 
 
 /* Macros defined to help better structure the message */
-#define kmr_utils_log(log_type, fmt, ...) \
-	_kmr_utils_log(log_type, stdout, "[%s:%d] " fmt, _kmr_utils_strip_path(__FILE__), __LINE__, ##__VA_ARGS__)
+#define kmr_utils_log(logType, fmt, ...) \
+	_kmr_utils_log(logType, stdout, "[%s:%d] " fmt, _kmr_utils_strip_path(__FILE__), __LINE__, ##__VA_ARGS__)
+
+
+/*
+ * kmr_utils_set_log_level: Sets which messages of kmr_utils_log_type allowed to be printed to stdout.
+ *
+ * args:
+ * @level - 32-bit integer representing the logs to print to stdout.
+ */
+void kmr_utils_set_log_level(kmr_utils_log_type level);
 
 #endif

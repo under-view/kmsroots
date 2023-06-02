@@ -316,6 +316,9 @@ int allocate_shm_file(size_t size)
 }
 
 
+static uint32_t logLevel = KMR_ALL;
+
+
 /* ANSI Escape Codes */
 static const char *term_colors[] = {
 	[KMR_NONE]    = "",
@@ -337,10 +340,13 @@ const char *_kmr_utils_strip_path(const char *filepath)
 }
 
 
-void _kmr_utils_log(enum kmr_utils_log_type type, FILE *stream, const char *fmt, ...)
+void _kmr_utils_log(kmr_utils_log_type type, FILE *stream, const char *fmt, ...)
 {
 	char buffer[26];
 	va_list args; /* type that holds variable arguments */
+
+	if (!(type & logLevel))
+		return;
 
 	/* create message time stamp */
 	time_t rawtime = time(NULL);
@@ -358,4 +364,9 @@ void _kmr_utils_log(enum kmr_utils_log_type type, FILE *stream, const char *fmt,
 
 	/* Flush buffer */
 	fprintf(stream, "\n");
+}
+
+
+void kmr_utils_set_log_level(kmr_utils_log_type level) {
+	logLevel = level;
 }
