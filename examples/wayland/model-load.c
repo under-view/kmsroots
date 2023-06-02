@@ -228,6 +228,8 @@ int main(void)
 		return 1;
 	}
 
+	kmr_utils_set_log_level(KMR_ALL);
+
 	struct app_vk app;
 	struct kmr_vk_destroy appd;
 	memset(&app, 0, sizeof(app));

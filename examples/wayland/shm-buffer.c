@@ -86,6 +86,8 @@ int main(void)
 		return 1;
 	}
 
+	kmr_utils_set_log_level(KMR_ALL);
+
 	struct app_wc wc;
 	struct kmr_wc_destroy wcd;
 	memset(&wcd, 0, sizeof(wcd));

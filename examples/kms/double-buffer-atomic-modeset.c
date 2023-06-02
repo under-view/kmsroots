@@ -130,6 +130,8 @@ int main(void)
 		return 1;
 	}
 
+	kmr_utils_set_log_level(KMR_ALL);
+
 	struct app_kms kms;
 	memset(&kms, 0, sizeof(kms));
 
