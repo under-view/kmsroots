@@ -189,8 +189,10 @@ void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer.bufferCount;
 	*fbid = kms->kmr_buffer.bufferObjects[*imageIndex].fbid;
 
-	const uint64_t waitValue = 0;
-	const uint64_t signalValue = 5;
+	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
+	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
+
+	static uint64_t signalValue = 1;
 
 	VkSemaphore timelineSemaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
 	VkCommandBuffer commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
@@ -199,22 +201,19 @@ void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 	VkSemaphore waitSemaphores[1] = { timelineSemaphore };
 	VkSemaphore signalSemaphores[1] = { timelineSemaphore };
 
-	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
-	update_uniform_buffer(app, *((uint32_t*)imageIndex), extent2D);
-
 	VkTimelineSemaphoreSubmitInfo timelineInfo;
 	timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
 	timelineInfo.pNext = NULL;
-	timelineInfo.waitSemaphoreValueCount = 1;
-	timelineInfo.pWaitSemaphoreValues = &waitValue;
+	timelineInfo.waitSemaphoreValueCount = 0;
+	timelineInfo.pWaitSemaphoreValues = NULL;
 	timelineInfo.signalSemaphoreValueCount = 1;
 	timelineInfo.pSignalSemaphoreValues = &signalValue;
 
 	VkSubmitInfo submitInfo;
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.pNext = &timelineInfo;
-	submitInfo.waitSemaphoreCount = ARRAY_LEN(waitSemaphores);
-	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitSemaphores = NULL;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
@@ -224,22 +223,27 @@ void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
 	/* Submit draw command */
 	vkQueueSubmit(app->kmr_vk_queue.queue, 1, &submitInfo, VK_NULL_HANDLE);
 
+	/*
+	 * Synchronous wait to ensure DMA-BUF is populated before
+	 * submitting associated KMS fbid to DRM core.
+	 */
 	VkSemaphoreWaitInfo waitInfo;
 	waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 	waitInfo.pNext = NULL;
 	waitInfo.flags = 0;
 	waitInfo.semaphoreCount = ARRAY_LEN(waitSemaphores);
 	waitInfo.pSemaphores = waitSemaphores;
-	waitInfo.pValues = &waitValue;
+	waitInfo.pValues = &signalValue;
 
 	vkWaitSemaphores(app->kmr_vk_lgdev.logicalDevice, &waitInfo, UINT64_MAX);
 
 	*running = prun;
+	signalValue++;
 }
 
 
 /*
- * Example code demonstrating how use Vulkan with Wayland
+ * Example code demonstrating how use Vulkan with KMS
  */
 int main(void)
 {
