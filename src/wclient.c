@@ -260,12 +260,12 @@ error_kmr_wc_create_buffer_exit:
  */
 struct kmr_wc_renderer_info {
 	struct kmr_wc_core_interface *coreInterface;
-	struct kmr_wc_surface *surfaceObject;
-	kmr_wc_renderer_impl renderer;
-	void *rendererData;
-	uint32_t *rendererCurrentBuffer;
-	bool *rendererRunning;
-	bool waitForConfigure;
+	struct kmr_wc_surface        *surfaceObject;
+	kmr_wc_renderer_impl         renderer;
+	void                         *rendererData;
+	uint32_t                     *rendererCurrentBuffer;
+	volatile bool                *rendererRunning;
+	bool                         waitForConfigure;
 };
 
 

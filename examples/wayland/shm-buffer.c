@@ -41,7 +41,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 }
 
 
-void render(bool *running, uint32_t *cbuf, void *data)
+void render(volatile bool *running, uint32_t *cbuf, void *data)
 {
 	struct app_wc *wc = data;
 
@@ -115,7 +115,7 @@ int main(void)
 		goto exit_error;
 
 	static uint32_t cbuf = 0;
-	static bool running = true;
+	static volatile bool running = true;
 
 	struct kmr_wc_surface_create_info wcSurfaceCreateInfo;
 	wcSurfaceCreateInfo.coreInterface = &wc.kmr_wc_core_interface;

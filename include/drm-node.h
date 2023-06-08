@@ -268,7 +268,7 @@ int kmr_drm_node_display_mode_reset(struct kmr_drm_node_display_mode_info *kmrdr
  *	4. A pointer to any arbitrary data the custom renderer may want pass
  *	   during rendering operations.
  */
-typedef void (*kmr_drm_node_renderer_impl)(bool*, uint8_t*, int*, void*);
+typedef void (*kmr_drm_node_renderer_impl)(volatile bool*, uint8_t*, int*, void*);
 
 
 /*
@@ -292,7 +292,7 @@ struct kmr_drm_node_atomic_request_create_info {
 	int                                      kmsfd;
 	struct kmr_drm_node_display_output_chain *displayOutputChain;
 	kmr_drm_node_renderer_impl               renderer;
-	bool                                     *rendererRunning;
+	volatile bool                            *rendererRunning;
 	uint8_t                                  *rendererCurrentBuffer;
 	int                                      *rendererFbId;
 	void                                     *rendererData;

@@ -141,7 +141,7 @@ static void run_stop(int UNUSED signum)
 int create_kms_instance(struct app_kms *kms);
 int create_kms_gbm_buffers(struct app_kms *kms);
 int create_kms_set_crtc(struct app_kms *kms);
-int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, bool *running);
+int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, volatile bool *running);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
 int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat);
@@ -171,7 +171,7 @@ void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkE
  *    Which leads to a page-flip.
  * 4. Update choosen buffer and Redo steps 1-3.
  */
-void render(bool *running, uint8_t *imageIndex, int *fbid, void *data)
+void render(volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 {
 	struct app_vk_kms *passData = (struct app_vk_kms *) data;
 	struct app_vk *app = passData->app_vk;
@@ -341,7 +341,7 @@ int main(void)
 
 	static int fbid = 0;
 	static uint8_t cbuf = 0;
-	static bool running = true;
+	static volatile bool running = true;
 
 	static struct app_vk_kms passData;
 	passData.app_kms = &kms;
@@ -544,7 +544,7 @@ int create_kms_set_crtc(struct app_kms *kms)
 }
 
 
-int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, bool *running)
+int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, volatile bool *running)
 {
 	struct app_kms *kms = passData->app_kms;
 

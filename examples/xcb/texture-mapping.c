@@ -155,7 +155,7 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
-void render(bool *running, uint32_t *imageIndex, void *data)
+void render(volatile bool *running, uint32_t *imageIndex, void *data)
 {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_xcb *vkxcb = (struct app_vk_xcb *) data;
@@ -299,7 +299,7 @@ int main(void)
 	kmr_xcb_window_make_visible(&xc);
 
 	static uint32_t cbuf = 0;
-	static bool running = true;
+	static volatile bool running = true;
 
 	static struct app_vk_xcb vkxc;
 	vkxc.kmr_xcb_window = &xc;

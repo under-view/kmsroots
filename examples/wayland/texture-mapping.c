@@ -141,7 +141,7 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, bool *running);
+int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, volatile bool *running);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -160,7 +160,7 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
-void render(bool *running, uint32_t *imageIndex, void *data)
+void render(volatile bool *running, uint32_t *imageIndex, void *data)
 {
 	VkExtent2D extent2D = {WIDTH, HEIGHT};
 	struct app_vk_wc *vkwc = data;
@@ -250,7 +250,7 @@ int main(void)
 	memset(&wc, 0, sizeof(wc));
 
 	static uint32_t cbuf = 0;
-	static bool running = true;
+	static volatile bool running = true;
 
 	if (create_vk_instance(&app) == -1)
 		goto exit_error;
@@ -352,7 +352,7 @@ exit_error:
 }
 
 
-int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, bool *running)
+int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, volatile bool *running)
 {
 	struct kmr_wc_core_interface_create_info coreInterfacesCreateInfo;
 	coreInterfacesCreateInfo.displayName = NULL;

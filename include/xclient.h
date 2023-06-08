@@ -83,7 +83,7 @@ void kmr_xcb_window_make_visible(struct kmr_xcb_window *kmsxcb);
  * Given that the arguments of the function are a pointer to a boolean,
  * pointer to an integer, and a pointer to void data type
  */
-typedef void (*kmr_xcb_renderer_impl)(bool*, uint32_t*, void*);
+typedef void (*kmr_xcb_renderer_impl)(volatile bool*, uint32_t*, void*);
 
 
 /*
@@ -103,7 +103,7 @@ struct kmr_xcb_window_handle_event_info {
 	kmr_xcb_renderer_impl renderer;
 	void                  *rendererData;
 	uint32_t              *rendererCurrentBuffer;
-	bool                  *rendererRunning;
+	volatile bool         *rendererRunning;
 };
 
 

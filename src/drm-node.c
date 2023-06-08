@@ -729,7 +729,7 @@ static int modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest, int fb
 struct kmr_drm_node_renderer_info {
 	struct kmr_drm_node_display_output_chain *displayOutputChain;
 	kmr_drm_node_renderer_impl               renderer;
-	bool                                     *rendererRunning;
+	volatile bool                            *rendererRunning;
 	uint8_t                                  *rendererCurrentBuffer;
 	drmModeAtomicReq                         *rendererAtomicRequest;
 	int                                      *rendererFbId;
