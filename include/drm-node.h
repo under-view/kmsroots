@@ -304,7 +304,7 @@ struct kmr_drm_node_atomic_request_create_info {
  *
  * members:
  * @atomicRequest - Pointer to a KMS atomic request instance
- * @rendererInfo  - Used by the implementation. DO NOT MODIFY.
+ * @rendererInfo  - Used by the implementation to free data. DO NOT MODIFY.
  */
 struct kmr_drm_node_atomic_request {
 	drmModeAtomicReq *atomicRequest;
