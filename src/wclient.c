@@ -274,7 +274,7 @@ static void drawframe(void *data, struct wl_callback *callback, uint32_t time);
 
 static void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial)
 {
-	struct kmr_wc_renderer_info UNUSED *rendererInfo = (struct kmr_wc_renderer_info *) data;
+	struct kmr_wc_renderer_info *rendererInfo = (struct kmr_wc_renderer_info *) data;
 	xdg_surface_ack_configure(xdg_surface, serial);
 
 	/*
@@ -345,51 +345,58 @@ static const struct wl_callback_listener frame_listener = {
 
 struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *kmrwc)
 {
-	static struct kmr_wc_surface surfaceObject;
-	memset(&surfaceObject, 0, sizeof(surfaceObject));
+	struct kmr_wc_surface *surfaceObject = NULL;
+	struct kmr_wc_renderer_info *rendererInfo = NULL;
 
-	static struct kmr_wc_renderer_info rendererInfo;
-	memset(&rendererInfo, 0, sizeof(rendererInfo));
-
-	if (kmrwc->wcBufferObject) {
-		surfaceObject.bufferCount = kmrwc->wcBufferObject->bufferCount;
-		surfaceObject.wlBufferHandles = kmrwc->wcBufferObject->wlBufferHandles;
-	} else if (kmrwc->bufferCount) {
-		surfaceObject.bufferCount = kmrwc->bufferCount;
-	} else {
-		surfaceObject.bufferCount = 0;
-	}
-
-	/* Assign pointer and data that a given client suface needs to watch */
-	if (kmrwc->renderer) {
-		rendererInfo.coreInterface = kmrwc->coreInterface;
-		rendererInfo.surfaceObject = &surfaceObject;
-		rendererInfo.renderer = kmrwc->renderer;
-		rendererInfo.rendererData = kmrwc->rendererData;
-		rendererInfo.rendererCurrentBuffer = kmrwc->rendererCurrentBuffer;
-		rendererInfo.rendererRunning = kmrwc->rendererRunning;
-	}
-
-	/* Use wl_compositor interface to create a wl_surface */
-	surfaceObject.wlSurface = wl_compositor_create_surface(kmrwc->coreInterface->wlCompositor);
-	if (!surfaceObject.wlSurface) {
-		kmr_utils_log(KMR_DANGER, "[x] wl_compositor_create_surface: Can't create wl_surface interface");
+	surfaceObject = calloc(1, sizeof(struct kmr_wc_surface));
+	if (!surfaceObject) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_wc_surface_create;
 	}
 
+	rendererInfo = calloc(1, sizeof(struct kmr_wc_renderer_info));
+	if (!rendererInfo) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_wc_surface_create_free_surfaceObject;
+	}
+
+	if (kmrwc->wcBufferObject) {
+		surfaceObject->bufferCount = kmrwc->wcBufferObject->bufferCount;
+		surfaceObject->wlBufferHandles = kmrwc->wcBufferObject->wlBufferHandles;
+	} else if (kmrwc->bufferCount) {
+		surfaceObject->bufferCount = kmrwc->bufferCount;
+	} else {
+		surfaceObject->bufferCount = 0;
+	}
+
+	/* Assign pointer and data that a given client suface needs to watch */
+	rendererInfo->coreInterface = kmrwc->coreInterface;
+	rendererInfo->surfaceObject = surfaceObject;
+	rendererInfo->renderer = kmrwc->renderer;
+	rendererInfo->rendererData = kmrwc->rendererData;
+	rendererInfo->rendererCurrentBuffer = kmrwc->rendererCurrentBuffer;
+	rendererInfo->rendererRunning = kmrwc->rendererRunning;
+
+	/* Use wl_compositor interface to create a wl_surface */
+	surfaceObject->wlSurface = wl_compositor_create_surface(kmrwc->coreInterface->wlCompositor);
+	if (!surfaceObject->wlSurface) {
+		kmr_utils_log(KMR_DANGER, "[x] wl_compositor_create_surface: Can't create wl_surface interface");
+		goto exit_error_wc_surface_create_free_rendererInfo;
+	}
+
 	if (kmrwc->fullscreen && kmrwc->coreInterface->fullScreenShell) {
-		zwp_fullscreen_shell_v1_present_surface(kmrwc->coreInterface->fullScreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
+		zwp_fullscreen_shell_v1_present_surface(kmrwc->coreInterface->fullScreenShell, surfaceObject->wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
 	} else {
 		/* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
-		surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(kmrwc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
-		if (!surfaceObject.xdgSurface) {
+		surfaceObject->xdgSurface = xdg_wm_base_get_xdg_surface(kmrwc->coreInterface->xdgWmBase, surfaceObject->wlSurface);
+		if (!surfaceObject->xdgSurface) {
 			kmr_utils_log(KMR_DANGER, "[x] xdg_wm_base_get_xdg_surface: Can't create xdg_surface interface");
 			goto exit_error_wc_surface_create_wl_surface_destroy;
 		}
 
 		/* Create xdg_toplevel interface from which we manage application window from */
-		surfaceObject.xdgToplevel = xdg_surface_get_toplevel(surfaceObject.xdgSurface);
-		if (!surfaceObject.xdgToplevel) {
+		surfaceObject->xdgToplevel = xdg_surface_get_toplevel(surfaceObject->xdgSurface);
+		if (!surfaceObject->xdgToplevel) {
 			kmr_utils_log(KMR_DANGER, "[x] xdg_surface_get_toplevel: Can't create xdg_toplevel interface");
 			goto exit_error_wc_surface_create_xdg_surface_destroy;
 		}
@@ -398,7 +405,7 @@ struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *k
 		 * Bind the xdg_surface_listener to a given xdg_surface objects. So that we can implement
 		 * how we handle events associate with object comming from the wayland server.
 		 */
-		if (xdg_surface_add_listener(surfaceObject.xdgSurface, &xdg_surface_listener, &rendererInfo)) {
+		if (xdg_surface_add_listener(surfaceObject->xdgSurface, &xdg_surface_listener, rendererInfo)) {
 			kmr_utils_log(KMR_DANGER, "[x] xdg_surface_add_listener: Failed");
 			goto exit_error_wc_surface_create_xdg_toplevel_destroy;
 		}
@@ -419,31 +426,35 @@ struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *k
 		 * Bind the xdg_toplevel_listener to a given xdg_toplevel objects. So that we can implement
 		 * how we handle events associate with objects comming from the wayland server.
 		 */
-		if (xdg_toplevel_add_listener(surfaceObject.xdgToplevel, &xdg_toplevel_listener, &rendererInfo)) {
+		if (xdg_toplevel_add_listener(surfaceObject->xdgToplevel, &xdg_toplevel_listener, rendererInfo)) {
 			kmr_utils_log(KMR_DANGER, "[x] xdg_toplevel_add_listener: Failed");
 			goto exit_error_wc_surface_create_xdg_toplevel_destroy;
 		}
 
-		xdg_toplevel_set_title(surfaceObject.xdgToplevel, kmrwc->appName);
+		xdg_toplevel_set_title(surfaceObject->xdgToplevel, kmrwc->appName);
 	}
 
-	wl_surface_commit(surfaceObject.wlSurface);
-	rendererInfo.waitForConfigure = true;
+	wl_surface_commit(surfaceObject->wlSurface);
+	rendererInfo->waitForConfigure = true;
 
-	return (struct kmr_wc_surface) { .xdgToplevel = surfaceObject.xdgToplevel, .xdgSurface = surfaceObject.xdgSurface, .wlSurface = surfaceObject.wlSurface,
-	                                 .bufferCount = surfaceObject.bufferCount, .wlBufferHandles = surfaceObject.wlBufferHandles };
+	return (struct kmr_wc_surface) { .xdgToplevel = surfaceObject->xdgToplevel, .xdgSurface = surfaceObject->xdgSurface, .wlSurface = surfaceObject->wlSurface,
+	                                 .bufferCount = surfaceObject->bufferCount, .wlBufferHandles = surfaceObject->wlBufferHandles, .rendererInfo = rendererInfo };
 
 exit_error_wc_surface_create_xdg_toplevel_destroy:
-	if (surfaceObject.xdgToplevel)
-		xdg_toplevel_destroy(surfaceObject.xdgToplevel);
+	if (surfaceObject->xdgToplevel)
+		xdg_toplevel_destroy(surfaceObject->xdgToplevel);
 exit_error_wc_surface_create_xdg_surface_destroy:
-	if (surfaceObject.xdgSurface)
-		xdg_surface_destroy(surfaceObject.xdgSurface);
+	if (surfaceObject->xdgSurface)
+		xdg_surface_destroy(surfaceObject->xdgSurface);
 exit_error_wc_surface_create_wl_surface_destroy:
-	if (surfaceObject.wlSurface)
-		wl_surface_destroy(surfaceObject.wlSurface);
+	if (surfaceObject->wlSurface)
+		wl_surface_destroy(surfaceObject->wlSurface);
+exit_error_wc_surface_create_free_rendererInfo:
+	free(rendererInfo);
+exit_error_wc_surface_create_free_surfaceObject:
+	free(surfaceObject);
 exit_error_wc_surface_create:
-	return (struct kmr_wc_surface) { .xdgToplevel = NULL, .xdgSurface = NULL, .wlSurface = NULL, .bufferCount = -1, .wlBufferHandles = NULL };
+	return (struct kmr_wc_surface) { .xdgToplevel = NULL, .xdgSurface = NULL, .wlSurface = NULL, .bufferCount = -1, .wlBufferHandles = NULL, .rendererInfo = NULL };
 }
 
 
@@ -458,6 +469,10 @@ void kmr_wc_destroy(struct kmr_wc_destroy *kmrwc)
 		xdg_surface_destroy(kmrwc->kmr_wc_surface.xdgSurface);
 	if (kmrwc->kmr_wc_surface.wlSurface)
 		wl_surface_destroy(kmrwc->kmr_wc_surface.wlSurface);
+	if (kmrwc->kmr_wc_surface.rendererInfo) {
+		struct kmr_wc_renderer_info *rendererInfo = (struct kmr_wc_renderer_info *) kmrwc->kmr_wc_surface.rendererInfo;
+		free(rendererInfo->surfaceObject); free(rendererInfo);
+	}
 
 	/* Destroy all wayland client buffer interfaces/objects */
 	if (kmrwc->kmr_wc_buffer.shmBufferObjects && kmrwc->kmr_wc_buffer.wlBufferHandles) {

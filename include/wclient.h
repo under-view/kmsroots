@@ -192,6 +192,7 @@ typedef void (*kmr_wc_renderer_impl)(volatile bool*, uint32_t*, void*);
  * @wlCallback      - The amount of pixel (uint8_t) buffers allocated. The array length of struct kmrwcwlbuf.
  * @bufferCount     - Amount of elements in pointer to array of @wlBufferHandles
  * @wlBufferHandles - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
+ * @rendererInfo    - Used by the implementation to free data. DO NOT MODIFY.
  */
 struct kmr_wc_surface {
 	struct xdg_toplevel            *xdgToplevel;
@@ -200,6 +201,7 @@ struct kmr_wc_surface {
 	struct wl_callback             *wlCallback;
 	uint32_t                       bufferCount;
 	struct kmr_wc_wl_buffer_handle *wlBufferHandles;
+	void                           *rendererInfo;
 };
 
 
