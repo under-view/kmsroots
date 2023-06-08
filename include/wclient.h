@@ -76,7 +76,7 @@ struct kmr_wc_core_interface_create_info {
  *                               global objects that define what requests and events are possible.
  *
  * args:
- * @kmswc - Pointer to a struct kmr_wc_core_interface_create_info which contains the name of the server
+ * @kmrwc - Pointer to a struct kmr_wc_core_interface_create_info which contains the name of the server
  *          to connected to and the core client specified globals to bind to a given client. Only if the
  *          server supports these globals.
  *
@@ -84,7 +84,7 @@ struct kmr_wc_core_interface_create_info {
  *	on success struct kmr_wc_core_interface
  *	on failure struct kmr_wc_core_interface { with members nulled }
  */
-struct kmr_wc_core_interface kmr_wc_core_interface_create(struct kmr_wc_core_interface_create_info *kmswc);
+struct kmr_wc_core_interface kmr_wc_core_interface_create(struct kmr_wc_core_interface_create_info *kmrwc);
 
 
 /*
@@ -120,9 +120,9 @@ struct kmr_wc_wl_buffer_handle {
  *
  * members:
  * @bufferCount      - The amount of wayland buffers allocated from a given wl_shm_pool
- * @shmBufferObjects - Pointer to an array of struct kmswcshmbuf containing all information required to
+ * @shmBufferObjects - Pointer to an array of struct kmrwcshmbuf containing all information required to
  *                     populate/release wayland shared memory pixel buffer.
- * @wlBufferHandles  - Pointer to an array of struct kmswcwlbuf containing compositor assigned buffer object
+ * @wlBufferHandles  - Pointer to an array of struct kmrwcwlbuf containing compositor assigned buffer object
  */
 struct kmr_wc_buffer {
 	int bufferCount;
@@ -158,14 +158,14 @@ struct kmr_wc_buffer_create_info {
  * kmr_wc_buffer_create: Adds way to get pixels from client to compositor by creating writable shared memory buffers.
  *
  * args:
- * @kmswc - Must pass a valid pointer to a struct kmr_wc_buffer_create_info which gives
+ * @kmrwc - Must pass a valid pointer to a struct kmr_wc_buffer_create_info which gives
  *          details of how a buffer should be allocated and how many to allocations to make.
  *
  * return:
  *	on success struct kmr_wc_buffer
  *	on failure struct kmr_wc_buffer { with members nulled, integers set to -1 }
  */
-struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmswc);
+struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmrwc);
 
 
 /*
@@ -187,9 +187,9 @@ typedef void (*kmr_wc_renderer_impl)(volatile bool*, uint32_t*, void*);
  *                    a tree of surfaces. Provides additional requests for assigning
  *                    roles.
  * @wlSurface       - The image displayed on screen. If wl_shm is binded one must attach
- *                    a wl_buffer (struct kmswcwlbuf) to display pixels on screen. Depending on
+ *                    a wl_buffer (struct kmrwcwlbuf) to display pixels on screen. Depending on
  *                    rendering backend wl_buffer may not need to be allocated.
- * @wlCallback      - The amount of pixel (uint8_t) buffers allocated. The array length of struct kmswcwlbuf.
+ * @wlCallback      - The amount of pixel (uint8_t) buffers allocated. The array length of struct kmrwcwlbuf.
  * @bufferCount     - Amount of elements in pointer to array of @wlBufferHandles
  * @wlBufferHandles - A pointer to an array of type struct wl_buffer *. Pixel storage place understood by compositor.
  */
@@ -241,7 +241,7 @@ struct kmr_wc_surface_create_info {
  * kmr_wc_surface_create: Creates a surface to place pixels in and a window for displaying surface pixels.
  *
  * args:
- * @kmswc - Must pass a valid pointer to a struct kmr_wc_surface_create_info which gives
+ * @kmrwc - Must pass a valid pointer to a struct kmr_wc_surface_create_info which gives
  *          details on what buffers are associated with surface object, the name of the
  *          window, how the window should be displayed, (more info TBA).
  *
@@ -249,7 +249,7 @@ struct kmr_wc_surface_create_info {
  *	on success struct kmr_wc_surface
  *	on failure struct kmr_wc_surface { with members nulled }
  */
-struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *kmswc);
+struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *kmrwc);
 
 
 /*
@@ -271,9 +271,9 @@ struct kmr_wc_destroy {
  * kmr_wc_destroy: frees any remaining allocated memory contained in struct kmr_wc_destroy
  *
  * args:
- * @kmswc - pointer to a struct kmr_wc contains all objects/interfaces
+ * @kmrwc - pointer to a struct kmr_wc contains all objects/interfaces
  *          necessary for an xcb client to run.
  */
-void kmr_wc_destroy(struct kmr_wc_destroy *kmswc);
+void kmr_wc_destroy(struct kmr_wc_destroy *kmrwc);
 
 #endif

@@ -95,14 +95,14 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 
-struct kmr_wc_core_interface kmr_wc_core_interface_create(struct kmr_wc_core_interface_create_info *kmswc)
+struct kmr_wc_core_interface kmr_wc_core_interface_create(struct kmr_wc_core_interface_create_info *kmrwc)
 {
 	struct kmr_wc_core_interface interfaces;
 	memset(&interfaces, 0, sizeof(struct kmr_wc_core_interface));
-	interfaces.iType = kmswc->iType;
+	interfaces.iType = kmrwc->iType;
 
 	/* Connect to wayland server */
-	interfaces.wlDisplay = wl_display_connect(kmswc->displayName);
+	interfaces.wlDisplay = wl_display_connect(kmrwc->displayName);
 	if (!interfaces.wlDisplay) {
 		kmr_utils_log(KMR_DANGER, "[x] wl_display_connect: Failed to connect to Wayland display.");
 		goto error_exit_core_interface_create;
@@ -129,7 +129,7 @@ struct kmr_wc_core_interface kmr_wc_core_interface_create(struct kmr_wc_core_int
 	if (!wl_display_roundtrip(interfaces.wlDisplay))
 		goto error_exit_core_interface_create_destroy_objects;
 
-	return (struct kmr_wc_core_interface) { .iType = kmswc->iType, .wlDisplay = interfaces.wlDisplay, .wlRegistry = interfaces.wlRegistry,
+	return (struct kmr_wc_core_interface) { .iType = kmrwc->iType, .wlDisplay = interfaces.wlDisplay, .wlRegistry = interfaces.wlRegistry,
 	                                        .wlCompositor = interfaces.wlCompositor, .xdgWmBase = interfaces.xdgWmBase, .wlShm = interfaces.wlShm,
 	                                        .wlSeat = interfaces.wlSeat };
 
@@ -153,24 +153,24 @@ error_exit_core_interface_create:
 }
 
 
-struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmswc)
+struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmrwc)
 {
 	struct kmr_wc_shm_buffer *shmBufferObjects = NULL;
 	struct kmr_wc_wl_buffer_handle *wlBufferHandles = NULL;
 	int c;
 
-	if (!kmswc->coreInterface->wlShm) {
-		kmr_utils_log(KMR_DANGER, "[x] kmr_wc_buffer_create(!kmswc->kmswccore->shm): Must bind the wl_shm interface");
+	if (!kmrwc->coreInterface->wlShm) {
+		kmr_utils_log(KMR_DANGER, "[x] kmr_wc_buffer_create(!kmrwc->kmrwccore->shm): Must bind the wl_shm interface");
 		goto error_kmr_wc_create_buffer_exit;
 	}
 
-	shmBufferObjects = (struct kmr_wc_shm_buffer *) calloc(kmswc->bufferCount, sizeof(struct kmr_wc_shm_buffer));
+	shmBufferObjects = (struct kmr_wc_shm_buffer *) calloc(kmrwc->bufferCount, sizeof(struct kmr_wc_shm_buffer));
 	if (!shmBufferObjects) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto error_kmr_wc_create_buffer_exit;
 	}
 
-	wlBufferHandles = (struct kmr_wc_wl_buffer_handle *) calloc(kmswc->bufferCount, sizeof(struct kmr_wc_wl_buffer_handle));
+	wlBufferHandles = (struct kmr_wc_wl_buffer_handle *) calloc(kmrwc->bufferCount, sizeof(struct kmr_wc_wl_buffer_handle));
 	if (!wlBufferHandles) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto error_kmr_wc_create_buffer_free_shmBufferObjects;
@@ -181,10 +181,10 @@ struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmsw
 	 *             @buffers (wl_buffer) can be created from shm_pool.
 	 */
 	struct wl_shm_pool *shmPool = NULL;
-	int stride = kmswc->width * kmswc->bytesPerPixel;
+	int stride = kmrwc->width * kmrwc->bytesPerPixel;
 
-	for (c = 0; c < kmswc->bufferCount; c++) {
-		shmBufferObjects[c].shmPoolSize = stride * kmswc->height;
+	for (c = 0; c < kmrwc->bufferCount; c++) {
+		shmBufferObjects[c].shmPoolSize = stride * kmrwc->height;
 		shmBufferObjects[c].shmFd = -1;
 
 		/* Create POSIX shared memory file of size shm_pool_size */
@@ -202,13 +202,13 @@ struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmsw
 		}
 
 		/* Create pool of memory shared between client and compositor */
-		shmPool = wl_shm_create_pool(kmswc->coreInterface->wlShm, shmBufferObjects[c].shmFd, shmBufferObjects[c].shmPoolSize);
+		shmPool = wl_shm_create_pool(kmrwc->coreInterface->wlShm, shmBufferObjects[c].shmFd, shmBufferObjects[c].shmPoolSize);
 		if (!shmPool) {
 			kmr_utils_log(KMR_DANGER, "[x] wl_shm_create_pool: failed to create wl_shm_pool");
 			goto error_kmr_wc_create_buffer_free_objects;
 		}
 
-		wlBufferHandles[c].buffer = wl_shm_pool_create_buffer(shmPool, 0, kmswc->width, kmswc->height, stride, kmswc->pixelFormat);
+		wlBufferHandles[c].buffer = wl_shm_pool_create_buffer(shmPool, 0, kmrwc->width, kmrwc->height, stride, kmrwc->pixelFormat);
 		if (!wlBufferHandles[c].buffer) {
 			kmr_utils_log(KMR_DANGER, "[x] wl_shm_pool_create_buffer: failed to create wl_buffer from a wl_shm_pool");
 			goto error_kmr_wc_create_buffer_free_objects;
@@ -219,11 +219,11 @@ struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmsw
 		shmPool = NULL;
 	}
 
-	return (struct kmr_wc_buffer) { .bufferCount = kmswc->bufferCount, .shmBufferObjects = shmBufferObjects, .wlBufferHandles = wlBufferHandles };
+	return (struct kmr_wc_buffer) { .bufferCount = kmrwc->bufferCount, .shmBufferObjects = shmBufferObjects, .wlBufferHandles = wlBufferHandles };
 
 error_kmr_wc_create_buffer_free_objects:
 	if (shmBufferObjects && wlBufferHandles) {
-		for (c = 0; c < kmswc->bufferCount; c++) {
+		for (c = 0; c < kmrwc->bufferCount; c++) {
 			if (shmBufferObjects[c].shmFd != -1)
 				close(shmBufferObjects[c].shmFd);
 			if (shmBufferObjects[c].shmPoolData)
@@ -234,7 +234,7 @@ error_kmr_wc_create_buffer_free_objects:
 		if (shmPool)
 			wl_shm_pool_destroy(shmPool);
 	}
-//error_kmr_wc_create_buffer_free_kmswcwlbufs:
+//error_kmr_wc_create_buffer_free_kmrwcwlbufs:
 	free(wlBufferHandles);
 error_kmr_wc_create_buffer_free_shmBufferObjects:
 	free(shmBufferObjects);
@@ -343,7 +343,7 @@ static const struct wl_callback_listener frame_listener = {
 };
 
 
-struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *kmswc)
+struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *kmrwc)
 {
 	static struct kmr_wc_surface surfaceObject;
 	memset(&surfaceObject, 0, sizeof(surfaceObject));
@@ -351,37 +351,37 @@ struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *k
 	static struct kmr_wc_renderer_info rendererInfo;
 	memset(&rendererInfo, 0, sizeof(rendererInfo));
 
-	if (kmswc->wcBufferObject) {
-		surfaceObject.bufferCount = kmswc->wcBufferObject->bufferCount;
-		surfaceObject.wlBufferHandles = kmswc->wcBufferObject->wlBufferHandles;
-	} else if (kmswc->bufferCount) {
-		surfaceObject.bufferCount = kmswc->bufferCount;
+	if (kmrwc->wcBufferObject) {
+		surfaceObject.bufferCount = kmrwc->wcBufferObject->bufferCount;
+		surfaceObject.wlBufferHandles = kmrwc->wcBufferObject->wlBufferHandles;
+	} else if (kmrwc->bufferCount) {
+		surfaceObject.bufferCount = kmrwc->bufferCount;
 	} else {
 		surfaceObject.bufferCount = 0;
 	}
 
 	/* Assign pointer and data that a given client suface needs to watch */
-	if (kmswc->renderer) {
-		rendererInfo.coreInterface = kmswc->coreInterface;
+	if (kmrwc->renderer) {
+		rendererInfo.coreInterface = kmrwc->coreInterface;
 		rendererInfo.surfaceObject = &surfaceObject;
-		rendererInfo.renderer = kmswc->renderer;
-		rendererInfo.rendererData = kmswc->rendererData;
-		rendererInfo.rendererCurrentBuffer = kmswc->rendererCurrentBuffer;
-		rendererInfo.rendererRunning = kmswc->rendererRunning;
+		rendererInfo.renderer = kmrwc->renderer;
+		rendererInfo.rendererData = kmrwc->rendererData;
+		rendererInfo.rendererCurrentBuffer = kmrwc->rendererCurrentBuffer;
+		rendererInfo.rendererRunning = kmrwc->rendererRunning;
 	}
 
 	/* Use wl_compositor interface to create a wl_surface */
-	surfaceObject.wlSurface = wl_compositor_create_surface(kmswc->coreInterface->wlCompositor);
+	surfaceObject.wlSurface = wl_compositor_create_surface(kmrwc->coreInterface->wlCompositor);
 	if (!surfaceObject.wlSurface) {
 		kmr_utils_log(KMR_DANGER, "[x] wl_compositor_create_surface: Can't create wl_surface interface");
 		goto exit_error_wc_surface_create;
 	}
 
-	if (kmswc->fullscreen && kmswc->coreInterface->fullScreenShell) {
-		zwp_fullscreen_shell_v1_present_surface(kmswc->coreInterface->fullScreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
+	if (kmrwc->fullscreen && kmrwc->coreInterface->fullScreenShell) {
+		zwp_fullscreen_shell_v1_present_surface(kmrwc->coreInterface->fullScreenShell, surfaceObject.wlSurface, ZWP_FULLSCREEN_SHELL_V1_PRESENT_METHOD_DEFAULT, NULL);
 	} else {
 		/* Use xdg_wm_base interface and wl_surface just created to create an xdg_surface object */
-		surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(kmswc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
+		surfaceObject.xdgSurface = xdg_wm_base_get_xdg_surface(kmrwc->coreInterface->xdgWmBase, surfaceObject.wlSurface);
 		if (!surfaceObject.xdgSurface) {
 			kmr_utils_log(KMR_DANGER, "[x] xdg_wm_base_get_xdg_surface: Can't create xdg_surface interface");
 			goto exit_error_wc_surface_create_wl_surface_destroy;
@@ -424,7 +424,7 @@ struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *k
 			goto exit_error_wc_surface_create_xdg_toplevel_destroy;
 		}
 
-		xdg_toplevel_set_title(surfaceObject.xdgToplevel, kmswc->appName);
+		xdg_toplevel_set_title(surfaceObject.xdgToplevel, kmrwc->appName);
 	}
 
 	wl_surface_commit(surfaceObject.wlSurface);
@@ -447,47 +447,47 @@ exit_error_wc_surface_create:
 }
 
 
-void kmr_wc_destroy(struct kmr_wc_destroy *kmswc)
+void kmr_wc_destroy(struct kmr_wc_destroy *kmrwc)
 {
 	int i;
 
 	/* Destroy all wayland client surface interfaces/objects */
-	if (kmswc->kmr_wc_surface.xdgToplevel)
-		xdg_toplevel_destroy(kmswc->kmr_wc_surface.xdgToplevel);
-	if (kmswc->kmr_wc_surface.xdgSurface)
-		xdg_surface_destroy(kmswc->kmr_wc_surface.xdgSurface);
-	if (kmswc->kmr_wc_surface.wlSurface)
-		wl_surface_destroy(kmswc->kmr_wc_surface.wlSurface);
+	if (kmrwc->kmr_wc_surface.xdgToplevel)
+		xdg_toplevel_destroy(kmrwc->kmr_wc_surface.xdgToplevel);
+	if (kmrwc->kmr_wc_surface.xdgSurface)
+		xdg_surface_destroy(kmrwc->kmr_wc_surface.xdgSurface);
+	if (kmrwc->kmr_wc_surface.wlSurface)
+		wl_surface_destroy(kmrwc->kmr_wc_surface.wlSurface);
 
 	/* Destroy all wayland client buffer interfaces/objects */
-	if (kmswc->kmr_wc_buffer.shmBufferObjects && kmswc->kmr_wc_buffer.wlBufferHandles) {
-		for (i = 0; i < kmswc->kmr_wc_buffer.bufferCount; i++) {
-			if (kmswc->kmr_wc_buffer.shmBufferObjects[i].shmFd != -1)
-				close(kmswc->kmr_wc_buffer.shmBufferObjects[i].shmFd);
-			if (kmswc->kmr_wc_buffer.shmBufferObjects[i].shmPoolData)
-				munmap(kmswc->kmr_wc_buffer.shmBufferObjects[i].shmPoolData, kmswc->kmr_wc_buffer.shmBufferObjects[i].shmPoolSize);
-			if (kmswc->kmr_wc_buffer.wlBufferHandles[i].buffer)
-				wl_buffer_destroy(kmswc->kmr_wc_buffer.wlBufferHandles[i].buffer);
+	if (kmrwc->kmr_wc_buffer.shmBufferObjects && kmrwc->kmr_wc_buffer.wlBufferHandles) {
+		for (i = 0; i < kmrwc->kmr_wc_buffer.bufferCount; i++) {
+			if (kmrwc->kmr_wc_buffer.shmBufferObjects[i].shmFd != -1)
+				close(kmrwc->kmr_wc_buffer.shmBufferObjects[i].shmFd);
+			if (kmrwc->kmr_wc_buffer.shmBufferObjects[i].shmPoolData)
+				munmap(kmrwc->kmr_wc_buffer.shmBufferObjects[i].shmPoolData, kmrwc->kmr_wc_buffer.shmBufferObjects[i].shmPoolSize);
+			if (kmrwc->kmr_wc_buffer.wlBufferHandles[i].buffer)
+				wl_buffer_destroy(kmrwc->kmr_wc_buffer.wlBufferHandles[i].buffer);
 		}
-		free(kmswc->kmr_wc_buffer.shmBufferObjects);
-		free(kmswc->kmr_wc_buffer.wlBufferHandles);
+		free(kmrwc->kmr_wc_buffer.shmBufferObjects);
+		free(kmrwc->kmr_wc_buffer.wlBufferHandles);
 	}
 
 	/* Destroy core wayland interfaces if allocated */
-	if (kmswc->kmr_wc_core_interface.wlSeat)
-		wl_seat_destroy(kmswc->kmr_wc_core_interface.wlSeat);
-	if (kmswc->kmr_wc_core_interface.wlShm)
-		wl_shm_destroy(kmswc->kmr_wc_core_interface.wlShm);
-	if (kmswc->kmr_wc_core_interface.xdgWmBase)
-		xdg_wm_base_destroy(kmswc->kmr_wc_core_interface.xdgWmBase);
-	if (kmswc->kmr_wc_core_interface.fullScreenShell)
-		zwp_fullscreen_shell_v1_release(kmswc->kmr_wc_core_interface.fullScreenShell);
-	if (kmswc->kmr_wc_core_interface.wlCompositor)
-		wl_compositor_destroy(kmswc->kmr_wc_core_interface.wlCompositor);
-	if (kmswc->kmr_wc_core_interface.wlRegistry)
-		wl_registry_destroy(kmswc->kmr_wc_core_interface.wlRegistry);
-	if (kmswc->kmr_wc_core_interface.wlDisplay) {
-		wl_display_flush(kmswc->kmr_wc_core_interface.wlDisplay);
-		wl_display_disconnect(kmswc->kmr_wc_core_interface.wlDisplay);
+	if (kmrwc->kmr_wc_core_interface.wlSeat)
+		wl_seat_destroy(kmrwc->kmr_wc_core_interface.wlSeat);
+	if (kmrwc->kmr_wc_core_interface.wlShm)
+		wl_shm_destroy(kmrwc->kmr_wc_core_interface.wlShm);
+	if (kmrwc->kmr_wc_core_interface.xdgWmBase)
+		xdg_wm_base_destroy(kmrwc->kmr_wc_core_interface.xdgWmBase);
+	if (kmrwc->kmr_wc_core_interface.fullScreenShell)
+		zwp_fullscreen_shell_v1_release(kmrwc->kmr_wc_core_interface.fullScreenShell);
+	if (kmrwc->kmr_wc_core_interface.wlCompositor)
+		wl_compositor_destroy(kmrwc->kmr_wc_core_interface.wlCompositor);
+	if (kmrwc->kmr_wc_core_interface.wlRegistry)
+		wl_registry_destroy(kmrwc->kmr_wc_core_interface.wlRegistry);
+	if (kmrwc->kmr_wc_core_interface.wlDisplay) {
+		wl_display_flush(kmrwc->kmr_wc_core_interface.wlDisplay);
+		wl_display_disconnect(kmrwc->kmr_wc_core_interface.wlDisplay);
 	}
 }
