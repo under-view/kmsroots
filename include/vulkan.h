@@ -1395,43 +1395,62 @@ struct kmr_vk_sampler kmr_vk_sampler_create(struct kmr_vk_sampler_create_info *k
 
 
 /*
- * enum kmr_vk_copy_info (kmsroots Vulkan Copy Type)
+ * enum kmr_vk_resource_copy_type (kmsroots Vulkan Resource Copy Type)
  *
  * ENUM Used by kmr_vk_copy_info to specify type of source
  * resource to copy over to a given type of destination resource.
  */
-typedef enum kmr_vk_copy_type {
-	KMR_VK_COPY_VK_BUFFER_TO_VK_BUFFER,
-	KMR_VK_COPY_VK_BUFFER_TO_VK_IMAGE,
-	KMR_VK_COPY_VK_IMAGE_TO_VK_BUFFER
-} kmr_vk_copy_type;
+typedef enum _kmr_vk_resource_copy_type {
+	KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER,
+	KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_IMAGE,
+	KMR_VK_RESOURCE_COPY_VK_IMAGE_TO_VK_BUFFER
+} kmr_vk_resource_copy_type;
+
+
+/*
+ * struct kmr_vk_resource_copy_buffer_to_buffer_info (kmsroots Vulkan Resource Copy Buffer To Buffer Information)
+ *
+ * @copyRegion - Specifies the starting memory address of struct kmr_vk_resource_copy_buffer_to_buffer_info { @srcResource }
+ *               to copy @byteSize data from to struct kmr_vk_resource_copy_buffer_to_buffer_info { @dstResource } memory address.
+ *               Memory address is found by specifying an offset.
+ */
+struct kmr_vk_resource_copy_buffer_to_buffer_info {
+	VkBufferCopy *copyRegion;
+};
+
+
+/*
+ * struct kmr_vk_resource_copy_buffer_to_image_info (kmsroots Vulkan Resource Copy Buffer To Image Information)
+ *
+ * @copyRegion  - Specifies what portion of the image to update or copy to buffer.
+ * @imageLayout - Memory layout of the destination image subresources for the copy
+ */
+struct kmr_vk_resource_copy_buffer_to_image_info {
+	VkBufferImageCopy *copyRegion;
+	VkImageLayout     imageLayout;
+};
 
 
 /*
  * struct kmr_vk_resource_copy_info (kmsroots Vulkan Resource Copy Information)
  *
  * members:
- * @resourceCopyType     - Determines what vkCmdCopyBuffer* function to utilize
- * @commandBuffer        - Command buffer used for recording. Best to utilize one already create via
- *                         kmr_vk_command_buffer_create(3). To save on unnecessary allocations.
- * @queue                - The physical device queue (graphics or transfer) to submit the copy buffer command to.
- * @srcResource          - Pointer to source vulkan resource containing raw data. (i.e Vkbuffer, VkImage, etc...)
- * @dstResource          - Pointer to destination vulkan resource to copy source resource data to.
- *                         (i.e Vkbuffer, VkImage, etc...)
- * @bufferCopyInfo       - Specifies the starting memory address of @srcResource to copy @byteSize data from
- *                         to @dstResource memory address. Memory address is found by specifying an offset.
- * @bufferImageCopyInfo  - Specifies what portion of the image to update or copy to buffer.
- * @imageLayout          - Memory layout of the destination image subresources for the copy
+ * @resourceCopyType - Determines what vkCmdCopyBuffer* function to utilize
+ * @resourceCopyInfo - The structs to pass to vkCmdCopyBuffer*
+ * @commandBuffer    - Command buffer used for recording. Best to utilize one already create via
+ *                     kmr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ * @queue            - The physical device queue (graphics or transfer) to submit the copy buffer command to.
+ * @srcResource      - Pointer to source vulkan resource containing raw data. (i.e Vkbuffer, VkImage, etc...)
+ * @dstResource      - Pointer to destination vulkan resource to copy source resource data to.
+ *                     (i.e Vkbuffer, VkImage, etc...)
  */
 struct kmr_vk_resource_copy_info {
-	kmr_vk_copy_type        resourceCopyType;
-	VkCommandBuffer         commandBuffer;
-	VkQueue                 queue;
-	void                    *srcResource;
-	void                    *dstResource;
-	VkBufferCopy            *bufferCopyInfo;      // Only allow 1 for now
-	VkBufferImageCopy       *bufferImageCopyInfo; // Only allow 1 for now
-	VkImageLayout           imageLayout;
+	kmr_vk_resource_copy_type resourceCopyType;
+	void                      *resourceCopyInfo;
+	VkCommandBuffer           commandBuffer;
+	VkQueue                   queue;
+	void                      *srcResource;
+	void                      *dstResource;
 };
 
 

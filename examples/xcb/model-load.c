@@ -908,16 +908,17 @@ int create_vk_buffers(struct app_vk *app)
 		copyRegion.dstOffset = 0;
 		copyRegion.size = vkVertexBufferCreateInfo.bufferSize;
 
+		struct kmr_vk_resource_copy_buffer_to_buffer_info bufferToBufferCopyInfo;
+		bufferToBufferCopyInfo.copyRegion = &copyRegion;
+
 		// Copy contents from CPU visible buffer over to GPU visible buffer
 		struct kmr_vk_resource_copy_info bufferCopyInfo;
-		bufferCopyInfo.resourceCopyType = KMR_VK_COPY_VK_BUFFER_TO_VK_BUFFER;
+		bufferCopyInfo.resourceCopyType = KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER;
+		bufferCopyInfo.resourceCopyInfo = &bufferToBufferCopyInfo;
 		bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 		bufferCopyInfo.queue = app->kmr_vk_queue.queue;
 		bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleBuffer].buffer;
 		bufferCopyInfo.dstResource = app->kmr_vk_buffer[gpuVisibleBuffer].buffer;
-		bufferCopyInfo.bufferCopyInfo = &copyRegion;
-		bufferCopyInfo.bufferImageCopyInfo = NULL;
-		bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		if (kmr_vk_resource_copy(&bufferCopyInfo) == -1)
 			return -1;
@@ -1056,9 +1057,14 @@ int create_vk_texture_images(struct app_vk *app)
 	copyRegion.bufferRowLength = 0;
 	copyRegion.bufferImageHeight = 0;
 
+	struct kmr_vk_resource_copy_buffer_to_image_info bufferToImageCopyInfo;
+	bufferToImageCopyInfo.copyRegion = &copyRegion;
+	bufferToImageCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
 	/* Copy VkImage resource to VkBuffer resource */
 	struct kmr_vk_resource_copy_info bufferCopyInfo;
-	bufferCopyInfo.resourceCopyType = KMR_VK_COPY_VK_BUFFER_TO_VK_IMAGE;
+	bufferCopyInfo.resourceCopyType = KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_IMAGE;
+	bufferCopyInfo.resourceCopyInfo = &bufferToImageCopyInfo;
 	bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 	bufferCopyInfo.queue = app->kmr_vk_queue.queue;
 	bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer;
@@ -1099,9 +1105,6 @@ int create_vk_texture_images(struct app_vk *app)
 		copyRegion.bufferOffset = imageData[curImage].imageBufferOffset;
 
 		bufferCopyInfo.dstResource = app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image;
-		bufferCopyInfo.bufferCopyInfo = NULL;
-		bufferCopyInfo.bufferImageCopyInfo = &copyRegion;
-		bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 		if (kmr_vk_resource_copy(&bufferCopyInfo) == -1) {
 			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });

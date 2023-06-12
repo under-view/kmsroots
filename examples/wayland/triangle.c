@@ -625,16 +625,17 @@ int create_vk_buffers(struct app_vk *app)
 		copyRegion.dstOffset = 0;
 		copyRegion.size = vkVertexBufferCreateInfo.bufferSize;
 
+		struct kmr_vk_resource_copy_buffer_to_buffer_info bufferToBufferCopyInfo;
+		bufferToBufferCopyInfo.copyRegion = &copyRegion;
+
 		// Copy contents from CPU visible buffer over to GPU visible vertex buffer
 		struct kmr_vk_resource_copy_info bufferCopyInfo;
-		bufferCopyInfo.resourceCopyType = KMR_VK_COPY_VK_BUFFER_TO_VK_BUFFER;
+		bufferCopyInfo.resourceCopyType = KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER;
+		bufferCopyInfo.resourceCopyInfo = &bufferToBufferCopyInfo;
 		bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
 		bufferCopyInfo.queue = app->kmr_vk_queue.queue;
 		bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleBuffer].buffer;
 		bufferCopyInfo.dstResource = app->kmr_vk_buffer[gpuVisibleBuffer].buffer;
-		bufferCopyInfo.bufferCopyInfo = &copyRegion;
-		bufferCopyInfo.bufferImageCopyInfo = NULL;
-		bufferCopyInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		if (kmr_vk_resource_copy(&bufferCopyInfo) == -1)
 			return -1;

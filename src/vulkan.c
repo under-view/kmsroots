@@ -1475,19 +1475,27 @@ int kmr_vk_resource_copy(struct kmr_vk_resource_copy_info *kmrvk)
 	VkCommandBuffer commandBuffer = commandBufferHandle.commandBuffer;
 
 	switch (kmrvk->resourceCopyType) {
-		case KMR_VK_COPY_VK_BUFFER_TO_VK_BUFFER:
+		case KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER:
 		{
-			vkCmdCopyBuffer(commandBuffer, (VkBuffer) kmrvk->srcResource, (VkBuffer) kmrvk->dstResource, 1, kmrvk->bufferCopyInfo);
+			struct kmr_vk_resource_copy_buffer_to_buffer_info *bufferToBufferCopyInfo = kmrvk->resourceCopyInfo;
+			VkBufferCopy *bufferCopyInfo = bufferToBufferCopyInfo->copyRegion;
+			vkCmdCopyBuffer(commandBuffer, (VkBuffer) kmrvk->srcResource, (VkBuffer) kmrvk->dstResource, 1, bufferCopyInfo);
 			break;
 		}
-		case KMR_VK_COPY_VK_BUFFER_TO_VK_IMAGE:
+		case KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_IMAGE:
 		{
-			vkCmdCopyBufferToImage(commandBuffer, (VkBuffer) kmrvk->srcResource, (VkImage) kmrvk->dstResource, kmrvk->imageLayout, 1, kmrvk->bufferImageCopyInfo);
+			struct kmr_vk_resource_copy_buffer_to_image_info *bufferToImageCopyInfo = kmrvk->resourceCopyInfo;
+			VkBufferImageCopy *bufferImageCopyInfo = bufferToImageCopyInfo->copyRegion;
+			VkImageLayout imageLayout = bufferToImageCopyInfo->imageLayout;
+			vkCmdCopyBufferToImage(commandBuffer, (VkBuffer) kmrvk->srcResource, (VkImage) kmrvk->dstResource, imageLayout, 1, bufferImageCopyInfo);
 			break;
 		}
-		case KMR_VK_COPY_VK_IMAGE_TO_VK_BUFFER:
+		case KMR_VK_RESOURCE_COPY_VK_IMAGE_TO_VK_BUFFER:
 		{
-			vkCmdCopyImageToBuffer(commandBuffer, (VkImage) kmrvk->srcResource, kmrvk->imageLayout, (VkBuffer) kmrvk->dstResource,  1, kmrvk->bufferImageCopyInfo);
+			struct kmr_vk_resource_copy_buffer_to_image_info *bufferToImageCopyInfo = kmrvk->resourceCopyInfo;
+			VkBufferImageCopy *bufferImageCopyInfo = bufferToImageCopyInfo->copyRegion;
+			VkImageLayout imageLayout = bufferToImageCopyInfo->imageLayout;
+			vkCmdCopyImageToBuffer(commandBuffer, (VkImage) kmrvk->srcResource, imageLayout, (VkBuffer) kmrvk->dstResource,  1, bufferImageCopyInfo);
 			break;
 		}
 		default:
