@@ -1,10 +1,21 @@
 
 if libdrm.found() and libgbm.found()
-  progs = ['double-buffer-atomic-modeset.c', 'model-load.c']
+  progs = [
+    'double-buffer-atomic-modeset.c', 'triangle.c', 'triangle-index.c',
+    'spin-rectangle.c', 'texture-mapping.c', 'model-load.c',
+  ]
 
   original_args = pargs
   foreach p : progs
     shader_name_prefix = p.substring(0,-2) # remove .c extension from name
+
+    if p == 'triangle-index.c'
+      shader_name_prefix = 'triangle'
+    endif
+
+    if p == 'texture-mapping.c'
+      pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
+    endif
 
     if p == 'model-load.c'
       pargs += [
