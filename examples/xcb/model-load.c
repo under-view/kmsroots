@@ -132,7 +132,6 @@ int create_vk_device(struct app_vk *app);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
 int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_depth_image(struct app_vk *app);
-int create_vk_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct app_vk *app);
 int create_vk_command_buffers(struct app_vk *app);
 int create_gltf_load_required_data(struct app_vk *app);
@@ -205,7 +204,7 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 
 
 /*
- * Example code demonstrating how use Vulkan with Wayland
+ * Example code demonstrating how use Vulkan with XCB
  */
 int main(void)
 {

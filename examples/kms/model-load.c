@@ -146,7 +146,6 @@ int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app, struct app_kms *kms);
 int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_depth_image(struct app_vk *app, VkExtent2D extent2D);
-int create_vk_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
 int create_vk_shader_modules(struct app_vk *app);
 int create_vk_command_buffers(struct app_vk *app);
 int create_gltf_load_required_data(struct app_vk *app);

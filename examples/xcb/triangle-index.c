@@ -172,7 +172,7 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 
 
 /*
- * Example code demonstrating how use Vulkan with Wayland
+ * Example code demonstrating how use Vulkan with XCB
  */
 int main(void)
 {
