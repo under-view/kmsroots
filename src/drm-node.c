@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -580,8 +581,14 @@ struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain_creat
 		drmModeFreePlaneResources(drmPlaneResources);
 		drmModeFreeResources(drmResources);
 
+		clockid_t presClock;
+		struct kmr_drm_node_device_capabilites deviceCap;
+		deviceCap = kmr_drm_node_get_device_capabilities(kmrdrm->kmsfd);
+
+		presClock = (deviceCap.CAP_TIMESTAMP_MONOTONIC) ? CLOCK_MONOTONIC : CLOCK_REALTIME;
+
 		return (struct kmr_drm_node_display_output_chain) { .kmsfd = kmrdrm->kmsfd, .width = width, .height = height, .modeData = modeData,
-								    .connector = connectorProps, .crtc = crtcProps, .plane = planeProps };
+								    .connector = connectorProps, .crtc = crtcProps, .plane = planeProps, .presClock = presClock };
 	}
 
 exit_error_kms_node_doc_create_free_kms_obj_props:
