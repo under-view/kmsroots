@@ -164,9 +164,11 @@ struct kmr_drm_node_display_mode_data {
  * @kmsfd      - Pollable file descriptor to an open KMS (GPU) device file.
  * @width      - Highest mode (display resolution) width for @connector attached to display
  * @height     - Highest mode (display resolution) height for @connector attached to display
- * @presClock  - Presentation clock stores the clock ID for the clock and timer functions. Clock will
- *               either be set to CLOCK_MONOTONIC or CLOCK_REALTIME depending upon the DRM device
- *               capabilities.
+ * @presClock  - Presentation clock stores the type of clock to utilize for fps tracking. Clock will
+ *               either be set to CLOCK_MONOTONIC or CLOCK_REALTIME depending upon the System/DRM device
+ *               capabilities. CLOCK_MONOTONIC will return the elapsed time from system boot, can
+ *               only increase, and can't be manually modified. While CLOCK_REALTIME will return the
+ *               real time system clock as set by the user. This clock can however be modified.
  * @modeData   - Stores highest mode (display resolution & refresh) along with the modeid property
  *               used during KMS atomic operations.
  * @connector  - Anything that can display pixels in some form. (i.e HDMI). Connectors can

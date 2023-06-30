@@ -804,7 +804,14 @@ static void handle_page_flip_event(int fd,
                                    unsigned int UNUSED crtc_id,
                                    void *data)
 {
+	static double finalTime = 0;
+	static uint16_t fpsCounter = 0;
+
+	struct timespec startTime, stopTime;
 	struct kmr_drm_node_renderer_info *rendererInfo = (struct kmr_drm_node_renderer_info *) data;
+	struct kmr_drm_node_display_output_chain *displayOutputChain = rendererInfo->displayOutputChain;
+
+	clock_gettime(displayOutputChain->presClock, &startTime);
 
 	/* Application updates @rendererFbId to the next displayable GBM[GEM]/DUMP buffer and renders into that buffer. This buffer is displayed when atomic commit is performed */
 	rendererInfo->renderer(rendererInfo->rendererRunning, rendererInfo->rendererCurrentBuffer, rendererInfo->rendererFbId, rendererInfo->rendererData);
@@ -823,6 +830,16 @@ static void handle_page_flip_event(int fd,
 		kmr_utils_log(KMR_WARNING, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
 		kmr_utils_log(KMR_WARNING, "[x] drmModeAtomicCommit: %s", strerror(errno));
 		return;
+	}
+
+	clock_gettime(displayOutputChain->presClock, &stopTime);
+
+	fpsCounter++;
+	finalTime += (stopTime.tv_sec - startTime.tv_sec) + (double) (stopTime.tv_nsec - startTime.tv_nsec) / 1000000000ULL;
+
+	if (finalTime >= 1.0f) {
+		kmr_utils_log(KMR_INFO, "%u fps in %lf seconds for crtc %u", fpsCounter, finalTime, crtc_id);
+		finalTime = 0; fpsCounter = 0;
 	}
 }
 
