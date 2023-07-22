@@ -42,5 +42,12 @@ if get_option('tests')
 endif
 
 if get_option('docs')
-  subdir('docs')
+  docs_dir = meson.current_source_dir() + '/docs'
+  sphinx = find_program('sphinx-build-5', 'sphinx-build', required: true)
+
+  if sphinx.found()
+    custom_target('docs',
+                  command: [sphinx, '-W', '-b', 'html', docs_dir, '@OUTPUT@'],
+                  output: 'docs', install: true, install_dir: '')
+  endif
 endif
