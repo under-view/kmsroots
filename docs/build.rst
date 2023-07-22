@@ -50,7 +50,6 @@ Docs
 **Dependencies**
 
 - python3-pip
-- python3-clang
 
 .. code-block::
 
