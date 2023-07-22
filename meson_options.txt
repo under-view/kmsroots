@@ -38,3 +38,7 @@ option('gpu',
        type: 'combo', value: 'discrete',
        choices: ['integrated', 'discrete', 'cpu'],
        description: 'Select VkPhysicalDeviceType to use in examples')
+
+option('docs',
+      type: 'boolean', value: 'false',
+      description: 'Build documentation')
