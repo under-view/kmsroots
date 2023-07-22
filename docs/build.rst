@@ -11,7 +11,7 @@ Meson
         $ ninja -C build -j$(nproc)
         $ sudo ninja -C build install
 
-**Meson Options:**
+**Meson Options**
 
 All options/features are disabled by default.
 
@@ -21,16 +21,17 @@ All options/features are disabled by default.
         c_std=c11
         buildtype=release
         default_library=shared
+        gpu=integrated    # Default [discrete] Options: [integrated, discrete, cpu]
         kms=enabled       # Default [disabled]
         libseat=enabled   # Default [disabled]
         libinput=enabled  # Default [disabled]
         xcb=enabled       # Default [disabled]
         wayland=enabled   # Default [disabled]
         shaderc=enabled   # Default [disabled]
+        debugging=enabled # Default [disabled]
         examples=true     # Default [false]
         tests=true        # Default [false]
-        debugging=enabled # Default [disabled]
-        gpu=integrated    # Default [discrete] Options: [integrated, discrete, cpu]
+        docs=true         # Default [false]
 
 **Use with your Meson project**
 
