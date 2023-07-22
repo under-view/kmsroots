@@ -6,17 +6,17 @@ kmsroots Documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started:
+   :caption: Getting Started
 
    build
 
 .. toctree::
    :maxdepth: 3
-   :caption: API:
+   :caption: API
 
    api
 
-Indices and Tables:
-===================
+Indices and Tables
+==================
 
 * :ref:`genindex`

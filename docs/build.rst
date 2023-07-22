@@ -44,8 +44,12 @@ All options/features are disabled by default.
 
         executable('exe', 'src/main.c', dependencies : kmsroots_dep)
 
-Docs
+Documentation (Sphinx)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+kmsroots uses sphinx framework for documentation
+
+https://www.sphinx-doc.org/en/master/man/sphinx-build.html
 
 **Dependencies**
 
@@ -56,4 +60,11 @@ Docs
         $ git clone https://github.com/under-view/kmsroots.git
         $ cd kmsroots/docs
         $ sudo pip3 install -r requirements.txt
+        $ cd ..
+
+        # If no build directory exists
+        $ meson setup -Ddocs=true build
+
+        # If build directory exists
+        $ meson configure -Ddocs=true build
 
