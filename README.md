@@ -1,5 +1,13 @@
 # kmsroots
 
+<p align="center">
+    <a href="http://kmsroots.readthedocs.io/en/latest/?badge=latest">
+        <img src="https://readthedocs.org/projects/kmsroots/badge/?version=latest" alt="Documentation Status">
+    </a>
+</p>
+
+---
+
 Library used to assists in building applications that require vulkan renderers. This implementation assists in displaying vulkan render pass
 final framebuffers either directly to display via KMS atomic API or to one of the other linux display server clients (xcb, wayland). May also assists
 any [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) based compositor build their [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
