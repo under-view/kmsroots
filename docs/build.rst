@@ -1,8 +1,8 @@
 Build kmsroots
-================================
+==============
 
 Meson
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
 
 .. code-block::
         :linenos:
@@ -46,9 +46,9 @@ All options/features are disabled by default.
         executable('exe', 'src/main.c', dependencies : kmsroots_dep)
 
 Documentation (Sphinx)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
-kmsroots uses sphinx framework for documentation
+kmsroots uses sphinx framework for documentation. Primarily utilizing `The C Domain`_.
 
 https://www.sphinx-doc.org/en/master/man/sphinx-build.html
 
@@ -69,3 +69,4 @@ https://www.sphinx-doc.org/en/master/man/sphinx-build.html
         # If build directory exists
         $ meson configure -Ddocs=true build
 
+.. _The C Domain: https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#the-c-domain
