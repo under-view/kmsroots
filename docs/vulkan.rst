@@ -8,19 +8,22 @@ Header: kmsroots/vulkan.h
 Table of contents (click to go)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Enums:
+
+1. :c:enum:`kmr_vk_surface_type`
+
 Structs:
 
 1. :c:struct:`kmr_vk_instance_create_info`
-
-Enums:
+#. :c:struct:`kmr_vk_surface_create_info`
 
 Functions:
 
 1. :c:func:`kmr_vk_instance_create`
+#. :c:func:`kmr_vk_surface_create`
 
-
-Functions documentation
-~~~~~~~~~~~~~~~~~~~~~~~
+API Documentation
+~~~~~~~~~~~~~~~~~
 
 .. c:struct:: kmr_vk_instance_create_info
 
@@ -63,18 +66,73 @@ Functions documentation
 
 .. c:function:: VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk)
 
-        Creates a VkInstance object and establishes a connection to the Vulkan API.
+        :kmrvk: pointer to a struct :c:struct:`kmr_vk_instance_create_info`
+        :returns:
+                :on success: `VkInstance`_
+                :upon faliure: `VK_NULL_HANDLE`_
+
+        Creates a `VkInstance`_ object and establishes a connection to the Vulkan API.
         It also acts as an easy wrapper that allows one to define instance extensions.
         Instance extensions basically allow developers to define what an app is setup to do.
         So, if a client wants the application to work with wayland surface or X11 surface etc...
         Client should enable those extensions inorder to gain access to those particular capabilities.
 
-        **Parameters**
+===========================================================================================================
 
-                :kmrvk: pointer to a struct :c:struct:`kmr_vk_instance_create_info`
+.. c:enum:: kmr_vk_surface_type
 
-        **returns** `VkInstance`_
+        .. c:macro::
+                KMR_SURFACE_WAYLAND_CLIENT
+                KMR_SURFACE_XCB_CLIENT
+
+        Display server protocol options. Used by :c:func:`kmr_vk_surface_create`
+        to create a `VkSurfaceKHR`_ object based upon platform specific information
+
+.. c:struct:: kmr_vk_surface_create_info
+
+        .. c:member::
+                kmr_vk_surface_type surfaceType
+                VkInstance instance
+                void *surface
+                void *display
+                unsigned int window
+
+        :c:member:`surfaceType`
+
+        Must pass a valid enum kmr_vk_surface_type value. Used in determine what vkCreate*SurfaceKHR
+        function and associated structs to utilize when creating the `VkSurfaceKHR`_ object.
+
+        :c:member:`instance`
+
+        Must pass a valid `VkInstance`_ handle to create/associate surfaces for an application
+
+        :c:member:`surface`
+
+        Must pass a pointer to a struct wl_surface object
+
+        :c:member:`display`
+
+        Must pass either a pointer to struct wl_display object or a pointer to an xcb_connection_t
+
+        :c:member:`window`
+
+        Must pass an xcb_window_t window id or an unsigned int representing XID
+
+.. c:function:: VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk)
+
+        :kmrvk: pointer to a struct :c:struct:`kmr_vk_surface_create_info`
+        :returns:
+                :on success: `VkSurfaceKHR`_
+                :upon faliure: `VK_NULL_HANDLE`_
+
+        Creates a `VkSurfaceKHR`_ object based upon platform specific information about the given surface.
+        `VkSurfaceKHR`_ are the interface between the window and Vulkan defined images in a given swapchain
+        if vulkan swapchain exists.
+
+===========================================================================================================
 
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
 .. _VkApplicationInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkApplicationInfo.html
+.. _VkSurfaceKHR: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSurfaceKHR.html
+.. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
