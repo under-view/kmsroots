@@ -52,10 +52,10 @@ struct kmr_xcb_window_create_info {
 /*
  * kmr_xcb_window_create: create a fulls xcb client window (can be fullscreen).
  *
- * args:
+ * parameters:
  * @kmsxcb - pointer to a struct kmr_xcb_window_create_info contains all information
  *           required to created an xcb client and some added window configuration options.
- * return:
+ * returns:
  *	on success struct kmr_xcb_window
  *	on failure struct kmr_xcb_window { with members nulled }
  */
@@ -69,7 +69,7 @@ struct kmr_xcb_window kmr_xcb_window_create(struct kmr_xcb_window_create_info *k
  *                              a power recycle. Validation layers report - vkCreateFramebuffer(): VkFramebufferCreateInfo
  *                              attachment #0 mip level 0 has width (1848) smaller than the corresponding framebuffer width (1920).
  *
- * args:
+ * parameters:
  * @kmsxcb - pointer to a struct kmr_xcb_window contains all objects necessary
  *           for an xcb client window to display.
  */
@@ -116,10 +116,10 @@ struct kmr_xcb_window_handle_event_info {
  *
  *                              https://xcb.freedesktop.org/tutorial/events
  *
- * args:
+ * parameters:
  * @client - pointer to a struct kmr_xcb_window_wait_for_event_info contains all objects necessary for an
  *           xcb client to run and pointer to custom renderer to execute and the arguments used by said renderer.
- * return:
+ * returns:
  *	on success 1
  *	on failure 0
  */
@@ -140,7 +140,7 @@ struct kmr_xcb_destroy {
 /*
  * kmr_xcb_destroy: frees all allocated memory contained in struct kmsxcb
  *
- * args:
+ * parameters:
  * @kmsxcb - pointer to a struct kmsxcb_destroy contains all objects
  *           created during window lifetime in need of destruction
  */

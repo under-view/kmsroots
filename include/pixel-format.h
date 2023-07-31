@@ -25,10 +25,10 @@ typedef enum _kmr_pixel_format_conv_type {
  *                                to determine to format to create VkImage's with given the format of the
  *                                GBM buffer object.
  *
- * args:
+ * parameters:
  * @conv   - Enum constant specifying the format to convert from then to.
  * @format - Unsigned 32bit integer representing the type of pixel format.
- * return:
+ * returns:
  * 	on success GBM/DRM/VK format (unsigned 32bit integer)
  * 	on failure UINT32_MAX
  */
@@ -48,10 +48,10 @@ typedef enum _kmr_pixel_format_type {
 /*
  * kmr_pixel_format_get_name: Return the string name given to an unsigned 32bit integer
  *
- * args:
+ * parameters:
  * @formatType - Enum constant specifying the API (GBM/DRM/VK) format name.
  * @format     - Unsigned 32bit integer representing the type of pixel format.
- * return:
+ * returns:
  * 	on success GBM/DRM/VK format in string form
  * 	on failure UINT32_MAX
  */

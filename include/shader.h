@@ -47,9 +47,9 @@ struct kmr_shader_spirv {
  *                                     passed to vulkan. struct kmr_shader_spirv member result can be free'd
  *                                     with a call to kmr_shader_destroy(3).
  *
- * args:
+ * parameters:
  * @kmsshader - Pointer to a struct kmr_shader_spirv_create_info containing infromation about what ops to do
- * return:
+ * returns:
  *	on success struct kmr_shader_spirv
  *	on failure struct kmr_shader_spirv { with member nulled }
  */
@@ -72,7 +72,7 @@ struct kmr_shader_destroy {
 /*
  * kmr_shader_destroy: frees any allocated memory defined by customer
  *
- * args:
+ * parameters:
  * @kmsshader - pointer to a struct kmr_shader_destroy contains all objects created during
  *              application lifetime in need freeing
  */

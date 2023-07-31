@@ -42,9 +42,9 @@ struct kmr_dma_buf_import_sync_file_create_info {
  *                                      file descriptors with DMA_BUF_IOCTL_IMPORT_SYNC_FILE. @syncFileFd in vulkan may be acquired via
  *                                      (VkSemaphoreGetFdInfoKHR->vkGetSemaphoreFdKHR)
  *
- * args:
+ * parameters:
  * @kmrdma - pointer to a struct kmr_dma_buf_import_sync_file_create_info
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -85,9 +85,9 @@ struct kmr_dma_buf_export_sync_file {
  *                                      DMA-BUF file descriptors with DMA_BUF_IOCTL_EXPORT_SYNC_FILE. @syncFileFds
  *                                      in vulkan may be imported via (VkImportSemaphoreFdInfoKHR->vkImportSemaphoreFdKHR).
  *
- * args:
+ * parameters:
  * @kmrdma - pointer to a struct kmr_dma_buf_export_sync_file_create_info
- * return:
+ * returns:
  *	on success struct kmr_dma_buf_export_sync_file
  *	on failure struct kmr_dma_buf_export_sync_file { with members nulled }
  */
@@ -111,7 +111,7 @@ struct kmr_dma_buf_destroy {
 /*
  * kmr_dma_buf_destroy: frees any allocated memory defined by user
  *
- * args:
+ * parameters:
  * @kmrdma - pointer to a struct kmr_vk_destroy contains all objects created during
  *          application lifetime in need freeing
  */

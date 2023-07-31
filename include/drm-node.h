@@ -69,10 +69,10 @@ struct kmr_drm_node_create_info {
  *                      info here: https://en.wikipedia.org/wiki/Direct_Rendering_Manager#DRM-Master_and_DRM-Auth
  *                      So, if a graphical session is already active on the current VT function fails.
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_create_info used to pass a DRI/KMS device file that we may want to use
  *           and to store information about the current seatd/sytemd-logind D-bus session.
- * return:
+ * returns:
  *	on success struct kmr_drm_node
  *	on failure struct kmr_drm_node { with members nulled, int's set to -1 }
  */
@@ -103,9 +103,9 @@ struct kmr_drm_node_device_capabilites {
  *                                       to give details on what capabilites the particular kms device supports. Function is called
  *                                       by kmr_drm_node_create(3), but exposed is exposed application developer for their own use.
  *
- * args:
+ * parameters:
  * @kmsfd - Number associated with open KMS device node
- * return:
+ * returns:
  *	struct kmr_drm_node_device_capabilites
  */
 struct kmr_drm_node_device_capabilites kmr_drm_node_get_device_capabilities(int kmsfd);
@@ -212,7 +212,7 @@ struct kmr_drm_node_display_output_chain_create_info {
  *                                           the members of struct kmr_drm_node_display_output_chain whose information will be
  *                                           later used in modesetting.
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_display_output_chain_create_info used to determine what operation will happen in the function
  * return
  *	on success struct kmr_drm_node_display_output_chain
@@ -238,7 +238,7 @@ struct kmr_drm_node_display_mode_info {
  * kmr_drm_node_display_mode_set: Sets the display connected to @displayChain.connecter screen resolution
  *                                and refresh to the highest possible value.
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_display_mode_info used to set highest display mode
  * return
  *	on success 0
@@ -250,7 +250,7 @@ int kmr_drm_node_display_mode_set(struct kmr_drm_node_display_mode_info *kmrdrm)
 /*
  * kmr_drm_node_display_mode_reset: Clears the current display mode setting
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_display_mode_info used to set highest display mode
  * return
  *	on success 0
@@ -323,7 +323,7 @@ struct kmr_drm_node_atomic_request {
  *                                     users of API to setup custom renderer implementation. Performs the initial modeset
  *                                     operation after all the application needs to do is wait for page-flip events to happen.
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_atomic_request_create_info used to set external renderer and arguments
  *           of the external renderer.
  * return
@@ -349,7 +349,7 @@ struct kmr_drm_node_handle_drm_event_info {
  *                                on the DRM file-descriptor. This function should be called after the DRM
  *                                file-descriptor has polled readable.
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_handle_drm_event_info
  * return
  *	on success 0
@@ -380,7 +380,7 @@ struct kmr_drm_node_destroy {
 /*
  * kmr_drm_node_destroy: Destroy any and all KMS node information
  *
- * args:
+ * parameters:
  * @kmrdrm - pointer to a struct kmr_drm_node_destroy
  */
 void kmr_drm_node_destroy(struct kmr_drm_node_destroy *kmrdrm);

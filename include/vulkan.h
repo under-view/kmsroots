@@ -72,9 +72,9 @@ struct kmr_vk_instance_create_info {
  *                         So, if a client wants the application to work with wayland surface or X11 surface etc…​
  *                         Client should enable those extensions inorder to gain access to those particular capabilities.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_instance_create_info
- * return:
+ * returns:
  *	on success VkInstance handle
  *	on failure VK_NULL_HANDLE
  */
@@ -118,32 +118,13 @@ struct kmr_vk_surface_create_info {
  *                        VkSurfaceKHR are the interface between the window and Vulkan defined images in a given swapchain
  *                        if vulkan swapchain exists.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_surface_create_info
- * return:
+ * returns:
  *	on success VkSurfaceKHR handle
  *	on failure VK_NULL_HANDLE
  */
 VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
-
-
-/*
- * struct kmr_vk_phdev_create_info (kmsroots Vulkan Physical Device Create Information)
- *
- * members:
- * @instance   - Must pass a valid VkInstance handle which to find VkPhysicalDevice with
- * @deviceType - Must pass one of the supported VkPhysicalDeviceType's.
- *               https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
- * @kmsfd      - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
- *               if corresponding DRM properties match.
- */
-struct kmr_vk_phdev_create_info {
-	VkInstance           instance;
-	VkPhysicalDeviceType deviceType;
-#ifdef INCLUDE_KMS
-	int                  kmsfd;
-#endif
-};
 
 
 /*
@@ -176,13 +157,31 @@ struct kmr_vk_phdev {
 
 
 /*
+ * struct kmr_vk_phdev_create_info (kmsroots Vulkan Physical Device Create Information)
+ *
+ * members:
+ * @instance   - Must pass a valid VkInstance handle which to find VkPhysicalDevice with
+ * @deviceType - Must pass one of the supported VkPhysicalDeviceType's.
+ *               https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
+ * @kmsfd      - Must pass a valid kms file descriptor for which a VkPhysicalDevice will be created
+ *               if corresponding DRM properties match.
+ */
+struct kmr_vk_phdev_create_info {
+	VkInstance           instance;
+	VkPhysicalDeviceType deviceType;
+#ifdef INCLUDE_KMS
+	int                  kmsfd;
+#endif
+};
+
+
+/*
  * kmr_vk_phdev_create: Retrieves a VkPhysicalDevice handle if certain characteristics of a physical device are meet.
  *                      Also retrieves a given physical device properties and features to be later used by the application.
- *                      Characteristics include @vkPhdevType and @kmsFd.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_phdev_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_phdev
  *	on failure struct kmr_vk_phdev { with members nulled, int's set to -1 }
  */
@@ -226,10 +225,10 @@ struct kmr_vk_queue_create_info {
  *                      family index and the queue count given a single VkQueueFlagBits. Queue
  *                      are used in vulkan to submit commands up to the GPU.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_queue_create_info. Contains information on which queue family
  *          we are trying to find and the physical device that supports said queue family.
- * return:
+ * returns:
  *	on success struct kmr_vk_queue
  *	on failure struct kmr_vk_queue { with members nulled, int's set to -1 }
  */
@@ -293,9 +292,9 @@ struct kmr_vk_lgdev_create_info {
  *                      struct kmr_vk_queue: member 'VkQueue queue' handle is assigned in this function as vkGetDeviceQueue
  *                      requires a logical device handle.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_lgdev_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_lgdev
  *	on failure struct kmr_vk_lgdev { with members nulled, int's set to -1 }
  */
@@ -364,9 +363,9 @@ struct kmr_vk_swapchain_create_info {
  *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1.
  *                          The swapchain can be defined as a set of images that can be drawn to and presented to a surface.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_swapchain_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_swapchain
  *	on failure struct kmr_vk_swapchain { with member nulled }
  */
@@ -540,9 +539,9 @@ struct kmr_vk_image_create_info {
  *                      creates VkImage object's given passed data and associate VkDeviceMemory & VkImageView
  *                      objects with images. Amount of images created it based upon @imageCount
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_image_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_image
  *	on failure struct kmr_vk_image { with member nulled }
  */
@@ -584,9 +583,9 @@ struct kmr_vk_shader_module_create_info {
 /*
  * kmr_vk_shader_module_create: Function creates VkShaderModule from passed SPIR-V byte code.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_shader_module_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_shader_module
  *	on failure struct kmr_vk_shader_module { with member nulled }
  */
@@ -638,9 +637,9 @@ struct kmr_vk_pipeline_layout_create_info {
  *                                stages these resources will be accessed, and how to access them. Describes the layout of the
  *                                data that will be given to the pipeline for a single draw operation.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_pipeline_layout_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_pipeline_layout
  *	on failure struct kmr_vk_pipeline_layout { with member nulled }
  */
@@ -700,9 +699,9 @@ struct kmr_vk_render_pass_create_info {
  *                            It describes how you want to render things to the viewport upon render time. Example at render time we wish to
  *                            color in the center of a triangle. We want to give the appears of depth to an image.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_render_pass_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_render_pass
  *	on failure struct kmr_vk_render_pass { with member nulled }
  */
@@ -778,9 +777,9 @@ struct kmr_vk_graphics_pipeline_create_info {
  *                                  system then the rasterizer converts all plotted points and turns it into fragments/pixels for your
  *                                  fragment shader to then color in.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_graphics_pipeline_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_graphics_pipeline
  *	on failure struct kmr_vk_graphics_pipeline { with member nulled }
  */
@@ -859,9 +858,9 @@ struct kmr_vk_framebuffer_create_info {
  *                            render pass. Meaning if are @renderPass instance has 1 color + 1 depth attachment. Then each VkFramebuffer
  *                            must have one VkImage for color and one VkImage for depth.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_framebuffer_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_framebuffer
  *	on failure struct kmr_vk_framebuffer { with member nulled }
  */
@@ -917,9 +916,9 @@ struct kmr_vk_command_buffer_create_info {
  *                               Function only allocates primary command buffers. VkCommandPool flags set
  *                               VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_command_buffer_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_command_buffer
  *	on failure struct kmr_vk_command_buffer { with member nulled }
  */
@@ -946,9 +945,9 @@ struct kmr_vk_command_buffer_record_info {
  *                                     command buffer to become writeable. Allowing for the application to write commands into it. Theses commands
  *                                     are later put into a queue to be sent off to the GPU.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_command_buffer_record_info
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -958,9 +957,9 @@ int kmr_vk_command_buffer_record_begin(struct kmr_vk_command_buffer_record_info 
 /*
  * kmr_vk_command_buffer_record_end: Function stops command buffer to recording. Thus, ending each command buffers ability to accept commands.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_command_buffer_record_info
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -1037,9 +1036,9 @@ struct kmr_vk_sync_obj_create_info {
  *                         So we need synchronization objects to make sure operations that require other operations to finish can
  *                         happen after.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sync_obj_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_sync_obj
  *	on failure struct kmr_vk_sync_obj { with member nulled }
  */
@@ -1089,9 +1088,9 @@ struct kmr_vk_sync_obj_import_external_sync_fd_info {
  *                                          synchronization object. The file descriptors can be acquired via a call to
  *                                          kmr_dma_buf_export_sync_file_create(3).
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sync_obj_import_external_sync_fd_info
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -1118,9 +1117,9 @@ struct kmr_vk_sync_obj_export_external_sync_fd_info {
  *                                          This file descriptor can later be associated with a DMA-BUF fd via
  *                                          kmr_dma_buf_import_sync_file_create(3).
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sync_obj_export_external_sync_fd_info
- * return:
+ * returns:
  *	on success posix file descriptor associated
  *	           with Vulkan sync object
  *	on failure -1
@@ -1175,9 +1174,9 @@ struct kmr_vk_buffer_create_info {
  * kmr_vk_buffer_create: Function creates vulkan buffer header and binds actual memory to said vulkan buffer headers. This
  *                       allows host visible data (i.e vertex data) to be given to the GPU.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_buffer_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_buffer
  *	on failure struct kmr_vk_buffer { with member nulled }
  */
@@ -1227,9 +1226,9 @@ struct kmr_vk_descriptor_set_layout_create_info {
  *                                      set, binding locate used by both vulkan and shader to determine how shader can access vulkan
  *                                      resources, and at what pipeline stage.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_descriptor_set_layout_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_descriptor_set_layout
  *	on failure struct kmr_vk_descriptor_set_layout { with member nulled }
  */
@@ -1307,9 +1306,9 @@ struct kmr_vk_descriptor_set_create_info {
  *                               [---------------------][---------------------][---------------------][-----------------------]
  *                   descriptor: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][     1     |     2     ]
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_descriptor_set_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_descriptor_set
  *	on failure struct kmr_vk_descriptor_set { with member nulled }
  */
@@ -1385,9 +1384,9 @@ struct kmr_vk_sampler_create_info {
  *
  *                        Loaded images (png, jpg)-> VkImage -> Sampler interacts with the VkImage.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sampler_create_info
- * return:
+ * returns:
  *	on success struct kmr_vk_sampler
  *	on failure struct kmr_vk_sampler { with member nulled }
  */
@@ -1459,9 +1458,9 @@ struct kmr_vk_resource_copy_info {
  *                       copying data from CPU visible buffer over to GPU visible buffer. That way the
  *                       GPU can acquire data (vertex data) more quickly.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_resource_copy_info
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -1498,9 +1497,9 @@ struct kmr_vk_resource_pipeline_barrier_info {
  * kmr_vk_resource_pipeline_barrier: Function is used to synchronize access to vulkan resources. Basically
  *                                   ensuring that a write to a resources finishes before reading from it.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_resource_pipeline_barrier_info
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -1511,10 +1510,10 @@ int kmr_vk_resource_pipeline_barrier(struct kmr_vk_resource_pipeline_barrier_inf
  * kmr_vk_get_surface_capabilities: Populates the VkSurfaceCapabilitiesKHR struct with supported GPU device surface capabilities.
  *                                  Queries what a physical device is capable of supporting for any given surface.
  *
- * args:
+ * parameters:
  * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
- * return:
+ * returns:
  *	populated VkSurfaceCapabilitiesKHR
  */
 VkSurfaceCapabilitiesKHR kmr_vk_get_surface_capabilities(VkPhysicalDevice physDev, VkSurfaceKHR surface);
@@ -1537,10 +1536,10 @@ struct kmr_vk_surface_format {
  * kmr_vk_get_surface_formats: Creates block of memory with all supported color space's and pixel formats a given physical device
  *                             supports for any given surface. Application must free struct kmr_vk_surface_format { member: surfaceFormats }
  *
- * args:
+ * parameters:
  * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
- * return:
+ * returns:
  *	on success struct kmr_vk_surface_format
  *	on failure struct kmr_vk_surface_format { with member nulled }
  */
@@ -1566,10 +1565,10 @@ struct kmr_vk_surface_present_mode {
  *                                   More information on presentation modes can be found here:
  *                                   https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
  *
- * args:
+ * parameters:
  * @physDev - Must pass a valid VkPhysicalDevice handle
  * @surface - Must pass a valid VkSurfaceKHR handle
- * return:
+ * returns:
  *	on success struct kmr_vk_surface_present_mode
  *	on failure struct kmr_vk_surface_present_mode { with member nulled }
  */
@@ -1614,9 +1613,9 @@ struct kmr_vk_phdev_format_prop_info {
  * kmr_vk_get_phdev_format_properties: Queries a given physical device supported format properties
  *                                     Application must free struct kmr_vk_phdev_format_prop { member: @formatProperties }
  *
- * args:
+ * parameters:
  * @kmrvk - Pointer to a struct kmr_vk_phdev_format_prop_info
- * return:
+ * returns:
  *	on success struct kmr_vk_phdev_format_prop
  *	on failure struct kmr_vk_phdev_format_prop { with members nulled }
  */
@@ -1627,11 +1626,11 @@ struct kmr_vk_phdev_format_prop kmr_vk_get_phdev_format_properties(struct kmr_vk
  * kmr_vk_get_external_semaphore_properties: Function returns a given physical device external semaphore handle capabilities.
  *
  *
- * args:
+ * parameters:
  * @physDev    - Must pass a valid VkPhysicalDevice handle
  * @handleType - Must pass bitwise or value specifying the external semaphore
  *               handle type for which capabilities/properties will be returned. 
- * return:
+ * returns:
  *	Populated VkExternalSemaphoreProperties
  */
 VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysicalDevice physDev, VkExternalSemaphoreHandleTypeFlagBits handleType);
@@ -1640,11 +1639,11 @@ VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysica
 /*
  * kmr_vk_get_external_fd_memory_properties: Get Properties of External Memory File Descriptors
  *
- * args:
+ * parameters:
  * @logicalDevice   - Must pass a valid VkDevice handle (Logical Device)
  * @extenalMemoryFd - File descriptor to externally create memory.
  * @handleType      - Describes the type of file descriptor @externalMemoryFd is.
- * return:
+ * returns:
  *	on success VkMemoryFdPropertiesKHR { member: @memoryTypeBits }
  *	on failure UINT32_MAX
  */
@@ -1675,9 +1674,9 @@ struct kmr_vk_memory_export_external_fd_info {
  *                                   VkDeviceMemory. Application must call close(2) on resulting file
  *                                   descriptor.
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_memory_export_external_fd_info
- * return:
+ * returns:
  *	on success POSIX file descriptor associated with VkDeviceMemory
  *	on failure -1
  */
@@ -1711,7 +1710,7 @@ struct kmr_vk_memory_map_info {
  *                    Use sparingly as consistently mapping and unmapping memory is very inefficient.
  *                    Try to avoid utilizing in render loops. Although that's how it's written
  *                    in multiple examples in this repo.
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_memory_map_info
  */
 void kmr_vk_memory_map(struct kmr_vk_memory_map_info *kmrvk);
@@ -1803,7 +1802,7 @@ struct kmr_vk_destroy {
 /*
  * kmr_vk_destroy: frees any allocated memory defined by customer
  *
- * args:
+ * parameters:
  * @kmrvk - pointer to a struct kmr_vk_destroy contains all objects created during
  *          application lifetime in need freeing
  */

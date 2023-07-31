@@ -47,9 +47,9 @@ struct kmr_utils_aligned_buffer_create_info {
  *                                  By default malloc(3) aligns buffers by 8 bytes function calls aligned_alloc(3) to change aligment value.
  *                                  Application must call free on struct kmr_utils_aligned_buffer { member: alignedBufferMemory }.
  *
- * args:
+ * parameters:
  * @kmsutils - pointer to a struct kmr_utils_aligned_buffer_create_info
- * return:
+ * returns:
  *	on success struct kmr_utils_aligned_buffer
  *	on failure struct kmr_utils_aligned_buffer { with members nulled }
  */
@@ -108,9 +108,9 @@ struct kmr_utils_image_buffer_create_info {
  *                                Function converts RGB-only images to RGBA, as most devices don't support
  *                                RGB-formats in Vulkan.
  *
- * args:
+ * parameters:
  * @kmsutils - pointer to a struct kmr_utils_image_buffer_create_info
- * return:
+ * returns:
  *	on success struct kmr_utils_image_buffer
  *	on failure struct kmr_utils_image_buffer { with member nulled }
  */
@@ -134,9 +134,9 @@ struct kmr_utils_file {
  * kmr_utils_file_load: Takes a file and loads its contents into a memory buffer.
  *                      Application's  must take up the mantel and call free on @bytes member.
  *
- * args:
+ * parameters:
  * @filename - Must pass path to file to load
- * return:
+ * returns:
  *	on success struct kmr_utils_file
  *	on failure struct kmr_utils_file { with member nulled }
  */
@@ -146,7 +146,7 @@ struct kmr_utils_file kmr_utils_file_load(const char *filename);
 /*
  * kmr_utils_nanosecond: Function returns the current time in nanosecond
  *
- * return:
+ * returns:
  *	on success current time in nanosecond
  *	on failure no checks occur
  */
@@ -158,12 +158,12 @@ uint64_t kmr_utils_nanosecond();
  *                               or the absolute path to another file that exists in the same directory. Function concatenates
  *                               @filename to @directory. Application must call free on returned pointer.
  *
- * args:
+ * parameters:
  * @directory - Directory or absolute path to a file that isn't @filename
  * @filename  - String containing file name to append to @directory.
  *              If NULL @directory needs to contain absolute path to file.
  * @maxStrLen - Allow customer to set maximum string len
- * return:
+ * returns:
  *	on success absolute path to file
  *	on failure NULL
  */
@@ -173,10 +173,10 @@ char *kmr_utils_concat_file_to_dir(const char *directory, const char *filename, 
 /*
  * kmr_utils_update_fd_flags: Updates the flags set on a file descriptor
  *
- * args:
+ * parameters:
  * @fd    - File descriptor to updates
  * @flags - Flags to update
- * return:
+ * returns:
  *	on success 0
  *	on failure -1
  */
@@ -215,7 +215,7 @@ const char *_kmr_utils_strip_path(const char *filepath);
 /*
  * kmr_utils_set_log_level: Sets which messages of kmr_utils_log_type allowed to be printed to stdout.
  *
- * args:
+ * parameters:
  * @level - 32-bit integer representing the logs to print to stdout.
  */
 void kmr_utils_set_log_level(kmr_utils_log_type level);

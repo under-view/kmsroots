@@ -59,7 +59,7 @@ struct kmr_wc_core_interface {
 /*
  * struct kmr_wc_core_interface_create_info (kmsroots Wayland Client Core Interface Create Information)
  *
- * args:
+ * parameters:
  * @iType       - Wayland global objects to include or exclude when the registry emits events
  * @displayName - Specify the wayland server unix domain socket a client should communicate with. This
  *                will set the $WAYLAND_DISPLAY variable to the desired display. Passing NULL will
@@ -75,12 +75,12 @@ struct kmr_wc_core_interface_create_info {
  * kmr_wc_core_interface_create: Establishes connection to the wayland display server and sets up client specified
  *                               global objects that define what requests and events are possible.
  *
- * args:
+ * parameters:
  * @kmrwc - Pointer to a struct kmr_wc_core_interface_create_info which contains the name of the server
  *          to connected to and the core client specified globals to bind to a given client. Only if the
  *          server supports these globals.
  *
- * return:
+ * returns:
  *	on success struct kmr_wc_core_interface
  *	on failure struct kmr_wc_core_interface { with members nulled }
  */
@@ -157,11 +157,11 @@ struct kmr_wc_buffer_create_info {
 /*
  * kmr_wc_buffer_create: Adds way to get pixels from client to compositor by creating writable shared memory buffers.
  *
- * args:
+ * parameters:
  * @kmrwc - Must pass a valid pointer to a struct kmr_wc_buffer_create_info which gives
  *          details of how a buffer should be allocated and how many to allocations to make.
  *
- * return:
+ * returns:
  *	on success struct kmr_wc_buffer
  *	on failure struct kmr_wc_buffer { with members nulled, integers set to -1 }
  */
@@ -242,12 +242,12 @@ struct kmr_wc_surface_create_info {
 /*
  * kmr_wc_surface_create: Creates a surface to place pixels in and a window for displaying surface pixels.
  *
- * args:
+ * parameters:
  * @kmrwc - Must pass a valid pointer to a struct kmr_wc_surface_create_info which gives
  *          details on what buffers are associated with surface object, the name of the
  *          window, how the window should be displayed, (more info TBA).
  *
- * return:
+ * returns:
  *	on success struct kmr_wc_surface
  *	on failure struct kmr_wc_surface { with members nulled }
  */
@@ -272,7 +272,7 @@ struct kmr_wc_destroy {
 /*
  * kmr_wc_destroy: frees any remaining allocated memory contained in struct kmr_wc_destroy
  *
- * args:
+ * parameters:
  * @kmrwc - pointer to a struct kmr_wc contains all objects/interfaces
  *          necessary for an xcb client to run.
  */

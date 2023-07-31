@@ -40,10 +40,10 @@ struct kmr_input_create_info {
 /*
  * kmr_input_create: Creates a libinput instance 
  *
- * args:
+ * parameters:
  * @kmsinp - pointer to a struct kmr_input_create_info used store information about
  *           the current seatd/sytemd-logind D-Bus session
- * return:
+ * returns:
  *	on success struct kmr_input
  *	on failure struct kmr_input { with members nulled, int's set to -1 }
  */
@@ -66,7 +66,7 @@ struct kmr_input_handle_input_event_info {
  *                               associated with the libinput instance and processes them internally. This function
  *                               should be called after the libinput instance file-descriptor has polled readable.
  *
- * args:
+ * parameters:
  * @kmsinp - pointer to a struct kmr_input_handle_input_event_info
  * return
  *	on success 0
@@ -90,7 +90,7 @@ struct kmr_input_destroy {
 /*
  * kmr_intput_destroy: Destroy any and all information
  *
- * args:
+ * parameters:
  * @kmsinp - pointer to a struct kmr_input_destroy
  */
 void kmr_input_destroy(struct kmr_input_destroy *kmsinp);
