@@ -8,6 +8,11 @@ Header: kmsroots/vulkan.h
 Table of contents (click to go)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Macros:
+
+1. :c:macro:`KMR_VK_INSTANCE_PROC_ADDR`
+#. :c:macro:`KMR_VK_DEVICE_PROC_ADDR`
+
 Enums:
 
 1. :c:enum:`kmr_vk_surface_type`
@@ -33,6 +38,39 @@ Functions:
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
+
+.. c:macro:: KMR_VK_INSTANCE_PROC_ADDR
+
+	Due to Vulkan not directly exposing functions for all platforms.
+	Dynamically (at runtime) retrieve or acquire the address of a
+	`VkInstance`_ function. Via token concatenation and String-izing Tokens.
+
+	.. code-block::
+
+		#define KMR_VK_INSTANCE_PROC_ADDR(inst, var, func) \
+			do { \
+				var = (PFN_vk##func) vkGetInstanceProcAddr(inst, "vk" #func); \
+				assert(var); \
+			} while(0);
+
+===========================================================================================================
+
+.. c:macro:: KMR_VK_DEVICE_PROC_ADDR
+
+	Due to Vulkan not directly exposing functions for all platforms.
+	Dynamically (at runtime) retrieve or acquire the address of a
+	`VkDevice`_ (logical device) function. Via token concatenation
+	and String-izing Tokens
+
+	.. code-block::
+
+		#define KMR_VK_DEVICE_PROC_ADDR(dev, var, func) \
+			do { \
+				var = (PFN_vk##func) vkGetDeviceProcAddr(dev, "vk" #func); \
+				assert(var); \
+			} while(0);
+
+===========================================================================================================
 
 .. c:struct:: kmr_vk_instance_create_info
 
