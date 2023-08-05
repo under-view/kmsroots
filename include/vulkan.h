@@ -192,9 +192,9 @@ struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk);
  * struct kmr_vk_queue (kmsroots Vulkan Queue)
  *
  * members:
- * @name        - Name of the given queue. This is strictly to give a name to the queue. Not required by API.
- * @queue       - VkQueue handle used when submitting command buffers to physical device. Handle assigned
- *                in kmr_vk_lgdev_create after VkDevice handle creation.
+ * @name        - Stores the name of the queue in string format. Not required by API.
+ * @queue       - VkQueue handle used when submitting command buffers to physical device. Address given to
+ *                handle in kmr_vk_lgdev_create after VkDevice handle creation.
  * @familyIndex - VkQueue family index associate with struct kmr_vk_queue_create_info { @queueFlag } selected
  * @queueCount  - Count of queues in a given VkQueue family
  */
@@ -239,13 +239,13 @@ struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk);
  * struct kmr_vk_lgdev (kmsroots Vulkan Logical Device)
  *
  * members:
- * @logicalDevice - Returned VkDevice handle which represents vulkans access to physical device
+ * @logicalDevice - Returned VkDevice handle which represents vulkan's access to physical device
  * @queueCount    - Amount of elements in pointer to array of struct kmr_vk_queue. This information
- *                  gets populated with the data pass through struct kmr_vk_lgdev_create_info { member: numqueues }
+ *                  gets populated with the data pass through struct kmr_vk_lgdev_create_info { @queueCount }
  * @queues        - Pointer to an array of struct kmr_vk_queue. This information gets populated with the
- *                  data pass through struct kmr_vk_lgdev_create_info { member: queues }
+ *                  data pass through struct kmr_vk_lgdev_create_info { @queues }.
  *
- *                  @queueCount & @queues are strictly for struct kmr_vk_lgdev to have extra information amount VkQueue's
+ *                  Members @queueCount & @queues are strictly for struct kmr_vk_lgdev to have extra information amount VkQueue's
  */
 struct kmr_vk_lgdev {
 	VkDevice            logicalDevice;
@@ -263,9 +263,9 @@ struct kmr_vk_lgdev {
  * @enabledFeatures       - Must pass a valid pointer to a VkPhysicalDeviceFeatures with X features enabled
  * @enabledExtensionCount - Must pass the amount of Vulkan Device extensions to enable.
  * @enabledExtensionNames - Must pass an array of strings containing Vulkan Device extension to enable.
- * @queueCount            - Must pass the amount of struct kmr_vk_queue (VkQueue,VkQueueFamily indicies) to
+ * @queueCount            - Must pass the amount of struct kmr_vk_queue { @queue, @familyIndex } to
  *                          create along with a given logical device
- * @queues                - Must pass a pointer to an array of struct kmr_vk_queue (VkQueue,VkQueueFamily indicies) to
+ * @queues                - Must pass a pointer to an array of struct kmr_vk_queue { @queue, @familyIndex } to
  *                          create along with a given logical device
  */
 struct kmr_vk_lgdev_create_info {
@@ -285,11 +285,11 @@ struct kmr_vk_lgdev_create_info {
  *                      to it and are not seen by other logical devices. Function also acts as an easy wrapper
  *                      that allows client to define device extensions. Device extensions basically allow developers
  *                      to define what operations a given logical device is capable of doing. So, if one wants the
- *                      device to be capable of utilizing a swap chain, etc…​ One should enable those extensions
+ *                      device to be capable of utilizing a swap chain, etc... You have to enable those extensions
  *                      inorder to gain access to those particular capabilities. Allows for creation of multiple
- *                      VkQueue's although the only one needed is the Graphics queue.
+ *                      VkQueue's although the only one we need is the Graphics queue.
  *
- *                      struct kmr_vk_queue: member 'VkQueue queue' handle is assigned in this function as vkGetDeviceQueue
+ *                      struct kmr_vk_queue { @queue } handle is assigned in this function as vkGetDeviceQueue
  *                      requires a logical device handle.
  *
  * parameters:
