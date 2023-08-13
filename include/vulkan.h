@@ -139,10 +139,10 @@ VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
  * @physDeviceFeatures      - Structure describing the features that can be supported by an physical device
  * @kmsfd                   - KMS device node file descriptor passed via struct kmr_vk_phdev_create_info
  * @physDeviceDrmProperties - Structure containing DRM information of a physical device. A VkPhysicalDeviceProperties2 structure
- *                            is utilzed to populate this member. Member information is then checked by the implementation to see
+ *                            is utilized to populate this member. Member information is then checked by the implementation to see
  *                            if passed KMS device node file descriptor struct kmr_vk_phdev_create_info { @kmsfd } is equal to the
  *                            physical device suggested by struct kmr_vk_phdev_create_info { @deviceType }. Contains data stored
- *                            after associate a DRM file descriptor with a vulkan physical device.
+ *                            after associating a DRM file descriptor with a vulkan physical device.
  */
 struct kmr_vk_phdev {
 	VkInstance                       instance;
