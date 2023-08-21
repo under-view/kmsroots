@@ -66,10 +66,10 @@ struct kmr_vk_instance_create_info {
 
 
 /*
- * kmr_vk_create_instance: Creates a VkInstance object and establishes a connection to the Vulkan API.
- *                         It also acts as an easy wrapper that allows one to define instance extensions.
- *                         Instance extensions basically allow developers to define what an app is setup to do.
- *                         So, if a client wants the application to work with wayland surface or X11 surface etc…​
+ * kmr_vk_create_instance: Creates a VkInstance object which allows the Vulkan API to better reference & store object
+ *                         state/data. It also acts as an easy wrapper that allows one to define instance extensions.
+ *                         VkInstance extensions basically allow developers to define what an app is setup to do.
+ *                         So, if a client wants the application to work with wayland surface or X11 surface etc...
  *                         Client should enable those extensions inorder to gain access to those particular capabilities.
  *
  * parameters:
@@ -84,7 +84,7 @@ VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk);
 /*
  * enum kmr_vk_surface_type (kmsroots Vulkan Surface Type)
  *
- * Display server protocol options. ENUM Used by kmr_vk_surface_create
+ * Display server protocol options. ENUM used by kmr_vk_surface_create
  * to create a VkSurfaceKHR object based upon platform specific information
  */
 typedef enum kmr_vk_surface_type {
@@ -99,7 +99,7 @@ typedef enum kmr_vk_surface_type {
  * members:
  * @surfaceType - Must pass a valid enum kmr_vk_surface_type value. Used in determine what vkCreate*SurfaceKHR
  *                function and associated structs to utilize when creating the VkSurfaceKHR object.
- * @instance    - Must pass a valid VkInstance handle to create/associate surfaces for an application
+ * @instance    - Must pass a valid VkInstance handle to create/associate surfaces with a VkInstance
  * @surface     - Must pass a pointer to a struct wl_surface object
  * @display     - Must pass either a pointer to struct wl_display object or a pointer to an xcb_connection_t
  * @window      - Must pass an xcb_window_t window id or an unsigned int representing XID
@@ -131,7 +131,7 @@ VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
  * struct kmr_vk_phdev (kmsroots Vulkan Physical Device)
  *
  * members:
- * @instance                - Must pass a valid VkInstance handle which to find and create a VkPhysicalDevice with
+ * @instance                - Must pass a valid VkInstance handle associated with VkPhysicalDevice.
  * @physDevice              - Must pass one of the supported VkPhysicalDeviceType's.
  *                            https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
  * @physDeviceProperties    - Structure specifying physical device properties. Like allocation limits for Image Array Layers
@@ -305,8 +305,8 @@ struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk);
  * struct kmr_vk_swapchain (kmsroots Vulkan Swapchain)
  *
  * members:
- * @logicalDevice - VkDevice handle (Logical Device) associated with swapchain
- * @swapchain     - Vulkan handle/object representing the swapchain itself
+ * @logicalDevice - VkDevice handle (Logical Device) that stores VkSwapchainKHR state/data.
+ * @swapchain     - Vulkan object storing reference to swapchain state/data.
  */
 struct kmr_vk_swapchain {
 	VkDevice       logicalDevice;
@@ -318,27 +318,28 @@ struct kmr_vk_swapchain {
  * struct kmr_vk_swapchain_create_info (kmsroots Vulkan Swapchain Create Information)
  *
  * members:
- * @logicalDevice         - Must pass a valid VkDevice handle (Logical Device)
- * @surface               - Must pass a valid VkSurfaceKHR handle. From kmr_vk_surface_create(3)
- * @surfaceCapabilities   - Passed the queried surface capabilities. From kmr_vk_get_surface_capabilities(3)
- * @surfaceFormat         - Pass colorSpace & pixel format of choice. Recommend querrying first via kmr_vk_get_surface_formats(3)
+ * @logicalDevice         - Must pass a valid VkDevice handle (Logical Device) to associate swapchain state/data with.
+ * @surface               - Must pass a valid VkSurfaceKHR handle. Can be acquired with a call to kmr_vk_surface_create().
+ * @surfaceCapabilities   - Passed the queried surface capabilities. Can be acquired with a call to kmr_vk_get_surface_capabilities().
+ * @surfaceFormat         - Pass colorSpace & pixel format of choice. Recommend querrying first via kmr_vk_get_surface_formats()
  *                          then check if pixel format and colorSpace you want is supported by a given physical device.
  *
  * See: https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkSwapchainCreateInfoKHR.html for more info on bellow members
  *
- * @extent2D              - The width and height in pixels of the images in the swapchain.
+ * @extent2D              - The width and height in pixels of the images in the VkSwapchainKHR.
  * @imageArrayLayers      - Number of views in a multiview/stereo surface
- * @imageUsage            - Intended use of images in swapchain
- * @imageSharingMode      - Sets whether images can only be accessed by a single queue or multiple queues
- * @queueFamilyIndexCount - Amount of queue families that may have access to the swapchain images. Only set if @imageSharingMode is
- *                          not set to VK_SHARING_MODE_EXCLUSIVE.
- * @queueFamilyIndices    - Pointer to an array of queue family indices that have access to images in the swapchain
- * @compositeAlpha        - How to blend images with external graphics
- * @presentMode           - How images are queued and presented internally by the swapchain (FIFO, MAIL_BOX are the only ones known not to lead to tearing)
+ * @imageUsage            - Intended use of images in VkSwapchainKHR.
+ * @imageSharingMode      - Sets whether images can only be accessed by a single VkQueue or multiple VkQueue's.
+ * @queueFamilyIndexCount - Amount of VkQueue families that may have access to the VkSwapchainKHR images. Only set if @imageSharingMode
+ *                          is not set to VK_SHARING_MODE_EXCLUSIVE.
+ * @queueFamilyIndices    - Pointer to an array of VkQueue family indices that have access to images in the VkSwapchainKHR.
+ * @compositeAlpha        - How to blend images with external graphics.
+ * @presentMode           - How images are queued and presented internally by the swapchain (FIFO, MAIL_BOX are the only ones
+ *                          known not to lead to tearing).
  * @clipped               - Allow vulkan to clip images not in view. (i.e clip/display part of the image if it's behind a window)
- * @oldSwapChain          - If a swapchain is still in use while a window is resized passing pointer to old swapchain may aid in
- *                          resource reuse as the application is allowed to present images already acquired from swapchain. Thus,
- *                          no need to recreate them.
+ * @oldSwapChain          - If a VkSwapchainKHR is still in use while a window is resized passing pointer to old VkSwapchainKHR may aid in
+ *                          resource reuse as the application is allowed to present images already acquired from old VkSwapchainKHR. Thus,
+ *                          no need to waste memory & clock cycles creating new images.
  */
 struct kmr_vk_swapchain_create_info {
 	VkDevice                    logicalDevice;
@@ -361,13 +362,13 @@ struct kmr_vk_swapchain_create_info {
 /*
  * kmr_vk_swapchain_create: Creates VkSwapchainKHR object that provides ability to present renderered results to a given VkSurfaceKHR
  *                          Minimum image count is equal to VkSurfaceCapabilitiesKHR.minImageCount + 1.
- *                          The swapchain can be defined as a set of images that can be drawn to and presented to a surface.
+ *                          The VkSwapchainKHR can be defined as a set of images that can be drawn to and presented to a VkSurfaceKHR.
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_swapchain_create_info
  * returns:
  *	on success struct kmr_vk_swapchain
- *	on failure struct kmr_vk_swapchain { with member nulled }
+ *	on failure struct kmr_vk_swapchain { with members nulled }
  */
 struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk);
 
@@ -375,8 +376,8 @@ struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_i
 /*
  * struct kmr_vk_image_handle (kmsroots Vulkan Image Handle)
  *
- * @image             - Represents actual image itself. May be a texture, etc...
- * @deviceMemory      - Actual memory whether CPU or GPU visible associate with VkImage object.
+ * @image             - Reference to data about VkImage itself. May be a texture, etc...
+ * @deviceMemory      - Actual memory buffer whether CPU or GPU visible associate with VkImage object.
  *                      If @useExternalDmaBuffer set to true @deviceMemory represents Vulkan API
  *                      usable memory associated with external DMA-BUFS.
  * @deviceMemoryCount - The amount of DMA-BUF fds (drmFormatModifierPlaneCount) per VkImage Resource.
@@ -384,15 +385,15 @@ struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_i
 struct kmr_vk_image_handle {
 	VkImage        image;
 	VkDeviceMemory deviceMemory[4];
-	uint8_t        deviceMemoryCount;
+	uint8_t        deviceMemoryCount : 2;
 };
 
 
 /*
  * struct kmr_vk_image_view_handle (kmsroots Vulkan Image View Handle)
  *
- * @view - Represents a way to interface with the actual VkImage itself. Describes to
- *         vulkan how to interface with a given VkImage. How to read the given image and
+ * @view - Represents a way to interface with the actual VkImage itself. Describes to the
+ *         vulkan api how to interface with a given VkImage. How to read the given image and
  *         exactly what in the image to read (color channels, etc...)
  */
 struct kmr_vk_image_view_handle {
@@ -404,11 +405,11 @@ struct kmr_vk_image_view_handle {
  * struct kmr_vk_image (kmsroots Vulkan Image)
  *
  * members:
- * @logicalDevice    - VkDevice handle (Logical Device) associated with VkImageView objects
+ * @logicalDevice    - VkDevice handle (Logical Device) associated with VkImageView & VkImage objects.
  * @imageCount       - Amount of VkImage's created. If VkSwapchainKHR reference is passed value would
  *                     be the amount of images in the given swapchain.
- * @imageHandles     - Pointer to an array of VkImage handles
- * @imageViewHandles - Pointer to an array of VkImageView handles
+ * @imageHandles     - Pointer to an array of VkImage handles.
+ * @imageViewHandles - Pointer to an array of VkImageView handles.
  * @swapchain        - Member not required, but used for storage purposes. A valid VkSwapchainKHR
  *                     reference to the VkSwapchainKHR passed to kmr_vk_image_create. Represents
  *                     the swapchain that created VkImage's.
@@ -429,7 +430,7 @@ struct kmr_vk_image {
  *
  * @imageViewflags             - Specifies additional prameters associated with VkImageView. Normally set to zero.
  * @imageViewType              - Specifies what the image view type is. Specifies coordinate system utilized by the image when
- *                               being addressed. Image view type must have compatible @imageType when @swapchain == VK_NULL_HANDLE.
+ *                               being addressed. @imageViewType must have compatible @imageType when @swapchain == VK_NULL_HANDLE.
  * @imageViewFormat            - Image Format (Bits per color channel, the color channel ordering, etc...).
  * @imageViewComponents        - Makes it so that we can select what value goes to what color channel. Basically if we want to assign
  *                               red channel value to green channel. Or set all (RGBA) color channel values to the value at B channel
@@ -465,18 +466,18 @@ struct kmr_vk_image_view_create_info {
  * @imageQueueFamilyIndexCount     - Array size of @imageQueueFamilyIndices. Amount of queue families may own given vulkan image.
  * @imageQueueFamilyIndices        - Pointer to an array of queue families to associate/own a given vulkan image.
  * @imageInitialLayout             - Set the inital memory layout of a VkImage
- * @imageDmaBufferFormatModifier   - A 64-bit, vendor-prefixed, semi-opaque unsigned integer describing vendor-specific details of
- *                                   an image’s memory layout. Acquired when a call to kmr_buffer_create(3) is made and stored in
- *                                   kmr_buffer.bufferObjects[0].modifier.
- * @imageDmaBufferCount            - Amount of elements in @imageDmaBufferFds, @imageDmaBufferResourceInfo, and @imageDmaBufferMemPropertyFlags.
+ * @imageDmaBufferMemTypeBits      - A 64-bit, vendor-prefixed, semi-opaque unsigned integer describing vendor-specific details of
+ *                                   an image’s memory layout. Acquired when a call to kmr_buffer_create() is made and stored in
+ *                                   struct kmr_buffer.bufferObjects[0].modifier.
+ * @imageDmaBufferCount            - Amount of elements in @imageDmaBufferFds, @imageDmaBufferResourceInfo, and @imageDmaBufferMemTypeBits.
  *                                   Value should be struct kmr_buffer.bufferObjects[0].planeCount.
- * @imageDmaBufferFds              - Array of DMA-BUF fds. Acqiored when a call to kmr_buffer_create(3) is made and stored in
- *                                   kmr_buffer.bufferObjects[0].dmaBufferFds[4].
+ * @imageDmaBufferFds              - Array of DMA-BUF fds. Acquired when a call to kmr_buffer_create() is made and stored in
+ *                                   struct kmr_buffer.bufferObjects[0].dmaBufferFds[4].
  * @imageDmaBufferResourceInfo     - Info about the DMA-BUF including offset, size, pitch, etc. Most of which is
- *                                   acquired after a call to kmr_buffer_create(3) is made and stored in
- *                                   kmr_buffer.bufferObjects[0].{pitches[4], offsets[4], etc..}
+ *                                   acquired after a call to kmr_buffer_create() is made and stored in
+ *                                   struct kmr_buffer.bufferObjects[0].{pitches[4], offsets[4], etc..}
  * @imageDmaBufferMemTypeBits      - Array of VkMemoryRequirements.memoryTypeBits that can be acquired after a call to
- *                                   kmr_vk_get_external_fd_memory_properties(3).
+ *                                   kmr_vk_get_external_fd_memory_properties().
  */
 struct kmr_vk_vimage_create_info {
 	VkImageCreateFlags        imageflags;
@@ -504,20 +505,23 @@ struct kmr_vk_vimage_create_info {
  * struct kmr_vk_image_create_info (kmsroots Vulkan Image Create Information)
  *
  * members:
- * @logicalDevice              - Must pass a valid VkDevice handle (Logical Device)
+ * @logicalDevice              - Must pass a valid VkDevice handle (Logical Device) to associate VkImage & VkImageView
+ *                               state/data with.
  * @swapchain                  - Must pass a valid VkSwapchainKHR handle. Used when retrieving references to underlying VkImage
- *                               If VkSwapchainKHR reference is not passed value set amount of VkImage/VkImageViews view
- * @imageCount                 - Must pass amount of VkImage's/VkImageView's to create. Set to 0 if @swapchain != VK_NULL_HANDLE
- *                               else set to number images to create.
+ *                               If VkSwapchainKHR reference is not passed. Application will need to set amount of
+ *                               VkImage's/VkImageView's via @imageCount.
+ * @imageCount                 - Must pass amount of VkImage's/VkImageView's to create. if @swapchain != VK_NULL_HANDLE set to 0.
  * @imageViewCreateInfos       - Pointer to an array of size @imageCount containing everything required to create an individual VkImageView.
- *                               If imageCount given array size must be @imageCount. If not given array size must equal 1.
+ *                               If a @imageCount value given array size must be at least @imageCount in size. If not given array size must
+ *                               equal 1.
  *
  * Bellow only required if @swapchain == VK_NULL_HANDLE
  * @imageCreateInfos           - Pointer to an array of size @imageCount containing everything required to create an individual VkImage
- *                               If imageCount given array size must be @imageCount. If not given array size must equal 1.
+ *                               If a imageCount value given array size must be at least @imageCount in size. If not given array size must
+ *                               equal 1.
  * @physDevice                 - Must pass a valid VkPhysicalDevice handle as it is used to query memory properties.
  * @memPropertyFlags           - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
- * @useExternalDmaBuffer       - Set to true if VkImage Resources created need to be associated with an external DMA-BUF created by GBM.
+ * @useExternalDmaBuffer       - Set to true if VkImage resources created need to be associated with an external DMA-BUF created by GBM.
  */
 struct kmr_vk_image_create_info {
 	VkDevice                             logicalDevice;
@@ -533,11 +537,10 @@ struct kmr_vk_image_create_info {
 
 /*
  * kmr_vk_image_create: Function creates/retrieve VkImage's and associates VkImageView's with said images.
- *                      VkImageView's allows a VkImage to be accessed by a shader. If a VkSwapchainKHR
- *                      reference is passed function retrieves all images in the swapchain and uses that
- *                      to associate VkImageView objects. If VkSwapchainKHR reference is not passed function
- *                      creates VkImage object's given passed data and associate VkDeviceMemory & VkImageView
- *                      objects with images. Amount of images created it based upon @imageCount
+ *                      If a VkSwapchainKHR reference is passed function retrieves all images in the swapchain
+ *                      and uses that to associate VkImageView objects. If VkSwapchainKHR reference is not passed
+ *                      function creates VkImage object's given passed data. Then associates VkDeviceMemory & VkImageView
+ *                      objects with images. Amount of images created is based upon @imageCount
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_image_create_info
