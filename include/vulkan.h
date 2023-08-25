@@ -555,7 +555,7 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmrvk);
  * struct kmr_vk_shader_module (kmsroots Vulkan Shader Module)
  *
  * members:
- * @logicalDevice - VkDevice handle (Logical Device) associated with VkShaderModule
+ * @logicalDevice - VkDevice handle (Logical Device) associated with VkShaderModule.
  * @shaderModule  - Contains shader code and one or more entry points.
  * @shaderName    - Name given to shader module can be safely ignored not required by API.
  */
@@ -570,9 +570,9 @@ struct kmr_vk_shader_module {
  * struct kmr_vk_shader_module_create_info (kmsroots Vulkan Shader Module Create Information)
  *
  * members:
- * @logicalDevice - Must pass a valid VkDevice handle (Logical Device)
- * @sprivByteSize - Sizeof SPIR-V byte code
- * @sprivBytes    - SPIR-V byte code itself
+ * @logicalDevice - Must pass a valid VkDevice handle (Logical Device) to associate VkShaderModule
+ * @sprivByteSize - Must pass the sizeof SPIR-V byte code
+ * @sprivBytes    - Must pass pointer to SPIR-V byte code itself
  * @shaderName    - Name given to shader module can be safely ignored not required by API.
  */
 struct kmr_vk_shader_module_create_info {

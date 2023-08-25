@@ -35,6 +35,8 @@ Structs:
 #. :c:struct:`kmr_vk_image_view_create_info`
 #. :c:struct:`kmr_vk_vimage_create_info`
 #. :c:struct:`kmr_vk_image_create_info`
+#. :c:struct:`kmr_vk_shader_module`
+#. :c:struct:`kmr_vk_shader_module_create_info`
 
 Functions:
 
@@ -45,6 +47,7 @@ Functions:
 #. :c:func:`kmr_vk_lgdev_create`
 #. :c:func:`kmr_vk_swapchain_create`
 #. :c:func:`kmr_vk_image_create`
+#. :c:func:`kmr_vk_shader_module_create`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -63,7 +66,7 @@ API Documentation
 				assert(var); \
 			} while(0);
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:macro:: KMR_VK_DEVICE_PROC_ADDR
 
@@ -80,7 +83,7 @@ API Documentation
 				assert(var); \
 			} while(0);
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:struct:: kmr_vk_instance_create_info
 
@@ -130,7 +133,7 @@ API Documentation
                 | **on success:** `VkInstance`_
                 | **on faliure:** `VK_NULL_HANDLE`_
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:enum:: kmr_vk_surface_type
 
@@ -180,7 +183,7 @@ API Documentation
                 | **on success:** `VkSurfaceKHR`_
                 | **on faliure:** `VK_NULL_HANDLE`_
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:struct:: kmr_vk_phdev
 
@@ -249,7 +252,7 @@ API Documentation
 		| **on success:** struct :c:struct:`kmr_vk_phdev`
 		| **on failure:** struct :c:struct:`kmr_vk_phdev` { with members nulled, int's set to -1 }
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:struct:: kmr_vk_queue
 
@@ -299,7 +302,7 @@ API Documentation
 		| **on success:** struct :c:struct:`kmr_vk_queue`
 		| **on failure:** struct :c:struct:`kmr_vk_queue` { with members nulled, int's set to -1 }
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:struct:: kmr_vk_lgdev
 
@@ -378,7 +381,7 @@ API Documentation
 		| **on success:** struct :c:struct:`kmr_vk_lgdev`
 		| **on failure:** struct :c:struct:`kmr_vk_lgdev` { with members nulled, int's set to -1 }
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:struct:: kmr_vk_swapchain
 
@@ -478,7 +481,7 @@ API Documentation
 		| **on success:** struct :c:struct:`kmr_vk_swapchain`
 		| **on failure:** struct :c:struct:`kmr_vk_swapchain` { with members nulled }
 
-===========================================================================================================
+=========================================================================================================================================
 
 .. c:struct:: kmr_vk_image_handle
 
@@ -716,7 +719,57 @@ API Documentation
 		| **on success:** struct :c:struct:`kmr_vk_image`
 		| **on failure:** struct :c:struct:`kmr_vk_image` { with members nulled }
 
-===========================================================================================================
+=========================================================================================================================================
+
+.. c:struct:: kmr_vk_shader_module
+
+	.. c:member::
+		VkDevice       logicalDevice;
+		VkShaderModule shaderModule;
+		const char     *shaderName;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkShaderModule`_.
+
+	:c:member:`shaderModule`
+		| Contains shader code and one or more entry points.
+
+	:c:member:`shaderName`
+		| Name given to shader module can be safely ignored not required by API.
+
+.. c:struct:: kmr_vk_shader_module_create_info
+
+	.. c:member::
+		VkDevice            logicalDevice;
+		size_t              sprivByteSize;
+		const unsigned char *sprivBytes;
+		const char          *shaderName;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device) to associate `VkShaderModule`_
+		| state/data with.
+
+	:c:member:`sprivByteSize`
+		| Must pass the sizeof SPIR-V byte code
+
+	:c:member:`sprivBytes`
+		| Must pass pointer to SPIR-V byte code itself
+
+	:c:member:`shaderName`
+		| Name given to shader module can be safely ignored not required by API.
+
+.. c:function:: struct kmr_vk_shader_module kmr_vk_shader_module_create(struct kmr_vk_shader_module_create_info *kmrvk);
+
+	Function creates `VkShaderModule`_ from passed SPIR-V byte code.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_shader_module_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_shader_module`
+		| **on failure:** struct :c:struct:`kmr_vk_shader_module` { with members nulled }
+
+=========================================================================================================================================
 
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
@@ -746,3 +799,4 @@ API Documentation
 .. _VkImageViewCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkImageViewCreateInfo.html
 .. _VkMemoryRequirements: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkMemoryRequirements.html
 .. _VkDeviceMemory: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDeviceMemory.html
+.. _VkShaderModule: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkShaderModule.html
