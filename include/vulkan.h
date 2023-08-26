@@ -875,7 +875,7 @@ struct kmr_vk_framebuffer kmr_vk_framebuffer_create(struct kmr_vk_framebuffer_cr
 /*
  * struct kmr_vk_command_buffer_handle (kmsroots Vulkan Command Buffer Handle)
  *
- * @commandBuffer - Handle used to prerecord commands before they are submitted to a device queue and sent off to the GPU.
+ * @commandBuffer - Handle used to pre-record commands before they are submitted to a device queue and sent off to the GPU.
  */
 struct kmr_vk_command_buffer_handle {
 	VkCommandBuffer commandBuffer;
@@ -887,8 +887,9 @@ struct kmr_vk_command_buffer_handle {
  *
  * members:
  * @logicalDevice        - VkDevice handle (Logical Device) associated with VkCommandPool
- * @commandPool          - The command pool which the buffers where allocated from.
- * @commandBufferCount   - Amount of VkCommandBuffer's alloocated
+ * @commandPool          - The memory pool which the buffers where allocated from.
+ * @commandBufferCount   - Amount of VkCommandBuffer's allocated from memory pool.
+ *                         Array size of @commandBufferHandles.
  * @commandBufferHandles - Pointer to an array of VkCommandBuffer handles
  */
 struct kmr_vk_command_buffer {
@@ -934,7 +935,7 @@ struct kmr_vk_command_buffer kmr_vk_command_buffer_create(struct kmr_vk_command_
  * struct kmr_vk_command_buffer_record_info (kmsroots Vulkan Command Buffer Record Information)
  *
  * members:
- * @commandBufferCount      - Amount of VkCommandBuffer handles allocated
+ * @commandBufferCount      - Array size of @commandBufferHandles
  * @commandBufferHandles    - Pointer to an array of struct kmr_vk_command_buffer_handle which contains your actual VkCommandBuffer handles to start writing commands to.
  * @commandBufferUsageflags - https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
  */
@@ -946,7 +947,7 @@ struct kmr_vk_command_buffer_record_info {
 
 
 /*
- * kmr_vk_command_buffer_record_begin: Function starts command buffer recording for command buffers up to @commandBufferCount. Thus, allowing each
+ * kmr_vk_command_buffer_record_begin: Function sets recording command for command buffers up to @commandBufferCount. Thus, allowing each
  *                                     command buffer to become writeable. Allowing for the application to write commands into it. Theses commands
  *                                     are later put into a queue to be sent off to the GPU.
  *

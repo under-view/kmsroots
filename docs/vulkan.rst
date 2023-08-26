@@ -53,6 +53,10 @@ Structs
 #. :c:struct:`kmr_vk_framebuffer`
 #. :c:struct:`kmr_vk_framebuffer_images`
 #. :c:struct:`kmr_vk_framebuffer_create_info`
+#. :c:struct:`kmr_vk_command_buffer_handle`
+#. :c:struct:`kmr_vk_command_buffer`
+#. :c:struct:`kmr_vk_command_buffer_create_info`
+#. :c:struct:`kmr_vk_command_buffer_record_info`
 
 =========================
 Functions
@@ -70,6 +74,9 @@ Functions
 #. :c:func:`kmr_vk_render_pass_create`
 #. :c:func:`kmr_vk_graphics_pipeline_create`
 #. :c:func:`kmr_vk_framebuffer_create`
+#. :c:func:`kmr_vk_command_buffer_create`
+#. :c:func:`kmr_vk_command_buffer_record_begin`
+#. :c:func:`kmr_vk_command_buffer_record_end`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -1296,6 +1303,141 @@ kmr_vk_framebuffer_create
 
 =========================================================================================================================================
 
+============================
+kmr_vk_command_buffer_handle
+============================
+
+.. c:struct:: kmr_vk_command_buffer_handle
+
+	.. c:member::
+		VkCommandBuffer commandBuffer;
+
+	:c:member:`commandBuffer`
+		| Handle used to pre-record commands before they are submitted to a device queue and
+		| sent off to the GPU.
+
+=====================
+kmr_vk_command_buffer
+=====================
+
+.. c:struct:: kmr_vk_command_buffer
+
+	.. c:member::
+		VkDevice                            logicalDevice;
+		VkCommandPool                       commandPool;
+		uint32_t                            commandBufferCount;
+		struct kmr_vk_command_buffer_handle *commandBufferHandles;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkCommandPool`_
+
+	:c:member:`commandPool`
+		| The memory pool which the buffers where allocated from.
+
+	:c:member:`commandBufferCount`
+		| Amount of `VkCommandBuffer`_'s allocated from memory pool.
+		| Array size of :c:member:`commandBufferHandles`.
+
+	:c:member:`commandBufferHandles`
+		| Pointer to an array of `VkCommandBuffer`_ handles
+
+=================================
+kmr_vk_command_buffer_create_info
+=================================
+
+.. c:struct:: kmr_vk_command_buffer_create_info
+
+	.. c:member::
+		VkDevice logicalDevice;
+		uint32_t queueFamilyIndex;
+		uint32_t commandBufferCount;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`queueFamilyIndex`
+		| Designates a queue family with `VkCommandPool`_. All command buffers allocated
+		| from VkCommandPool must used same queue.
+
+	:c:member:`commandBufferCount`
+		| The amount of command buffers to allocate from a given pool
+
+============================
+kmr_vk_command_buffer_create
+============================
+
+.. c:function:: struct kmr_vk_command_buffer kmr_vk_command_buffer_create(struct kmr_vk_command_buffer_create_info *kmrvk);
+
+	Function creates a `VkCommandPool`_ handle then allocates `VkCommandBuffer`_ handles from
+	that pool. The amount of `VkCommandBuffer`_'s allocated is based upon **@commandBufferCount**.
+	Function only allocates primary command buffers. `VkCommandPool`_ flags set
+	`VK_COMMAND_POOL_CREATE_TRANSIENT_BIT`_ |
+	`VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT`_
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_command_buffer_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_command_buffer`
+		| **on failure:** struct :c:struct:`kmr_vk_command_buffer` { with members nulled }
+
+=========================================================================================================================================
+
+=================================
+kmr_vk_command_buffer_record_info
+=================================
+
+.. c:struct:: kmr_vk_command_buffer_record_info
+
+	.. c:member::
+		uint32_t                            commandBufferCount;
+		struct kmr_vk_command_buffer_handle *commandBufferHandles;
+		VkCommandBufferUsageFlagBits        commandBufferUsageflags;
+
+	:c:member:`commandBufferCount`
+		| Array size of :c:member:`commandBufferHandles`
+
+	:c:member:`commandBufferHandles`
+		| Pointer to an array of :c:struct:`kmr_vk_command_buffer_handle` which contains your
+		| actual `VkCommandBuffer`_ handles to start writing commands to.
+
+	:c:member:`commandBufferUsageflags`
+		| `VkCommandBufferUsageFlagBits`_
+
+==================================
+kmr_vk_command_buffer_record_begin
+==================================
+
+.. c:function:: int kmr_vk_command_buffer_record_begin(struct kmr_vk_command_buffer_record_info *kmrvk);
+
+	Function sets recording command in command buffers up to **@commandBufferCount**. Thus, allowing each
+	command buffer to become writeable. Allowing for the application to write commands into it. Theses commands
+	are later put into a queue to be sent off to the GPU.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_command_buffer_record_info`
+
+	Returns:
+		| **on success:** 0
+		| **on failure:** -1
+
+================================
+kmr_vk_command_buffer_record_end
+================================
+
+.. c:function:: int kmr_vk_command_buffer_record_end(struct kmr_vk_command_buffer_record_info *kmrvk);
+
+	Function stops command buffer to recording. Thus, ending each command buffers ability to accept commands.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_command_buffer_record_info`
+
+	Returns:
+		| **on success:** 0
+		| **on failure:** -1
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -1335,4 +1477,10 @@ kmr_vk_framebuffer_create
 .. _VkGraphicsPipelineCreateInfo: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkGraphicsPipelineCreateInfo.html
 .. _VkPrimitiveTopology: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPrimitiveTopology.html
 .. _VkViewport: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkViewport.html
+.. _VkCommandPool: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandPool.html
+.. _VkCommandBuffer: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandBuffer.html
+.. _VkCommandPoolCreateFlagBits: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandPoolCreateFlagBits.html
+.. _VkCommandBufferUsageFlagBits: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
+.. _VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandPoolCreateFlagBits.html
+.. _VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandPoolCreateFlagBits.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor
