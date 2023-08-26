@@ -8,16 +8,22 @@ Header: kmsroots/vulkan.h
 Table of contents (click to go)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Macros:
+=========================
+Macros
+=========================
 
 1. :c:macro:`KMR_VK_INSTANCE_PROC_ADDR`
 #. :c:macro:`KMR_VK_DEVICE_PROC_ADDR`
 
-Enums:
+=========================
+Enums
+=========================
 
 1. :c:enum:`kmr_vk_surface_type`
 
-Structs:
+=========================
+Structs
+=========================
 
 1. :c:struct:`kmr_vk_instance_create_info`
 #. :c:struct:`kmr_vk_surface_create_info`
@@ -42,7 +48,9 @@ Structs:
 #. :c:struct:`kmr_vk_render_pass`
 #. :c:struct:`kmr_vk_render_pass_create_info`
 
-Functions:
+=========================
+Functions
+=========================
 
 1. :c:func:`kmr_vk_instance_create`
 #. :c:func:`kmr_vk_surface_create`
@@ -57,6 +65,10 @@ Functions:
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
+
+=======================
+KMR_VK_DEVICE_PROC_ADDR
+=======================
 
 .. c:macro:: KMR_VK_INSTANCE_PROC_ADDR
 
@@ -74,6 +86,10 @@ API Documentation
 
 =========================================================================================================================================
 
+=======================
+KMR_VK_DEVICE_PROC_ADDR
+=======================
+
 .. c:macro:: KMR_VK_DEVICE_PROC_ADDR
 
 	Due to Vulkan not directly exposing functions for all platforms.
@@ -90,6 +106,10 @@ API Documentation
 			} while(0);
 
 =========================================================================================================================================
+
+===========================
+kmr_vk_instance_create_info
+===========================
 
 .. c:struct:: kmr_vk_instance_create_info
 
@@ -124,6 +144,10 @@ API Documentation
 		| A member of the `VkInstanceCreateInfo`_ structure used to pass a pointer to an array
 		| of strings containing the name of the Vulkan Instance Extensions one wants to enable.
 
+======================
+kmr_vk_instance_create
+======================
+
 .. c:function:: VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk);
 
         Creates a `VkInstance`_ object which allows the Vulkan API to better reference & store object
@@ -141,6 +165,10 @@ API Documentation
 
 =========================================================================================================================================
 
+===================
+kmr_vk_surface_type
+===================
+
 .. c:enum:: kmr_vk_surface_type
 
         .. c:macro::
@@ -149,6 +177,10 @@ API Documentation
 
         Display server protocol options. ENUM used by :c:func:`kmr_vk_surface_create`
         to create a `VkSurfaceKHR`_ object based upon platform specific information
+
+==========================
+kmr_vk_surface_create_info
+==========================
 
 .. c:struct:: kmr_vk_surface_create_info
 
@@ -176,6 +208,10 @@ API Documentation
         :c:member:`window`
 		| Must pass an xcb_window_t window id or an unsigned int representing XID
 
+=====================
+kmr_vk_surface_create
+=====================
+
 .. c:function:: VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
 
         Creates a `VkSurfaceKHR`_ object based upon platform specific information about the given surface.
@@ -190,6 +226,10 @@ API Documentation
                 | **on faliure:** `VK_NULL_HANDLE`_
 
 =========================================================================================================================================
+
+============
+kmr_vk_phdev
+============
 
 .. c:struct:: kmr_vk_phdev
 
@@ -227,6 +267,10 @@ API Documentation
 		| suggested by (struct :c:struct:`kmr_vk_phdev_create_info` { **@deviceType** }).
 		| Contains data stored after associating a DRM file descriptor with a vulkan physical device.
 
+========================
+kmr_vk_phdev_create_info
+========================
+
 .. c:struct:: kmr_vk_phdev_create_info
 
 	.. c:member::
@@ -246,6 +290,10 @@ API Documentation
 		| Must pass a valid kms file descriptor for which a `VkPhysicalDevice`_ will be created
 		| if corresponding DRM properties match.
 
+===================
+kmr_vk_phdev_create
+===================
+
 .. c:function::	struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk);
 
 	Retrieves a `VkPhysicalDevice`_ handle if certain characteristics of a physical device are meet.
@@ -259,6 +307,10 @@ API Documentation
 		| **on failure:** struct :c:struct:`kmr_vk_phdev` { with members nulled, int's set to -1 }
 
 =========================================================================================================================================
+
+============
+kmr_vk_queue
+============
 
 .. c:struct:: kmr_vk_queue
 
@@ -282,6 +334,10 @@ API Documentation
 	:c:member:`queueCount`
 		| Number of queues in a given `VkQueue`_ family
 
+========================
+kmr_vk_queue_create_info
+========================
+
 .. c:struct:: kmr_vk_queue_create_info
 
 	.. c:member::
@@ -294,6 +350,10 @@ API Documentation
 	:c:member:`queueFlag`
 		| Must pass one `VkQueueFlagBits`_, if multiple flags are bitwised or'd function will fail
 		| to return `VkQueue`_ family index (struct :c:struct:`kmr_vk_queue`).
+
+===================
+kmr_vk_queue_create
+===================
 
 .. c:function::	struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk);
 
@@ -309,6 +369,10 @@ API Documentation
 		| **on failure:** struct :c:struct:`kmr_vk_queue` { with members nulled, int's set to -1 }
 
 =========================================================================================================================================
+
+============
+kmr_vk_lgdev
+============
 
 .. c:struct:: kmr_vk_lgdev
 
@@ -331,6 +395,10 @@ API Documentation
 
 		| Members :c:member:`queueCount` & :c:member:`queues` are strictly for struct :c:struct:`kmr_vk_lgdev`
 		| to have extra information amount `VkQueue`_'s
+
+========================
+kmr_vk_lgdev_create_info
+========================
 
 .. c:struct:: kmr_vk_lgdev_create_info
 
@@ -366,6 +434,10 @@ API Documentation
 		| Must pass a pointer to an array of struct :c:struct:`kmr_vk_queue` { **@queue**, **@familyIndex** } to
 		| create along with a given logical device
 
+===================
+kmr_vk_lgdev_create
+===================
+
 .. c:function:: struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk);
 
 	Creates a `VkDevice`_ handle and allows vulkan to have a connection to a given physical device.
@@ -389,6 +461,10 @@ API Documentation
 
 =========================================================================================================================================
 
+================
+kmr_vk_swapchain
+================
+
 .. c:struct:: kmr_vk_swapchain
 
 	.. c:member::
@@ -400,6 +476,10 @@ API Documentation
 
 	:c:member:`swapchain`
 		| Vulkan object storing reference to swapchain state/data.
+
+============================
+kmr_vk_swapchain_create_info
+============================
 
 .. c:struct:: kmr_vk_swapchain_create_info
 
@@ -474,6 +554,10 @@ API Documentation
 		| present images already acquired from old `VkSwapchainKHR`_. Thus, no need to waste
 		| memory & clock cycles creating new images.
 
+=======================
+kmr_vk_swapchain_create
+=======================
+
 .. c:function:: struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk);
 
 	Creates `VkSwapchainKHR`_ object that provides ability to present renderered results to a given `VkSurfaceKHR`_
@@ -488,6 +572,10 @@ API Documentation
 		| **on failure:** struct :c:struct:`kmr_vk_swapchain` { with members nulled }
 
 =========================================================================================================================================
+
+===================
+kmr_vk_image_handle
+===================
 
 .. c:struct:: kmr_vk_image_handle
 
@@ -508,6 +596,10 @@ API Documentation
 	:c:member:`deviceMemoryCount`
 		| The amount of DMA-BUF fds (drmFormatModifierPlaneCount) per `VkImage`_ Resource.
 
+========================
+kmr_vk_image_view_handle
+========================
+
 .. c:struct:: kmr_vk_image_view_handle
 
 	.. c:member::
@@ -517,6 +609,10 @@ API Documentation
 		| Represents a way to interface with the actual VkImage itself. Describes to the
 		| vulkan api how to interface with a given VkImage. How to read the given image and
 		| exactly what in the image to read (color channels, etc...)
+
+============
+kmr_vk_image
+============
 
 .. c:struct:: kmr_vk_image
 
@@ -544,6 +640,10 @@ API Documentation
 		| Member not required, but used for storage purposes. A valid `VkSwapchainKHR`_
 		| reference to the `VkSwapchainKHR`_ passed to :c:struct:`kmr_vk_image_create`.
 		| Represents the swapchain that created `VkImage`_'s.
+
+=============================
+kmr_vk_image_view_create_info
+=============================
 
 .. c:struct:: kmr_vk_image_view_create_info
 
@@ -574,6 +674,10 @@ API Documentation
 
 	:c:member:`imageViewSubresourceRange`
 		| Gates an image so that only a part of an image is allowed to be viewable.
+
+=========================
+kmr_vk_vimage_create_info
+=========================
 
 .. c:struct:: kmr_vk_vimage_create_info
 
@@ -663,6 +767,10 @@ API Documentation
 		| Array of `VkMemoryRequirements`_.memoryTypeBits that can be acquired after a call to
 		| :c:func:`kmr_vk_get_external_fd_memory_properties`.
 
+========================
+kmr_vk_image_create_info
+========================
+
 .. c:struct:: kmr_vk_image_create_info
 
 	.. c:member::
@@ -709,6 +817,10 @@ API Documentation
 	:c:member:`useExternalDmaBuffer`
 		| Set to true if `VkImage`_ resources created needs to be associated with an external DMA-BUF created by GBM.
 
+===================
+kmr_vk_image_create
+===================
+
 .. c:function:: struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmrvk);
 
 	Function creates/retrieve `VkImage`_'s and associates `VkImageView`_'s with said images.
@@ -727,6 +839,10 @@ API Documentation
 
 =========================================================================================================================================
 
+====================
+kmr_vk_shader_module
+====================
+
 .. c:struct:: kmr_vk_shader_module
 
 	.. c:member::
@@ -742,6 +858,10 @@ API Documentation
 
 	:c:member:`shaderName`
 		| Name given to shader module can be safely ignored not required by API.
+
+================================
+kmr_vk_shader_module_create_info
+================================
 
 .. c:struct:: kmr_vk_shader_module_create_info
 
@@ -764,6 +884,10 @@ API Documentation
 	:c:member:`shaderName`
 		| Name given to shader module can be safely ignored not required by API.
 
+===========================
+kmr_vk_shader_module_create
+===========================
+
 .. c:function:: struct kmr_vk_shader_module kmr_vk_shader_module_create(struct kmr_vk_shader_module_create_info *kmrvk);
 
 	Function creates `VkShaderModule`_ from passed SPIR-V byte code.
@@ -777,6 +901,10 @@ API Documentation
 
 =========================================================================================================================================
 
+======================
+kmr_vk_pipeline_layout
+======================
+
 .. c:struct:: kmr_vk_pipeline_layout
 
 	.. c:member::
@@ -789,6 +917,10 @@ API Documentation
 	:c:member:`pipelineLayout`
 		| Stores collection of data describing the vulkan resources that are needed to
 		| produce final image. This data is later used during graphics pipeline runtime.
+
+==================================
+kmr_vk_pipeline_layout_create_info
+==================================
 
 .. c:struct:: kmr_vk_pipeline_layout_create_info
 
@@ -822,6 +954,10 @@ API Documentation
 		| Push constants allow for smaller data to be more efficiently passed up to the GPU by
 		| passing values directly to the shader.
 
+=============================
+kmr_vk_pipeline_layout_create
+=============================
+
 .. c:function:: struct kmr_vk_pipeline_layout kmr_vk_pipeline_layout_create(struct kmr_vk_pipeline_layout_create_info *kmrvk);
 
 	Function creates a `VkPipelineLayout`_ handle that is then later used by the graphics pipeline
@@ -838,6 +974,10 @@ API Documentation
 
 =========================================================================================================================================
 
+==================
+kmr_vk_render_pass
+==================
+
 .. c:struct:: kmr_vk_render_pass
 
 	.. c:member::
@@ -849,6 +989,10 @@ API Documentation
 
 	:c:member:`renderpass`
 		| Represents a collection of attachments, subpasses, and dependencies between the subpasses
+
+==============================
+kmr_vk_render_pass_create_info
+==============================
 
 .. c:struct:: kmr_vk_render_pass_create_info
 
@@ -887,6 +1031,10 @@ API Documentation
 	:c:member:`subpassDependencies`
 		| Pointer to an array of subpass dependencies that define stages in a pipeline where image
 		| transitions need to occur before sending output to framebuffer then later the viewport.
+
+=========================
+kmr_vk_render_pass_create
+=========================
 
 .. c:function:: struct kmr_vk_render_pass kmr_vk_render_pass_create(struct kmr_vk_render_pass_create_info *kmrvk);
 
