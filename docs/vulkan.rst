@@ -188,7 +188,7 @@ kmr_vk_instance_create
         Client should enable those extensions inorder to gain access to those particular capabilities.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_instance_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_instance_create_info`
 
         Returns:
                 | **on success:** `VkInstance`_
@@ -237,10 +237,10 @@ kmr_vk_surface_create_info
 		| Must pass a valid `VkInstance`_ handle to associate `VkSurfaceKHR`_ with a `VkInstance`_.
 
         :c:member:`surface`
-		| Must pass a pointer to a struct wl_surface object
+		| Must pass a pointer to a ``struct`` wl_surface object
 
         :c:member:`display`
-		| Must pass either a pointer to struct wl_display object or a pointer to an xcb_connection_t
+		| Must pass either a pointer to ``struct`` wl_display object or a pointer to an xcb_connection_t
 
         :c:member:`window`
 		| Must pass an xcb_window_t window id or an unsigned int representing XID
@@ -256,7 +256,7 @@ kmr_vk_surface_create
         if vulkan swapchain exists.
 
         Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_surface_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_surface_create_info`
 
         Returns:
                 | **on success:** `VkSurfaceKHR`_
@@ -294,14 +294,14 @@ kmr_vk_phdev
 	**Only included if meson option kms set true**
 
 	:c:member:`kmsfd`
-		| KMS device node file descriptor passed via struct :c:struct:`kmr_vk_phdev_create_info`
+		| KMS device node file descriptor passed via ``struct`` :c:struct:`kmr_vk_phdev_create_info`
 
 	:c:member:`physDeviceDrmProperties`
 		| Structure containing DRM information of a physical device. A `VkPhysicalDeviceProperties2`_
 		| structure is utilized to populate this member. Member information is then checked by the
 		| implementation to see if passed KMS device node file descriptor
-		| (struct :c:struct:`kmr_vk_phdev_create_info` { **@kmsfd** }) is equal to the physical device
-		| suggested by (struct :c:struct:`kmr_vk_phdev_create_info` { **@deviceType** }).
+		| (``struct`` :c:struct:`kmr_vk_phdev_create_info` { ``kmsfd`` }) is equal to the physical device
+		| suggested by (``struct`` :c:struct:`kmr_vk_phdev_create_info` { ``deviceType`` }).
 		| Contains data stored after associating a DRM file descriptor with a vulkan physical device.
 
 ========================
@@ -337,11 +337,11 @@ kmr_vk_phdev_create
 	Also retrieves a given physical device properties and features to be later used by the application.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_phdev_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_phdev_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_phdev`
-		| **on failure:** struct :c:struct:`kmr_vk_phdev` { with members nulled, int's set to -1 }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_phdev`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_phdev` { with members nulled, int's set to -1 }
 
 =========================================================================================================================================
 
@@ -365,8 +365,8 @@ kmr_vk_queue
 		| given to handle in :c:func:`kmr_vk_lgdev_create` after `VkDevice`_ handle creation.
 
 	:c:member:`familyIndex`
-		| `VkQueue`_ family index associate with selected struct :c:struct:`kmr_vk_queue_create_info`
-		| { **@queueFlag** }.
+		| `VkQueue`_ family index associate with selected ``struct`` :c:struct:`kmr_vk_queue_create_info`
+		| { ``queueFlag`` }.
 
 	:c:member:`queueCount`
 		| Number of queues in a given `VkQueue`_ family
@@ -386,7 +386,7 @@ kmr_vk_queue_create_info
 
 	:c:member:`queueFlag`
 		| Must pass one `VkQueueFlagBits`_, if multiple flags are bitwised or'd function will fail
-		| to return `VkQueue`_ family index (struct :c:struct:`kmr_vk_queue`).
+		| to return `VkQueue`_ family index (``struct`` :c:struct:`kmr_vk_queue`).
 
 ===================
 kmr_vk_queue_create
@@ -399,11 +399,11 @@ kmr_vk_queue_create
 	are used in vulkan to submit commands up to the GPU.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_queue_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_queue_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_queue`
-		| **on failure:** struct :c:struct:`kmr_vk_queue` { with members nulled, int's set to -1 }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_queue`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_queue` { with members nulled, int's set to -1 }
 
 =========================================================================================================================================
 
@@ -422,15 +422,15 @@ kmr_vk_lgdev
 		| Returned `VkDevice`_ handle which represents vulkan's access to physical device
 
 	:c:member:`queueCount`
-		| Amount of elements in pointer to array of struct :c:struct:`kmr_vk_queue`. This information
-		| gets populated with the data pass through struct :c:struct:`kmr_vk_lgdev_create_info`
-		| { **@queueCount** }.
+		| Amount of elements in pointer to array of ``struct`` :c:struct:`kmr_vk_queue`. This information
+		| gets populated with the data pass through ``struct`` :c:struct:`kmr_vk_lgdev_create_info`
+		| { ``queueCount`` }.
 
 	:c:member:`queues`
-		| Pointer to an array of struct :c:struct:`kmr_vk_queue`. This information gets populated with the
-		| data pass through struct :c:struct:`kmr_vk_lgdev_create_info` { **@queues** }.
+		| Pointer to an array of ``struct`` :c:struct:`kmr_vk_queue`. This information gets populated with the
+		| data pass through ``struct`` :c:struct:`kmr_vk_lgdev_create_info` { ``queues`` }.
 
-		| Members :c:member:`queueCount` & :c:member:`queues` are strictly for struct :c:struct:`kmr_vk_lgdev`
+		| Members :c:member:`queueCount` & :c:member:`queues` are strictly for ``struct`` :c:struct:`kmr_vk_lgdev`
 		| to have extra information amount `VkQueue`_'s
 
 ========================
@@ -464,11 +464,11 @@ kmr_vk_lgdev_create_info
 		| Must pass an array of strings containing Vulkan Device extension to enable.
 
 	:c:member:`queueCount`
-		| Must pass the amount of struct :c:struct:`kmr_vk_queue` { **@queue**, **@familyIndex** } to
+		| Must pass the amount of ``struct`` :c:struct:`kmr_vk_queue` { ``queue``, ``familyIndex`` } to
 		| create along with a given logical device
 
 	:c:member:`queues`
-		| Must pass a pointer to an array of struct :c:struct:`kmr_vk_queue` { **@queue**, **@familyIndex** } to
+		| Must pass a pointer to an array of ``struct`` :c:struct:`kmr_vk_queue` { ``queue``, ``familyIndex`` } to
 		| create along with a given logical device
 
 ===================
@@ -486,15 +486,15 @@ kmr_vk_lgdev_create
 	inorder to gain access to those particular capabilities. Allows for creation of multiple
 	`VkQueue`_'s although the only one we needis the Graphics queue.
 
-	struct :c:struct:`kmr_vk_queue` { **@queue** } handle is assigned in this function as `vkGetDeviceQueue`_
+	``struct`` :c:struct:`kmr_vk_queue` { ``queue`` } handle is assigned in this function as `vkGetDeviceQueue`_
 	requires a logical device handle.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_lgdev_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_lgdev_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_lgdev`
-		| **on failure:** struct :c:struct:`kmr_vk_lgdev` { with members nulled, int's set to -1 }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_lgdev`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_lgdev` { with members nulled, int's set to -1 }
 
 =========================================================================================================================================
 
@@ -602,11 +602,11 @@ kmr_vk_swapchain_create
 	The `VkSwapchainKHR`_ can be defined as a set of images that can be drawn to and presented to a `VkSurfaceKHR`_.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_swapchain_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_swapchain_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_swapchain`
-		| **on failure:** struct :c:struct:`kmr_vk_swapchain` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_swapchain`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_swapchain` { with members nulled }
 
 =========================================================================================================================================
 
@@ -626,7 +626,7 @@ kmr_vk_image_handle
 
 	:c:member:`deviceMemory`
 		| Actual memory buffer whether CPU or GPU visible associate with `VkImage`_ object.
-		| If @useExternalDmaBuffer set to true
+		| If ``struct`` :c:struct:`kmr_vk_image_create_info` {  ``useExternalDmaBuffer`` } set to **true**
 		| :c:member:`deviceMemory` represents Vulkan API usable memory associated with
 		| external DMA-BUFS.
 
@@ -784,21 +784,21 @@ kmr_vk_vimage_create_info
 	:c:member:`imageDmaBufferFormatModifier`
 		| A 64-bit, vendor-prefixed, semi-opaque unsigned integer describing vendor-specific details
  		| of an image’s memory layout. Acquired when a call to :c:func:`kmr_buffer_create` is made
-		| and stored in struct :c:struct:`kmr_buffer`.bufferObjects[0].modifier.
+		| and stored in ``struct`` :c:struct:`kmr_buffer`.bufferObjects[0].modifier.
 
 	:c:member:`imageDmaBufferCount`
 		| Amount of elements in :c:member:`imageDmaBufferFds`, :c:member:`imageDmaBufferResourceInfo`,
 		| and :c:member:`imageDmaBufferMemTypeBits`. Value should be
-		| struct :c:struct:`kmr_buffer`.bufferObjects[0].planeCount.
+		| ``struct`` :c:struct:`kmr_buffer`.bufferObjects[0].planeCount.
 
 	:c:member:`imageDmaBufferFds`
 		| Array of DMA-BUF fds. Acquired when a call to :c:func:`kmr_buffer_create` is made and
-		| stored in struct :c:struct:`kmr_buffer`.bufferObjects[0].dmaBufferFds[4].
+		| stored in ``struct`` :c:struct:`kmr_buffer`.bufferObjects[0].dmaBufferFds[4].
 
 	:c:member:`imageDmaBufferResourceInfo`
 		| Info about the DMA-BUF including offset, size, pitch, etc. Most of which is acquired after a
 		| call to :c:func:`kmr_buffer_create` is made and stored in
-		| struct :c:struct:`kmr_buffer`.bufferObjects[0].{pitches[4], offsets[4], etc..}
+		| ``struct`` :c:struct:`kmr_buffer`.bufferObjects[0].{pitches[4], offsets[4], etc..}
 
 	:c:member:`imageDmaBufferMemTypeBits`
 		| Array of `VkMemoryRequirements`_.memoryTypeBits that can be acquired after a call to
@@ -865,14 +865,14 @@ kmr_vk_image_create
 	and uses that to associate `VkImageView`_ objects. If `VkSwapchainKHR`_ reference is not
 	passed function creates `VkImage`_ object's given the passed data. Then associates
 	`VkDeviceMemory`_ & `VkImageView`_ objects with the `VkImage`_. Amount of images created is
-	based upon struct :c:struct:`kmr_vk_image_create_info` { **@imageCount** }.
+	based upon ``struct`` :c:struct:`kmr_vk_image_create_info` { ``imageCount`` }.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_image_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_image_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_image`
-		| **on failure:** struct :c:struct:`kmr_vk_image` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_image`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_image` { with members nulled }
 
 =========================================================================================================================================
 
@@ -930,11 +930,11 @@ kmr_vk_shader_module_create
 	Function creates `VkShaderModule`_ from passed SPIR-V byte code.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_shader_module_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_shader_module_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_shader_module`
-		| **on failure:** struct :c:struct:`kmr_vk_shader_module` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_shader_module`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_shader_module` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1003,11 +1003,11 @@ kmr_vk_pipeline_layout_create
 	data that will be given to the pipeline for a single draw operation.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_pipeline_layout_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_pipeline_layout_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_pipeline_layout`
-		| **on failure:** struct :c:struct:`kmr_vk_pipeline_layout` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_pipeline_layout`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_pipeline_layout` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1085,11 +1085,11 @@ kmr_vk_render_pass_create
 	color in the center of a triangle. We want to give the appearance of depth to an image.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_render_pass_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_render_pass_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_render_pass`
-		| **on failure:** struct :c:struct:`kmr_vk_render_pass` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_render_pass`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_render_pass` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1207,11 +1207,11 @@ kmr_vk_graphics_pipeline_create
 	fragment shader to then color in.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_graphics_pipeline_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_graphics_pipeline_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_graphics_pipeline`
-		| **on failure:** struct :c:struct:`kmr_vk_graphics_pipeline` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_graphics_pipeline`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_graphics_pipeline` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1310,18 +1310,18 @@ kmr_vk_framebuffer_create
 
 .. c:function:: struct kmr_vk_framebuffer kmr_vk_framebuffer_create(struct kmr_vk_framebuffer_create_info *kmrvk);
 
-	Creates **@framebufferCount** amount of `VkFramebuffer`_ handles. Can think of this function as creating the
+	Creates ``framebufferCount`` amount of `VkFramebuffer`_ handles. Can think of this function as creating the
 	frames to hold the pictures in them, with each frame only containing one picture. Note framebuffer
-	`VkImage`_'s (**@framebufferImages** -> **@imageAttachments**) must match up one to one with attachments in the
-	`VkRenderpass`_ instance. Meaning if are **@renderPass** instance has 1 color + 1 depth attachment. Then each `VkFramebuffer`_
+	`VkImage`_'s (``framebufferImages`` -> ``imageAttachments``) must match up one to one with attachments in the
+	`VkRenderpass`_ instance. Meaning if are ``renderPass`` instance has 1 color + 1 depth attachment. Then each `VkFramebuffer`_
 	must have one `VkImage`_ for color and one `VkImage`_ for depth.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_framebuffer_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_framebuffer_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_framebuffer`
-		| **on failure:** struct :c:struct:`kmr_vk_framebuffer` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_framebuffer`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_framebuffer` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1391,17 +1391,17 @@ kmr_vk_command_buffer_create
 .. c:function:: struct kmr_vk_command_buffer kmr_vk_command_buffer_create(struct kmr_vk_command_buffer_create_info *kmrvk);
 
 	Function creates a `VkCommandPool`_ handle then allocates `VkCommandBuffer`_ handles from
-	that pool. The amount of `VkCommandBuffer`_'s allocated is based upon **@commandBufferCount**.
+	that pool. The amount of `VkCommandBuffer`_'s allocated is based upon ``commandBufferCount``.
 	Function only allocates primary command buffers. `VkCommandPool`_ flags set
 	`VK_COMMAND_POOL_CREATE_TRANSIENT_BIT`_ |
 	`VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT`_
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_command_buffer_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_command_buffer`
-		| **on failure:** struct :c:struct:`kmr_vk_command_buffer` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_command_buffer`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_command_buffer` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1432,12 +1432,12 @@ kmr_vk_command_buffer_record_begin
 
 .. c:function:: int kmr_vk_command_buffer_record_begin(struct kmr_vk_command_buffer_record_info *kmrvk);
 
-	Function sets recording command in command buffers up to **@commandBufferCount**. Thus, allowing each
+	Function sets recording command in command buffers up to ``commandBufferCount``. Thus, allowing each
 	command buffer to become writeable. Allowing for the application to write commands into it. Theses commands
 	are later put into a queue to be sent off to the GPU.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_command_buffer_record_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_record_info`
 
 	Returns:
 		| **on success:** 0
@@ -1452,7 +1452,7 @@ kmr_vk_command_buffer_record_end
 	Function stops command buffer to recording. Thus, ending each command buffers ability to accept commands.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_command_buffer_record_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_record_info`
 
 	Returns:
 		| **on success:** 0
@@ -1557,11 +1557,11 @@ kmr_vk_sync_obj_create
 	happen after.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_sync_obj_create_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_create_info`
 
 	Returns:
-		| **on success:** struct :c:struct:`kmr_vk_sync_obj`
-		| **on failure:** struct :c:struct:`kmr_vk_sync_obj` { with members nulled }
+		| **on success:** ``struct`` :c:struct:`kmr_vk_sync_obj`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_sync_obj` { with members nulled }
 
 =========================================================================================================================================
 
@@ -1595,10 +1595,10 @@ kmr_vk_sync_obj_handle
 	is used at a given time.
 
 	:c:member:`fence`
-		| See struct :c:struct:`kmr_vk_fence_handle`
+		| See ``struct`` :c:struct:`kmr_vk_fence_handle`
 
 	:c:member:`semaphore`
-		| See struct :c:struct:`kmr_vk_semaphore_handle`
+		| See ``struct`` :c:struct:`kmr_vk_semaphore_handle`
 
 ============================================
 kmr_vk_sync_obj_import_external_sync_fd_info
@@ -1635,7 +1635,7 @@ kmr_vk_sync_obj_import_external_sync_fd
 	:c:func:`kmr_dma_buf_export_sync_file_create`.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
 
 	Returns:
 		| **on success:** 0
@@ -1672,7 +1672,7 @@ kmr_vk_sync_obj_export_external_sync_fd
 	:c:func:`kmr_dma_buf_import_sync_file_create`.
 
 	Parameters:
-		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
 
 	Returns:
 		| **on success:** POSIX file descriptor associated with Vulkan sync object
