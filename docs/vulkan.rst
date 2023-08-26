@@ -8,22 +8,29 @@ Header: kmsroots/vulkan.h
 Table of contents (click to go)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-=========================
+======
 Macros
-=========================
+======
 
 1. :c:macro:`KMR_VK_INSTANCE_PROC_ADDR`
 #. :c:macro:`KMR_VK_DEVICE_PROC_ADDR`
 
-=========================
+=====
 Enums
-=========================
+=====
 
 1. :c:enum:`kmr_vk_surface_type`
+#. :c:enum:`kmr_vk_sync_obj_type`
 
-=========================
+======
+Unions
+======
+
+1. :c:union:`kmr_vk_sync_obj_handle`
+
+=======
 Structs
-=========================
+=======
 
 1. :c:struct:`kmr_vk_instance_create_info`
 #. :c:struct:`kmr_vk_surface_create_info`
@@ -57,10 +64,16 @@ Structs
 #. :c:struct:`kmr_vk_command_buffer`
 #. :c:struct:`kmr_vk_command_buffer_create_info`
 #. :c:struct:`kmr_vk_command_buffer_record_info`
+#. :c:struct:`kmr_vk_fence_handle`
+#. :c:struct:`kmr_vk_semaphore_handle`
+#. :c:struct:`kmr_vk_sync_obj`
+#. :c:struct:`kmr_vk_sync_obj_create_info`
+#. :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
+#. :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
 
-=========================
+=========
 Functions
-=========================
+=========
 
 1. :c:func:`kmr_vk_instance_create`
 #. :c:func:`kmr_vk_surface_create`
@@ -77,13 +90,16 @@ Functions
 #. :c:func:`kmr_vk_command_buffer_create`
 #. :c:func:`kmr_vk_command_buffer_record_begin`
 #. :c:func:`kmr_vk_command_buffer_record_end`
+#. :c:func:`kmr_vk_sync_obj_create`
+#. :c:func:`kmr_vk_sync_obj_import_external_sync_fd`
+#. :c:func:`kmr_vk_sync_obj_export_external_sync_fd`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
 
-=======================
-KMR_VK_DEVICE_PROC_ADDR
-=======================
+=========================
+KMR_VK_INSTANCE_PROC_ADDR
+=========================
 
 .. c:macro:: KMR_VK_INSTANCE_PROC_ADDR
 
@@ -192,6 +208,12 @@ kmr_vk_surface_type
 
         Display server protocol options. ENUM used by :c:func:`kmr_vk_surface_create`
         to create a `VkSurfaceKHR`_ object based upon platform specific information
+
+	:c:macro:`KMR_SURFACE_WAYLAND_CLIENT`
+		| Value set to ``0``
+
+	:c:macro:`KMR_SURFACE_XCB_CLIENT`
+		| Value set to ``1``
 
 ==========================
 kmr_vk_surface_create_info
@@ -1438,6 +1460,226 @@ kmr_vk_command_buffer_record_end
 
 =========================================================================================================================================
 
+===================
+kmr_vk_fence_handle
+===================
+
+.. c:struct:: kmr_vk_fence_handle
+
+	.. c:member::
+		VkFence fence;
+
+	:c:member:`fence`
+		| May be used to insert a dependency from a queue to the host. Used to block host (CPU)
+		| operations until commands in a command buffer are finished. Handles CPU - GPU syncs.
+		| It is up to host to set `VkFence`_ to an unsignaled state after GPU set it to a signaled
+		| state when a resource becomes available. Host side we wait for that signal then
+		| conduct XYZ operations. This is how we block.
+
+=======================
+kmr_vk_semaphore_handle
+=======================
+
+.. c:struct:: kmr_vk_semaphore_handle
+
+	.. c:member::
+		VkSemaphore semaphore;
+
+	:c:member:`semaphore`
+		| May be used to insert a dependency between queue operations or between a queue
+		| operation and the host. Used to block queue operations until commands in a
+		| command buffer are finished. Handles GPU - GPU syncs. Solely utilized on the
+		| GPU itself. Thus, only the GPU can control the state of a semphore.
+
+===============
+kmr_vk_sync_obj
+===============
+
+.. c:struct:: kmr_vk_sync_obj
+
+	.. c:member::
+		VkDevice                       logicalDevice;
+		uint32_t                       fenceCount;
+		struct kmr_vk_fence_handle     *fenceHandles;
+		uint32_t                       semaphoreCount;
+		struct kmr_vk_semaphore_handle *semaphoreHandles;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with :c:member:`fenceCount`
+		| `VkFence`_ objects and :c:member:`semaphoreCount` `VkSemaphore`_
+
+	:c:member:`fenceCount`
+		| Array size of :c:member:`fenceHandles` array
+
+	:c:member:`fenceHandles`
+		| Pointer to an array of `VkFence`_ handles
+
+	:c:member:`semaphoreCount`
+		| Array size of :c:member:`semaphoreHandles` array
+
+	:c:member:`semaphoreHandles`
+		| Pointer to an array of `VkSemaphore`_ handles
+
+===========================
+kmr_vk_sync_obj_create_info
+===========================
+
+.. c:struct:: kmr_vk_sync_obj_create_info
+
+	.. c:member::
+		VkDevice        logicalDevice;
+		VkSemaphoreType semaphoreType;
+		uint8_t         semaphoreCount;
+		uint8_t         fenceCount;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`semaphoreType`
+		| Specifies the type of semaphore to create (`VkSemaphoreType`_).
+
+	:c:member:`semaphoreCount`
+		| Amount of `VkSemaphore`_ objects to allocate.
+		| Initial value of each semaphore is set to zero.
+
+	:c:member:`fenceCount`
+		| Amount of `VkFence`_ objects to allocate.
+
+======================
+kmr_vk_sync_obj_create
+======================
+
+.. c:function:: struct kmr_vk_sync_obj kmr_vk_sync_obj_create(struct kmr_vk_sync_obj_create_info *kmrvk);
+
+	Creates `VkFence`_ and `VkSemaphore`_ synchronization objects. Vulkan API calls that execute work
+	on the GPU happen asynchronously. Vulkan API function calls return before operations are fully finished.
+	So we need synchronization objects to make sure operations that require other operations to finish can
+	happen after.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_sync_obj_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_sync_obj`
+		| **on failure:** struct :c:struct:`kmr_vk_sync_obj` { with members nulled }
+
+=========================================================================================================================================
+
+====================
+kmr_vk_sync_obj_type
+====================
+
+.. c:enum:: kmr_vk_sync_obj_type
+
+        .. c:macro::
+		KMR_VK_SYNC_OBJ_FENCE
+		KMR_VK_SYNC_OBJ_SEMAPHORE
+
+	:c:macro:`KMR_VK_SYNC_OBJ_FENCE`
+		| Value set to ``0``
+
+	:c:macro:`KMR_VK_SYNC_OBJ_SEMAPHORE`
+		| Value set to ``1``
+
+======================
+kmr_vk_sync_obj_handle
+======================
+
+.. c:union:: kmr_vk_sync_obj_handle
+
+	.. c:member::
+		VkFence     fence;
+		VkSemaphore semaphore;
+
+	Lessens memory as only one type of Vulkan synchronization primitive
+	is used at a given time.
+
+	:c:member:`fence`
+		| See struct :c:struct:`kmr_vk_fence_handle`
+
+	:c:member:`semaphore`
+		| See struct :c:struct:`kmr_vk_semaphore_handle`
+
+============================================
+kmr_vk_sync_obj_import_external_sync_fd_info
+============================================
+
+.. c:struct:: kmr_vk_sync_obj_import_external_sync_fd_info
+
+	.. c:member::
+		VkDevice               logicalDevice;
+		int                    syncFd;
+		kmr_vk_sync_obj_type   syncType;
+		kmr_vk_sync_obj_handle syncHandle;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`syncFd`
+		| External Posix file descriptor to import and associate with Vulkan sync object.
+
+	:c:member:`syncType`
+		| Specifies the type of Vulkan sync object to bind to.
+
+	:c:member:`syncHandle`
+		| Must pass one valid Vulkan sync object `VkFence`_ or `VkSemaphore`_.
+
+=======================================
+kmr_vk_sync_obj_import_external_sync_fd
+=======================================
+
+.. c:function:: int kmr_vk_sync_obj_import_external_sync_fd(struct kmr_vk_sync_obj_import_external_sync_fd_info *kmrvk);
+
+	From external POSIX DMA-BUF synchronization file descriptor bind to choosen Vulkan
+	synchronization object. The file descriptors can be acquired via a call to
+	:c:func:`kmr_dma_buf_export_sync_file_create`.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
+
+	Returns:
+		| **on success:** 0
+		| **on failure:** -1
+
+============================================
+kmr_vk_sync_obj_export_external_sync_fd_info
+============================================
+
+.. c:struct:: kmr_vk_sync_obj_export_external_sync_fd_info
+
+	.. c:member::
+		VkDevice               logicalDevice;
+		kmr_vk_sync_obj_type   syncType;
+		kmr_vk_sync_obj_handle syncHandle;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`syncType`
+		| Specifies the type of Vulkan sync object to bind to.
+
+	:c:member:`syncHandle`
+		| Must pass one valid Vulkan sync object `VkFence`_ or `VkSemaphore`_.
+
+=======================================
+kmr_vk_sync_obj_export_external_sync_fd
+=======================================
+
+.. c:function:: int kmr_vk_sync_obj_export_external_sync_fd(struct kmr_vk_sync_obj_export_external_sync_fd_info *kmrvk);
+
+	Creates POSIX file descriptor associated with Vulkan synchronization object.
+	This file descriptor can later be associated with a DMA-BUF fd via
+	:c:func:`kmr_dma_buf_import_sync_file_create`.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
+
+	Returns:
+		| **on success:** POSIX file descriptor associated with Vulkan sync object
+		| **on failure:** -1
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -1483,4 +1725,7 @@ kmr_vk_command_buffer_record_end
 .. _VkCommandBufferUsageFlagBits: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandBufferUsageFlagBits.html
 .. _VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandPoolCreateFlagBits.html
 .. _VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCommandPoolCreateFlagBits.html
+.. _VkFence: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFence.html
+.. _VkSemaphore: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSemaphore.html
+.. _VkSemaphoreType: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSemaphoreType.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor

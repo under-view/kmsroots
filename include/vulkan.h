@@ -1002,11 +1002,11 @@ struct kmr_vk_semaphore_handle {
  * struct kmr_vk_sync_obj (kmsroots Vulkan Synchronization Object)
  *
  * members:
- * @logicalDevice    - VkDevice handle (Logical Device) associated with @fenceCount VkFence objects
- *                     and @semaphoreCount VkSemaphore objects
- * @fenceCount       - Amount of handles in @vkFence array
+ * @logicalDevice    - VkDevice handle (Logical Device) associated with @fenceCount VkFence
+ *                     objects and @semaphoreCount VkSemaphore objects.
+ * @fenceCount       - Array size of @fenceHandles
  * @fenceHandles     - Pointer to an array of VkFence handles
- * @semaphoreCount   - Amount of handles in @vkSemaphore array
+ * @semaphoreCount   - Array size of @semaphoreHandles array
  * @semaphoreHandles - Pointer to an array of VkSemaphore handles
  */
 struct kmr_vk_sync_obj {
@@ -1024,8 +1024,8 @@ struct kmr_vk_sync_obj {
  * members:
  * @logicalDevice  - Must pass a valid VkDevice handle (Logical Device)
  * @semaphoreType  - Specifies the type of semaphore to create.
- * @semaphoreCount - Amount of VkSemaphore objects to allocate. Initial value of each semaphore
- *                   is set to zero.
+ * @semaphoreCount - Amount of VkSemaphore objects to allocate.
+ *                   Initial value of each semaphore is set to zero.
  * @fenceCount     - Amount of VkFence objects to allocate.
  */
 struct kmr_vk_sync_obj_create_info {
@@ -1065,6 +1065,9 @@ typedef enum _kmr_vk_sync_obj_type {
  *
  * Lessens memory as only one type of Vulkan synchronization primitive is used
  * at a given time.
+ *
+ * @fence - See struct kmr_vk_fence_handle
+ * @semaphore - See struct kmr_vk_semaphore_handle
  */
 typedef union _kmr_vk_sync_obj_handle {
 	VkFence     fence;
@@ -1079,7 +1082,7 @@ typedef union _kmr_vk_sync_obj_handle {
  * @logicalDevice - Must pass a valid VkDevice handle (Logical Device)
  * @syncFd        - External Posix file descriptor to import and associate with Vulkan sync object.
  * @syncType      - Specifies the type of Vulkan sync object to bind to.
- * @syncHandle    - Must pass one valid Vulkan sync object @fence or @semaphore.
+ * @syncHandle    - Must pass one valid Vulkan sync object VkFence or VkSemaphore.
  */
 struct kmr_vk_sync_obj_import_external_sync_fd_info {
 	VkDevice               logicalDevice;
@@ -1092,7 +1095,7 @@ struct kmr_vk_sync_obj_import_external_sync_fd_info {
 /*
  * kmr_vk_sync_obj_import_external_sync_fd: From external POSIX DMA-BUF synchronization file descriptor bind to choosen Vulkan
  *                                          synchronization object. The file descriptors can be acquired via a call to
- *                                          kmr_dma_buf_export_sync_file_create(3).
+ *                                          kmr_dma_buf_export_sync_file_create().
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sync_obj_import_external_sync_fd_info
@@ -1109,7 +1112,7 @@ int kmr_vk_sync_obj_import_external_sync_fd(struct kmr_vk_sync_obj_import_extern
  * members:
  * @logicalDevice - Must pass a valid VkDevice handle (Logical Device)
  * @syncType      - Specifies the type of Vulkan sync object to bind to.
- * @syncHandle    - Must pass one valid Vulkan sync object @fence or @semaphore.
+ * @syncHandle    - Must pass one valid Vulkan sync object VkFence or VkSemaphore.
  */
 struct kmr_vk_sync_obj_export_external_sync_fd_info {
 	VkDevice               logicalDevice;
@@ -1121,13 +1124,12 @@ struct kmr_vk_sync_obj_export_external_sync_fd_info {
 /*
  * kmr_vk_sync_obj_export_external_sync_fd: Creates POSIX file descriptor associated with Vulkan synchronization object.
  *                                          This file descriptor can later be associated with a DMA-BUF fd via
- *                                          kmr_dma_buf_import_sync_file_create(3).
+ *                                          kmr_dma_buf_import_sync_file_create().
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sync_obj_export_external_sync_fd_info
  * returns:
- *	on success posix file descriptor associated
- *	           with Vulkan sync object
+ *	on success POSIX file descriptor associated with Vulkan sync object
  *	on failure -1
  */
 int kmr_vk_sync_obj_export_external_sync_fd(struct kmr_vk_sync_obj_export_external_sync_fd_info *kmrvk);
