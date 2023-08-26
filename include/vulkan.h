@@ -820,7 +820,7 @@ struct kmr_vk_framebuffer {
 /*
  * struct kmr_vk_framebuffer_images (kmsroots Vulkan Framebuffer Images)
  *
- * @imageAttachments - Allow at most 6 attachments (VkImageView->VkImage) per VkFrameBbuffer.
+ * @imageAttachments - Allow at most 6 attachments (VkImageView -> VkImage) per VkFramebuffer.
  */
 struct kmr_vk_framebuffer_images {
 	VkImageView imageAttachments[6];
@@ -833,16 +833,16 @@ struct kmr_vk_framebuffer_images {
  * members:
  * @logicalDevice                   - Must pass a valid VkDevice handle (Logical Device)
  * @framebufferCount                - Amount of VkFramebuffer handles to create (i.e the array length of @framebufferImages)
- * @framebufferImageAttachmentCount - Amount of framebuffer attachments (VkImageView->VkImage) per each framebuffer.
+ * @framebufferImageAttachmentCount - Amount of framebuffer attachments (VkImageView -> VkImage) per VkFramebuffer.
  * @framebufferImages               - Pointer to an array of VkImageView handles which the @renderPass instance will merge to create final VkFramebuffer.
- *                                    These VkImageView->VkImage handles must always be in a format that equals to the render pass attachment format.
+ *                                    These VkImageView -> VkImage handles must always be in a format that equals to the render pass attachment format.
  * @renderPass                      - Defines the render pass a given framebuffer is compatible with
  * @width                           - Framebuffer width in pixels
  * @height                          - Framebuffer height in pixels
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html for more info on bellow members
  *
- * @layers
+ * @layers                          - TBA
  */
 struct kmr_vk_framebuffer_create_info {
 	VkDevice                         logicalDevice;
@@ -859,9 +859,9 @@ struct kmr_vk_framebuffer_create_info {
 /*
  * kmr_vk_framebuffer_create: Creates @framebufferCount amount of VkFramebuffer handles. Can think of this function as creating the
  *                            frames to hold the pictures in them, with each frame only containing one picture. Note framebuffer
- *                            VkImage's (@framebufferImages->@imageAttachments) must match up one to one with attachments in the
- *                            render pass. Meaning if are @renderPass instance has 1 color + 1 depth attachment. Then each VkFramebuffer
- *                            must have one VkImage for color and one VkImage for depth.
+ *                            VkImage's (@framebufferImages -> @imageAttachments) must match up one to one with attachments in the
+ *                            VkRenderpass instance. Meaning if are @renderPass instance has 1 color + 1 depth attachment. Then
+ *                            each VkFramebuffer must have one VkImage for color and one VkImage for depth.
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_framebuffer_create_info

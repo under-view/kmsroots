@@ -49,6 +49,10 @@ Structs
 #. :c:struct:`kmr_vk_render_pass_create_info`
 #. :c:struct:`kmr_vk_graphics_pipeline`
 #. :c:struct:`kmr_vk_graphics_pipeline_create_info`
+#. :c:struct:`kmr_vk_framebuffer_handle`
+#. :c:struct:`kmr_vk_framebuffer`
+#. :c:struct:`kmr_vk_framebuffer_images`
+#. :c:struct:`kmr_vk_framebuffer_create_info`
 
 =========================
 Functions
@@ -65,6 +69,7 @@ Functions
 #. :c:func:`kmr_vk_pipeline_layout_create`
 #. :c:func:`kmr_vk_render_pass_create`
 #. :c:func:`kmr_vk_graphics_pipeline_create`
+#. :c:func:`kmr_vk_framebuffer_create`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -1178,6 +1183,116 @@ kmr_vk_graphics_pipeline_create
 	Returns:
 		| **on success:** struct :c:struct:`kmr_vk_graphics_pipeline`
 		| **on failure:** struct :c:struct:`kmr_vk_graphics_pipeline` { with members nulled }
+
+=========================================================================================================================================
+
+=========================
+kmr_vk_framebuffer_handle
+=========================
+
+.. c:struct:: kmr_vk_framebuffer_handle
+
+	.. c:member::
+		VkFramebuffer framebuffer;
+
+	:c:member:`framebuffer`
+		| Framebuffers represent a collection of specific memory attachments that a render pass
+		| instance uses. Connection between an image (or images) and the render pass instance.
+
+==================
+kmr_vk_framebuffer
+==================
+
+.. c:struct:: kmr_vk_framebuffer
+
+	.. c:member::
+		VkDevice                          logicalDevice;
+		uint8_t                           framebufferCount;
+		struct kmr_vk_framebuffer_handle  *framebufferHandles;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with :c:member:`framebufferCount` `VkFramebuffer`_'s.
+
+	:c:member:`framebufferCount`
+		| Amount of `VkFramebuffer`_ handles created.
+
+	:c:member:`framebufferHandles`
+		| Pointer to an array of `VkFramebuffer`_ handles.
+
+=========================
+kmr_vk_framebuffer_images
+=========================
+
+.. c:struct:: kmr_vk_framebuffer_images
+
+	.. c:member::
+		VkImageView imageAttachments[6];
+
+	:c:member:`imageAttachments`
+		| Allow at most 6 attachments (`VkImageView`_ -> `VkImage`_) per `VkFramebuffer`_.
+
+==============================
+kmr_vk_framebuffer_create_info
+==============================
+
+.. c:struct:: kmr_vk_framebuffer_create_info
+
+	.. c:member::
+		VkDevice                         logicalDevice;
+		uint8_t                          framebufferCount;
+		uint8_t                          framebufferImageAttachmentCount;
+		struct kmr_vk_framebuffer_images *framebufferImages;
+		VkRenderPass                     renderPass;
+		uint32_t                         width;
+		uint32_t                         height;
+		uint32_t                         layers;
+
+	Most members may also be located at `VkFramebufferCreateInfo`_.
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device).
+
+	:c:member:`framebufferCount`
+		| Amount of `VkFramebuffer`_ handles to create (i.e the array length of :c:member:`framebufferImages`)
+
+	:c:member:`framebufferImageAttachmentCount`
+		| Amount of framebuffer attachments (`VkImageView`_ -> `VkImage`_) per `VkFramebuffer`_.
+
+	:c:member:`framebufferImages`
+		| Pointer to an array of `VkImageView`_ handles which the :c:member:`renderPass` instance will
+		| merge to create final `VkFramebuffer`_. These `VkImageView`_ -> `VkImage`_ handles must always
+		| be in a format that equals to the render pass attachment format.
+
+	:c:member:`renderPass`
+		| Defines the render pass a given framebuffer is compatible with
+
+	:c:member:`width`
+		| Framebuffer width in pixels
+
+	:c:member:`height`
+		| Framebuffer height in pixels
+
+	:c:member:`layers`
+		| TBA
+
+=========================
+kmr_vk_framebuffer_create
+=========================
+
+.. c:function:: struct kmr_vk_framebuffer kmr_vk_framebuffer_create(struct kmr_vk_framebuffer_create_info *kmrvk);
+
+	Creates **@framebufferCount** amount of `VkFramebuffer`_ handles. Can think of this function as creating the
+	frames to hold the pictures in them, with each frame only containing one picture. Note framebuffer
+	`VkImage`_'s (**@framebufferImages** -> **@imageAttachments**) must match up one to one with attachments in the
+	`VkRenderpass`_ instance. Meaning if are **@renderPass** instance has 1 color + 1 depth attachment. Then each `VkFramebuffer`_
+	must have one `VkImage`_ for color and one `VkImage`_ for depth.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_framebuffer_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_framebuffer`
+		| **on failure:** struct :c:struct:`kmr_vk_framebuffer` { with members nulled }
 
 =========================================================================================================================================
 
