@@ -718,7 +718,7 @@ struct kmr_vk_render_pass kmr_vk_render_pass_create(struct kmr_vk_render_pass_cr
  *
  * members:
  * @logicalDevice    - VkDevice handle (Logical Device) associated with VkPipeline (Graphics Pipeline)
- * @graphicsPipeline - Handle to a pipeline object
+ * @graphicsPipeline - Handle to a pipeline object. Storing what to do during each stage of the graphics pipeline.
  */
 struct kmr_vk_graphics_pipeline {
 	VkDevice   logicalDevice;
@@ -730,23 +730,23 @@ struct kmr_vk_graphics_pipeline {
  * struct kmr_vk_graphics_pipeline_create_info (kmsroots Vulkan Graphics Pipeline Create Information)
  *
  * members:
- * @logicalDevice       - Must pass a valid VkDevice handle (Logical Device)
+ * @logicalDevice       - Must pass a valid VkDevice handle (Logical Device) to associate graphics pipeline state/data with.
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkGraphicsPipelineCreateInfo.html for more info on bellow members
  *
- * @shaderStageCount    - Amount of shaders being used by graphics pipeline
- * @pStages             - Defines shaders and at what shader stages this GP will utilize them
+ * @shaderStageCount    - Must pass the array size of @shaderStages. Amount of shaders being used by the graphics pipeline.
+ * @shaderStages        - Defines shaders (via VkShaderModule) and at what shader stages the create VkPipeline will utilize them.
  * @vertexInputState    - Defines the layout and format of vertex input data. Provides details for loading vertex data.
  * @inputAssemblyState  - Defines how to assemble vertices to primitives (i.e. triangles or lines).
  *                        https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPrimitiveTopology.html
- * @tessellationState   -
- * @viewportState       - View port defines how to populated image with pixel data (i.e populate only the top half or bottom half). Scissor defines
+ * @tessellationState   - TBA
+ * @viewportState       - VkViewPort defines how to populate image with pixel data (i.e populate only the top half or bottom half). Scissor defines
  *                        how to crop an image. How much of image should be drawn (i.e draw whole image, right half, middle, etc...)
  * @rasterizationState  - Handles how raw vertex data turns into cordinates on screen and in a pixel buffer. Handle computation of fragments (pixels)
  *                        from primitives (i.e. triangles or lines)
  * @multisampleState    - If you want to do clever anti-aliasing through multisampling. Stores multisampling information.
- * @depthStencilState   - How to handle depth + stencil data. If one has to object we don't want it to draw the back object in the one
- *                        that's in front of it.
+ * @depthStencilState   - How to handle depth + stencil data. If a draw has 2 or more objects we don't want to be
+ *                        drawing the back object on top of the object that should be in front of it.
  * @colorBlendState     - Defines how to blend fragments at the end of the pipeline.
  * @dynamicState        - Graphics pipelines settings are static once set they can't change. To get new settings you'd have to create a whole new pipeline.
  *                        There are settings however that can be changed at runtime. We define which settings here.

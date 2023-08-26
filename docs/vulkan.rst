@@ -47,6 +47,8 @@ Structs
 #. :c:struct:`kmr_vk_pipeline_layout_create_info`
 #. :c:struct:`kmr_vk_render_pass`
 #. :c:struct:`kmr_vk_render_pass_create_info`
+#. :c:struct:`kmr_vk_graphics_pipeline`
+#. :c:struct:`kmr_vk_graphics_pipeline_create_info`
 
 =========================
 Functions
@@ -62,6 +64,7 @@ Functions
 #. :c:func:`kmr_vk_shader_module_create`
 #. :c:func:`kmr_vk_pipeline_layout_create`
 #. :c:func:`kmr_vk_render_pass_create`
+#. :c:func:`kmr_vk_graphics_pipeline_create`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -987,7 +990,7 @@ kmr_vk_render_pass
 	:c:member:`logicalDevice`
 		| `VkDevice`_ handle (Logical Device) associated with render pass instance
 
-	:c:member:`renderpass`
+	:c:member:`renderPass`
 		| Represents a collection of attachments, subpasses, and dependencies between the subpasses
 
 ==============================
@@ -1056,6 +1059,128 @@ kmr_vk_render_pass_create
 
 =========================================================================================================================================
 
+========================
+kmr_vk_graphics_pipeline
+========================
+
+.. c:struct:: kmr_vk_graphics_pipeline
+
+	.. c:member::
+		VkDevice   logicalDevice;
+		VkPipeline graphicsPipeline;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkPipeline`_ (Graphics Pipeline)
+
+	:c:member:`graphicsPipeline`
+		| Handle to a pipeline object. Storing what to do during each stage of the graphics pipeline.
+
+====================================
+kmr_vk_graphics_pipeline_create_info
+====================================
+
+.. c:struct:: kmr_vk_graphics_pipeline_create_info
+
+	.. c:member::
+		VkDevice                                      logicalDevice;
+		uint32_t                                      shaderStageCount;
+		const VkPipelineShaderStageCreateInfo         *shaderStages;
+		const VkPipelineVertexInputStateCreateInfo    *vertexInputState;
+		const VkPipelineInputAssemblyStateCreateInfo  *inputAssemblyState;
+		const VkPipelineTessellationStateCreateInfo   *tessellationState;
+		const VkPipelineViewportStateCreateInfo       *viewportState;
+		const VkPipelineRasterizationStateCreateInfo  *rasterizationState;
+		const VkPipelineMultisampleStateCreateInfo    *multisampleState;
+		const VkPipelineDepthStencilStateCreateInfo   *depthStencilState;
+		const VkPipelineColorBlendStateCreateInfo     *colorBlendState;
+		const VkPipelineDynamicStateCreateInfo        *dynamicState;
+		VkPipelineLayout                              pipelineLayout;
+		VkRenderPass                                  renderPass;
+		uint32_t                                      subpass;
+
+	Most members may also be located at `VkGraphicsPipelineCreateInfo`_.
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device) to associate graphics pipeline
+		| state/data with.
+
+	:c:member:`shaderStageCount`
+		| Must pass the array size of :c:member:`shaderStages`. Amount of shaders being used by
+		| the graphics pipeline.
+
+	:c:member:`shaderStages`
+		| Defines shaders (via `VkShaderModule`_) and at what shader stages the created `VkPipeline`_
+		| will utilize them.
+
+	:c:member:`vertexInputState`
+		| Defines the layout and format of vertex input data. Provides details for loading vertex data.
+		| So the graphics pipeline understands how the vertices are stored in the buffer.
+
+	:c:member:`inputAssemblyState`
+		| Defines how to assemble vertices to primitives (i.e. triangles or lines).
+		| For more info see `VkPrimitiveTopology`_.
+
+	:c:member:`tessellationState`
+		| TBA
+
+	:c:member:`viewportState`
+		| `VkViewPort`_ defines how to populate image with pixel data (i.e populate only the top half
+		| or bottom half). `Scissor`_ defines how to crop an image. How much of image should be drawn
+		| (i.e draw whole image, right half, middle, etc...)
+
+	:c:member:`rasterizationState`
+		| Handles how raw vertex data turns into cordinates on screen and in a pixel buffer.
+		| Handle computation of fragments (pixels) from primitives (i.e. triangles or lines).
+
+	:c:member:`multisampleState`
+		| If you want to do clever anti-aliasing through multisampling. Stores multisampling information.
+
+	:c:member:`depthStencilState`
+		| How to handle depth + stencil data. If a draw has 2 or more objects we don't want to be
+		| drawing the back object on top of the object that should be in front of it.
+
+	:c:member:`colorBlendState`
+		| Defines how to blend fragments at the end of the pipeline.
+
+	:c:member:`dynamicState`
+		| Graphics pipelines settings are static once set they can't change. To get new settings you'd
+		| have to create a whole new pipeline. There are settings however that can be changed at
+		| runtime. We define which settings here.
+
+	:c:member:`pipelineLayout`
+		| Pass `VkPipelineLayout`_ handle to define the resources (i.e. descriptor sets, push constants)
+		| given to the pipeline for a single draw operation.
+
+	:c:member:`renderPass`
+		| Pass `VkRenderPass`_ handle which holds a pipeline and handles how it is execute. With final
+		| outputs being to a framebuffer. One can have multiple smaller subpasses inside of render
+		| pass. Used to bind a given render pass to the graphics pipeline. Contains multiple
+		| attachments that go to all plausible pipeline outputs (i.e Depth, Color, etc..).
+
+	:c:member:`subpass`
+		| Pass the index of the subpass to use in the :c:member:`renderPass` instance.
+
+===============================
+kmr_vk_graphics_pipeline_create
+===============================
+
+.. c:function:: struct kmr_vk_graphics_pipeline kmr_vk_graphics_pipeline_create(struct kmr_vk_graphics_pipeline_create_info *kmrvk);
+
+	Function creates a `VkPipeline`_ handle that references a sequence of operations that first takes
+	raw vertices (points on a coordinate plane), textures coordinates, color coordinates, tangent,
+	etc.. [**NOTE:** Data combinded is called a mesh]. Utilizes shaders to plot the points on a coordinate
+	system then the rasterizer converts all plotted points and turns it into fragments/pixels for your
+	fragment shader to then color in.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_graphics_pipeline_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_graphics_pipeline`
+		| **on failure:** struct :c:struct:`kmr_vk_graphics_pipeline` { with members nulled }
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -1091,3 +1216,8 @@ kmr_vk_render_pass_create
 .. _VkRenderPassCreateInfo: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html
 .. _VkFramebuffer: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebuffer.html
 .. _VkFramebufferCreateInfo: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html
+.. _VkPipeline: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipeline.html
+.. _VkGraphicsPipelineCreateInfo: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkGraphicsPipelineCreateInfo.html
+.. _VkPrimitiveTopology: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPrimitiveTopology.html
+.. _VkViewport: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkViewport.html
+.. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor
