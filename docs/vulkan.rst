@@ -37,6 +37,10 @@ Structs:
 #. :c:struct:`kmr_vk_image_create_info`
 #. :c:struct:`kmr_vk_shader_module`
 #. :c:struct:`kmr_vk_shader_module_create_info`
+#. :c:struct:`kmr_vk_pipeline_layout`
+#. :c:struct:`kmr_vk_pipeline_layout_create_info`
+#. :c:struct:`kmr_vk_render_pass`
+#. :c:struct:`kmr_vk_render_pass_create_info`
 
 Functions:
 
@@ -48,6 +52,8 @@ Functions:
 #. :c:func:`kmr_vk_swapchain_create`
 #. :c:func:`kmr_vk_image_create`
 #. :c:func:`kmr_vk_shader_module_create`
+#. :c:func:`kmr_vk_pipeline_layout_create`
+#. :c:func:`kmr_vk_render_pass_create`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -771,6 +777,137 @@ API Documentation
 
 =========================================================================================================================================
 
+.. c:struct:: kmr_vk_pipeline_layout
+
+	.. c:member::
+		VkDevice         logicalDevice;
+		VkPipelineLayout pipelineLayout;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkPipelineLayout`_
+
+	:c:member:`pipelineLayout`
+		| Stores collection of data describing the vulkan resources that are needed to
+		| produce final image. This data is later used during graphics pipeline runtime.
+
+.. c:struct:: kmr_vk_pipeline_layout_create_info
+
+	.. c:member::
+		VkDevice                    logicalDevice;
+		uint32_t                    descriptorSetLayoutCount;
+		const VkDescriptorSetLayout *descriptorSetLayouts;
+		uint32_t                    pushConstantRangeCount;
+		const VkPushConstantRange   *pushConstantRanges;
+
+	Most members may also be located at `VkPipelineLayoutCreateInfo`_.
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`descriptorSetLayoutCount`
+		| Must pass the array size of :c:member:`descriptorSetLayouts`
+
+	:c:member:`descriptorSetLayouts`
+		| Must pass a pointer to an array of descriptor set layouts so a given graphics
+		| pipeline can know how a shader can access a given vulkan resource.
+
+	:c:member:`pushConstantRangeCount`
+		| Must pass the array size of :c:member:`pushConstantRanges`
+
+	:c:member:`pushConstantRanges`
+		| Must pass a pointer to an array of push constant definitions that describe at what
+		| shader stage and the sizeof the data being pushed to the GPU to be later utilized by
+		| the shader at a given stage. If the shader needs to recieve smaller values quickly
+		| instead of creating a dynamic uniform buffer and updating the value at memory address.
+		| Push constants allow for smaller data to be more efficiently passed up to the GPU by
+		| passing values directly to the shader.
+
+.. c:function:: struct kmr_vk_pipeline_layout kmr_vk_pipeline_layout_create(struct kmr_vk_pipeline_layout_create_info *kmrvk);
+
+	Function creates a `VkPipelineLayout`_ handle that is then later used by the graphics pipeline
+	itself so that is knows what vulkan resources are need to produce the final image, at what shader
+	stages these resources will be accessed, and how to access them. Describes the layout of the
+	data that will be given to the pipeline for a single draw operation.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_pipeline_layout_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_pipeline_layout`
+		| **on failure:** struct :c:struct:`kmr_vk_pipeline_layout` { with members nulled }
+
+=========================================================================================================================================
+
+.. c:struct:: kmr_vk_render_pass
+
+	.. c:member::
+		VkDevice     logicalDevice;
+		VkRenderPass renderPass;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with render pass instance
+
+	:c:member:`renderpass`
+		| Represents a collection of attachments, subpasses, and dependencies between the subpasses
+
+.. c:struct:: kmr_vk_render_pass_create_info
+
+	.. c:member::
+		VkDevice                      logicalDevice;
+		uint32_t                      attachmentDescriptionCount;
+		const VkAttachmentDescription *attachmentDescriptions;
+		uint32_t                      subpassDescriptionCount;
+		const VkSubpassDescription    *subpassDescriptions;
+		uint32_t                      subpassDependencyCount;
+		const VkSubpassDependency     *subpassDependencies;
+
+	Most members may also be located at `VkRenderPassCreateInfo`_.
+	
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`attachmentDescriptionCount`
+		| Must pass array size of :c:member:`attachmentDescriptions`
+
+	:c:member:`attachmentDescriptions`
+		| Describes the type of location to output fragment data to
+		| Depth attachment outputs to a `VkImage`_ used for depth
+		| Color attachment outputs to a `VkImage`_ used for coloring insides of a triangle
+
+	:c:member:`subpassDescriptionCount`
+		| Must pass array size of :c:member:`subpassDescriptions`
+
+	:c:member:`subpassDescriptions`
+		| What type of pipeline attachments are bounded to (Graphics being the one we want) and
+		| the final layout of the image before its presented on the screen.
+
+	:c:member:`subpassDependencyCount`
+		| Must pass array size of :c:member:`subpassDependencies`
+
+	:c:member:`subpassDependencies`
+		| Pointer to an array of subpass dependencies that define stages in a pipeline where image
+		| transitions need to occur before sending output to framebuffer then later the viewport.
+
+.. c:function:: struct kmr_vk_render_pass kmr_vk_render_pass_create(struct kmr_vk_render_pass_create_info *kmrvk);
+
+	Function creates a `VkRenderPass`_ handle that is then later used by the graphics pipeline
+	itself so that is knows how many attachments (color, depth, etc...) there will be per `VkFramebuffer`_,
+	how many samples an attachment has (samples to use for multisampling), and how their contents should
+	be handled throughout rendering operations. Subpasses within a render pass then references the attachments
+	for every draw operations and connects attachments (i.e. `VkImage`_'s connect to a `VkFramebuffer`_) to the graphics
+	pipeline. In short the render pass is the intermediary step between your graphics pipeline and the framebuffer.
+	It describes how you want to render things to the viewport upon render time. Example at render time we wish to
+	color in the center of a triangle. We want to give the appearance of depth to an image.
+
+	Parameters:
+		| **kmrvk:** pointer to a struct :c:struct:`kmr_vk_render_pass_create_info`
+
+	Returns:
+		| **on success:** struct :c:struct:`kmr_vk_render_pass`
+		| **on failure:** struct :c:struct:`kmr_vk_render_pass` { with members nulled }
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -800,3 +937,9 @@ API Documentation
 .. _VkMemoryRequirements: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkMemoryRequirements.html
 .. _VkDeviceMemory: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDeviceMemory.html
 .. _VkShaderModule: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkShaderModule.html
+.. _VkPipelineLayout: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineLayout.html
+.. _VkPipelineLayoutCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPipelineLayoutCreateInfo.html
+.. _VkRenderPass: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPass.html
+.. _VkRenderPassCreateInfo: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html
+.. _VkFramebuffer: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebuffer.html
+.. _VkFramebufferCreateInfo: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFramebufferCreateInfo.html

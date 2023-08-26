@@ -599,8 +599,9 @@ struct kmr_vk_shader_module kmr_vk_shader_module_create(struct kmr_vk_shader_mod
  * struct kmr_vk_pipeline_layout (kmsroots Vulkan Pipeline Layout)
  *
  * members:
- * @logicalDevice  - VkDevice handle (Logical Device) associated with pipeline layout
- * @pipelineLayout - Represents collection of what resources are needed to produce final image
+ * @logicalDevice  - VkDevice handle (Logical Device) associated with VkPipelineLayout
+ * @pipelineLayout - Stores collection of data describing the vulkan resources that are needed to
+ *                   produce final image. This data is later used during graphics pipeline runtime.
  */
 struct kmr_vk_pipeline_layout {
 	VkDevice         logicalDevice;
@@ -618,12 +619,13 @@ struct kmr_vk_pipeline_layout {
  *
  * @descriptorSetLayoutCount - Must pass the array size of @descriptorSetLayouts
  * @descriptorSetLayouts     - Must pass a pointer to an array of descriptor set layouts so a given graphics pipeline can know how a shader
- *                             can access a given resource.
- * @pushConstantRangeCount   - Must pass the array size of @descriptorSetLayouts
+ *                             can access a given vulkan resource.
+ * @pushConstantRangeCount   - Must pass the array size of @pushConstantRanges
  * @pushConstantRanges       - Must pass a pointer to an array of push constant definitions that describe at what shader stage and the sizeof
- *                             the data being pushed to shader. If the shader needs to recieve smaller values quickly instead of creating
- *                             a dynamic uniform buffer and updating the value at memory address. Push constants allow for smaller data to
- *                             be more efficiently passed up to the GPU by passing values directly to the shader.
+ *                             the data being pushed to the GPU to be later utilized by the shader at a given stage. If the shader needs to
+ *                             recieve smaller values quickly instead of creating a dynamic uniform buffer and updating the value at memory
+ *                             address. Push constants allow for smaller data to be more efficiently passed up to the GPU by passing values
+ *                             directly to the shader.
  */
 struct kmr_vk_pipeline_layout_create_info {
 	VkDevice                    logicalDevice;
@@ -636,7 +638,7 @@ struct kmr_vk_pipeline_layout_create_info {
 
 /*
  * kmr_vk_pipeline_layout_create: Function creates a VkPipelineLayout handle that is then later used by the graphics pipeline
- *                                itself so that is knows what resources are need to produce the final image, at what shader
+ *                                itself so that is knows what vulkan resources are need to produce the final image, at what shader
  *                                stages these resources will be accessed, and how to access them. Describes the layout of the
  *                                data that will be given to the pipeline for a single draw operation.
  *
@@ -670,14 +672,14 @@ struct kmr_vk_render_pass {
  *
  * See: https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassCreateInfo.html for more info on bellow members
  *
- * @attachmentDescriptionCount - Array size of @attachmentDescriptions
+ * @attachmentDescriptionCount - Must pass array size of @attachmentDescriptions
  * @attachmentDescriptions     - Describes the type of location to output fragment data to
  *                               Depth attachment outputs to a VkImage used for depth
  *                               Color attachment outputs to a VkImage used for coloring insides of a triangle
  * @subpassDescriptionCount    - Array size of @subpassDescriptions
- * @subpassDescriptions        - What type of pipeline attachments are bounded to (Graphics being the one we want) and the final layout
- *                               og the image before its presented on the screen.
- * @subpassDependenciesCount   - Amount of elements in @subpassDependencies array
+ * @subpassDescriptions        - What type of pipeline attachments are bounded to (Graphics being the one we want) and
+ *                               the final layout of the image before its presented on the screen.
+ * @subpassDependencyCount     - Must pass array size of @subpassDependencies
  * @subpassDependencies        - Pointer to an array of subpass dependencies that define stages in a pipeline where image
  *                               transitions need to occur before sending output to framebuffer then later the viewport.
  */
@@ -700,7 +702,7 @@ struct kmr_vk_render_pass_create_info {
  *                            for every draw operations and connects attachments (i.e. VkImage's connect to a VkFramebuffer) to the graphics
  *                            pipeline. In short the render pass is the intermediary step between your graphics pipeline and the framebuffer.
  *                            It describes how you want to render things to the viewport upon render time. Example at render time we wish to
- *                            color in the center of a triangle. We want to give the appears of depth to an image.
+ *                            color in the center of a triangle. We want to give the appearance of depth to an image.
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_render_pass_create_info
