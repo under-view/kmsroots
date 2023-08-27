@@ -70,6 +70,8 @@ Structs
 #. :c:struct:`kmr_vk_sync_obj_create_info`
 #. :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
 #. :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
+#. :c:struct:`kmr_vk_buffer`
+#. :c:struct:`kmr_vk_buffer_create_info`
 
 =========
 Functions
@@ -93,6 +95,7 @@ Functions
 #. :c:func:`kmr_vk_sync_obj_create`
 #. :c:func:`kmr_vk_sync_obj_import_external_sync_fd`
 #. :c:func:`kmr_vk_sync_obj_export_external_sync_fd`
+#. :c:func:`kmr_vk_buffer_create`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -1680,6 +1683,96 @@ kmr_vk_sync_obj_export_external_sync_fd
 
 =========================================================================================================================================
 
+=============
+kmr_vk_buffer
+=============
+
+.. c:struct:: kmr_vk_buffer
+
+	.. c:member:: 
+		VkDevice       logicalDevice;
+		VkBuffer       buffer;
+		VkDeviceMemory deviceMemory;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkBuffer`_
+
+	:c:member:`buffer`
+		| Header for the given buffer that stores information about the buffer
+
+	:c:member:`deviceMemory`
+		| Pointer to actual memory whether CPU or GPU visible associated with
+		| `VkBuffer`_ header object.
+
+=========================
+kmr_vk_buffer_create_info
+=========================
+
+.. c:struct:: kmr_vk_buffer_create_info
+
+	.. c:member:: 
+		VkDevice                 logicalDevice;
+		VkPhysicalDevice         physDevice;
+		VkBufferCreateFlagBits   bufferFlags;
+		VkDeviceSize             bufferSize;
+		VkBufferUsageFlags       bufferUsage;
+		VkSharingMode            bufferSharingMode;
+		uint32_t                 queueFamilyIndexCount;
+		const uint32_t           *queueFamilyIndices;
+		VkMemoryPropertyFlagBits memPropertyFlags;
+ 
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`physDevice`
+		| Must pass a valid `VkPhysicalDevice`_ handle as it is used to
+		| query memory properties.
+
+	:c:member:`bufferFlags`
+		| Used when configuring sparse buffer memory
+
+	:c:member:`bufferSize`
+		| Size of underlying buffer to allocate
+
+	:c:member:`bufferUsage`
+		| Specifies type of buffer (i.e vertex, etc...). Multiple buffer types
+		| can be selected here via bitwise or operations.
+
+	:c:member:`bufferSharingMode`
+		| Vulkan buffers may be owned by one device queue family or shared by
+		| multiple device queue families.
+
+	:c:member:`queueFamilyIndexCount`
+		| Must pass array size of :c:member:`queueFamilyIndices`. Amount of
+		| queue families may own given `VkBuffer`_.
+
+	:c:member:`queueFamilyIndices`
+		| Pointer to an array of queue family indices to associate/own a
+		| given `VkBuffer`_.
+
+	:c:member:`memPropertyFlags`
+		| Used to determine the type of actual memory to allocated.
+		| Whether CPU (host) or GPU visible.
+
+====================
+kmr_vk_buffer_create
+====================
+
+.. c:function:: struct kmr_vk_buffer kmr_vk_buffer_create(struct kmr_vk_buffer_create_info *kmrvk);
+
+	Function creates `VkBuffer`_ header and binds pointer to actual memory (`VkDeviceMemory`_)
+	to said `VkBuffer`_ headers. This allows host visible data (i.e vertex data) to be given
+	to the GPU.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_buffer_create_info`
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_buffer`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_buffer` { with members nulled }
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -1728,4 +1821,6 @@ kmr_vk_sync_obj_export_external_sync_fd
 .. _VkFence: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFence.html
 .. _VkSemaphore: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSemaphore.html
 .. _VkSemaphoreType: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSemaphoreType.html
+.. _VkBuffer: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBuffer.html
+.. _VkBufferCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferCreateInfo.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor

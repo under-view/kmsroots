@@ -1140,8 +1140,9 @@ int kmr_vk_sync_obj_export_external_sync_fd(struct kmr_vk_sync_obj_export_extern
  *
  * members:
  * @logicalDevice - VkDevice handle (Logical Device) associated with VkBuffer
- * @buffer        - Header of a given buffer that stores information about the buffer
- * @deviceMemory  - Actual memory whether CPU or GPU visible associate with VkBuffer header object
+ * @buffer        - Header for the given buffer that stores information about the buffer
+ * @deviceMemory  - Pointer to actual memory whether CPU or GPU visible associate with
+ *                  VkBuffer header object
  */
 struct kmr_vk_buffer {
 	VkDevice       logicalDevice;
@@ -1161,8 +1162,8 @@ struct kmr_vk_buffer {
  * @bufferUsage           - Specifies type of buffer (i.e vertex, etc...). Multiple buffer types can be selected here
  *                          via bitwise or operations.
  * @bufferSharingMode     - Vulkan buffers may be owned by one device queue family or shared by multiple device queue families.
- * @queueFamilyIndexCount - Array size of @queueFamilyIndices. Amount of queue families may own given vulkan buffer.
- * @queueFamilyIndices    - Pointer to an array of queue families to associate/own a given vulkan buffer.
+ * @queueFamilyIndexCount - Must pass array size of @queueFamilyIndices. Amount of queue families may own given VkBuffer.
+ * @queueFamilyIndices    - Pointer to an array of queue families to associate/own a given VkBuffer.
  * @memPropertyFlags      - Used to determine the type of actual memory to allocated. Whether CPU (host) or GPU visible.
  */
 struct kmr_vk_buffer_create_info {
@@ -1179,8 +1180,9 @@ struct kmr_vk_buffer_create_info {
 
 
 /*
- * kmr_vk_buffer_create: Function creates vulkan buffer header and binds actual memory to said vulkan buffer headers. This
- *                       allows host visible data (i.e vertex data) to be given to the GPU.
+ * kmr_vk_buffer_create: Function creates VkBuffer header and binds pointer actual memory (VkDeviceMemory)
+ *                       to said VkBuffer headers. This allows host visible data (i.e vertex data) to be
+ *                       given to the GPU.
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_buffer_create_info
