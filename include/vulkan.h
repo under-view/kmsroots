@@ -1334,8 +1334,9 @@ struct kmr_vk_descriptor_set kmr_vk_descriptor_set_create(struct kmr_vk_descript
  *
  * members:
  * @logicalDevice - VkDevice handle (Logical Device) associated with VkSampler
- * @sampler       - VkSampler handle represent the state of an image sampler which is used by the implementation
- *                  to read image data and apply filtering and other transformations for the shader.
+ * @sampler       - VkSampler handle represent the state of an image sampler which is used
+ *                  by the implementation to read image data and apply filtering and other
+ *                  transformations for the shader.
  *                  TAKEN FROM: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSampler.html
  */
 struct kmr_vk_sampler {
@@ -1352,12 +1353,12 @@ struct kmr_vk_sampler {
  *
  * See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerCreateInfo.html for more information
  *
- * @samplerFlags                   -
+ * @samplerFlags                   - TBA
  * @samplerMagFilter               - How to render when image is magnified on screen (Camera close to texture)
  * @samplerMinFilter               - How to render when image is minimized on screen (Camera further away from texture)
  * @samplerAddressModeU            - How to handle texture wrap in U (x) direction
- * @samplerAddressModeV            - How to handle texture wrap in U (y) direction
- * @samplerAddressModeW            - How to handle texture wrap in U (z) direction
+ * @samplerAddressModeV            - How to handle texture wrap in V (y) direction
+ * @samplerAddressModeW            - How to handle texture wrap in W (z) direction
  * @samplerBorderColor             - Used if @samplerAddressMode{U,V,W} == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
  *                                   set border beyond texture.
  * @samplerMipmapMode              - Mipmap interpolation mode
@@ -1367,8 +1368,8 @@ struct kmr_vk_sampler {
  * @samplerUnnormalizedCoordinates - Sets if the texture coordinates should be normalized (between 0 and 1)
  * @samplerAnisotropyEnable        - Enable/Disable Anisotropy
  * @samplerMaxAnisotropy           - Anisotropy sample level
- * @samplerCompareEnable           -
- * @samplerCompareOp               -
+ * @samplerCompareEnable           - TBA
+ * @samplerCompareOp               - TBA
  */
 struct kmr_vk_sampler_create_info {
 	VkDevice                logicalDevice;
@@ -1396,7 +1397,7 @@ struct kmr_vk_sampler_create_info {
  *                        methods. These methods cover concepts such as picking a point between two texels or
  *                        beyond the edge of the image. Describes how an image should be read.
  *
- *                        Loaded images (png, jpg)-> VkImage -> Sampler interacts with the VkImage.
+ *                        Loaded images (png, jpg) -> VkImage -> Sampler interacts with the VkImage.
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_sampler_create_info

@@ -77,6 +77,8 @@ Structs
 #. :c:struct:`kmr_vk_descriptor_set_handle`
 #. :c:struct:`kmr_vk_descriptor_set`
 #. :c:struct:`kmr_vk_descriptor_set_create_info`
+#. :c:struct:`kmr_vk_sampler`
+#. :c:struct:`kmr_vk_sampler_create_info`
 
 =========
 Functions
@@ -103,6 +105,7 @@ Functions
 #. :c:func:`kmr_vk_buffer_create`
 #. :c:func:`kmr_vk_descriptor_set_layout_create`
 #. :c:func:`kmr_vk_descriptor_set_create`
+#. :c:func:`kmr_vk_sampler_create_info`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -1960,6 +1963,124 @@ kmr_vk_descriptor_set_create
 
 =========================================================================================================================================
 
+==============
+kmr_vk_sampler
+==============
+
+.. c:struct:: kmr_vk_sampler
+
+	.. c:member::
+		VkDevice  logicalDevice;
+		VkSampler sampler;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkSampler`_
+
+	:c:member:`sampler`
+		| `VkSampler` handle represent the state of an image sampler which is used
+		| by the implementation to read image data and apply filtering and other
+		| transformations for the shader.
+
+==========================
+kmr_vk_sampler_create_info
+==========================
+
+.. c:struct:: kmr_vk_sampler_create_info
+
+	.. c:member::
+		VkDevice                logicalDevice;
+		VkSamplerCreateFlags    samplerFlags;
+		VkFilter                samplerMagFilter;
+		VkFilter                samplerMinFilter;
+		VkSamplerAddressMode    samplerAddressModeU;
+		VkSamplerAddressMode    samplerAddressModeV;
+		VkSamplerAddressMode    samplerAddressModeW;
+		VkBorderColor           samplerBorderColor;
+		VkBool32                samplerAnisotropyEnable;
+		float                   samplerMaxAnisotropy;
+		VkBool32                samplerCompareEnable;
+		VkCompareOp             samplerCompareOp;
+		VkSamplerMipmapMode     samplerMipmapMode;
+		float                   samplerMipLodBias;
+		float                   samplerMinLod;
+		float                   samplerMaxLod;
+		VkBool32                samplerUnnormalizedCoordinates;
+
+	Most members may also be located at `VkSamplerCreateInfo`_.
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`samplerFlags`
+		| TBA
+
+	:c:member:`samplerMagFilter`
+		| How to render when image is magnified on screen (Camera close to texture)
+
+	:c:member:`samplerMinFilter`
+		| How to render when image is minimized on screen (Camera further away from texture)
+
+	:c:member:`samplerAddressModeU`
+		| How to handle texture wrap in U (x) direction
+
+	:c:member:`samplerAddressModeV`
+		| How to handle texture wrap in V (y) direction
+
+	:c:member:`samplerAddressModeW`
+		| How to handle texture wrap in W (z) direction
+
+	:c:member:`samplerBorderColor`
+		| Used if ``samplerAddressMode{U,V,W}`` == `VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER`_
+		| set border beyond texture.
+
+	:c:member:`samplerMipmapMode`
+		| Mipmap interpolation mode
+
+	:c:member:`samplerMipLodBias`
+		| Level of details bias for mip level. Sets value to add to mip levels.
+
+	:c:member:`samplerMinLod`
+		| Minimum level of detail to pick miplevel
+
+	:c:member:`samplerMaxLod`
+		| Maximum level of detail to pick miplevel
+
+	:c:member:`samplerUnnormalizedCoordinates`
+		| Sets if the texture coordinates should be normalized (between 0 and 1)
+
+	:c:member:`samplerAnisotropyEnable`
+		| Enable/Disable Anisotropy
+
+	:c:member:`samplerMaxAnisotropy`
+		| Anisotropy sample level
+
+	:c:member:`samplerCompareEnable`
+		| TBA
+
+	:c:member:`samplerCompareOp`
+		| TBA
+
+=====================
+kmr_vk_sampler_create
+=====================
+
+.. c:function:: struct kmr_vk_sampler kmr_vk_sampler_create(struct kmr_vk_sampler_create_info *kmrvk);
+
+	Functions creates `VkSampler`_ handle this object accesses the image using pre-defined
+	methods. These methods cover concepts such as picking a point between two texels or
+	beyond the edge of the image. Describes how an image should be read.
+
+	Loaded images (png, jpg) -> `VkImage`_ -> Sampler interacts with the `VkImage`_.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sampler_create_info`
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_sampler`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_sampler` { with members nulled }
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -2015,4 +2136,12 @@ kmr_vk_descriptor_set_create
 .. _VkDescriptorSet: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorSet.html
 .. _VkDescriptorPool: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorPool.html
 .. _vkAllocateDescriptorSets: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkAllocateDescriptorSets.html
+.. _VkSampler: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSampler.html
+.. _VkSamplerCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerCreateInfo.html
+.. _VkSamplerAddressMode: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
+.. _VK_SAMPLER_ADDRESS_MODE_REPEAT: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
+.. _VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
+.. _VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
+.. _VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
+.. _VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor
