@@ -21,6 +21,7 @@ Enums
 
 1. :c:enum:`kmr_vk_surface_type`
 #. :c:enum:`kmr_vk_sync_obj_type`
+#. :c:enum:`kmr_vk_resource_copy_type`
 
 ======
 Unions
@@ -79,6 +80,9 @@ Structs
 #. :c:struct:`kmr_vk_descriptor_set_create_info`
 #. :c:struct:`kmr_vk_sampler`
 #. :c:struct:`kmr_vk_sampler_create_info`
+#. :c:struct:`kmr_vk_resource_copy_buffer_to_buffer_info`
+#. :c:struct:`kmr_vk_resource_copy_buffer_to_image_info`
+#. :c:struct:`kmr_vk_resource_copy_info`
 
 =========
 Functions
@@ -106,6 +110,7 @@ Functions
 #. :c:func:`kmr_vk_descriptor_set_layout_create`
 #. :c:func:`kmr_vk_descriptor_set_create`
 #. :c:func:`kmr_vk_sampler_create_info`
+#. :c:func:`kmr_vk_resource_copy`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -2081,6 +2086,180 @@ kmr_vk_sampler_create
 
 =========================================================================================================================================
 
+=========================
+kmr_vk_resource_copy_type
+=========================
+
+.. c:enum:: kmr_vk_resource_copy_type
+
+	.. c:macro::
+		KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER
+		KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_IMAGE
+		KMR_VK_RESOURCE_COPY_VK_IMAGE_TO_VK_BUFFER
+
+	ENUM Used by ``struct`` :c:struct:`kmr_vk_resource_copy_info` to specify type of source
+	resource to copy over to a given type of destination resource.
+
+	:c:macro:`KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER`
+		| Value set to ``0``
+
+	:c:macro:`KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_IMAGE`
+		| Value set to ``1``
+
+	:c:macro:`KMR_VK_RESOURCE_COPY_VK_IMAGE_TO_VK_BUFFER`
+		| Value set to ``2``
+
+==========================================
+kmr_vk_resource_copy_buffer_to_buffer_info
+==========================================
+
+.. c:struct:: kmr_vk_resource_copy_buffer_to_buffer_info
+
+	.. c:member::
+		VkBufferCopy *copyRegion;
+
+	:c:member:`copyRegion`
+		| Specifies the byte offset to use for given
+		| ``struct`` :c:struct:`kmr_vk_resource_copy_info` { ``srcResource`` } memory address.
+		| Then, specifies the byte offset to use for given
+		| ``struct`` :c:struct:`kmr_vk_resource_copy_info` { ``dstResource`` } memory address.
+		| Along with including the byte size (`VkBufferCopy`_ { ``size`` }) to copy
+		| from ``srcResource`` to ``dstResource``.
+
+=========================================
+kmr_vk_resource_copy_buffer_to_image_info
+=========================================
+
+.. c:struct:: kmr_vk_resource_copy_buffer_to_image_info
+
+	.. c:member::
+		VkBufferImageCopy *copyRegion;
+		VkImageLayout     imageLayout;
+
+	:c:member:`copyRegion`
+		| Specifies the byte offset to use for given
+		| ``struct`` :c:struct:`kmr_vk_resource_copy_info` { ``srcResource`` } memory address.
+		| Along with specifying what portion of the (``dstResource``) image to update or copy
+		| given ``srcResource``.
+		| `VkBufferImageCopy`_.
+
+	:c:member:`imageLayout`
+		| Memory layout of the destination image subresources after the copy
+
+=========================
+kmr_vk_resource_copy_info
+=========================
+
+.. c:struct:: kmr_vk_resource_copy_info
+
+	.. c:member::
+		kmr_vk_resource_copy_type resourceCopyType;
+		void                      *resourceCopyInfo;
+		VkCommandBuffer           commandBuffer;
+		VkQueue                   queue;
+		void                      *srcResource;
+		void                      *dstResource;
+
+	:c:member:`resourceCopyType`
+		| Determines what vkCmdCopyBuffer* function to utilize
+
+	:c:member:`resourceCopyInfo`
+		| The structs to pass to vkCmdCopyBuffer*
+
+	:c:member:`commandBuffer`
+		| Command buffer used for recording. Best to utilize one already create via
+		| :c:func:`kmr_vk_command_buffer_create`. To save on unnecessary allocations.
+
+	:c:member:`queue`
+		| The physical device queue (graphics or transfer) to submit the copy buffer command to.
+
+	:c:member:`srcResource`
+		| Pointer to source vulkan resource containing raw data.
+		| (i.e `Vkbuffer`_, `VkImage`_, etc...)
+
+	:c:member:`dstResource`
+		| Pointer to destination vulkan resource to copy :c:member:`srcResource` data to.
+		| (i.e `Vkbuffer`_, `VkImage`_, etc...)
+
+====================
+kmr_vk_resource_copy
+====================
+
+.. c:function:: int kmr_vk_resource_copy(struct kmr_vk_resource_copy_info *kmrvk);
+
+	Function copies data from one vulkan resource to another. Best utilized when
+	copying data from CPU visible buffer over to GPU visible buffer. That way the
+	GPU can acquire data (vertex data) more quickly.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_resource_copy_info`
+
+	Returns:
+		| **on success:** 0
+		| **on failure:** -1
+
+=========================================================================================================================================
+
+=====================================
+kmr_vk_resource_pipeline_barrier_info
+=====================================
+
+.. c:struct:: kmr_vk_resource_pipeline_barrier_info
+
+	.. c:member::
+		VkCommandBuffer                       commandBuffer;
+		VkQueue                               queue;
+		VkPipelineStageFlags                  srcPipelineStage;
+		VkPipelineStageFlags                  dstPipelineStage;
+		VkDependencyFlags                     dependencyFlags;
+		VkMemoryBarrier                       *memoryBarrier;
+		VkBufferMemoryBarrier                 *bufferMemoryBarrier;
+		VkImageMemoryBarrier                  *imageMemoryBarrier;
+
+	:c:member:`commandBuffer`
+		| Command buffer used for recording. Best to utilize one already create via
+		| :c:func:`kmr_vk_command_buffer_create`. To save on unnecessary allocations.
+
+	:c:member:`queue`
+		| The physical device queue (graphics or transfer) to submit the pipeline
+		| barrier command to.
+
+	:c:member:`srcPipelineStage`
+		| Specifies in which pipeline stage operations occur before the barrier.
+
+	:c:member:`dstPipelineStage`
+		| Specifies in which pipeline stage operations will wait on the barrier.
+
+	:c:member:`dependencyFlags`
+		| Defines types of dependencies
+
+	:c:member:`memoryBarrier`
+		| Specifies pipeline barrier for vulkan memory
+
+	:c:member:`bufferMemoryBarrier`
+		| Specifies pipeline barrier for vulkan buffer resource
+
+	:c:member:`imageMemoryBarrier`
+		| Specifies pipeline barrier for vulkan image resource
+
+================================
+kmr_vk_resource_pipeline_barrier
+================================
+
+.. c:function:: int kmr_vk_resource_pipeline_barrier(struct kmr_vk_resource_pipeline_barrier_info *kmrvk);
+
+	Function is used to synchronize access to vulkan resources. Basically
+	ensuring that a write to a resources finishes before reading from it.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_resource_pipeline_barrier_info`
+
+	Returns:
+		| **on success:** 0
+		| **on failure:** -1
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -2144,4 +2323,6 @@ kmr_vk_sampler_create
 .. _VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
 .. _VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
 .. _VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
+.. _VkBufferCopy: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferCopy.html
+.. _VkBufferImageCopy: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferImageCopy.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor

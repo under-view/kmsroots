@@ -1411,7 +1411,7 @@ struct kmr_vk_sampler kmr_vk_sampler_create(struct kmr_vk_sampler_create_info *k
 /*
  * enum kmr_vk_resource_copy_type (kmsroots Vulkan Resource Copy Type)
  *
- * ENUM Used by kmr_vk_copy_info to specify type of source
+ * ENUM Used by struct kmr_vk_resource_copy_info to specify type of source
  * resource to copy over to a given type of destination resource.
  */
 typedef enum _kmr_vk_resource_copy_type {
@@ -1424,9 +1424,12 @@ typedef enum _kmr_vk_resource_copy_type {
 /*
  * struct kmr_vk_resource_copy_buffer_to_buffer_info (kmsroots Vulkan Resource Copy Buffer To Buffer Information)
  *
- * @copyRegion - Specifies the starting memory address of struct kmr_vk_resource_copy_buffer_to_buffer_info { @srcResource }
- *               to copy @byteSize data from to struct kmr_vk_resource_copy_buffer_to_buffer_info { @dstResource } memory address.
- *               Memory address is found by specifying an offset.
+ * @copyRegion - Specifies the byte offset to use for given
+ *               struct kmr_vk_resource_copy_info { @srcResource } memory address.
+ *               Then specifies the byte offset to use for given
+ *               struct kmr_vk_resource_copy_info { @dstResource } memory address.
+ *               Along with including the byte size (VkBufferCopy { @size }) to copy
+ *               from @srcResource to @dstResource.
  */
 struct kmr_vk_resource_copy_buffer_to_buffer_info {
 	VkBufferCopy *copyRegion;
@@ -1436,8 +1439,12 @@ struct kmr_vk_resource_copy_buffer_to_buffer_info {
 /*
  * struct kmr_vk_resource_copy_buffer_to_image_info (kmsroots Vulkan Resource Copy Buffer To Image Information)
  *
- * @copyRegion  - Specifies what portion of the image to update or copy to buffer.
- * @imageLayout - Memory layout of the destination image subresources for the copy
+ * @copyRegion  - Specifies the byte offset to use for given
+ *                struct kmr_vk_resource_copy_info { @srcResource } memory address.
+ *                Along with specifying what portion of the (@dstResource) image to update
+ *                or copy given @srcResource.
+ *                https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferImageCopy.html
+ * @imageLayout - Memory layout of the destination image subresources after the copy
  */
 struct kmr_vk_resource_copy_buffer_to_image_info {
 	VkBufferImageCopy *copyRegion;
@@ -1452,10 +1459,10 @@ struct kmr_vk_resource_copy_buffer_to_image_info {
  * @resourceCopyType - Determines what vkCmdCopyBuffer* function to utilize
  * @resourceCopyInfo - The structs to pass to vkCmdCopyBuffer*
  * @commandBuffer    - Command buffer used for recording. Best to utilize one already create via
- *                     kmr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ *                     kmr_vk_command_buffer_create(). To save on unnecessary allocations.
  * @queue            - The physical device queue (graphics or transfer) to submit the copy buffer command to.
  * @srcResource      - Pointer to source vulkan resource containing raw data. (i.e Vkbuffer, VkImage, etc...)
- * @dstResource      - Pointer to destination vulkan resource to copy source resource data to.
+ * @dstResource      - Pointer to destination vulkan resource to copy @srcResource data to.
  *                     (i.e Vkbuffer, VkImage, etc...)
  */
 struct kmr_vk_resource_copy_info {
@@ -1487,12 +1494,12 @@ int kmr_vk_resource_copy(struct kmr_vk_resource_copy_info *kmrvk);
  *
  * members:
  * @commandBuffer       - Command buffer used for recording. Best to utilize one already create via
- *                        kmr_vk_command_buffer_create(3). To save on unnecessary allocations.
+ *                        kmr_vk_command_buffer_create(). To save on unnecessary allocations.
  * @queue               - The physical device queue (graphics or transfer) to submit the pipeline barrier command to.
  * @srcPipelineStage    - Specifies in which pipeline stage operations occur before the barrier.
  * @dstPipelineStage    - Specifies in which pipeline stage operations will wait on the barrier.
- * @VkDependencyFlags   - Defines types of dependencies
- * @memoryBarrier       - specifying pipeline barrier for vulkan memory
+ * @dependencyFlags     - Defines types of dependencies
+ * @memoryBarrier       - Specifies pipeline barrier for vulkan memory
  * @bufferMemoryBarrier - Specifies pipeline barrier for vulkan buffer resource
  * @imageMemoryBarrier  - Specifies pipeline barrier for vulkan image resource
  */
