@@ -72,6 +72,11 @@ Structs
 #. :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
 #. :c:struct:`kmr_vk_buffer`
 #. :c:struct:`kmr_vk_buffer_create_info`
+#. :c:struct:`kmr_vk_descriptor_set_layout`
+#. :c:struct:`kmr_vk_descriptor_set_layout_create_info`
+#. :c:struct:`kmr_vk_descriptor_set_handle`
+#. :c:struct:`kmr_vk_descriptor_set`
+#. :c:struct:`kmr_vk_descriptor_set_create_info`
 
 =========
 Functions
@@ -96,6 +101,8 @@ Functions
 #. :c:func:`kmr_vk_sync_obj_import_external_sync_fd`
 #. :c:func:`kmr_vk_sync_obj_export_external_sync_fd`
 #. :c:func:`kmr_vk_buffer_create`
+#. :c:func:`kmr_vk_descriptor_set_layout_create`
+#. :c:func:`kmr_vk_descriptor_set_create`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -1773,6 +1780,186 @@ kmr_vk_buffer_create
 
 =========================================================================================================================================
 
+============================
+kmr_vk_descriptor_set_layout
+============================
+
+.. c:struct:: kmr_vk_descriptor_set_layout
+
+	.. c:member::
+		VkDevice              logicalDevice;
+		VkDescriptorSetLayout descriptorSetLayout;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkDescriptorSetLayout`_
+
+	:c:member:`descriptorSetLayout`
+		| Describes how a descriptor set connects up to graphics pipeline. The layout
+		| defines what type of descriptor set to allocate, a binding link used by vulkan
+		| to give shader access to resources, and at what graphics pipeline stage
+		| will the shader descriptor need access to a given resource.
+
+========================================
+kmr_vk_descriptor_set_layout_create_info
+========================================
+
+.. c:struct:: kmr_vk_descriptor_set_layout_create_info
+
+	.. c:member::
+		VkDevice                         logicalDevice;
+		VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateflags;
+		uint32_t                         descriptorSetLayoutBindingCount;
+		VkDescriptorSetLayoutBinding     *descriptorSetLayoutBindings;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`descriptorSetLayoutCreateflags`
+		| Options for descriptor set layout
+
+	:c:member:`descriptorSetLayoutBindingCount`
+		| Must pass the array size of :c:member:`descriptorSetLayoutBindings`
+
+	:c:member:`descriptorSetLayoutBindings`
+		| Pointer to an array of shader variable (descriptor) attributes. Attributes include the
+		| binding location set in the shader, the type of descriptor allowed to be allocated,
+		| and what graphics pipeline stage will shader have access to vulkan resources assoicated
+		| with `VkDescriptorSetLayoutBinding`_ { ``binding`` }.
+
+===================================
+kmr_vk_descriptor_set_layout_create
+===================================
+
+.. c:function:: struct kmr_vk_descriptor_set_layout kmr_vk_descriptor_set_layout_create(struct kmr_vk_descriptor_set_layout_create_info *kmrvk);
+
+	Function creates descriptor set layout which is used during pipeline creation to
+	define how a given shader may access vulkan resources. Also used during `VkDescriptorSet`_
+	creation to define what type of descriptor to allocate within a descriptor set, binding
+	locate used by both vulkan and shader to determine how shader can access vulkan
+	resources, and at what pipeline stage.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_descriptor_set_layout_create_info`
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_descriptor_set_layout`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_descriptor_set_layout` { with members nulled }
+
+=========================================================================================================================================
+
+============================
+kmr_vk_descriptor_set_handle
+============================
+
+.. c:struct:: kmr_vk_descriptor_set_handle
+
+	.. c:member::
+		VkDescriptorSet descriptorSet;
+
+	:c:member:`descriptorSet`
+		| Represents a set of descriptors. Descriptors can be defined as resources shared across
+		| draw operations. If there is only one uniform buffer object (type of descriptor) in the
+		| shader then there is only one descriptor in the set. If the uniform buffer object
+		| (type of descriptor) in the shader is an array of size N. Then there are N descriptors
+		| of the same type in a given descriptor set. Types of descriptor sets include Images,
+		| Samplers, uniform...
+
+=====================
+kmr_vk_descriptor_set
+=====================
+
+.. c:struct:: kmr_vk_descriptor_set
+
+	.. c:member::
+		VkDevice                            logicalDevice;
+		VkDescriptorPool                    descriptorPool;
+		uint32_t                            descriptorSetsCount;
+		struct kmr_vk_descriptor_set_handle *descriptorSetHandles;
+
+	:c:member:`logicalDevice`
+		| `VkDevice`_ handle (Logical Device) associated with `VkDescriptorPool`_ which
+		| contains one or more descriptor sets.
+
+	:c:member:`descriptorPool`
+		| Pointer to a Vulkan Descriptor Pool used to allocate and dellocate descriptor sets.
+
+	:c:member:`descriptorSetsCount`
+		| Number of descriptor sets in the :c:member:`descriptorSetHandles` array
+
+	:c:member:`descriptorSetHandles`
+		| Pointer to an array of descriptor sets
+
+=================================
+kmr_vk_descriptor_set_create_info
+=================================
+
+.. c:struct:: kmr_vk_descriptor_set_create_info
+
+	.. c:member::
+		VkDevice                    logicalDevice;
+		VkDescriptorPoolSize        *descriptorPoolInfos;
+		uint32_t                    descriptorPoolInfoCount;
+		VkDescriptorSetLayout       *descriptorSetLayouts;
+		uint32_t                    descriptorSetLayoutCount;
+		VkDescriptorPoolCreateFlags descriptorPoolCreateflags;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`descriptorPoolInfos`
+		| Must pass a pointer to an array of descriptor sets information. With each
+		| elements information corresponding to number of descriptors a given pool
+		| needs to allocate and the type of descriptors in the pool. Per my understanding
+		| this is just so the `VkDescriptorPool`_ knows what to preallocate. No descriptor
+		| is assigned to a set when the pool is created. Given an array of descriptor
+		| set layouts the actual assignment of descriptor to descriptor set happens in
+                | the `vkAllocateDescriptorSets`_ function.
+
+	:c:member:`descriptorPoolInfoCount`
+		| Number of descriptor sets in pool or array size of :c:member:`descriptorPoolInfos`
+
+	:c:member:`descriptorSetLayouts`
+		| Pointer to an array of `VkDescriptorSetLayout`_. Each set must contain it's own layout.
+		| This variable must be of same size as :c:member:`descriptorPoolInfos`
+
+	:c:member:`descriptorSetLayoutCount`
+		| Array size of :c:member:`descriptorSetLayouts` corresponding to the actual number of descriptor
+		| sets in the pool.
+
+	:c:member:`descriptorPoolCreateflags`
+		| Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
+
+============================
+kmr_vk_descriptor_set_create
+============================
+
+.. c:function:: struct kmr_vk_descriptor_set kmr_vk_descriptor_set_create(struct kmr_vk_descriptor_set_create_info *kmrvk);
+
+	Function allocates a descriptor pool then ``descriptorPoolInfoCount`` amount of sets
+	from descriptor pool. This is how we establishes connection between a the shader
+	and vulkan resources at specific graphics pipeline stages. One can think of a
+	descriptor pool as a range of addresses that contain segments or sub range addresses.
+	Each segment is a descriptor set within the pool and each set contains a certain number
+	of descriptors.
+
+	Descriptor Pool
+	---------------
+
+	=============== =========  =====  === ===
+	Descriptor Set      1        2     3   4
+	=============== =========  =====  === ===
+	Descriptors     1|2|3|4|5  1|2|3   1  1|2
+	=============== =========  =====  === ===
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_descriptor_set_create_info`
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_descriptor_set`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_descriptor_set` { with members nulled }
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
@@ -1823,4 +2010,9 @@ kmr_vk_buffer_create
 .. _VkSemaphoreType: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSemaphoreType.html
 .. _VkBuffer: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBuffer.html
 .. _VkBufferCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferCreateInfo.html
+.. _VkDescriptorSetLayout: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorSetLayout.html
+.. _VkDescriptorSetLayoutBinding: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorSetLayoutBinding.html
+.. _VkDescriptorSet: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorSet.html
+.. _VkDescriptorPool: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorPool.html
+.. _vkAllocateDescriptorSets: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkAllocateDescriptorSets.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor

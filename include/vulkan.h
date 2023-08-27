@@ -1198,8 +1198,8 @@ struct kmr_vk_buffer kmr_vk_buffer_create(struct kmr_vk_buffer_create_info *kmrv
  *
  * members:
  * @logicalDevice       - VkDevice handle (Logical Device) associated with VkDescriptorSetLayout
- * @descriptorSetLayout - How descriptor set connects up to graphics pipeline. The layout defines
- *                        what type of descriptor set to allocate, a binding link used by vulkan
+ * @descriptorSetLayout - Describes how a descriptor set connects up to graphics pipeline. The layout
+ *                        defines what type of descriptor set to allocate, a binding link used by vulkan
  *                        to give shader access to resources, and at what graphics pipeline stage
  *                        will the shader descriptor need access to a given resource.
  */
@@ -1215,11 +1215,11 @@ struct kmr_vk_descriptor_set_layout {
  * members:
  * @logicalDevice                   - Must pass a valid VkDevice handle (Logical Device)
  * @descriptorSetLayoutCreateflags  - Options for descriptor set layout
- * @descriptorSetLayoutBindingCount - Must pass the amount of elements in VkDescriptorSetLayoutBinding array
+ * @descriptorSetLayoutBindingCount - Must pass the array size of @descriptorSetLayoutBindings
  * @descriptorSetLayoutBindings     - Pointer to an array of shader variable (descriptor) attributes. Attributes include the
  *                                    binding location set in the shader, the type of descriptor allowed to be allocated,
- *                                    what graphics pipeline stage will shader have access to vulkan resources assoicated with
- *                                    VkDescriptorSetLayoutBinding { @binding }.
+ *                                    and what graphics pipeline stage will shader have access to vulkan resources assoicated
+ *                                    with VkDescriptorSetLayoutBinding { @binding }.
  */
 struct kmr_vk_descriptor_set_layout_create_info {
 	VkDevice                         logicalDevice;
@@ -1232,8 +1232,8 @@ struct kmr_vk_descriptor_set_layout_create_info {
 /*
  * kmr_vk_descriptor_set_layout_create: Function creates descriptor set layout which is used during pipeline creation to
  *                                      define how a given shader may access vulkan resources. Also used during VkDescriptorSet
- *                                      creation to define what type of descriptor of descriptor to allocate within a descriptor
- *                                      set, binding locate used by both vulkan and shader to determine how shader can access vulkan
+ *                                      creation to define what type of descriptor to allocate within a descriptor set, binding
+ *                                      locate used by both vulkan and shader to determine how shader can access vulkan
  *                                      resources, and at what pipeline stage.
  *
  * parameters:
@@ -1248,11 +1248,12 @@ struct kmr_vk_descriptor_set_layout kmr_vk_descriptor_set_layout_create(struct k
 /*
  * struct kmr_vk_descriptor_set_handle (kmsroots Vulkan Descriptor Set Handle)
  *
- * @descriptorSet - Set of descriptors. Descriptors can be defined as resources shared across draw operations.
- *                  If there is only one uniform buffer object (type of descriptor) in the shader then there is
- *                  only one descriptor in the set. If the uniform buffer object (type of descriptor) in the shader
- *                  is an array of size N. Then there are N descriptors of the same type in a given
- *                  descriptor set. Types of descriptor sets include Images, Samplers, uniform...
+ * @descriptorSet - Represents a set of descriptors. Descriptors can be defined as resources shared across
+ *                  draw operations. If there is only one uniform buffer object (type of descriptor) in the
+ *                  shader then there is only one descriptor in the set. If the uniform buffer object
+ *                  (type of descriptor) in the shader is an array of size N. Then there are N descriptors
+ *                  of the same type in a given descriptor set. Types of descriptor sets include Images,
+ *                  Samplers, uniform...
  */
 struct kmr_vk_descriptor_set_handle {
 	VkDescriptorSet descriptorSet;
@@ -1263,7 +1264,8 @@ struct kmr_vk_descriptor_set_handle {
  * struct kmr_vk_descriptor_set (kmsroots Vulkan Descriptor Set)
  *
  * members:
- * @logicalDevice        - VkDevice handle (Logical Device) associated with VkDescriptorPool which contain sets
+ * @logicalDevice        - VkDevice handle (Logical Device) associated with VkDescriptorPool which
+ *                         contains one or more descriptor sets.
  * @descriptorPool       - Pointer to a Vulkan Descriptor Pool used to allocate and dellocate descriptor sets.
  * @descriptorSetsCount  - Number of descriptor sets in the @descriptorSetHandles array
  * @descriptorSetHandles - Pointer to an array of descriptor sets
@@ -1281,14 +1283,16 @@ struct kmr_vk_descriptor_set {
  *
  * members:
  * @logicalDevice             - Must pass a valid VkDevice handle (Logical Device)
- * @descriptorPoolInfos       - Must pass a pointer to an array of descriptor sets information. With each elements information corresponding
- *                              to number of descriptors a given pool needs to allocate the and type of descriptors in the pool. Per my
- *                              understanding this is just so the VkDescriptorPool knows what to preallocate. No descriptor is assigned
- *                              to a set when the pool is created. Given an array of descriptor set layouts the actual assignment of descriptor
- *                              to descriptor set happens in the vkAllocateDescriptorSets function.
- * @descriptorPoolInfoCount   - Number of descriptor sets in pool or array size of @descriptorPoolSetsInfo
+ * @descriptorPoolInfos       - Must pass a pointer to an array of descriptor sets information. With each
+ *                              elements information corresponding to number of descriptors a given pool
+ *                              needs to allocate and the type of descriptors in the pool. Per my understanding
+ *                              this is just so the VkDescriptorPool knows what to preallocate. No descriptor
+ *                              is assigned to a set when the pool is created. Given an array of descriptor
+ *                              set layouts the actual assignment of descriptor to descriptor set happens in
+ *                              the vkAllocateDescriptorSets function.
+ * @descriptorPoolInfoCount   - Number of descriptor sets in pool or array size of @descriptorPoolInfos
  * @descriptorSetLayouts      - Pointer to an array of VkDescriptorSetLayout. Each set must contain it's own layout.
- *                              This variable must be of same size as @descriptorPoolSetsInfo
+ *                              This variable must be of same size as @descriptorPoolInfo
  * @descriptorSetLayoutCount  - Array size of @descriptorSetLayouts corresponding to the actual number of descriptor
  *                              sets in the pool.
  * @descriptorPoolCreateflags - Enables certain operations on a pool (i.e enabling freeing of descriptor sets)
@@ -1304,7 +1308,7 @@ struct kmr_vk_descriptor_set_create_info {
 
 
 /*
- * kmr_vk_descriptor_set_create: Function allocates a descriptor pool then @descriptorPoolSetsInfoCount amount of sets
+ * kmr_vk_descriptor_set_create: Function allocates a descriptor pool then @descriptorPoolInfoCount amount of sets
  *                               from descriptor pool. This is how we establishes connection between a the shader
  *                               and vulkan resources at specific graphics pipeline stages. One can think of a
  *                               descriptor pool as a range of addresses that contain segments or sub range addresses.
@@ -1314,7 +1318,7 @@ struct kmr_vk_descriptor_set_create_info {
  *                               [--------------------------------------------------------------------------------------------]
  *                                   descriptor set 1   |   descriptor set 2   |   descriptor set 3   |  descriptor set 4
  *                               [---------------------][---------------------][---------------------][-----------------------]
- *                   descriptor: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][     1     |     2     ]
+ *                  descriptors: [  1 | 2 | 3 | 4 | 5  ][  1   |   2   |  3   ][           1         ][     1     |     2     ]
  *
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_descriptor_set_create_info
