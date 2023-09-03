@@ -59,9 +59,8 @@ https://www.sphinx-doc.org/en/master/man/sphinx-build.html
 .. code-block::
 
         $ git clone https://github.com/under-view/kmsroots.git
-        $ cd kmsroots/docs
-        $ sudo pip3 install -r requirements.txt
-        $ cd ..
+        $ cd kmsroots
+        $ sudo pip3 install -r docs/requirements.txt
 
         # If no build directory exists
         $ meson setup -Ddocs=true build
