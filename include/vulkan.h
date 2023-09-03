@@ -1545,7 +1545,7 @@ VkSurfaceCapabilitiesKHR kmr_vk_get_surface_capabilities(VkPhysicalDevice physDe
  * struct kmr_vk_surface_format (kmsroots Vulkan Surface Format)
  *
  * members:
- * @surfaceFormatCount - Amount of color formats a given surface supports
+ * @surfaceFormatCount - Amount of color formats a given surface supports. Array size of @surfaceFormats.
  * @surfaceFormats     - Pointer to a array of VkSurfaceFormatKHR which stores color space and pixel format
  */
 struct kmr_vk_surface_format {
@@ -1563,7 +1563,7 @@ struct kmr_vk_surface_format {
  * @surface - Must pass a valid VkSurfaceKHR handle
  * returns:
  *	on success struct kmr_vk_surface_format
- *	on failure struct kmr_vk_surface_format { with member nulled }
+ *	on failure struct kmr_vk_surface_format { with members nulled }
  */
 struct kmr_vk_surface_format kmr_vk_get_surface_formats(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
@@ -1572,7 +1572,7 @@ struct kmr_vk_surface_format kmr_vk_get_surface_formats(VkPhysicalDevice physDev
  * struct kmr_vk_surface_present_mode (kmsroots Vulkan Surface Present Mode)
  *
  * members:
- * @presentModeCount - Amount of present modes a given surface supports
+ * @presentModeCount - Amount of present modes a given surface supports. Array size of @presentModes.
  * @presentModes     - Pointer to an array of VkPresentModeKHR which stores values of potential surface present modes
  */
 struct kmr_vk_surface_present_mode {
@@ -1592,7 +1592,7 @@ struct kmr_vk_surface_present_mode {
  * @surface - Must pass a valid VkSurfaceKHR handle
  * returns:
  *	on success struct kmr_vk_surface_present_mode
- *	on failure struct kmr_vk_surface_present_mode { with member nulled }
+ *	on failure struct kmr_vk_surface_present_mode { with members nulled }
  */
 struct kmr_vk_surface_present_mode kmr_vk_get_surface_present_modes(VkPhysicalDevice physDev, VkSurfaceKHR surface);
 
@@ -1618,9 +1618,9 @@ struct kmr_vk_phdev_format_prop {
  * @formats            - Must pass a pointer to an array of type VkFormat to get VkFormatProperties from
  * @formatCount        - Must pass the amount of elements in @formats array
  * @modifierProperties - The properties of a format when combined with a DRM format modifier
- *                       kmr_buffer_create(3) and stored in kmr_buffer.bufferObjects[0].modifier
+ *                       kmr_buffer_create() and stored in kmr_buffer.bufferObjects[0].modifier
  * @modifierCount      - Array size of @modifierProperties. Value may be acquired after a call to
- *                       kmr_buffer_create(3) and stored in kmr_buffer.bufferObjects[0].planeCount
+ *                       kmr_buffer_create() and stored in kmr_buffer.bufferObjects[0].planeCount
  */
 struct kmr_vk_phdev_format_prop_info {
 	VkPhysicalDevice                 physDev;
@@ -1662,9 +1662,10 @@ VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysica
  * kmr_vk_get_external_fd_memory_properties: Get Properties of External Memory File Descriptors
  *
  * parameters:
- * @logicalDevice   - Must pass a valid VkDevice handle (Logical Device)
- * @extenalMemoryFd - File descriptor to externally create memory.
- * @handleType      - Describes the type of file descriptor @externalMemoryFd is.
+ * @logicalDevice    - Must pass a valid VkDevice handle (Logical Device)
+ * @externalMemoryFd - File descriptor to externally create memory.
+ * @handleType       - Describes the type of file descriptor @externalMemoryFd is.
+ *
  * returns:
  *	on success VkMemoryFdPropertiesKHR { member: @memoryTypeBits }
  *	on failure UINT32_MAX

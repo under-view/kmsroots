@@ -83,6 +83,10 @@ Structs
 #. :c:struct:`kmr_vk_resource_copy_buffer_to_buffer_info`
 #. :c:struct:`kmr_vk_resource_copy_buffer_to_image_info`
 #. :c:struct:`kmr_vk_resource_copy_info`
+#. :c:struct:`kmr_vk_surface_format`
+#. :c:struct:`kmr_vk_surface_present_mode`
+#. :c:struct:`kmr_vk_phdev_format_prop`
+#. :c:struct:`kmr_vk_phdev_format_prop_info`
 
 =========
 Functions
@@ -111,6 +115,12 @@ Functions
 #. :c:func:`kmr_vk_descriptor_set_create`
 #. :c:func:`kmr_vk_sampler_create_info`
 #. :c:func:`kmr_vk_resource_copy`
+#. :c:func:`kmr_vk_get_surface_capabilities`
+#. :c:func:`kmr_vk_get_surface_formats`
+#. :c:func:`kmr_vk_get_surface_present_modes`
+#. :c:func:`kmr_vk_get_phdev_format_properties`
+#. :c:func:`kmr_vk_get_external_semaphore_properties`
+#. :c:func:`kmr_vk_get_external_fd_memory_properties`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -2260,12 +2270,209 @@ kmr_vk_resource_pipeline_barrier
 
 =========================================================================================================================================
 
+===============================
+kmr_vk_get_surface_capabilities
+===============================
+
+.. c:function:: VkSurfaceCapabilitiesKHR kmr_vk_get_surface_capabilities(VkPhysicalDevice physDev, VkSurfaceKHR surface);
+
+	Populates the `VkSurfaceCapabilitiesKHR`_ ``struct`` with supported GPU device surface capabilities.
+	Queries what a physical device is capable of supporting for any given surface.
+
+	Parameters:
+		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
+		| **surface:** Must pass a valid `VkSurfaceKHR`_ handle
+
+	Returns:
+		| Populated `VkSurfaceCapabilitiesKHR`_
+
+=========================================================================================================================================
+
+=====================
+kmr_vk_surface_format
+=====================
+
+.. c:struct:: kmr_vk_surface_format
+
+	.. c:member::
+		uint32_t           surfaceFormatCount;
+		VkSurfaceFormatKHR *surfaceFormats;
+
+	:c:member:`surfaceFormatCount`
+		| Amount of color formats a given surface supports. Array size of :c:member:`surfaceFormats`.
+
+	:c:member:`surfaceFormats`
+		| Pointer to a array of `VkSurfaceFormatKHR`_ which stores color space and pixel format
+
+==========================
+kmr_vk_get_surface_formats
+==========================
+
+.. c:function:: struct kmr_vk_surface_format kmr_vk_get_surface_formats(VkPhysicalDevice physDev, VkSurfaceKHR surface);
+
+	Creates block of memory with all supported color space's and pixel formats a given physical device
+	supports for any given surface. Application must free
+	``struct`` :c:struct:`kmr_vk_surface_format` { ``surfaceFormats`` }.
+
+	Parameters:
+		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
+		| **surface:** Must pass a valid `VkSurfaceKHR`_ handle
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_surface_format`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_surface_format` { with members nulled }
+
+=========================================================================================================================================
+
+===========================
+kmr_vk_surface_present_mode
+===========================
+
+.. c:struct:: kmr_vk_surface_present_mode
+
+	.. c:member::
+		uint32_t         presentModeCount;
+		VkPresentModeKHR *presentModes;
+
+	:c:member:`presentModeCount`
+		| Amount of present modes a given surface supports. Array size of :c:member:`presentModes`.
+
+	:c:member:`presentModes`
+		| Pointer to an array of `VkPresentModeKHR`_ which stores values of potential surface present modes.
+
+================================
+kmr_vk_get_surface_present_modes
+================================
+
+.. c:function:: struct kmr_vk_surface_present_mode kmr_vk_get_surface_present_modes(VkPhysicalDevice physDev, VkSurfaceKHR surface);
+
+	Creates block of memory with all supported presentation modes for a surface
+	Application must free ``struct`` :c:struct:`kmr_vk_surface_present_mode` { ``presentModes`` }
+	More information on presentation modes can be found here:
+	`VkPresentModeKHR`_
+
+	Parameters:
+		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
+		| **surface:** Must pass a valid `VkSurfaceKHR`_ handle
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_surface_present_mode`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_surface_present_mode` { with members nulled }
+
+=========================================================================================================================================
+
+========================
+kmr_vk_phdev_format_prop
+========================
+
+.. c:struct:: kmr_vk_phdev_format_prop
+
+	.. c:member::
+		VkFormatProperties *formatProperties;
+		uint32_t            formatPropertyCount;
+
+	:c:member:`formatProperties`
+		| Pointer to an array of type (`VkFormatProperties`_) specifying a given image format (`VkFormat`_) properties
+
+	:c:member:`formatPropertyCount`
+		| The amount of elements contained in :c:member:`formatProperties` array
+
+=============================
+kmr_vk_phdev_format_prop_info
+=============================
+
+.. c:struct:: kmr_vk_phdev_format_prop_info
+
+	.. c:member::
+		VkPhysicalDevice                 physDev;
+		VkFormat                         *formats;
+		uint32_t                         formatCount;
+		VkDrmFormatModifierPropertiesEXT *modifierProperties;
+		uint32_t                         modifierCount;
+
+	:c:member:`physDev`
+		| Must pass a valid `VkPhysicalDevice`_ handle
+
+	:c:member:`formats`
+		| Must pass a pointer to an array of type `VkFormat`_ to get `VkFormatProperties`_ from
+
+	:c:member:`formatCount`
+		| Must pass the amount of elements in :c:member:`formats` array
+
+	:c:member:`modifierProperties`
+		| The properties of a format when combined with a DRM format modifier
+		| :c:func:`kmr_buffer_create` and stored in ``struct`` :c:struct:`kmr_buffer`.bufferObjects[0].modifier
+
+	:c:member:`modifierCount`
+		| Array size of :c:member:`modifierProperties`. Value may be acquired after a call to
+		| :c:member:`kmr_buffer_create` and stored in ``struct`` :c:struct:`kmr_buffer`.bufferObjects[0].planeCount
+
+==================================
+kmr_vk_get_phdev_format_properties
+==================================
+
+.. c:function:: struct kmr_vk_phdev_format_prop kmr_vk_get_phdev_format_properties(struct kmr_vk_phdev_format_prop_info *kmrvk);
+
+	Queries a given physical device supported format properties
+	Application must free ``struct`` :c:struct:`kmr_vk_phdev_format_prop` { ``formatProperties`` }
+
+	Parameters:
+		| **kmrvk:** Pointer to a ``struct`` :c:struct:`kmr_vk_phdev_format_prop_info`
+
+	Returns:
+		| **on success:** ``struct`` :c:struct:`kmr_vk_phdev_format_prop`
+		| **on failure:** ``struct`` :c:struct:`kmr_vk_phdev_format_prop` { with members nulled }
+
+=========================================================================================================================================
+
+========================================
+kmr_vk_get_external_semaphore_properties
+========================================
+
+.. c:function:: VkExternalSemaphoreProperties kmr_vk_get_external_semaphore_properties(VkPhysicalDevice physDev, VkExternalSemaphoreHandleTypeFlagBits handleType);
+
+	Function returns a given physical device external semaphore handle capabilities.
+
+	Parameters:
+		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
+		| **handleType:**
+		| Must pass bitwise or value specifying the external semaphore
+		| handle type for which capabilities/properties will be returned.
+		| See: `VkExternalSemaphoreHandleTypeFlagBits`_
+
+	Returns:
+		| Populated `VkExternalSemaphoreProperties`_
+
+=========================================================================================================================================
+
+========================================
+kmr_vk_get_external_fd_memory_properties
+========================================
+
+.. c:function:: uint32_t kmr_vk_get_external_fd_memory_properties(VkDevice logicalDevice, int externalMemoryFd, VkExternalMemoryHandleTypeFlagBits handleType);
+
+	Get Properties of External Memory File Descriptors
+
+	Parameters:
+		| **logicalDevice:** Must pass a valid `VkDevice`_ handle (Logical Device)
+		| **externalMemoryFd:** File descriptor to externally create memory.
+		| **handleType:**
+		| Describes the type of file descriptor ``externalMemoryFd`` is.
+		| See: `VkExternalMemoryHandleTypeFlagBits`_
+
+	Returns:
+		| **on success:** `VkMemoryFdPropertiesKHR`_ { ``memoryTypeBits`` }
+		| **on failure:** UINT32_MAX
+
+=========================================================================================================================================
+
 .. _VK_NULL_HANDLE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_NULL_HANDLE.html
 .. _VkInstance: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 .. _VkInstanceCreateInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstanceCreateInfo.html
 .. _VkApplicationInfo: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkApplicationInfo.html
 .. _VkSurfaceKHR: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSurfaceKHR.html
 .. _VkSurfaceCapabilitiesKHR: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSurfaceCapabilitiesKHR.html
+.. _VkSurfaceFormatKHR: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSurfaceFormatKHR.html
 .. _VkPhysicalDevice: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDevice.html
 .. _VkPhysicalDeviceType: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
 .. _VkPhysicalDeviceFeatures: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
@@ -2325,4 +2532,11 @@ kmr_vk_resource_pipeline_barrier
 .. _VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkSamplerAddressMode.html
 .. _VkBufferCopy: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferCopy.html
 .. _VkBufferImageCopy: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBufferImageCopy.html
+.. _VkPresentModeKHR: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
+.. _VkFormat: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFormat.html
+.. _VkFormatProperties: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFormatProperties.html
+.. _VkExternalSemaphoreProperties: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkExternalSemaphoreProperties.html
+.. _VkExternalSemaphoreHandleTypeFlagBits: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkExternalSemaphoreHandleTypeFlagBits.html
+.. _VkExternalMemoryHandleTypeFlagBits: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkExternalMemoryHandleTypeFlagBits.html
+.. _VkMemoryFdPropertiesKHR: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkMemoryFdPropertiesKHR.html
 .. _Scissor: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#fragops-scissor
