@@ -1729,10 +1729,12 @@ struct kmr_vk_memory_map_info {
  * kmr_vk_memory_map: Function maps bytes of buffer data from application generated buffer
  *                    to Vulkan generated buffer. So, that the Vulkan api can have better
  *                    understanding and control over data it utilizes.
+ *
  *                    NOTE:
+ *
  *                    Use sparingly as consistently mapping and unmapping memory is very inefficient.
  *                    Try to avoid utilizing in render loops. Although that's how it's written
- *                    in multiple examples in this repo.
+ *                    in multiple kmsroots examples.
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_memory_map_info
  */

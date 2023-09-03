@@ -87,6 +87,8 @@ Structs
 #. :c:struct:`kmr_vk_surface_present_mode`
 #. :c:struct:`kmr_vk_phdev_format_prop`
 #. :c:struct:`kmr_vk_phdev_format_prop_info`
+#. :c:struct:`kmr_vk_memory_export_external_fd_info`
+#. :c:struct:`kmr_vk_memory_map_info`
 
 =========
 Functions
@@ -121,6 +123,8 @@ Functions
 #. :c:func:`kmr_vk_get_phdev_format_properties`
 #. :c:func:`kmr_vk_get_external_semaphore_properties`
 #. :c:func:`kmr_vk_get_external_fd_memory_properties`
+#. :c:func:`kmr_vk_memory_export_external_fd`
+#. :c:func:`kmr_vk_memory_map`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -2463,6 +2467,96 @@ kmr_vk_get_external_fd_memory_properties
 	Returns:
 		| **on success:** `VkMemoryFdPropertiesKHR`_ { ``memoryTypeBits`` }
 		| **on failure:** UINT32_MAX
+
+=========================================================================================================================================
+
+=====================================
+kmr_vk_memory_export_external_fd_info
+=====================================
+
+.. c:struct:: kmr_vk_memory_export_external_fd_info
+
+	.. c:member::
+		VkDevice                           logicalDevice;
+		VkDeviceMemory                     deviceMemory;
+		VkExternalMemoryHandleTypeFlagBits handleType;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+
+	:c:member:`deviceMemory`
+		| Must pass a valid `VkDeviceMemory`_ handle to retrieve POSIX file descriptor.
+
+	:c:member:`handleType`
+		| Type of file descriptor to create from :c:member:`deviceMemory`
+
+================================
+kmr_vk_memory_export_external_fd
+================================
+
+.. c:function:: int kmr_vk_memory_export_external_fd(struct kmr_vk_memory_export_external_fd_info *kmrvk);
+
+	Creates POSIX file descriptor associated with a `VkDeviceMemory`_ object.
+	`VkDeviceMemory`_ objects are associated with the actual memory whether
+	CPU or GPU visible. `VkBuffer`_, `VkImage`_ headers need to be backed by
+	`VkDeviceMemory`_. Application must call ``close(2)`` on resulting file
+	descriptor.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_memory_export_external_fd_info`
+
+	Returns:
+		| **on success:** POSIX file descriptor associated with `VkDeviceMemory`_
+		| **on failure:** -1
+
+=========================================================================================================================================
+
+======================
+kmr_vk_memory_map_info
+======================
+
+.. c:struct:: kmr_vk_memory_map_info
+
+	.. c:member::
+		VkDevice       logicalDevice;
+		VkDeviceMemory deviceMemory;
+		VkDeviceSize   deviceMemoryOffset;
+		VkDeviceSize   memoryBufferSize;
+		const void     *bufferData;
+
+	:c:member:`logicalDevice`
+		| Must pass a valid `VkDevice`_ handle (Logical Device). The device associated with :c:member:`deviceMemory`.
+
+	:c:member:`deviceMemory`
+		| Pointer to Vulkan API created memory associated with :c:member:`logicalDevice`
+
+	:c:member:`deviceMemoryOffset`
+		| Byte offset within :c:member:`deviceMemory` buffer
+
+	:c:member:`memoryBufferSize`
+		| Byte size of the data to copy over.
+
+	:c:member:`bufferData`
+		| Pointer to memory to copy into :c:member:`deviceMemory` at :c:member:`deviceMemoryOffset`
+
+=================
+kmr_vk_memory_map
+=================
+
+.. c:function:: void kmr_vk_memory_map(struct kmr_vk_memory_map_info *kmrvk);
+
+	Function maps bytes of buffer data from application generated buffer
+	to Vulkan generated buffer. So, that the Vulkan api can have better
+	understanding and control over data it utilizes.
+
+	**NOTE:**
+
+	Use sparingly as consistently mapping and unmapping memory is very inefficient.
+	Try to avoid utilizing in render loops. Although that's how it's written
+	in multiple kmsroots examples.
+
+	Parameters:
+		| **kmrvk:** pointer to a ``struct`` :c:member:`kmr_vk_memory_map_info`
 
 =========================================================================================================================================
 
