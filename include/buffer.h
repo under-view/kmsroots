@@ -27,8 +27,9 @@ enum kmr_buffer_type {
  * struct kmr_buffer_object (kmsroots Buffer Object)
  *
  * members:
- * @bo           - Handle to some GEM allocated buffer. Used to get GEM handles, DMA buffer fds (fd associate with GEM buffer),
- *                 pitches, and offsets for the buffer used by DRI device (GPU)
+ * @bo           - Handle to some GEM allocated buffer. Used to get GEM handles, DMA buffer fds
+ *                 (fd associate with GEM buffer), pitches, and offsets for the buffer used by
+ *                 DRI device (GPU)
  * @fbid         - Framebuffer ID
  * @format       - The format of an image details how each pixel color channels is laid out in
  *                 memory: (i.e. RAM, VRAM, etc...). So, basically the width in bits, type, and
@@ -36,7 +37,7 @@ enum kmr_buffer_type {
  * @modifier     - The modifier details information on how pixels should be within a buffer for different types
  *                 operations such as scan out or rendering. (i.e linear, tiled, compressed, etc...)
  *                 https://01.org/linuxgraphics/Linux-Window-Systems-with-DRM
- * @planeCount   - Number of Planer Formats. The number of @dmaBufferFds, @offsets, @pitches retrieved per plane.
+ * @planeCount   - Number of Planar Formats. The number of @dmaBufferFds, @offsets, @pitches retrieved per plane.
  *                 More information can be found https://en.wikipedia.org/wiki/Planar_(computer_graphics)
  * @pitches      - width in bytes for each plane
  * @offsets      - offset of each plane
@@ -63,8 +64,7 @@ struct kmr_buffer_object {
  * members:
  * @gbmDevice     - A handle used to allocate gbm buffers & surfaces
  * @bufferCount   - Array size of @bufferObjects
- * @bufferObjects - Stores an array of gbm_bo's and corresponding information
- *                  about the individual buffer.
+ * @bufferObjects - Stores an array of gbm_bo's and corresponding information about the individual buffer.
  */
 struct kmr_buffer {
 	struct gbm_device        *gbmDevice;
@@ -111,7 +111,7 @@ struct kmr_buffer_create_info {
 
 
 /*
- * kmr_buffer_create: Function creates multiple buffers that can store
+ * kmr_buffer_create: Function creates multiple GPU buffers
  *
  * parameters:
  * @kmsbuff - Pointer to a struct kmsbuff_create_info
