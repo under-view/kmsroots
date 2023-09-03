@@ -95,16 +95,20 @@ struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file_create(struct k
 
 
 /*
- * struct kmr_dma_buf_destroy (kmsroots DMA Buffer Destroy)
+ * struct kmr_dma_buf_export_sync_file_destroy_info (kmsroots DMA Buffer Export Sync File Descriptor Destroy Information)
  *
  * members:
  *
- * @kmr_dma_buf_export_sync_file_cnt - Must pass the amount of elements in struct kmr_dma_buf_export_sync_file
- * @kmr_dma_buf_export_sync_file     - Must pass a pointer to an array of valid struct kmr_dma_buf_export_sync_file { free'd members: @syncFileFds }
+ * @count - Must pass the amount of elements in struct kmr_dma_buf_export_sync_file
+ * @data  - Must pass a pointer to an array of valid struct kmr_dma_buf_export_sync_file
+ *          Free'd members
+ *          struct kmr_dma_buf_export_sync_file {
+ *          	int *syncFileFds;
+ *          }
  */
-struct kmr_dma_buf_destroy {
-	uint32_t                            kmr_dma_buf_export_sync_file_cnt;
-	struct kmr_dma_buf_export_sync_file *kmr_dma_buf_export_sync_file;
+struct kmr_dma_buf_export_sync_file_destroy_info {
+	uint32_t                            count;
+	struct kmr_dma_buf_export_sync_file *data;
 };
 
 
@@ -115,7 +119,7 @@ struct kmr_dma_buf_destroy {
  * @kmrdma - pointer to a struct kmr_vk_destroy contains all objects created during
  *          application lifetime in need freeing
  */
-void kmr_dma_buf_destroy(struct kmr_dma_buf_destroy *kmrdma);
+void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file_destroy_info *kmrdma);
 
 
 #endif

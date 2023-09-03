@@ -246,7 +246,7 @@ int main(void)
 	struct app_kms kms;
 	struct kmr_drm_node_destroy kmsdevd;
 	struct kmr_buffer_destroy_info kmsbuffsd;
-	struct kmr_dma_buf_destroy kmsdmabufd;
+	struct kmr_dma_buf_export_sync_file_destroy_info kmsdmabufd;
 	memset(&kms, 0, sizeof(kms));
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
@@ -406,9 +406,9 @@ exit_error:
 	appd.kmr_vk_buffer = app.kmr_vk_buffer;
 	kmr_vk_destroy(&appd);
 
-	kmsdmabufd.kmr_dma_buf_export_sync_file_cnt = ARRAY_LEN(kms.kmr_dma_buf_export_sync_file);
-	kmsdmabufd.kmr_dma_buf_export_sync_file = kms.kmr_dma_buf_export_sync_file;
-	kmr_dma_buf_destroy(&kmsdmabufd);
+	kmsdmabufd.count = ARRAY_LEN(kms.kmr_dma_buf_export_sync_file);
+	kmsdmabufd.data = kms.kmr_dma_buf_export_sync_file;
+	kmr_dma_buf_export_sync_file_destroy(&kmsdmabufd);
 
 	kmsbuffsd.count = 1;
 	kmsbuffsd.data = &kms.kmr_buffer;

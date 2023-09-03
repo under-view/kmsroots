@@ -163,15 +163,15 @@ exit_error_kmr_dma_buf_export_sync_file:
 }
 
 
-void kmr_dma_buf_destroy(struct kmr_dma_buf_destroy *kmrdma)
+void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file_destroy_info *kmrdma)
 {
 	uint32_t i, j;
 
-	for (i = 0; i < kmrdma->kmr_dma_buf_export_sync_file_cnt; i++) {
-		for (j = 0; j < kmrdma->kmr_dma_buf_export_sync_file[i].syncFileFdsCount; j++) {
-			if (kmrdma->kmr_dma_buf_export_sync_file[i].syncFileFds[j])
-				close(kmrdma->kmr_dma_buf_export_sync_file[i].syncFileFds[j]);
-			free(kmrdma->kmr_dma_buf_export_sync_file[i].syncFileFds);
+	for (i = 0; i < kmrdma->count; i++) {
+		for (j = 0; j < kmrdma->data[i].syncFileFdsCount; j++) {
+			if (kmrdma->data[i].syncFileFds[j])
+				close(kmrdma->data[i].syncFileFds[j]);
+			free(kmrdma->data[i].syncFileFds);
 		}
 	}
 }
