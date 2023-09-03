@@ -6,4 +6,5 @@
         :caption: API documentations
 
         buffer
+        dma-buf
         vulkan
