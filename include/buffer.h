@@ -114,12 +114,12 @@ struct kmr_buffer_create_info {
  * kmr_buffer_create: Function creates multiple GPU buffers
  *
  * parameters:
- * @kmsbuff - Pointer to a struct kmsbuff_create_info
+ * @kmrbuff - Pointer to a struct kmsbuff_create_info
  * returns:
  *	on success struct kmr_buffer
  *	on failure struct kmr_buffer { with members nulled }
  */
-struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff);
+struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
 
 
 /*
@@ -147,9 +147,9 @@ struct kmr_buffer_destroy {
  * kmr_buffer_destroy: Function free's all allocate objects associated with a given buffer
  *
  * parameters:
- * @kmsbuff - Pointer to a struct kmr_buffer_destroy
+ * @kmrbuff - Pointer to a struct kmr_buffer_destroy
  */
-void kmr_buffer_destroy(struct kmr_buffer_destroy *kmsbuff);
+void kmr_buffer_destroy(struct kmr_buffer_destroy *kmrbuff);
 
 
 #endif

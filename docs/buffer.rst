@@ -196,12 +196,12 @@ kmr_buffer_create_info
 kmr_buffer_create
 =================
 
-.. c:function:: struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff);
+.. c:function:: struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
 
 	Function creates multiple GPU buffers
 
 	Parameters:
-		| **kmsbuff:** Pointer to a ``struct`` :c:struct:`kmsbuff_create_info`
+		| **kmrbuff:** Pointer to a ``struct`` :c:struct:`kmr_buffer_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_buffer`

@@ -14,41 +14,41 @@
 #include "buffer.h"
 
 
-struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
+struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff)
 {
 	struct gbm_device *gbmDevice = NULL;
 	struct kmr_buffer_object *bufferObjects = NULL;
 
 	uint32_t currentBuffer, currentPlane;
 
-	if (kmsbuff->bufferType == KMR_BUFFER_GBM_BUFFER || kmsbuff->bufferType == KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
-		gbmDevice = gbm_create_device(kmsbuff->kmsfd);
+	if (kmrbuff->bufferType == KMR_BUFFER_GBM_BUFFER || kmrbuff->bufferType == KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
+		gbmDevice = gbm_create_device(kmrbuff->kmsfd);
 		if (!gbmDevice) goto exit_error_buffer_null_struct;
 
-		bufferObjects = calloc(kmsbuff->bufferCount, sizeof(struct kmr_buffer_object));
+		bufferObjects = calloc(kmrbuff->bufferCount, sizeof(struct kmr_buffer_object));
 		if (!bufferObjects) {
 			kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 			goto exit_error_buffer_gbmdev_destroy;
 		}
 	}
 
-	if (kmsbuff->bufferType == KMR_BUFFER_GBM_BUFFER) {
-		for (unsigned b = 0; b < kmsbuff->bufferCount; b++) {
-			bufferObjects[b].kmsfd = kmsbuff->kmsfd;
-			bufferObjects[b].bo = gbm_bo_create(gbmDevice, kmsbuff->width, kmsbuff->height, kmsbuff->pixelFormat, kmsbuff->gbmBoFlags);
+	if (kmrbuff->bufferType == KMR_BUFFER_GBM_BUFFER) {
+		for (unsigned b = 0; b < kmrbuff->bufferCount; b++) {
+			bufferObjects[b].kmsfd = kmrbuff->kmsfd;
+			bufferObjects[b].bo = gbm_bo_create(gbmDevice, kmrbuff->width, kmrbuff->height, kmrbuff->pixelFormat, kmrbuff->gbmBoFlags);
 			if (!bufferObjects[b].bo) {
-				kmr_utils_log(KMR_DANGER, "[x] gbm_bo_create: failed to create gbm_bo with res %u x %u", kmsbuff->width, kmsbuff->height);
+				kmr_utils_log(KMR_DANGER, "[x] gbm_bo_create: failed to create gbm_bo with res %u x %u", kmrbuff->width, kmrbuff->height);
 				goto exit_error_buffer_gbm_bo_detroy;
 			}
 		}
 	}
 
-	if (kmsbuff->bufferType == KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
-		for (unsigned b = 0; b < kmsbuff->bufferCount; b++) {
-			bufferObjects[b].kmsfd = kmsbuff->kmsfd;
-			bufferObjects[b].bo = gbm_bo_create_with_modifiers2(gbmDevice, kmsbuff->width, kmsbuff->height, kmsbuff->pixelFormat, kmsbuff->modifiers, kmsbuff->modifierCount, kmsbuff->gbmBoFlags);
+	if (kmrbuff->bufferType == KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
+		for (unsigned b = 0; b < kmrbuff->bufferCount; b++) {
+			bufferObjects[b].kmsfd = kmrbuff->kmsfd;
+			bufferObjects[b].bo = gbm_bo_create_with_modifiers2(gbmDevice, kmrbuff->width, kmrbuff->height, kmrbuff->pixelFormat, kmrbuff->modifiers, kmrbuff->modifierCount, kmrbuff->gbmBoFlags);
 			if (!bufferObjects[b].bo) {
-				kmr_utils_log(KMR_DANGER, "[x] gbm_bo_create_with_modifiers: failed to create gbm_bo with res %u x %u", kmsbuff->width, kmsbuff->height);
+				kmr_utils_log(KMR_DANGER, "[x] gbm_bo_create_with_modifiers: failed to create gbm_bo with res %u x %u", kmrbuff->width, kmrbuff->height);
 				goto exit_error_buffer_gbm_bo_detroy;
 			}
 		}
@@ -57,7 +57,7 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 	// Stores GEM handles per plane used to retrieve an FD to a DMA-BUF
 	// and retrieve a KMS framebuffer ID for modesetting purposes.
 	unsigned gemHandles[4];
-	for (currentBuffer = 0; currentBuffer < kmsbuff->bufferCount; currentBuffer++) {
+	for (currentBuffer = 0; currentBuffer < kmrbuff->bufferCount; currentBuffer++) {
 		bufferObjects[currentBuffer].planeCount = gbm_bo_get_plane_count(bufferObjects[currentBuffer].bo);
 		bufferObjects[currentBuffer].modifier = gbm_bo_get_modifier(bufferObjects[currentBuffer].bo);
 		bufferObjects[currentBuffer].format = gbm_bo_get_format(bufferObjects[currentBuffer].bo);
@@ -121,14 +121,14 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 		 * the kernel enforces that they must be the same for each plane
 		 * which is there, and 0 for everything else.
 		 */
-		if (kmsbuff->bufferType == KMR_BUFFER_GBM_BUFFER) {
+		if (kmrbuff->bufferType == KMR_BUFFER_GBM_BUFFER) {
 			struct drm_mode_fb_cmd framebuffer;
 			memset(&framebuffer,0,sizeof(struct drm_mode_fb_cmd));
 
-			framebuffer.bpp    = kmsbuff->bitsPerPixel;
-			framebuffer.depth  = kmsbuff->bitDepth;
-			framebuffer.width  = kmsbuff->width;
-			framebuffer.height = kmsbuff->height;
+			framebuffer.bpp    = kmrbuff->bitsPerPixel;
+			framebuffer.depth  = kmrbuff->bitDepth;
+			framebuffer.width  = kmrbuff->width;
+			framebuffer.height = kmrbuff->height;
 			framebuffer.pitch  = bufferObjects[currentBuffer].pitches[0];
 			framebuffer.handle = gemHandles[0];
 			bufferObjects[currentBuffer].fbid = 0;
@@ -141,19 +141,19 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 			bufferObjects[currentBuffer].fbid = framebuffer.fb_id;
 		}
 
-		if (kmsbuff->bufferType == KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
+		if (kmrbuff->bufferType == KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS) {
 			struct drm_mode_fb_cmd2 framebuffer;
 			memset(&framebuffer,0,sizeof(struct drm_mode_fb_cmd2));
 
-			framebuffer.width  = kmsbuff->width;
-			framebuffer.height = kmsbuff->height;
+			framebuffer.width  = kmrbuff->width;
+			framebuffer.height = kmrbuff->height;
 			framebuffer.pixel_format = bufferObjects[currentBuffer].format;
 			framebuffer.flags = DRM_MODE_FB_MODIFIERS;
 
 			memcpy(framebuffer.handles, gemHandles, sizeof(framebuffer.handles));
 			memcpy(framebuffer.pitches, bufferObjects[currentBuffer].pitches, sizeof(framebuffer.pitches));
 			memcpy(framebuffer.offsets, bufferObjects[currentBuffer].offsets, sizeof(framebuffer.offsets));
-			memcpy(framebuffer.modifier, kmsbuff->modifiers, sizeof(framebuffer.modifier));
+			memcpy(framebuffer.modifier, kmrbuff->modifiers, sizeof(framebuffer.modifier));
 			bufferObjects[currentBuffer].fbid = 0;
 
 			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB2, &framebuffer) == -1) {
@@ -167,10 +167,10 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmsbuff)
 
 	kmr_utils_log(KMR_SUCCESS, "Successfully create GBM buffers");
 
-	return (struct kmr_buffer) { .gbmDevice = gbmDevice, .bufferCount = kmsbuff->bufferCount, .bufferObjects = bufferObjects };
+	return (struct kmr_buffer) { .gbmDevice = gbmDevice, .bufferCount = kmrbuff->bufferCount, .bufferObjects = bufferObjects };
 
 exit_error_buffer_gbm_bo_detroy:
-	for (currentBuffer = 0; currentBuffer < kmsbuff->bufferCount; currentBuffer++) {
+	for (currentBuffer = 0; currentBuffer < kmrbuff->bufferCount; currentBuffer++) {
 		if (bufferObjects[currentBuffer].fbid)
 			ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_RMFB, &bufferObjects[currentBuffer].fbid);
 		if (bufferObjects[currentBuffer].bo)
@@ -191,24 +191,24 @@ exit_error_buffer_null_struct:
 }
 
 
-void kmr_buffer_destroy(struct kmr_buffer_destroy *kmsbuff)
+void kmr_buffer_destroy(struct kmr_buffer_destroy *kmrbuff)
 {
 	unsigned int currentIndex, i, j;
 
-	for (currentIndex = 0; currentIndex < kmsbuff->kmr_buffer_cnt; currentIndex++) {
-		for (i = 0; i < kmsbuff->kmr_buffer[currentIndex].bufferCount; i++) {
-			if (kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].fbid)
-				ioctl(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, DRM_IOCTL_MODE_RMFB, &kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].fbid);
-			if (kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].bo)
-				gbm_bo_destroy(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].bo);
+	for (currentIndex = 0; currentIndex < kmrbuff->kmr_buffer_cnt; currentIndex++) {
+		for (i = 0; i < kmrbuff->kmr_buffer[currentIndex].bufferCount; i++) {
+			if (kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].fbid)
+				ioctl(kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, DRM_IOCTL_MODE_RMFB, &kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].fbid);
+			if (kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].bo)
+				gbm_bo_destroy(kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].bo);
 
-			for (j = 0; j < kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].planeCount; j++)  {
-				if (kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j] != -1)
-					drmCloseBufferHandle(kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, kmsbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j]);
+			for (j = 0; j < kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].planeCount; j++)  {
+				if (kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j] != -1)
+					drmCloseBufferHandle(kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].kmsfd, kmrbuff->kmr_buffer[currentIndex].bufferObjects[i].dmaBufferFds[j]);
 			}
 		}
-		free(kmsbuff->kmr_buffer[currentIndex].bufferObjects);
-		if (kmsbuff->kmr_buffer[currentIndex].gbmDevice)
-			gbm_device_destroy(kmsbuff->kmr_buffer[currentIndex].gbmDevice);
+		free(kmrbuff->kmr_buffer[currentIndex].bufferObjects);
+		if (kmrbuff->kmr_buffer[currentIndex].gbmDevice)
+			gbm_device_destroy(kmrbuff->kmr_buffer[currentIndex].gbmDevice);
 	}
 }
