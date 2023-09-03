@@ -128,15 +128,15 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
  * members:
  * @count - Must pass the amount of elements in struct kmr_buffer array
  * @data  - Must pass an array of valid struct kmr_buffer
- *          {
- *		@gbmDevice,
- *		@bufferObjects,
- *		struct kmr_buffer_object {
- *			@dmaBufferFds,
- *			@bo,
- *			@fbid
- *		}
- *          }
+ *          Free’d and file descriptors closed members
+ *          struct kmr_buffer {
+ *           	struct gbm_device *gbmDevice;
+ *           	struct kmr_buffer_object *bufferObjects {
+ *           		struct gbm_bo *bo;
+ *           		unsigned dmaBufferFds[4];
+ *           		unsigned fbid;
+ *           	}
+ *           }
  */
 struct kmr_buffer_destroy_info {
 	unsigned          count;

@@ -29,12 +29,14 @@ Structs
 1. :c:struct:`kmr_buffer_object`
 #. :c:struct:`kmr_buffer`
 #. :c:struct:`kmr_buffer_create_info`
+#. :c:struct:`kmr_buffer_destroy_info`
 
 =========
 Functions
 =========
 
 1. :c:func:`kmr_buffer_create`
+#. :c:func:`kmr_buffer_destroy`
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
@@ -206,6 +208,48 @@ kmr_buffer_create
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_buffer`
 		| **on failure:** ``struct`` :c:struct:`kmr_buffer` { with members nulled }
+
+=========================================================================================================================================
+
+=======================
+kmr_buffer_destroy_info
+=======================
+
+.. c:struct:: kmr_buffer_destroy_info
+
+	.. c:member::
+		unsigned          count;
+		struct kmr_buffer *data;
+
+	:c:member:`count`
+		| Must pass the amount of elements in ``struct`` :c:struct:`kmr_buffer` array
+
+	:c:member:`data`
+		| Must pass an array of valid ``struct`` :c:struct:`kmr_buffer`
+		| Free'd and file descriptors closed members
+
+		.. code-block::
+
+			struct kmr_buffer {
+				struct gbm_device *gbmDevice;
+				struct kmr_buffer_object *bufferObjects {
+					struct gbm_bo *bo;
+					unsigned dmaBufferFds[4];
+					unsigned fbid;
+				}
+			}
+
+==================
+kmr_buffer_destroy
+==================
+
+.. c:function:: void kmr_buffer_destroy(struct kmr_buffer_destroy_info *kmrbuff);
+
+	Function free's all allocate objects and closes all file descriptors
+	associated with a given buffer.
+
+	Parameters:
+		| **kmrbuff:** Pointer to a ``struct`` :c:struct:`kmr_buffer_destroy`
 
 =========================================================================================================================================
 
