@@ -41,7 +41,7 @@ int main(void)
 
 	struct app_kms kms;
 	struct kmr_drm_node_destroy kmsdevd;
-	struct kmr_buffer_destroy kmsbuffsd;
+	struct kmr_buffer_destroy_info kmsbuffsd;
 	memset(&kms, 0, sizeof(kms));
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
@@ -67,8 +67,8 @@ exit_error:
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	kmr_vk_destroy(&appd);
 
-	kmsbuffsd.kmr_buffer_cnt = 1;
-	kmsbuffsd.kmr_buffer = &kms.kmr_buffer;
+	kmsbuffsd.count = 1;
+	kmsbuffsd.data = &kms.kmr_buffer;
 	kmr_buffer_destroy(&kmsbuffsd);
 
 	kmsdevd.kmr_drm_node = kms.kmr_drm_node;

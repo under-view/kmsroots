@@ -123,23 +123,24 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
 
 
 /*
- * struct kmr_buffer_destroy (kmsroots Buffer Destroy)
+ * struct kmr_buffer_destroy_info (kmsroots Buffer Destroy Information)
  *
  * members:
- * @kmr_buffer_cnt - Must pass the amount of elements in struct kmr_buffer array
- * @kmr_buffer     - Must pass an array of valid struct kmr_buffer
- *                   {
- *                      free'd members:
- *                               struct gbm_device reference
- *                               struct kmr_buffer_object reference
- *                               int dmaBufferFds[4] - GEM handles closed
- *                               struct gbm_bo reference
- *                               unsigned fbid - KMS fd removed
- *                   }
+ * @count - Must pass the amount of elements in struct kmr_buffer array
+ * @data  - Must pass an array of valid struct kmr_buffer
+ *          {
+ *		@gbmDevice,
+ *		@bufferObjects,
+ *		struct kmr_buffer_object {
+ *			@dmaBufferFds,
+ *			@bo,
+ *			@fbid
+ *		}
+ *          }
  */
-struct kmr_buffer_destroy {
-	unsigned          kmr_buffer_cnt;
-	struct kmr_buffer *kmr_buffer;
+struct kmr_buffer_destroy_info {
+	unsigned          count;
+	struct kmr_buffer *data;
 };
 
 
@@ -149,7 +150,7 @@ struct kmr_buffer_destroy {
  * parameters:
  * @kmrbuff - Pointer to a struct kmr_buffer_destroy
  */
-void kmr_buffer_destroy(struct kmr_buffer_destroy *kmrbuff);
+void kmr_buffer_destroy(struct kmr_buffer_destroy_info *kmrbuff);
 
 
 #endif
