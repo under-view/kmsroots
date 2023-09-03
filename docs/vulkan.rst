@@ -568,7 +568,7 @@ kmr_vk_swapchain_create_info
 		VkBool32                    clipped;
 		VkSwapchainKHR              oldSwapChain;
 
-	Most members may also be located at `VkSwapchainCreateInfoKHR`_.
+	More information can be found at `VkSwapchainCreateInfoKHR`_.
 
 	:c:member:`logicalDevice`
 		| Must pass a valid `VkDevice`_ handle (Logical Device) to associate swapchain state/data with.
@@ -723,7 +723,7 @@ kmr_vk_image_view_create_info
 		VkComponentMapping       imageViewComponents;
 		VkImageSubresourceRange  imageViewSubresourceRange;
 
-	Most members may also be located at `VkImageViewCreateInfo`_.
+	More information can be found at `VkImageViewCreateInfo`_.
 
 	:c:member:`imageViewflags`
 		| Specifies additional prameters associated with VkImageView. Normally set to zero.
@@ -770,7 +770,7 @@ kmr_vk_vimage_create_info
 		const VkSubresourceLayout *imageDmaBufferResourceInfo;
 		uint32_t                  *imageDmaBufferMemTypeBits;
 
-	Most members may also be located at `VkImageCreateInfo`_.
+	More information can be found at `VkImageCreateInfo`_.
 
 	:c:member:`imageflags`
 		| Bits used to specify additional parameters for a given `VkImage`_.
@@ -1000,7 +1000,7 @@ kmr_vk_pipeline_layout_create_info
 		uint32_t                    pushConstantRangeCount;
 		const VkPushConstantRange   *pushConstantRanges;
 
-	Most members may also be located at `VkPipelineLayoutCreateInfo`_.
+	More information can be found at `VkPipelineLayoutCreateInfo`_.
 
 	:c:member:`logicalDevice`
 		| Must pass a valid `VkDevice`_ handle (Logical Device)
@@ -1074,7 +1074,7 @@ kmr_vk_render_pass_create_info
 		uint32_t                      subpassDependencyCount;
 		const VkSubpassDependency     *subpassDependencies;
 
-	Most members may also be located at `VkRenderPassCreateInfo`_.
+	More information can be found at `VkRenderPassCreateInfo`_.
 	
 	:c:member:`logicalDevice`
 		| Must pass a valid `VkDevice`_ handle (Logical Device)
@@ -1164,7 +1164,7 @@ kmr_vk_graphics_pipeline_create_info
 		VkRenderPass                                  renderPass;
 		uint32_t                                      subpass;
 
-	Most members may also be located at `VkGraphicsPipelineCreateInfo`_.
+	More information can be found at `VkGraphicsPipelineCreateInfo`_.
 
 	:c:member:`logicalDevice`
 		| Must pass a valid `VkDevice`_ handle (Logical Device) to associate graphics pipeline
@@ -1308,7 +1308,7 @@ kmr_vk_framebuffer_create_info
 		uint32_t                         height;
 		uint32_t                         layers;
 
-	Most members may also be located at `VkFramebufferCreateInfo`_.
+	More information can be found at `VkFramebufferCreateInfo`_.
 
 	:c:member:`logicalDevice`
 		| Must pass a valid `VkDevice`_ handle (Logical Device).
@@ -2025,7 +2025,7 @@ kmr_vk_sampler_create_info
 		float                   samplerMaxLod;
 		VkBool32                samplerUnnormalizedCoordinates;
 
-	Most members may also be located at `VkSamplerCreateInfo`_.
+	More information can be found at `VkSamplerCreateInfo`_.
 
 	:c:member:`logicalDevice`
 		| Must pass a valid `VkDevice`_ handle (Logical Device)
