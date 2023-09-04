@@ -1,6 +1,6 @@
 .. default-domain:: C
 
-Vulkan
+vulkan
 ======
 
 Header: kmsroots/vulkan.h

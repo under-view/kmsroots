@@ -1,6 +1,6 @@
 .. default-domain:: C
 
-Buffer
+buffer
 ======
 
 Header: kmsroots/buffer.h
