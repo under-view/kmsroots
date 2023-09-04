@@ -29,7 +29,6 @@ Structs
 1. :c:struct:`kmr_dma_buf_import_sync_file_create_info`
 #. :c:struct:`kmr_dma_buf_export_sync_file`
 #. :c:struct:`kmr_dma_buf_export_sync_file_create_info`
-#. :c:struct:`kmr_dma_buf_export_sync_file_destroy_info`
 
 =========
 Functions
@@ -167,41 +166,25 @@ kmr_dma_buf_export_sync_file_create
 		| **on success:** ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
 		| **on failure:** ``struct`` :c:struct:`kmr_dma_buf_export_sync_file` { with members nulled }
 
-=========================================
-kmr_dma_buf_export_sync_file_destroy_info
-=========================================
-
-.. c:struct:: kmr_dma_buf_export_sync_file_destroy_info
-
-	.. c:member::
-		uint32_t                            count;
-		struct kmr_dma_buf_export_sync_file *data;
-
-	:c:member:`count`
-		| Must pass the amount of elements in ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
-
-	:c:member:`data`
-		| Must pass a pointer to an array of valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
-		| Free'd members
-
-		.. code-block::
-
-			struct kmr_dma_buf_export_sync_file {
-				int *syncFileFds;
-			}
-
 ====================================
 kmr_dma_buf_export_sync_file_destroy
 ====================================
 
-.. c:function:: void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file_destroy_info *kmrdma);
+.. c:function:: void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file *kmrdma, uint32_t count);
 
 	frees any allocated memory defined by user
 
 	Parameters:
-		| **kmrdma:**
-		| Pointer to a ``struct`` :c:struct:`kmr_dma_buff_export_sync_file_destroy_info` containing
-		| all memory created during application lifetime in need free'ing
+		| **kmrdma:** Pointer to an array of valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
+
+		.. code-block::
+
+			/* Free'd members with fd's closed */
+			struct kmr_dma_buf_export_sync_file {
+				int *syncFileFds;
+			}
+
+		| **count:** Must pass the amount of elements in ``struct`` :c:struct:`kmr_dma_buf_export_sync_file` array
 
 =========================================================================================================================================
 

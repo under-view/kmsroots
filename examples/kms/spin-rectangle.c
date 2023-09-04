@@ -272,11 +272,9 @@ int main(void)
 	struct app_kms kms;
 	struct kmr_drm_node_destroy kmsdevd;
 	struct kmr_buffer_destroy_info kmsbuffsd;
-	struct kmr_dma_buf_export_sync_file_destroy_info kmsdmabufd;
 	memset(&kms, 0, sizeof(kms));
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
-	memset(&kmsdmabufd, 0, sizeof(kmsdmabufd));
 
 	VkExtent2D extent2D;
 	VkSurfaceFormatKHR surfaceFormat;
@@ -443,9 +441,7 @@ exit_error:
 	appd.kmr_vk_descriptor_set = &app.kmr_vk_descriptor_set;
 	kmr_vk_destroy(&appd);
 
-	kmsdmabufd.count = ARRAY_LEN(kms.kmr_dma_buf_export_sync_file);
-	kmsdmabufd.data = kms.kmr_dma_buf_export_sync_file;
-	kmr_dma_buf_export_sync_file_destroy(&kmsdmabufd);
+	kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file, ARRAY_LEN(kms.kmr_dma_buf_export_sync_file));
 
 	kmsbuffsd.count = 1;
 	kmsbuffsd.data = &kms.kmr_buffer;
