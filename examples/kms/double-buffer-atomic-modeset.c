@@ -229,10 +229,8 @@ int main(void)
 
 exit_error:
 	struct kmr_drm_node_destroy kmsdevd;
-	struct kmr_buffer_destroy_info kmsbuffsd;
 	struct kmr_input_destroy kmsinputd;
 	memset(&kmsdevd, 0, sizeof(kmsdevd));
-	memset(&kmsbuffsd, 0, sizeof(kmsbuffsd));
 	memset(&kmsinputd, 0, sizeof(kmsinputd));
 
 	if (passData.pixelBuffer)
@@ -241,9 +239,7 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	kmsbuffsd.count = 1;
-	kmsbuffsd.data = &kms.kmr_buffer;
-	kmr_buffer_destroy(&kmsbuffsd);
+	kmr_buffer_destroy(&kms.kmr_buffer, 1);
 
 	kmsinputd.kmr_input = kms.kmr_input;
 	kmr_input_destroy(&kmsinputd);

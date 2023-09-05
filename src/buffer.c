@@ -191,24 +191,24 @@ exit_error_buffer_null_struct:
 }
 
 
-void kmr_buffer_destroy(struct kmr_buffer_destroy_info *kmrbuff)
+void kmr_buffer_destroy(struct kmr_buffer *kmrbuff, unsigned count)
 {
 	unsigned int currentIndex, i, j;
 
-	for (currentIndex = 0; currentIndex < kmrbuff->count; currentIndex++) {
-		for (i = 0; i < kmrbuff->data[currentIndex].bufferCount; i++) {
-			if (kmrbuff->data[currentIndex].bufferObjects[i].fbid)
-				ioctl(kmrbuff->data[currentIndex].bufferObjects[i].kmsfd, DRM_IOCTL_MODE_RMFB, &kmrbuff->data[currentIndex].bufferObjects[i].fbid);
-			if (kmrbuff->data[currentIndex].bufferObjects[i].bo)
-				gbm_bo_destroy(kmrbuff->data[currentIndex].bufferObjects[i].bo);
+	for (currentIndex = 0; currentIndex < count; currentIndex++) {
+		for (i = 0; i < kmrbuff[currentIndex].bufferCount; i++) {
+			if (kmrbuff[currentIndex].bufferObjects[i].fbid)
+				ioctl(kmrbuff[currentIndex].bufferObjects[i].kmsfd, DRM_IOCTL_MODE_RMFB, &kmrbuff[currentIndex].bufferObjects[i].fbid);
+			if (kmrbuff[currentIndex].bufferObjects[i].bo)
+				gbm_bo_destroy(kmrbuff[currentIndex].bufferObjects[i].bo);
 
-			for (j = 0; j < kmrbuff->data[currentIndex].bufferObjects[i].planeCount; j++)  {
-				if (kmrbuff->data[currentIndex].bufferObjects[i].dmaBufferFds[j] != -1)
-					drmCloseBufferHandle(kmrbuff->data[currentIndex].bufferObjects[i].kmsfd, kmrbuff->data[currentIndex].bufferObjects[i].dmaBufferFds[j]);
+			for (j = 0; j < kmrbuff[currentIndex].bufferObjects[i].planeCount; j++)  {
+				if (kmrbuff[currentIndex].bufferObjects[i].dmaBufferFds[j] != -1)
+					drmCloseBufferHandle(kmrbuff[currentIndex].bufferObjects[i].kmsfd, kmrbuff[currentIndex].bufferObjects[i].dmaBufferFds[j]);
 			}
 		}
-		free(kmrbuff->data[currentIndex].bufferObjects);
-		if (kmrbuff->data[currentIndex].gbmDevice)
-			gbm_device_destroy(kmrbuff->data[currentIndex].gbmDevice);
+		free(kmrbuff[currentIndex].bufferObjects);
+		if (kmrbuff[currentIndex].gbmDevice)
+			gbm_device_destroy(kmrbuff[currentIndex].gbmDevice);
 	}
 }

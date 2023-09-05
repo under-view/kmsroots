@@ -123,34 +123,22 @@ struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
 
 
 /*
- * struct kmr_buffer_destroy_info (kmsroots Buffer Destroy Information)
- *
- * members:
- * @count - Must pass the amount of elements in struct kmr_buffer array
- * @data  - Must pass an array of valid struct kmr_buffer
- *          Free’d and file descriptors closed members
- *          struct kmr_buffer {
- *           	struct gbm_device *gbmDevice;
- *           	struct kmr_buffer_object *bufferObjects {
- *           		struct gbm_bo *bo;
- *           		unsigned dmaBufferFds[4];
- *           		unsigned fbid;
- *           	}
- *           }
- */
-struct kmr_buffer_destroy_info {
-	unsigned          count;
-	struct kmr_buffer *data;
-};
-
-
-/*
  * kmr_buffer_destroy: Function free's all allocate objects associated with a given buffer
  *
  * parameters:
- * @kmrbuff - Pointer to a struct kmr_buffer_destroy
+ * @kmrbuff - Must pass an array of valid struct kmr_buffer
+ * 	      Free’d and file descriptors closed members
+ *	      struct kmr_buffer {
+ *	          struct gbm_device *gbmDevice;
+ *	          struct kmr_buffer_object *bufferObjects {
+ *	              struct gbm_bo *bo;
+ *	              unsigned dmaBufferFds[4];
+ *	              unsigned fbid;
+ *	          }
+ *	      }
+ * @count - Must pass the amount of elements in struct kmr_buffer array
  */
-void kmr_buffer_destroy(struct kmr_buffer_destroy_info *kmrbuff);
+void kmr_buffer_destroy(struct kmr_buffer *kmrbuff, unsigned count);
 
 
 #endif

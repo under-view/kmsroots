@@ -29,7 +29,6 @@ Structs
 1. :c:struct:`kmr_buffer_object`
 #. :c:struct:`kmr_buffer`
 #. :c:struct:`kmr_buffer_create_info`
-#. :c:struct:`kmr_buffer_destroy_info`
 
 =========
 Functions
@@ -209,27 +208,22 @@ kmr_buffer_create
 		| **on success:** ``struct`` :c:struct:`kmr_buffer`
 		| **on failure:** ``struct`` :c:struct:`kmr_buffer` { with members nulled }
 
-=========================================================================================================================================
+==================
+kmr_buffer_destroy
+==================
 
-=======================
-kmr_buffer_destroy_info
-=======================
+.. c:function:: void kmr_buffer_destroy(struct kmr_buffer *kmrbuff, unsigned count);
 
-.. c:struct:: kmr_buffer_destroy_info
+	Function free's all allocate objects and closes all file descriptors
+	associated with a given buffer.
 
-	.. c:member::
-		unsigned          count;
-		struct kmr_buffer *data;
-
-	:c:member:`count`
-		| Must pass the amount of elements in ``struct`` :c:struct:`kmr_buffer` array
-
-	:c:member:`data`
+	Parameters:
+		| **kmrbuff:**
 		| Must pass an array of valid ``struct`` :c:struct:`kmr_buffer`
-		| Free'd and file descriptors closed members
 
 		.. code-block::
 
+			/* Free'd and file descriptors closed members */
 			struct kmr_buffer {
 				struct gbm_device *gbmDevice;
 				struct kmr_buffer_object *bufferObjects {
@@ -239,22 +233,12 @@ kmr_buffer_destroy_info
 				}
 			}
 
-==================
-kmr_buffer_destroy
-==================
-
-.. c:function:: void kmr_buffer_destroy(struct kmr_buffer_destroy_info *kmrbuff);
-
-	Function free's all allocate objects and closes all file descriptors
-	associated with a given buffer.
-
-	Parameters:
-		| **kmrbuff:** Pointer to a ``struct`` :c:struct:`kmr_buffer_destroy`
+		| **count:** Must pass the amount of elements in ``struct`` :c:struct:`kmr_buffer` array
 
 =========================================================================================================================================
 
 .. _Linux Window Systems with DRM: https://01.org/linuxgraphics/Linux-Window-Systems-with-DRM
 .. _Planar Formats: https://en.wikipedia.org/wiki/Planar_(computer_graphics)
 .. _DrmMode: https://gitlab.freedesktop.org/mesa/drm/-/blob/main/include/drm/drm_mode.h#L589
-.. _gbm.h: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h#L213
+.. _gbm.h: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h
 .. _Bit depth: https://petapixel.com/2018/09/19/8-12-14-vs-16-bit-depth-what-do-you-really-need/
