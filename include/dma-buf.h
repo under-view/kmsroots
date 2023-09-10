@@ -101,12 +101,12 @@ struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file_create(struct k
  * kmr_dma_buf_export_sync_file_destroy: frees any allocated memory defined by user
  *
  * parameters:
+ * @kmrdma - Must pass a pointer to an array of valid struct kmr_dma_buf_export_sync_file
+ *           Free'd members with fd's closed
+ *           struct kmr_dma_buf_export_sync_file {
+ *          	 int *syncFileFds;
+ *           }
  * @count - Must pass the amount of elements in struct kmr_dma_buf_export_sync_file
- * @data  - Must pass a pointer to an array of valid struct kmr_dma_buf_export_sync_file
- *          Free'd members with fd's closed
- *          struct kmr_dma_buf_export_sync_file {
- *          	int *syncFileFds;
- *          }
  */
 void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file *kmrdma, uint32_t count);
 
