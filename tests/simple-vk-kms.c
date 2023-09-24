@@ -16,23 +16,31 @@ struct app_vk {
 struct app_kms {
 	struct kmr_drm_node kmr_drm_node;
 	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
-	struct kmr_buffer kmr_buffer;
+	struct kmr_buffer *kmr_buffer;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
 #endif
 };
 
 
-int create_kms_instance(struct app_kms *kms);
-int create_kms_gbm_buffers(struct app_kms *kms);
-int create_vk_instance(struct app_vk *app);
-int create_vk_device(struct app_vk *app, struct app_kms *kms);
+static int
+create_kms_instance (struct app_kms *kms);
+
+static int
+create_kms_gbm_buffers (struct app_kms *kms);
+
+static int
+create_vk_instance (struct app_vk *app);
+
+static int
+create_vk_device (struct app_vk *app, struct app_kms *kms);
 
 
 /*
  * Example code demonstrating how to use Vulkan with KMS
  */
-int main(void)
+int
+main (void)
 {
 	struct app_vk app;
 	struct kmr_vk_destroy appd;
@@ -65,7 +73,7 @@ exit_error:
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	kmr_vk_destroy(&appd);
 
-	kmr_buffer_destroy(&kms.kmr_buffer, 1);
+	kmr_buffer_destroy(kms.kmr_buffer);
 
 	kmsdevd.kmr_drm_node = kms.kmr_drm_node;
 	kmsdevd.kmr_drm_node_display_output_chain = kms.kmr_drm_node_display_output_chain;
@@ -77,7 +85,8 @@ exit_error:
 }
 
 
-int create_vk_instance(struct app_vk *app)
+static int
+create_vk_instance (struct app_vk *app)
 {
 	/*
 	 * "VK_LAYER_KHRONOS_validation"
@@ -113,7 +122,8 @@ int create_vk_instance(struct app_vk *app)
 }
 
 
-int create_kms_instance(struct app_kms *kms)
+static int
+create_kms_instance (struct app_kms *kms)
 {
 	struct kmr_drm_node_create_info kmsNodeCreateInfo;
 
@@ -145,7 +155,8 @@ int create_kms_instance(struct app_kms *kms)
 }
 
 
-int create_kms_gbm_buffers(struct app_kms *kms)
+static int
+create_kms_gbm_buffers (struct app_kms *kms)
 {
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
@@ -161,14 +172,15 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	gbmBufferInfo.modifierCount = 0;
 
 	kms->kmr_buffer = kmr_buffer_create(&gbmBufferInfo);
-	if (!kms->kmr_buffer.gbmDevice)
+	if (!kms->kmr_buffer)
 		return -1;
 
 	return 0;
 }
 
 
-int create_vk_device(struct app_vk *app, struct app_kms *kms)
+static int
+create_vk_device(struct app_vk *app, struct app_kms *kms)
 {
 	const char *device_extensions[] = {
 		"VK_KHR_timeline_semaphore",

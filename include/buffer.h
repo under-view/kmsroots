@@ -19,7 +19,8 @@
 enum kmr_buffer_type {
 	KMR_BUFFER_DUMP_BUFFER               = 0,
 	KMR_BUFFER_GBM_BUFFER                = 1,
-	KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2
+	KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2,
+	KMR_BUFFER_MAX_TYPE                  = 3,
 };
 
 
@@ -47,7 +48,7 @@ enum kmr_buffer_type {
  */
 struct kmr_buffer_object {
 	struct gbm_bo *bo;
-	unsigned      fbid;
+	int           fbid;
 	unsigned      format;
 	uint64_t      modifier;
 	unsigned      planeCount;
@@ -92,8 +93,8 @@ struct kmr_buffer {
  * @pixelFormat   - The format of an image details how each pixel color channels is laid out in
  *                  memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
  *                  ordering of each pixels color channels.
- * @modifiers     - List of drm format modifier
  * @modifierCount - Number of drm format modifiers passed
+ * @modifiers     - List of drm format modifier
  */
 struct kmr_buffer_create_info {
 	enum kmr_buffer_type bufferType;
@@ -105,8 +106,8 @@ struct kmr_buffer_create_info {
 	unsigned int         bitsPerPixel;
 	unsigned int         gbmBoFlags;
 	unsigned int         pixelFormat;
-	uint64_t             *modifiers;
 	unsigned int         modifierCount;
+	uint64_t             *modifiers;
 };
 
 
@@ -114,31 +115,32 @@ struct kmr_buffer_create_info {
  * kmr_buffer_create: Function creates multiple GPU buffers
  *
  * parameters:
- * @kmrbuff - Pointer to a struct kmsbuff_create_info
+ * @bufferInfo - Pointer to a struct kmr_buffer_create_info
  * returns:
- *	on success struct kmr_buffer
- *	on failure struct kmr_buffer { with members nulled }
+ *	on success Pointer to a struct kmr_buffer
+ *	on failure NULL
  */
-struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
+struct kmr_buffer *
+kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo);
 
 
 /*
  * kmr_buffer_destroy: Function free's all allocate objects associated with a given buffer
  *
  * parameters:
- * @kmrbuff - Must pass an array of valid struct kmr_buffer
- * 	      Free’d and file descriptors closed members
- *	      struct kmr_buffer {
- *	          struct gbm_device *gbmDevice;
- *	          struct kmr_buffer_object *bufferObjects {
- *	              struct gbm_bo *bo;
- *	              unsigned dmaBufferFds[4];
- *	              unsigned fbid;
- *	          }
- *	      }
- * @count - Must pass the amount of elements in struct kmr_buffer array
+ * @buffer - Must pass a valid pointer to a struct kmr_buffer
+ * 	     Free’d and file descriptors closed members
+ *	     struct kmr_buffer {
+ *	         struct gbm_device *gbmDevice;
+ *	         struct kmr_buffer_object *bufferObjects {
+ *	             struct gbm_bo *bo;
+ *	             unsigned dmaBufferFds[4];
+ *	             unsigned fbid;
+ *	         }
+ *	     }
  */
-void kmr_buffer_destroy(struct kmr_buffer *kmrbuff, unsigned count);
+void
+kmr_buffer_destroy (struct kmr_buffer *buffer);
 
 
 #endif

@@ -20,6 +20,10 @@
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 2
 #define MAX_EPOLL_EVENTS 2
 
+/***************************
+ * Structs used by example *
+ ***************************/
+
 struct app_vk {
 	VkInstance instance;
 	struct kmr_vk_phdev kmr_vk_phdev;
@@ -56,7 +60,7 @@ struct app_kms {
 	struct kmr_drm_node kmr_drm_node;
 	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
 	struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request;
-	struct kmr_buffer kmr_buffer;
+	struct kmr_buffer *kmr_buffer;
 	struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
 	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
@@ -77,11 +81,17 @@ struct app_vertex_data {
 };
 
 
+/***********
+ * Globals *
+ ***********/
+static volatile sig_atomic_t prun = 1;
+
+
 /*
  * Comments define how to draw rectangle without index buffer
  * Actual array itself draws triangles utilizing index buffers.
  */
-const struct app_vertex_data meshData[2][4] = {
+static const struct app_vertex_data meshData[2][4] = {
 	{
 		{{-0.1f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Vertex 0. Top-right- red
 		{{-0.1f,0.5f}, {0.0f, 1.0f, 0.0f}},   // Vertex 1. Bottom-right - green
@@ -105,35 +115,74 @@ const struct app_vertex_data meshData[2][4] = {
  * Defines what vertices in vertex array are reusable
  * inorder to draw a rectangle
  */
-const uint16_t indices[] = {
+static const uint16_t indices[] = {
 	0, 1, 2, 2, 3, 0
 };
 
 
-static volatile sig_atomic_t prun = 1;
+/***********************
+ * Function Prototypes *
+ ***********************/
+static int
+create_kms_instance (struct app_kms *kms);
 
+static int
+create_kms_gbm_buffers (struct app_kms *kms);
 
-static void run_stop(int UNUSED signum)
+static int
+create_kms_set_crtc (struct app_kms *kms);
+
+static int
+create_kms_atomic_request_instance (struct app_vk_kms *passData,
+                                    uint8_t *cbuf,
+                                    int *fbid,
+                                    volatile bool *running);
+
+static int
+create_vk_instance (struct app_vk *app);
+
+static int
+create_vk_device (struct app_vk *app, struct app_kms *kms);
+
+static int
+create_vk_swapchain_images (struct app_vk *app,
+                            struct app_kms *kms,
+                            VkSurfaceFormatKHR *surfaceFormat);
+
+static int
+create_vk_shader_modules (struct app_vk *app);
+
+static int
+create_vk_buffers (struct app_vk *app);
+
+static int
+create_vk_graphics_pipeline (struct app_vk *app,
+                             VkSurfaceFormatKHR *surfaceFormat,
+                             VkExtent2D extent2D);
+
+static int
+create_vk_framebuffers (struct app_vk *app, VkExtent2D extent2D);
+
+static int
+create_vk_command_buffers (struct app_vk *app);
+
+static int
+create_vk_sync_objs (struct app_vk *app);
+
+static int
+record_vk_draw_commands(struct app_vk *app,
+                        uint32_t swapchainImageIndex,
+                        VkExtent2D extent2D);
+
+/************************************
+ * Start of function implementation *
+ ************************************/
+
+static void
+run_stop (int UNUSED signum)
 {
 	prun = 0;
 }
-
-
-int create_kms_instance(struct app_kms *kms);
-int create_kms_gbm_buffers(struct app_kms *kms);
-int create_kms_set_crtc(struct app_kms *kms);
-int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, volatile bool *running);
-int create_vk_instance(struct app_vk *app);
-int create_vk_device(struct app_vk *app, struct app_kms *kms);
-int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat);
-int create_vk_depth_image(struct app_vk *app, VkExtent2D extent2D);
-int create_vk_shader_modules(struct app_vk *app);
-int create_vk_buffers(struct app_vk *app);
-int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
-int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D);
-int create_vk_command_buffers(struct app_vk *app);
-int create_vk_sync_objs(struct app_vk *app);
-int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
 /*
@@ -146,7 +195,8 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
  *    Which leads to a page-flip.
  * 4. Update choosen buffer and Redo steps 1-3.
  */
-void render(volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
+static void
+render (volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 {
 	struct app_vk_kms *passData = (struct app_vk_kms *) data;
 	struct app_vk *app = passData->app_vk;
@@ -161,8 +211,8 @@ void render(volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 
 	// Write to buffer that'll be displayed at function end
 	// acquire Next Image (TODO: Implement own version)
-	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer.bufferCount;
-	*fbid = kms->kmr_buffer.bufferObjects[*imageIndex].fbid;
+	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer->bufferCount;
+	*fbid = kms->kmr_buffer->bufferObjects[*imageIndex].fbid;
 
 	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
 
@@ -219,7 +269,8 @@ void render(volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 /*
  * Example code demonstrating how use Vulkan with KMS
  */
-int main(void)
+int
+main (void)
 {
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
 		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
@@ -404,7 +455,7 @@ exit_error:
 
 	kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file, ARRAY_LEN(kms.kmr_dma_buf_export_sync_file));
 
-	kmr_buffer_destroy(&kms.kmr_buffer, 1);
+	kmr_buffer_destroy(kms.kmr_buffer);
 
 	kmsdevd.kmr_drm_node = kms.kmr_drm_node;
 	kmsdevd.kmr_drm_node_display_output_chain = kms.kmr_drm_node_display_output_chain;
@@ -417,7 +468,8 @@ exit_error:
 }
 
 
-int create_kms_instance(struct app_kms *kms)
+static int
+create_kms_instance (struct app_kms *kms)
 {
 	struct kmr_drm_node_create_info kmsNodeCreateInfo;
 
@@ -449,7 +501,8 @@ int create_kms_instance(struct app_kms *kms)
 }
 
 
-int create_kms_gbm_buffers(struct app_kms *kms)
+static int
+create_kms_gbm_buffers (struct app_kms *kms)
 {
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
@@ -465,19 +518,20 @@ int create_kms_gbm_buffers(struct app_kms *kms)
 	gbmBufferInfo.modifierCount = 0;
 
 	kms->kmr_buffer = kmr_buffer_create(&gbmBufferInfo);
-	if (!kms->kmr_buffer.gbmDevice)
+	if (!kms->kmr_buffer)
 		return -1;
 
 	return 0;
 }
 
 
-int create_kms_set_crtc(struct app_kms *kms)
+static int
+create_kms_set_crtc (struct app_kms *kms)
 {
 	struct kmr_drm_node_display_mode_info nextImageInfo;
 
-	for (uint8_t i = 0; i < kms->kmr_buffer.bufferCount; i++) {
-		nextImageInfo.fbid = kms->kmr_buffer.bufferObjects[i].fbid;
+	for (uint8_t i = 0; i < kms->kmr_buffer->bufferCount; i++) {
+		nextImageInfo.fbid = kms->kmr_buffer->bufferObjects[i].fbid;
 		nextImageInfo.displayChain = &kms->kmr_drm_node_display_output_chain;
 		if (kmr_drm_node_display_mode_set(&nextImageInfo))
 			return -1;
@@ -487,11 +541,15 @@ int create_kms_set_crtc(struct app_kms *kms)
 }
 
 
-int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbuf, int *fbid, volatile bool *running)
+static int
+create_kms_atomic_request_instance(struct app_vk_kms *passData,
+                                   uint8_t *cbuf,
+                                   int *fbid,
+                                   volatile bool *running)
 {
 	struct app_kms *kms = passData->app_kms;
 
-	*fbid = kms->kmr_buffer.bufferObjects[*cbuf].fbid;
+	*fbid = kms->kmr_buffer->bufferObjects[*cbuf].fbid;
 
 	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
 	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display_output_chain.kmsfd;
@@ -510,7 +568,8 @@ int create_kms_atomic_request_instance(struct app_vk_kms *passData, uint8_t *cbu
 }
 
 
-int create_vk_instance(struct app_vk *app)
+static int
+create_vk_instance (struct app_vk *app)
 {
 	/*
 	 * "VK_LAYER_KHRONOS_validation"
@@ -543,7 +602,8 @@ int create_vk_instance(struct app_vk *app)
 }
 
 
-int create_vk_device(struct app_vk *app, struct app_kms *kms)
+static int
+create_vk_device (struct app_vk *app, struct app_kms *kms)
 {
 	const char *deviceExtensions[] = {
 		"VK_KHR_timeline_semaphore",
@@ -595,19 +655,22 @@ int create_vk_device(struct app_vk *app, struct app_kms *kms)
 }
 
 
-int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfaceFormatKHR *surfaceFormat)
+static int
+create_vk_swapchain_images (struct app_vk *app,
+                            struct app_kms *kms,
+                            VkSurfaceFormatKHR *surfaceFormat)
 {
 	uint16_t width, height;
-	struct kmr_buffer bufferHandle = kms->kmr_buffer;
+	struct kmr_buffer *bufferHandle = kms->kmr_buffer;
 	struct kmr_drm_node_display_output_chain displayOutputHandle = kms->kmr_drm_node_display_output_chain;
 
-	uint8_t curImage, plane, imageCount = bufferHandle.bufferCount;
+	uint8_t curImage, plane, imageCount = bufferHandle->bufferCount;
 	VkSubresourceLayout *imageDmaBufferResourceInfos = NULL;
 	uint32_t *imageDmaBufferMemTypeBits = NULL;
 
 	width = displayOutputHandle.width;
 	height = displayOutputHandle.height;
-	surfaceFormat->format = kmr_pixel_format_convert_name(KMR_PIXEL_FORMAT_CONV_GBM_TO_VK, bufferHandle.bufferObjects[0].format);
+	surfaceFormat->format = kmr_pixel_format_convert_name(KMR_PIXEL_FORMAT_CONV_GBM_TO_VK, bufferHandle->bufferObjects[0].format);
 	if (surfaceFormat->format == UINT32_MAX)
 		return -1;
 
@@ -620,11 +683,13 @@ int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfac
 		imageViewCreateInfos[curImage].imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageViewCreateInfos[curImage].imageViewFormat = surfaceFormat->format;
 		imageViewCreateInfos[curImage].imageViewComponents = (VkComponentMapping) { .r = 0, .g = 0, .b = 0, .a = 0 };
-		imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
-		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel = 0;                       // Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
-		imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount = 1;                         // Number of mipmap levels to view
-		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer = 0;                     // Start array level to view from
-		imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount = 1;                         // Number of array levels to view
+		// Which aspect of image to view (i.e VK_IMAGE_ASPECT_COLOR_BIT view color)
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		// Start mipmap level to view from (https://en.wikipedia.org/wiki/Mipmap)
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseMipLevel = 0;
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.levelCount = 1;          // Number of mipmap levels to view
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.baseArrayLayer = 0;      // Start array level to view from
+		imageViewCreateInfos[curImage].imageViewSubresourceRange.layerCount = 1;          // Number of array levels to view
 
 		imageCreateInfos[curImage].imageflags = 0;
 		imageCreateInfos[curImage].imageType = VK_IMAGE_TYPE_2D;
@@ -639,20 +704,21 @@ int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfac
 		imageCreateInfos[curImage].imageQueueFamilyIndexCount = 0;
 		imageCreateInfos[curImage].imageQueueFamilyIndices = NULL;
 		imageCreateInfos[curImage].imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageCreateInfos[curImage].imageDmaBufferFormatModifier = bufferHandle.bufferObjects[curImage].modifier;
-		imageCreateInfos[curImage].imageDmaBufferCount = bufferHandle.bufferObjects[curImage].planeCount;
-		imageCreateInfos[curImage].imageDmaBufferFds = bufferHandle.bufferObjects[curImage].dmaBufferFds;
+		imageCreateInfos[curImage].imageDmaBufferFormatModifier = bufferHandle->bufferObjects[curImage].modifier;
+		imageCreateInfos[curImage].imageDmaBufferCount = bufferHandle->bufferObjects[curImage].planeCount;
+		imageCreateInfos[curImage].imageDmaBufferFds = bufferHandle->bufferObjects[curImage].dmaBufferFds;
 
 		imageDmaBufferMemTypeBits = alloca(imageCreateInfos[curImage].imageDmaBufferCount * sizeof(uint32_t));
 		imageDmaBufferResourceInfos = alloca(imageCreateInfos[curImage].imageDmaBufferCount * sizeof(VkSubresourceLayout));
 
 		for (plane = 0; plane < imageCreateInfos[curImage].imageDmaBufferCount; plane++) {
-			imageDmaBufferMemTypeBits[plane] = kmr_vk_get_external_fd_memory_properties(app->kmr_vk_lgdev.logicalDevice,
-			                                                                            bufferHandle.bufferObjects[curImage].dmaBufferFds[plane],
-												    VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
+			imageDmaBufferMemTypeBits[plane] = \
+				kmr_vk_get_external_fd_memory_properties(app->kmr_vk_lgdev.logicalDevice,
+				                                         bufferHandle->bufferObjects[curImage].dmaBufferFds[plane],
+				                                         VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
 
-			imageDmaBufferResourceInfos[plane].offset = bufferHandle.bufferObjects[curImage].offsets[plane];
-			imageDmaBufferResourceInfos[plane].rowPitch = bufferHandle.bufferObjects[curImage].pitches[plane];
+			imageDmaBufferResourceInfos[plane].offset = bufferHandle->bufferObjects[curImage].offsets[plane];
+			imageDmaBufferResourceInfos[plane].rowPitch = bufferHandle->bufferObjects[curImage].pitches[plane];
 			imageDmaBufferResourceInfos[plane].size = 0;
 			imageDmaBufferResourceInfos[plane].arrayPitch = 0;
 			imageDmaBufferResourceInfos[plane].depthPitch = 0;
@@ -680,7 +746,8 @@ int create_vk_swapchain_images(struct app_vk *app, struct app_kms *kms, VkSurfac
 }
 
 
-int create_vk_shader_modules(struct app_vk *app)
+static int
+create_vk_shader_modules (struct app_vk *app)
 {
 	int ret = 0;
 
@@ -774,7 +841,8 @@ exit_distroy_shader:
 }
 
 
-int create_vk_buffers(struct app_vk *app)
+static int
+create_vk_buffers (struct app_vk *app)
 {
 	uint8_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
 
@@ -788,7 +856,8 @@ int create_vk_buffers(struct app_vk *app)
 	vkVertexBufferCreateInfo.bufferFlags = 0;
 	vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(meshData);
 	vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
-	                                        VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	                                        VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? \
+	                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	vkVertexBufferCreateInfo.queueFamilyIndexCount = 0;
 	vkVertexBufferCreateInfo.queueFamilyIndices = NULL;
@@ -822,7 +891,9 @@ int create_vk_buffers(struct app_vk *app)
 		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 		vkVertexBufferGPUCreateInfo.bufferFlags = 0;
 		vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
-		vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+		                                          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+							  VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		vkVertexBufferGPUCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		vkVertexBufferGPUCreateInfo.queueFamilyIndexCount = 0;
 		vkVertexBufferGPUCreateInfo.queueFamilyIndices = NULL;
@@ -857,7 +928,10 @@ int create_vk_buffers(struct app_vk *app)
 }
 
 
-int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D)
+static int
+create_vk_graphics_pipeline (struct app_vk *app,
+                             VkSurfaceFormatKHR *surfaceFormat,
+                             VkExtent2D extent2D)
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1074,7 +1148,8 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 }
 
 
-int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
+static int
+create_vk_framebuffers (struct app_vk *app, VkExtent2D extent2D)
 {
 	uint8_t framebufferCount = app->kmr_vk_image.imageCount;
 	struct kmr_vk_framebuffer_images framebufferImages[framebufferCount];
@@ -1101,7 +1176,8 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 }
 
 
-int create_vk_command_buffers(struct app_vk *app)
+static int
+create_vk_command_buffers (struct app_vk *app)
 {
 	struct kmr_vk_command_buffer_create_info commandBufferCreateInfo;
 	commandBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
@@ -1116,7 +1192,8 @@ int create_vk_command_buffers(struct app_vk *app)
 }
 
 
-int create_vk_sync_objs(struct app_vk *app)
+static int
+create_vk_sync_objs (struct app_vk *app)
 {
 	struct kmr_vk_sync_obj_create_info syncObjsCreateInfo;
 	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
@@ -1155,7 +1232,10 @@ int create_vk_sync_objs(struct app_vk *app)
 }
 
 
-int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D)
+static int
+record_vk_draw_commands (struct app_vk *app,
+                         uint32_t swapchainImageIndex,
+                         VkExtent2D extent2D)
 {
 	struct kmr_vk_command_buffer_record_info commandBufferRecordInfo;
 	commandBufferRecordInfo.commandBufferCount = app->kmr_vk_command_buffer.commandBufferCount;

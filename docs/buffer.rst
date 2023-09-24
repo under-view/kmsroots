@@ -50,6 +50,7 @@ kmr_buffer_type
 		KMR_BUFFER_DUMP_BUFFER
 		KMR_BUFFER_GBM_BUFFER
 		KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS
+		KMR_BUFFER_MAX_TYPE
 
 	Buffer allocation options used by :c:func:`kmr_buffer_create`
 
@@ -61,6 +62,9 @@ kmr_buffer_type
 
 	:c:macro:`KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS`
 		| Value set to ``2``
+
+	:c:macro:`KMR_BUFFER_MAX_TYPE`
+		| Value set to ``3``
 
 =================
 kmr_buffer_object
@@ -152,8 +156,8 @@ kmr_buffer_create_info
 		unsigned int         bitsPerPixel;
 		unsigned int         gbmBoFlags;
 		unsigned int         pixelFormat;
-		uint64_t             *modifiers;
 		unsigned int         modifierCount;
+		uint64_t             *modifiers;
 
 	:c:member:`bufferType`
 		| Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
@@ -187,39 +191,39 @@ kmr_buffer_create_info
 		| memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
 		| ordering of each pixels color channels.
 
-	:c:member:`modifiers`
-		| List of drm format modifier
-
 	:c:member:`modifierCount`
 		| Number of drm format modifiers passed
+
+	:c:member:`modifiers`
+		| List of drm format modifiers
 
 =================
 kmr_buffer_create
 =================
 
-.. c:function:: struct kmr_buffer kmr_buffer_create(struct kmr_buffer_create_info *kmrbuff);
+.. c:function:: struct kmr_buffer * kmr_buffer_create(struct kmr_buffer_create_info *bufferInfo);
 
 	Function creates multiple GPU buffers
 
 	Parameters:
-		| **kmrbuff:** Pointer to a ``struct`` :c:struct:`kmr_buffer_create_info`
+		| **bufferInfo:** Pointer to a ``struct`` :c:struct:`kmr_buffer_create_info`
 
 	Returns:
-		| **on success:** ``struct`` :c:struct:`kmr_buffer`
-		| **on failure:** ``struct`` :c:struct:`kmr_buffer` { with members nulled }
+		| **on success:** Pointer to a ``struct`` :c:struct:`kmr_buffer`
+		| **on failure:** ``NULL``
 
 ==================
 kmr_buffer_destroy
 ==================
 
-.. c:function:: void kmr_buffer_destroy(struct kmr_buffer *kmrbuff, unsigned count);
+.. c:function:: void kmr_buffer_destroy(struct kmr_buffer *buffer);
 
 	Function free's all allocate objects and closes all file descriptors
 	associated with a given buffer.
 
 	Parameters:
-		| **kmrbuff:**
-		| Must pass an array of valid ``struct`` :c:struct:`kmr_buffer`
+		| **buffer:**
+		| Must pass a valid pointer to a ``struct`` :c:struct:`kmr_buffer`
 
 		.. code-block::
 
@@ -232,8 +236,6 @@ kmr_buffer_destroy
 					unsigned fbid;
 				}
 			}
-
-		| **count:** Must pass the amount of elements in ``struct`` :c:struct:`kmr_buffer` array
 
 =========================================================================================================================================
 
