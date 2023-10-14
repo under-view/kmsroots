@@ -15,6 +15,10 @@
 #include "buffer.h"
 
 
+/*****************************************
+ * START OF create_gbm_buffers FUNCTIONS *
+ *****************************************/
+
 /*
  * Type defines to shorten code blocks.
  * Hopefully makes it more readable in the future.
@@ -233,6 +237,13 @@ create_gbm_buffers (struct kmr_buffer *buffer,
 	return 0;
 }
 
+/***************************************
+ * END OF create_gbm_buffers FUNCTIONS *
+ ***************************************/
+
+/**************************************************
+ * START OF kmr_buffer_{create,destroy} FUNCTIONS *
+ **************************************************/
 
 struct kmr_buffer *
 kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo)
@@ -301,3 +312,7 @@ kmr_buffer_destroy (struct kmr_buffer *buffer)
 	free(buffer->bufferObjects);
 	free(buffer);
 }
+
+/************************************************
+ * END OF kmr_buffer_{create,destroy} FUNCTIONS *
+ ************************************************/
