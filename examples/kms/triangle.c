@@ -62,7 +62,7 @@ struct app_kms {
 	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
 	struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request;
 	struct kmr_buffer *kmr_buffer;
-	struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
+	struct kmr_dma_buf_export_sync_file *kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
 	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
@@ -401,6 +401,7 @@ main (void)
 	}
 
 exit_error:
+	unsigned int destroyLoop;
 
 	/*
 	 * Let the api know of what addresses to free and fd's to close
@@ -428,7 +429,8 @@ exit_error:
 	appd.kmr_vk_buffer = app.kmr_vk_buffer;
 	kmr_vk_destroy(&appd);
 
-	kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file, ARRAY_LEN(kms.kmr_dma_buf_export_sync_file));
+	for (destroyLoop = 0; destroyLoop < ARRAY_LEN(kms.kmr_dma_buf_export_sync_file); destroyLoop++)
+		kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file[destroyLoop]);
 
 	kmr_buffer_destroy(kms.kmr_buffer);
 

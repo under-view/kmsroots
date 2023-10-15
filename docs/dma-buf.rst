@@ -62,7 +62,7 @@ kmr_dma_buf_sync_flags
 		| Value set to ``2``
 
 	:c:macro:`KMR_DMA_BUF_SYNC_RW`
-		| Value set to ``2``
+		| Value set to ``3``
 
 =========================================================================================================================================
 
@@ -87,7 +87,8 @@ kmr_dma_buf_import_sync_file_create_info
 	:c:member:`syncFileFd`
 		| File descriptor to a graphics API synchronization primitive.
 		| May be acquired in Vulkan via (`VkSemaphoreGetFdInfoKHR`_ -> `vkGetSemaphoreFdKHR`_) or
-		| by making a call to :c:func:`kmr_vk_sync_obj_export_external_sync_fd`
+		| by making a call to :c:func:`kmr_vk_sync_obj_export_external_sync_fd`. Will be closed on
+		| success or failure.
 
 	:c:member:`syncFlags`
 		| Flags used to determine permission allowed after import
@@ -96,13 +97,13 @@ kmr_dma_buf_import_sync_file_create_info
 kmr_dma_buf_import_sync_file_create
 ===================================
 
-.. c:function::  int kmr_dma_buf_import_sync_file_create(struct kmr_dma_buf_import_sync_file_create_info *kmrdma);
+.. c:function::  int kmr_dma_buf_import_sync_file_create(struct kmr_dma_buf_import_sync_file_create_info *importSyncFileInfo);
 
-	Import single graphics API synchronization primitive file descriptor into an array of DMA-BUF
-	file descriptors with ``DMA_BUF_IOCTL_IMPORT_SYNC_FILE``.
+	Import a single file descriptor to a graphics API synchronization primitive
+	into an array of DMA-BUF file descriptors with ``drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)``.
 
 	Parameters:
-		| **kmrdma:** pointer to a ``struct`` :c:struct:`kmr_dma_buf_import_sync_file_create_info`
+		| **importSyncFileInfo:** pointer to a ``struct`` :c:struct:`kmr_dma_buf_import_sync_file_create_info`
 
 	Returns:
 		| **on success:** 0
@@ -124,9 +125,9 @@ kmr_dma_buf_export_sync_file
 		| Array size of :c:member:`syncFileFds`
 
 	:c:member:`syncFileFds`
-		| Pointer to an array of file descriptors of size :c:member:`syncFileFdsCount`.
-		| These file descriptors make be import to a graphics API primitive.
-		| In Vulkan you can imported via
+		| Pointer to an array of file descriptors used for synchronization
+		| of size :c:member:`syncFileFdsCount`. These file descriptors may
+		| be imported to a graphics API primitive. In Vulkan you can import via
 		| (`VkImportSemaphoreFdInfoKHR`_ -> `vkImportSemaphoreFdKHR`_)
 		| or by making a call to :c:func:`kmr_vk_sync_obj_import_external_sync_fd`
 
@@ -145,7 +146,8 @@ kmr_dma_buf_export_sync_file_create_info
 		| Array size of :c:member:`dmaBufferFds`
 
 	:c:member:`dmaBufferFds`
-		| Pointer to an array of file descriptors to DMA-BUF's of size :c:member:`dmaBufferFdsCount`.
+		| Pointer to an array of file descriptors. These file descriptors point to
+		| DMA-BUF's of size :c:member:`dmaBufferFdsCount`.
 
 	:c:member:`syncFlags`
 		| Flags used to determine permission allowed by file descriptor after export
@@ -154,28 +156,28 @@ kmr_dma_buf_export_sync_file_create_info
 kmr_dma_buf_export_sync_file_create
 ===================================
 
-.. c:function:: struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file_create(struct kmr_dma_buf_export_sync_file_create_info *kmrdma);
+.. c:function:: struct kmr_dma_buf_export_sync_file *kmr_dma_buf_export_sync_file_create(struct kmr_dma_buf_export_sync_file_create_info *exportSyncFileInfo);
 
 	Exports an array of synchronization file descriptors from an array of
-	DMA-BUF file descriptors with ``DMA_BUF_IOCTL_EXPORT_SYNC_FILE``.
+	DMA-BUF file descriptors with ``drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)``.
 
 	Parameters:
-		| **kmrdma:** pointer to a ``struct`` :c:struct:`kmr_dma_buf_export_sync_file_create_info`
+		| **exportSyncFileInfo:** pointer to a ``struct`` :c:struct:`kmr_dma_buf_export_sync_file_create_info`
 
 	Returns:
-		| **on success:** ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
-		| **on failure:** ``struct`` :c:struct:`kmr_dma_buf_export_sync_file` { with members nulled }
+		| **on success:** Pointer to a ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
+		| **on failure:** NULL
 
 ====================================
 kmr_dma_buf_export_sync_file_destroy
 ====================================
 
-.. c:function:: void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file *kmrdma, uint32_t count);
+.. c:function:: void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file *exportSyncFile);
 
-	frees any allocated memory defined by user
+	Frees any allocated memory defined by user
 
 	Parameters:
-		| **kmrdma:** Pointer to an array of valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
+		| **exportSyncFile:** Pointer to a valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
 
 		.. code-block::
 
@@ -183,8 +185,6 @@ kmr_dma_buf_export_sync_file_destroy
 			struct kmr_dma_buf_export_sync_file {
 				int *syncFileFds;
 			}
-
-		| **count:** Must pass the amount of elements in ``struct`` :c:struct:`kmr_dma_buf_export_sync_file` array
 
 =========================================================================================================================================
 

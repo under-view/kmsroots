@@ -73,7 +73,7 @@ struct app_kms {
 	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
 	struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request;
 	struct kmr_buffer *kmr_buffer;
-	struct kmr_dma_buf_export_sync_file kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
+	struct kmr_dma_buf_export_sync_file *kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
 	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
@@ -466,11 +466,14 @@ main (void)
 	}
 
 exit_error:
-	free(app.modelTransferSpace.alignedBufferMemory);
+	unsigned int destroyLoop;
 
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
+
+	free(app.modelTransferSpace.alignedBufferMemory);
+
 	appd.instance = app.instance;
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
@@ -498,7 +501,8 @@ exit_error:
 	appd.kmr_vk_descriptor_set = &app.kmr_vk_descriptor_set;
 	kmr_vk_destroy(&appd);
 
-	kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file, ARRAY_LEN(kms.kmr_dma_buf_export_sync_file));
+	for (destroyLoop = 0; destroyLoop < ARRAY_LEN(kms.kmr_dma_buf_export_sync_file); destroyLoop++)
+		kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file[destroyLoop]);
 
 	kmr_buffer_destroy(kms.kmr_buffer);
 
