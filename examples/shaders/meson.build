@@ -32,6 +32,8 @@ foreach shader : shaders
   spriv_byte_code += [gen_spriv_byte_code.process(infile, extra_args: outfile)]
 endforeach
 
+# Make sure if we edit one of the
+# shaders that we are able to rebuild them
 index=0
 foreach shader : shaders
   if (index == shaders.length()) # Fixes array out of bounds issues
