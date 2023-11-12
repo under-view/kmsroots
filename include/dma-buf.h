@@ -114,5 +114,4 @@ kmr_dma_buf_export_sync_file_create (struct kmr_dma_buf_export_sync_file_create_
 void
 kmr_dma_buf_export_sync_file_destroy (struct kmr_dma_buf_export_sync_file *exportSyncFile);
 
-
-#endif
+#endif /* KMR_DMA_BUF_H */
