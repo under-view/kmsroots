@@ -351,7 +351,7 @@ kmr_drm_node_get_device_capabilities (int kmsfd)
  */
 static int
 acquire_kms_object_properties (int fd,
-                               struct kmr_drm_node_object_props *obj,
+                               struct kmr_drm_node_display_object_props *obj,
 			       uint32_t type)
 {
 	unsigned int i;
@@ -387,7 +387,7 @@ acquire_kms_object_properties (int fd,
 	}
 
 	obj->propsDataCount = propsDataCount;
-	obj->propsData = calloc(obj->propsDataCount, sizeof(struct kmr_drm_node_object_props_data));
+	obj->propsData = calloc(obj->propsDataCount, sizeof(struct kmr_drm_node_display_object_props_data));
 	if (!obj->propsData) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_acquire_kms_object_properties;

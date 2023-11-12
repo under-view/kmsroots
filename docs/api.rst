@@ -7,4 +7,5 @@
 
         buffer
         dma-buf
+        drm-node
         vulkan
