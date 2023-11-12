@@ -142,5 +142,4 @@ kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo);
 void
 kmr_buffer_destroy (struct kmr_buffer *buffer);
 
-
-#endif
+#endif /* KMR_BUFFER_H */

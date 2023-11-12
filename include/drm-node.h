@@ -70,13 +70,28 @@ struct kmr_drm_node_create_info {
  *                      So, if a graphical session is already active on the current VT function fails.
  *
  * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_create_info used to pass a DRI/KMS device file that we may want to use
- *           and to store information about the current seatd/sytemd-logind D-bus session.
+ * @nodeInfo - Pointer to a struct kmr_drm_node_create_info used to pass a DRI/KMS device file that we may want to use
+ *             and to store information about the current seatd/sytemd-logind D-bus session.
  * returns:
- *	on success struct kmr_drm_node
- *	on failure struct kmr_drm_node { with members nulled, int's set to -1 }
+ *	on success pointer to a struct kmr_drm_node
+ *	on failure NULL
  */
-struct kmr_drm_node kmr_drm_node_create(struct kmr_drm_node_create_info *kmrdrm);
+struct kmr_drm_node *
+kmr_drm_node_create (struct kmr_drm_node_create_info *nodeInfo);
+
+
+/*
+ * kmr_drm_node_destroy: Frees any allocated memory defined by user
+ *
+ * parameters:
+ * @node - Pointer to a valid struct kmr_drm_node
+ *         Free'd members with fd's closed
+ *         struct kmr_drm_node {
+ *             int kmsfd;
+ *         }
+ */
+void
+kmr_drm_node_destroy (struct kmr_drm_node *node);
 
 
 /*
@@ -108,13 +123,14 @@ struct kmr_drm_node_device_capabilites {
  * returns:
  *	struct kmr_drm_node_device_capabilites
  */
-struct kmr_drm_node_device_capabilites kmr_drm_node_get_device_capabilities(int kmsfd);
+struct kmr_drm_node_device_capabilites
+kmr_drm_node_get_device_capabilities (int kmsfd);
 
 
 /*
  * struct kmr_drm_node_object_props_data (kmsroots DRM Node Object Properties Data)
  *
- * @id    - Id of the given property
+ * @id    - Driver assigned ID of a given property belonging to a KMS object.
  * @value - Enum value of given KMS object property. Can be used for instance to check if plane
  *          object is a primary plane (DRM_PLANE_TYPE_PRIMARY).
  */
@@ -148,7 +164,7 @@ struct kmr_drm_node_object_props {
  * members:
  * @id       - Store the highest mode (resolution + refresh) property id. When we perform an atomic commit,
  *             the driver expects a CRTC property named "MODE_ID", which points to the id given to one
- *             of connceted display resolution & refresh rate. At the moment the highest mode it choosen.
+ *             of connected display resolution & refresh rate. At the moment the highest mode it choosen.
  * @modeInfo - Store the highest mode data (display resolution + refresh) associated with display.
  */
 struct kmr_drm_node_display_mode_data {
@@ -158,7 +174,7 @@ struct kmr_drm_node_display_mode_data {
 
 
 /*
- * struct kmr_drm_node_display_output_chain (kmsroots DRM Node Display Output Chain)
+ * struct kmr_drm_node_display (kmsroots DRM Node Display Output Chain)
  *
  * members:
  * @kmsfd      - Pollable file descriptor to an open KMS (GPU) device file.
@@ -183,7 +199,7 @@ struct kmr_drm_node_display_mode_data {
  *               properties used during KMS atomic modesetting and page-flips.
  * For more info see https://manpages.org/drm-kms/7
  */
-struct kmr_drm_node_display_output_chain {
+struct kmr_drm_node_display {
 	int                                   kmsfd;
 	uint16_t                              width;
 	uint16_t                              height;
@@ -196,67 +212,87 @@ struct kmr_drm_node_display_output_chain {
 
 
 /*
- * struct kmr_drm_node_display_output_chain_create_info (kmsroots DRM Node display Output Chain Create Information)
+ * struct kmr_drm_node_display_create_info (kmsroots DRM Node Display Create Information)
  *
  * members:
  * @kmsfd - The file descriptor associated with open KMS device node.
  */
-struct kmr_drm_node_display_output_chain_create_info {
+struct kmr_drm_node_display_create_info {
 	int kmsfd;
 };
 
 
 /*
- * kmr_drm_node_display_output_chain_create: Function takes in a pointer to a struct kmrdrm_node_get_display_output_chain_create_info
- *                                           and produces one connector->encoder->CRTC->plane display output chain. Populating
- *                                           the members of struct kmr_drm_node_display_output_chain whose information will be
- *                                           later used in modesetting.
+ * kmr_drm_node_display_create: Function takes in a pointer to a struct kmr_drm_node_display_create_info
+ *                              and produces one connector->encoder->CRTC->plane display output chain.
+ *                              Populating the members of struct kmr_drm_node_display whose information
+ *                              will be later used in modesetting.
  *
  * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_display_output_chain_create_info used to determine what operation will happen in the function
- * return
- *	on success struct kmr_drm_node_display_output_chain
- *	on failure struct kmr_drm_node_display_output_chain { with members nulled }
+ * @displayInfo - Pointer to a struct kmr_drm_node_display_create_info used
+ *                to determine what operation will happen in the function
+ * returns:
+ *	on success pointer to a struct kmr_drm_node_display
+ *	on failure NULL
  */
-struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain_create(struct kmr_drm_node_display_output_chain_create_info *kmrdrm);
+struct kmr_drm_node_display *
+kmr_drm_node_display_create (struct kmr_drm_node_display_create_info *displayInfo);
+
+
+/*
+ * kmr_drm_node_display_destroy: Frees any allocated memory defined by user
+ *
+ * parameters:
+ * @display - Pointer to a valid struct kmr_drm_node_display
+ *            Free'd members
+ *            struct kmr_drm_node_display {
+ *                struct kmr_drm_node_object_props connector.propsData;
+ *                struct kmr_drm_node_object_props crtc.propsData;
+ *                struct kmr_drm_node_object_props plane.propsData;
+ *            }
+ */
+void
+kmr_drm_node_display_destroy (struct kmr_drm_node_display *display);
 
 
 /*
  * struct kmr_drm_node_display_mode_info (kmsroots KMS Display Mode Information)
  *
  * members:
- * @fbid         - Id of framebuffer associated with gbm or dump buffer
- * @displayChain - Pointer to a plane->crtc->encoder->connector pair
+ * @fbid    - Id of framebuffer associated with gbm or dump buffer
+ * @display - Pointer to a plane->crtc->encoder->connector pair
  */
 struct kmr_drm_node_display_mode_info {
-	int                                      fbid;
-	struct kmr_drm_node_display_output_chain *displayChain;
+	int                         fbid;
+	struct kmr_drm_node_display *display;
 };
 
 
 /*
- * kmr_drm_node_display_mode_set: Sets the display connected to @displayChain.connecter screen resolution
+ * kmr_drm_node_display_mode_set: Sets the display connected to @display.connecter screen resolution
  *                                and refresh to the highest possible value.
  *
  * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_display_mode_info used to set highest display mode
- * return
+ * @displayModeInfo - Pointer to a struct kmr_drm_node_display_mode_info used to set highest display mode
+ * returns:
  *	on success 0
  *	on failure -1
  */
-int kmr_drm_node_display_mode_set(struct kmr_drm_node_display_mode_info *kmrdrm);
+int
+kmr_drm_node_display_mode_set (struct kmr_drm_node_display_mode_info *displayModeInfo);
 
 
 /*
  * kmr_drm_node_display_mode_reset: Clears the current display mode setting
  *
  * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_display_mode_info used to set highest display mode
- * return
+ * @displayModeInfo - Pointer to a struct kmr_drm_node_display_mode_info used to set highest display mode
+ * returns:
  *	on success 0
  *	on failure -1
  */
-int kmr_drm_node_display_mode_reset(struct kmr_drm_node_display_mode_info *kmrdrm);
+int
+kmr_drm_node_display_mode_reset (struct kmr_drm_node_display_mode_info *displayModeInfo);
 
 
 /*
@@ -278,34 +314,6 @@ typedef void (*kmr_drm_node_renderer_impl)(volatile bool*, uint8_t*, int*, void*
 
 
 /*
- * struct kmr_drm_node_atomic_request_create_info (kmsroots DRM Node Atomic Request Create Information)
- *
- * members:
- * @kmsfd                 - File descriptor to an open KMS device node.
- * @displayOutputChain    - Pointer to a struct containing all plane->crtc->connector data used during
- *                          KMS atomic mode setting.
- * @renderer              - Function pointer that allows custom external renderers to be executed by the api
- *                          upon @kmsfd polled events.
- * @rendererRunning       - Pointer to a boolean that determines if a given renderer is running and in need
- *                          of stopping.
- * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
- * @rendererFbId          - Pointer to an integer used as the value of the FB_ID property for a plane related to
- *                          the CRTC during the atomic modeset operation
- * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
- *                          Reference/Address passed depends on external renderer function.
- */
-struct kmr_drm_node_atomic_request_create_info {
-	int                                      kmsfd;
-	struct kmr_drm_node_display_output_chain *displayOutputChain;
-	kmr_drm_node_renderer_impl               renderer;
-	volatile bool                            *rendererRunning;
-	uint8_t                                  *rendererCurrentBuffer;
-	int                                      *rendererFbId;
-	void                                     *rendererData;
-};
-
-
-/*
  * struct kmr_drm_node_atomic_request (kmsroots DRM Node Atomic Request)
  *
  * members:
@@ -319,18 +327,62 @@ struct kmr_drm_node_atomic_request {
 
 
 /*
+ * struct kmr_drm_node_atomic_request_create_info (kmsroots DRM Node Atomic Request Create Information)
+ *
+ * members:
+ * @kmsfd                 - File descriptor to an open KMS device node.
+ * @display               - Pointer to a struct containing all plane->crtc->connector data used during
+ *                          KMS atomic mode setting.
+ * @renderer              - Function pointer that allows custom external renderers to be executed by the api
+ *                          upon @kmsfd polled events.
+ * @rendererRunning       - Pointer to a boolean that determines if a given renderer is running and in need
+ *                          of stopping.
+ * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
+ * @rendererFbId          - Pointer to an integer used as the value of the FB_ID property for a plane related to
+ *                          the CRTC during the atomic modeset operation
+ * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
+ *                          Reference/Address passed depends on external renderer function.
+ */
+struct kmr_drm_node_atomic_request_create_info {
+	int                         kmsfd;
+	struct kmr_drm_node_display *display;
+	kmr_drm_node_renderer_impl  renderer;
+	volatile bool               *rendererRunning;
+	uint8_t                     *rendererCurrentBuffer;
+	int                         *rendererFbId;
+	void                        *rendererData;
+};
+
+
+/*
  * kmr_drm_node_atomic_request_create: Function creates a KMS atomic request instance. Sets the interface that allows
  *                                     users of API to setup custom renderer implementation. Performs the initial modeset
  *                                     operation after all the application needs to do is wait for page-flip events to happen.
  *
  * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_atomic_request_create_info used to set external renderer and arguments
- *           of the external renderer.
- * return
- *	on success struct kmr_drm_node_atomic_request
- *	on failure struct kmr_drm_node_atomic_request { with members nulled }
+ * @atomicInfo - Pointer to a struct kmr_drm_node_atomic_request_create_info used to set
+ *               external renderer and arguments of the external renderer.
+ * returns:
+ *	on success pointer to a struct kmr_drm_node_atomic_request
+ *	on failure NULL
  */
-struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request_create(struct kmr_drm_node_atomic_request_create_info *kmrdrm);
+struct kmr_drm_node_atomic_request *
+kmr_drm_node_atomic_request_create (struct kmr_drm_node_atomic_request_create_info *atomicInfo);
+
+
+/*
+ * kmr_drm_node_atomic_request_destroy: Frees any allocated memory defined by user
+ *
+ * parameters:
+ * @atomic - Pointer to a valid struct kmr_drm_node_atomic_request
+ *           Free'd members
+ *           struct kmr_drm_node_atomic_request {
+ *               drmModeAtomicReq *atomicRequest;
+ *               void             *rendererInfo;
+ *           }
+ */
+void
+kmr_drm_node_atomic_request_destroy (struct kmr_drm_node_atomic_request *atomic);
 
 
 /*
@@ -350,39 +402,12 @@ struct kmr_drm_node_handle_drm_event_info {
  *                                file-descriptor has polled readable.
  *
  * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_handle_drm_event_info
- * return
+ * @eventInfo - Pointer to a struct kmr_drm_node_handle_drm_event_info
+ * returns:
  *	on success 0
  *	on failure -1
  */
-int kmr_drm_node_handle_drm_event(struct kmr_drm_node_handle_drm_event_info *kmrdrm);
+int
+kmr_drm_node_handle_drm_event (struct kmr_drm_node_handle_drm_event_info *eventInfo);
 
-
-/*
- * struct kmr_drm_node_destroy (kmsroots DRM Node Destroy)
- *
- * members:
- * @kmr_drm_node                      - Must pass a valid struct kmr_drm_node. Which contains information about the
- *                                      file descriptor associated with open DRI device node to be closed. Stores
- *                                      information about logind session bus, id, and path needed to release control
- *                                      of a given device. That given device is a DRI device file.
- * @kmr_drm_node_display_output_chain - Must pass a valid struct kmr_drm_node_display_output_chain. Stores information
- *                                      about KMS device node connector->encoder->crtc->plane pair
- * @kmr_drm_node_atomic_request       - Must pass a valid struct kmr_drm_node_atomic_request { free'd members: @atomicRequest, @rendererInfo }
- */
-struct kmr_drm_node_destroy {
-	struct kmr_drm_node                      kmr_drm_node;
-	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
-	struct kmr_drm_node_atomic_request       kmr_drm_node_atomic_request;
-};
-
-
-/*
- * kmr_drm_node_destroy: Destroy any and all KMS node information
- *
- * parameters:
- * @kmrdrm - pointer to a struct kmr_drm_node_destroy
- */
-void kmr_drm_node_destroy(struct kmr_drm_node_destroy *kmrdrm);
-
-#endif
+#endif /* KMR_DRM_NODE_H */

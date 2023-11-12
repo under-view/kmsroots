@@ -18,9 +18,9 @@
  * Structs used by example *
  ***************************/
 struct app_kms {
-	struct kmr_drm_node kmr_drm_node;
-	struct kmr_drm_node_display_output_chain kmr_drm_node_display_output_chain;
-	struct kmr_drm_node_atomic_request kmr_drm_node_atomic_request;
+	struct kmr_drm_node *kmr_drm_node;
+	struct kmr_drm_node_display *kmr_drm_node_display;
+	struct kmr_drm_node_atomic_request *kmr_drm_node_atomic_request;
 	struct kmr_buffer *kmr_buffer;
 	struct kmr_input kmr_input;
 #ifdef INCLUDE_LIBSEAT
@@ -124,8 +124,8 @@ render (volatile bool *running, uint8_t *cbuf, int *fbid, void *data)
 	pixelBuffer = passData->pixelBuffer;
 	pixelBufferSize = passData->pixelBufferSize;
 
-	width = kms->kmr_drm_node_display_output_chain.width;
-	height = kms->kmr_drm_node_display_output_chain.height;
+	width = kms->kmr_drm_node_display->width;
+	height = kms->kmr_drm_node_display->height;
 
 	bytesPerPixel = 4, offset = 0;
 	r_up = true, g_up = true, b_up = true;
@@ -219,7 +219,7 @@ main (void)
 		goto exit_error;
 
 	inputfd = kms.kmr_input.inputfd;
-	kmsfd = kms.kmr_drm_node.kmsfd;
+	kmsfd = kms.kmr_drm_node->kmsfd;
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
@@ -272,9 +272,7 @@ main (void)
 	}
 
 exit_error:
-	struct kmr_drm_node_destroy kmsdevd;
 	struct kmr_input_destroy kmsinputd;
-	memset(&kmsdevd, 0, sizeof(kmsdevd));
 	memset(&kmsinputd, 0, sizeof(kmsinputd));
 
 	if (passData.pixelBuffer)
@@ -288,10 +286,9 @@ exit_error:
 	kmsinputd.kmr_input = kms.kmr_input;
 	kmr_input_destroy(&kmsinputd);
 
-	kmsdevd.kmr_drm_node = kms.kmr_drm_node;
-	kmsdevd.kmr_drm_node_display_output_chain = kms.kmr_drm_node_display_output_chain;
-	kmsdevd.kmr_drm_node_atomic_request = kms.kmr_drm_node_atomic_request;
-	kmr_drm_node_destroy(&kmsdevd);
+	kmr_drm_node_atomic_request_destroy(kms.kmr_drm_node_atomic_request);
+	kmr_drm_node_display_destroy(kms.kmr_drm_node_display);
+	kmr_drm_node_destroy(kms.kmr_drm_node);
 
 #ifdef INCLUDE_LIBSEAT
 	kmr_session_destroy(kms.kmr_session);
@@ -315,19 +312,15 @@ create_kms_instance (struct app_kms *kms)
 
 	kmsNodeCreateInfo.kmsNode = NULL;
 	kms->kmr_drm_node = kmr_drm_node_create(&kmsNodeCreateInfo);
-	if (kms->kmr_drm_node.kmsfd == -1)
+	if (!kms->kmr_drm_node)
 		return -1;
 
-	struct kmr_drm_node_display_output_chain_create_info dochainCreateInfo;
-	dochainCreateInfo.kmsfd = kms->kmr_drm_node.kmsfd;
+	struct kmr_drm_node_display_create_info displayCreateInfo;
+	displayCreateInfo.kmsfd = kms->kmr_drm_node->kmsfd;
 
-	kms->kmr_drm_node_display_output_chain = kmr_drm_node_display_output_chain_create(&dochainCreateInfo);
-	if (!kms->kmr_drm_node_display_output_chain.connector.propsData ||
-	    !kms->kmr_drm_node_display_output_chain.crtc.propsData      ||
-	    !kms->kmr_drm_node_display_output_chain.plane.propsData)
-	{
+	kms->kmr_drm_node_display = kmr_drm_node_display_create(&displayCreateInfo);
+	if (!kms->kmr_drm_node_display)
 		return -1;
-	}
 
 	return 0;
 }
@@ -338,10 +331,10 @@ create_kms_gbm_buffers (struct app_kms *kms)
 {
 	struct kmr_buffer_create_info gbmBufferInfo;
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
-	gbmBufferInfo.kmsfd = kms->kmr_drm_node.kmsfd;
+	gbmBufferInfo.kmsfd = kms->kmr_drm_node->kmsfd;
 	gbmBufferInfo.bufferCount = 2;
-	gbmBufferInfo.width = kms->kmr_drm_node_display_output_chain.width;
-	gbmBufferInfo.height = kms->kmr_drm_node_display_output_chain.height;
+	gbmBufferInfo.width = kms->kmr_drm_node_display->width;
+	gbmBufferInfo.height = kms->kmr_drm_node_display->height;
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
 	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
@@ -365,7 +358,7 @@ create_kms_set_crtc (struct app_kms *kms)
 
 	for (i = 0; i < kms->kmr_buffer->bufferCount; i++) {
 		nextImageInfo.fbid = kms->kmr_buffer->bufferObjects[i].fbid;
-		nextImageInfo.displayChain = &kms->kmr_drm_node_display_output_chain;
+		nextImageInfo.display = kms->kmr_drm_node_display;
 		if (kmr_drm_node_display_mode_set(&nextImageInfo))
 			return -1;
 	}
@@ -385,8 +378,8 @@ create_kms_atomic_request_instance (struct app_kms_pass *passData,
 
 	*fbid = kms->kmr_buffer->bufferObjects[*cbuf].fbid;
 
-	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display_output_chain.kmsfd;
-	atomicRequestInfo.displayOutputChain = &kms->kmr_drm_node_display_output_chain;
+	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display->kmsfd;
+	atomicRequestInfo.display = kms->kmr_drm_node_display;
 	atomicRequestInfo.renderer = &render;
 	atomicRequestInfo.rendererRunning = running;
 	atomicRequestInfo.rendererCurrentBuffer = cbuf;
@@ -394,7 +387,7 @@ create_kms_atomic_request_instance (struct app_kms_pass *passData,
 	atomicRequestInfo.rendererData = passData;
 
 	kms->kmr_drm_node_atomic_request = kmr_drm_node_atomic_request_create(&atomicRequestInfo);
-	if (!kms->kmr_drm_node_atomic_request.atomicRequest)
+	if (!kms->kmr_drm_node_atomic_request)
 		return -1;
 
 	return 0;
@@ -404,15 +397,21 @@ create_kms_atomic_request_instance (struct app_kms_pass *passData,
 static int
 create_kms_pixel_buffer (struct app_kms_pass *passData)
 {
-	struct app_kms *kms = passData->app_kms;
+	struct app_kms *kms = NULL;
 
-	unsigned int width = kms->kmr_drm_node_display_output_chain.width;
-	unsigned int height = kms->kmr_drm_node_display_output_chain.height;
-	unsigned int bytesPerPixel = 4;
-	unsigned int pixelBufferSize = width * height * bytesPerPixel;
+	uint8_t *pixelBuffer = NULL; 
+	unsigned int width = 0, height = 0;
+	unsigned int bytesPerPixel = 0, pixelBufferSize = 0;
 
-	uint8_t *pixelBuffer = mmap(NULL, pixelBufferSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON,
-                                    -1, kms->kmr_buffer->bufferObjects[0].offsets[0]);
+	kms = passData->app_kms;
+	width = kms->kmr_drm_node_display->width;
+	height = kms->kmr_drm_node_display->height;
+
+	bytesPerPixel = 4;
+	pixelBufferSize = width * height * bytesPerPixel;
+
+	pixelBuffer = mmap(NULL, pixelBufferSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON,
+                           -1, kms->kmr_buffer->bufferObjects[0].offsets[0]);
 	if (pixelBuffer == MAP_FAILED) {
 		kmr_utils_log(KMR_DANGER, "[x] mmap: %s", strerror(errno));
 		return -1;
