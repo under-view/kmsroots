@@ -10,7 +10,7 @@
 
 
 /*
- * struct kmr_gltf_loader_file (kmsroots GLTF File)
+ * struct kmr_gltf_loader_file (kmsroots GLTF Loader File)
  *
  * members:
  * @gltfData - Buffer that stores a given gltf file's content
@@ -21,12 +21,12 @@ struct kmr_gltf_loader_file {
 
 
 /*
- * struct kmr_gltf_loader_file_load_info (kmsroots GLTF Loader File Information)
+ * struct kmr_gltf_loader_file_create_info (kmsroots GLTF Loader File Create Information)
  *
  * members:
  * @fileName - Must pass the path to the gltf file to load
  */
-struct kmr_gltf_loader_file_load_info {
+struct kmr_gltf_loader_file_create_info {
 	const char *fileName;
 };
 
@@ -37,16 +37,31 @@ struct kmr_gltf_loader_file_load_info {
  *                            be free'd with a call to kmr_gltf_loader_destroy(3).
  *
  * parameters:
- * @kmsgltf - Must pass a pointer to a struct kmr_gltf_loader_file_load_info
+ * @gltfFileInfo - Must pass a pointer to a struct kmr_gltf_loader_file_load_info
  * returns:
- *	on success struct kmr_gltf_loader_file
- *	on failure struct kmr_gltf_loader_file { with member nulled }
+ *	on success pointer to a struct kmr_gltf_loader_file
+ *	on failure NULL
  */
-struct kmr_gltf_loader_file kmr_gltf_loader_file_load(struct kmr_gltf_loader_file_load_info *kmsgltf);
+struct kmr_gltf_loader_file *
+kmr_gltf_loader_file_create (struct kmr_gltf_loader_file_create_info *gltfFileInfo);
 
 
 /*
- * struct kmr_gltf_loader_mesh_data (kmsroots GLTF Loader Mesh Data)
+ * kmr_gltf_loader_file_destroy: Frees any allocated memory created after *_create call.
+ *
+ * parameters:
+ * @gltfFile - Pointer to a valid struct kmr_gltf_loader_file
+ *             Free'd members
+ *             struct kmr_gltf_loader_file {
+ *                 cgltf_data *gltfData;
+ *             }
+ */
+void
+kmr_gltf_loader_file_destroy (struct kmr_gltf_loader_file *gltfFile);
+
+
+/*
+ * struct kmr_gltf_loader_mesh_vertex_data (kmsroots GLTF Loader Mesh Vertex Data)
  *
  * Struct member order is arbitrary. SHOULD NOT BE USED DIRECTLY. Advise to create second stack buffer
  * and copy data over to it. Members populated with vertices from GLTF file buffer.
@@ -56,7 +71,7 @@ struct kmr_gltf_loader_file kmr_gltf_loader_file_load(struct kmr_gltf_loader_fil
  * @texCoord - Texture Coordinate
  * @color    - Color
  */
-struct kmr_gltf_loader_mesh_data {
+struct kmr_gltf_loader_mesh_vertex_data {
 	vec3 position;
 	vec3 normal;
 	vec2 texCoord;
@@ -65,10 +80,10 @@ struct kmr_gltf_loader_mesh_data {
 
 
 /*
- * struct kmr_gltf_loader_mesh_mesh_data (kmsroots GLTF Loader Mesh Data)
+ * struct kmr_gltf_loader_mesh_data (kmsroots GLTF Loader Mesh Data)
  *
  * @firstIndex            - Base index within the index buffer. Calculated in kmr_gltf_loader_mesh_create(3)
- *                          firstIndex = firstIndex + bufferElementCount (GLTF file accessor[index].count)
+ *                          firstIndex = firstIndex + bufferElementCount (GLTF file accessor[index].count).
  *                          Can be used by the application to fill in vkCmdDrawIndexed(3) function.
  * @indexBufferData       - Buffer of index data belonging to mesh populated from GLTF file buffer at @bufferIndex.
  * @indexBufferDataCount  - Amount of elements in @indexBufferData.
@@ -77,14 +92,14 @@ struct kmr_gltf_loader_mesh_data {
  * @vertexBufferDataCount - Amount of elements in @vertexBufferData array.
  * @vertexBufferDataSize  - The total size in bytes of the @vertexBufferData array.
  */
-struct kmr_gltf_loader_mesh_mesh_data {
-	uint32_t                         firstIndex;
-	uint32_t                         *indexBufferData;
-	uint32_t                         indexBufferDataCount;
-	uint32_t                         indexBufferDataSize;
-	struct kmr_gltf_loader_mesh_data *vertexBufferData;
-	uint32_t                         vertexBufferDataCount;
-	uint32_t                         vertexBufferDataSize;
+struct kmr_gltf_loader_mesh_data {
+	uint32_t                                firstIndex;
+	uint32_t                                *indexBufferData;
+	uint32_t                                indexBufferDataCount;
+	uint32_t                                indexBufferDataSize;
+	struct kmr_gltf_loader_mesh_vertex_data *vertexBufferData;
+	uint32_t                                vertexBufferDataCount;
+	uint32_t                                vertexBufferDataSize;
 };
 
 
@@ -93,14 +108,15 @@ struct kmr_gltf_loader_mesh_mesh_data {
  *
  * members:
  * @bufferIndex   - The index in the "buffers" array of give GLTF file.
- * @meshDataCount - Amount of meshes associated with a @bufferIndex GLTF buffer. The array size of @meshData array.
- * @meshData      - Pointer to an array of struct kmr_gltf_loader_mesh_mesh_data storing all important data
- *                  related to each mesh.
+ * @meshDataCount - Amount of meshes associated with a @bufferIndex GLTF buffer.
+ *                  The array size of @meshData array.
+ * @meshData      - Pointer to an array of struct kmr_gltf_loader_mesh_data
+ *                  storing all important data related to each mesh.
  */
 struct kmr_gltf_loader_mesh {
-	uint16_t                              bufferIndex;
-	uint16_t                              meshDataCount;
-	struct kmr_gltf_loader_mesh_mesh_data *meshData;
+	uint16_t                         bufferIndex;
+	uint16_t                         meshDataCount;
+	struct kmr_gltf_loader_mesh_data *meshData;
 };
 
 
@@ -108,11 +124,12 @@ struct kmr_gltf_loader_mesh {
  * struct kmr_gltf_loader_mesh_create_info (kmsroots GLTF Loader Mesh Create Information)
  *
  * members:
- * @gltfLoaderFile - Must pass a valid struct kmr_gltf_loader_file for cgltf_data @gltfData member
- * @bufferIndex    - Index of buffer in GLTF file buffers array
+ * @gltfFile    - Must pass a valid pointer to a struct kmr_gltf_loader_file
+ *                for cgltf_data @gltfData member
+ * @bufferIndex - Index of buffer in GLTF file buffers array
  */
 struct kmr_gltf_loader_mesh_create_info {
-	struct kmr_gltf_loader_file gltfLoaderFile;
+	struct kmr_gltf_loader_file *gltfFile;
 	uint16_t                    bufferIndex;
 };
 
@@ -128,12 +145,31 @@ struct kmr_gltf_loader_mesh_create_info {
  *                              array. @meshData must be free'd by the application with call to kmr_gltf_loader_destroy(3).
  *
  * parameters:
- * @kmsgltf - Must pass a pointer to a struct kmr_gltf_loader_mesh_create_info
+ * @meshInfo - Must pass a pointer to a struct kmr_gltf_loader_mesh_create_info
  * returns:
- *	on success struct kmr_gltf_loader_mesh { with member being pointer to an array }
- *	on failure struct kmr_gltf_loader_mesh { with member nulled }
+ *	on success pointer to a struct kmr_gltf_loader_mesh
+ *	on failure NULL
  */
-struct kmr_gltf_loader_mesh kmr_gltf_loader_mesh_create(struct kmr_gltf_loader_mesh_create_info *kmsgltf);
+struct kmr_gltf_loader_mesh *
+kmr_gltf_loader_mesh_create (struct kmr_gltf_loader_mesh_create_info *meshInfo);
+
+
+/*
+ * kmr_gltf_loader_mesh_destroy: Frees any allocated memory created after *_create call.
+ *
+ * parameters:
+ * @mesh - Pointer to a valid struct kmr_gltf_loader_mesh
+ *         Free'd members
+ *         struct kmr_gltf_loader_mesh {
+ *             struct kmr_gltf_loader_mesh_data {
+ *                 uint32_t *indexBufferData;
+ *                 struct kmr_gltf_loader_mesh_vertex_data *vertexBufferData;
+ *             }
+ *             struct kmr_gltf_loader_mesh_data *meshData;
+ *         }
+ */
+void
+kmr_gltf_loader_mesh_destroy (struct kmr_gltf_loader_mesh *mesh);
 
 
 /*
@@ -156,12 +192,12 @@ struct kmr_gltf_loader_texture_image {
  * struct kmr_gltf_loader_texture_image_create_info (kmsroots GLTF Loader Texture Image Create Information)
  *
  * members:
- * @gltfLoaderFile - Must pass a valid struct kmr_gltf_loader_file for cgltf_data @gltfData member
- * @directory      - Must pass a pointer to a string detailing the directory of where all images are stored.
- *                   Absolute path to a file that resides in the same directory as the image files will work too.
+ * @gltfFile  - Must pass a valid pointer to struct kmr_gltf_loader_file for cgltf_data @gltfData member
+ * @directory - Must pass a pointer to a string detailing the directory of where all images are stored.
+ *              Absolute path to a file that resides in the same directory as the image files will work too.
  */
 struct kmr_gltf_loader_texture_image_create_info {
-	struct kmr_gltf_loader_file gltfLoaderFile;
+	struct kmr_gltf_loader_file *gltfFile;
 	const char                  *directory;
 };
 
@@ -171,12 +207,31 @@ struct kmr_gltf_loader_texture_image_create_info {
  *                                       To free @pixels and @imageData call kmr_gltf_loader_destroy(3).
  *
  * parameters:
- * @kmsgltf - Must pass a pointer to a struct kmr_gltf_loader_texture_image_create_info
+ * @textureImageInfo - Must pass a pointer to a struct kmr_gltf_loader_texture_image_create_info
  * returns:
- *	on success struct kmr_gltf_loader_texture_image { with member being pointer to an array }
- *	on failure struct kmr_gltf_loader_texture_image { with member nulled }
+ *	on success pointer to a struct kmr_gltf_loader_texture_image
+ *	on failure NULL
  */
-struct kmr_gltf_loader_texture_image kmr_gltf_loader_texture_image_create(struct kmr_gltf_loader_texture_image_create_info *kmsgltf);
+struct kmr_gltf_loader_texture_image *
+kmr_gltf_loader_texture_image_create (struct kmr_gltf_loader_texture_image_create_info *textureImageInfo);
+
+
+/*
+ * kmr_gltf_loader_texture_image_destroy: Frees any allocated memory created after *_create call.
+ *
+ * parameters:
+ * @textureImage - Pointer to a valid struct kmr_gltf_loader_texture_image
+ *                 Free'd members
+ *                 struct kmr_gltf_loader_mesh {
+ *                     struct kmr_gltf_loader_mesh_data {
+ *                         uint32_t *indexBufferData;
+ *                         struct kmr_gltf_loader_mesh_vertex_data *vertexBufferData;
+ *                     }
+ *                     struct kmr_gltf_loader_mesh_data *meshData;
+ *                 }
+ */
+void
+kmr_gltf_loader_texture_image_destroy (struct kmr_gltf_loader_texture_image *textureImage);
 
 
 /*
@@ -252,7 +307,7 @@ struct kmr_gltf_loader_cgltf_pbr_metallic_roughness {
  */
 struct kmr_gltf_loader_material_data {
 	uint32_t                                             meshIndex;
-	char                                                 materialName[32];
+	char                                                 *materialName;
 	struct kmr_gltf_loader_cgltf_pbr_metallic_roughness  pbrMetallicRoughness;
 	struct kmr_gltf_loader_cgltf_texture_view            normalTexture;
 	struct kmr_gltf_loader_cgltf_texture_view            occlusionTexture;
@@ -276,10 +331,10 @@ struct kmr_gltf_loader_material {
  * struct kmr_gltf_loader_material_create_info (kmsroots GLTF Loader Material Create Information)
  *
  * members:
- * @gltfLoaderFile - Must pass a valid struct kmr_gltf_loader_file for cgltf_data @gltfData member
+ * @gltfFile - Must pass a valid pointer to a struct kmr_gltf_loader_file for cgltf_data @gltfData member
  */
 struct kmr_gltf_loader_material_create_info {
-	struct kmr_gltf_loader_file gltfLoaderFile;
+	struct kmr_gltf_loader_file *gltfFile;
 };
 
 
@@ -288,21 +343,39 @@ struct kmr_gltf_loader_material_create_info {
  *                                  To free @materialData call kmr_gltf_loader_destroy(3) or free(@materialData).
  *
  * parameters:
- * @kmsgltf - Must pass a pointer to a struct kmr_gltf_loader_material_create_info
+ * @materialInfo - Must pass a pointer to a struct kmr_gltf_loader_material_create_info
  * returns:
- *	on success struct kmr_gltf_loader_material { with member being pointer to an array }
- *	on failure struct kmr_gltf_loader_material { with member nulled }
+ *	on success pointer to a struct kmr_gltf_loader_material
+ *	on failure NULL
  */
-struct kmr_gltf_loader_material kmr_gltf_loader_material_create(struct kmr_gltf_loader_material_create_info *kmsgltf);
+struct kmr_gltf_loader_material *
+kmr_gltf_loader_material_create (struct kmr_gltf_loader_material_create_info *materialInfo);
+
+
+/*
+ * kmr_gltf_loader_material_destroy: Frees any allocated memory created after *_create call.
+ *
+ * parameters:
+ * @material - Pointer to a valid struct kmr_gltf_loader_material
+ *             Free'd members
+ *             struct kmr_gltf_loader_material {
+ *                 struct kmr_gltf_loader_material_data {
+ *                     char *materialName;
+ *                 }
+ *                 struct kmr_gltf_loader_material_data *materialData;
+ *             }
+ */
+void
+kmr_gltf_loader_material_destroy (struct kmr_gltf_loader_material *material);
 
 
 /*
  * enum kmr_gltf_loader_gltf_object_type (kmsroots GLTF Loader GLTF Object Type)
  */
 enum kmr_gltf_loader_gltf_object_type {
-	KMR_GLTF_LOADER_GLTF_NODE = 0x00000001,
-	KMR_GLTF_LOADER_GLTF_MESH = 0x00000002,
-	KMR_GLTF_LOADER_GLTF_SKIN = 0x00000003,
+	KMR_GLTF_LOADER_GLTF_NODE   = 0x00000001,
+	KMR_GLTF_LOADER_GLTF_MESH   = 0x00000002,
+	KMR_GLTF_LOADER_GLTF_SKIN   = 0x00000003,
 	KMR_GLTF_LOADER_GLTF_CAMERA = 0x00000004,
 };
 
@@ -348,11 +421,11 @@ struct kmr_gltf_loader_node {
  * struct kmr_gltf_loader_node_create_info (kmsroots GLTF Loader Node Create Information)
  *
  * members:
- * @gltfLoaderFile - Must pass a valid struct kmr_gltf_loader_file for cgltf_data @gltfData member
- * @sceneIndex     - Index in GLTF file "scenes" array.
+ * @gltfFile   - Must pass a valid pointer to a struct kmr_gltf_loader_file for cgltf_data @gltfData member
+ * @sceneIndex - Index in GLTF file "scenes" array.
  */
 struct kmr_gltf_loader_node_create_info {
-	struct kmr_gltf_loader_file gltfLoaderFile;
+	struct kmr_gltf_loader_file *gltfFile;
 	uint32_t                    sceneIndex;
 };
 
@@ -364,60 +437,38 @@ struct kmr_gltf_loader_node_create_info {
  *                              the index of that object in that GLTF file "Insert Object Name" array.
  *
  * parameters:
- * @kmsgltf - Must pass a pointer to a struct kmr_gltf_loader_node_create_info
+ * @nodeInfo - Must pass a pointer to a struct kmr_gltf_loader_node_create_info
  * returns:
- *	on success struct kmr_gltf_loader_node { with member being pointer to an array }
- *	on failure struct kmr_gltf_loader_node { with member nulled }
+ *	on success pointer to a struct kmr_gltf_loader_node
+ *	on failure NULL
  */
-struct kmr_gltf_loader_node kmr_gltf_loader_node_create(struct kmr_gltf_loader_node_create_info *kmsgltf);
+struct kmr_gltf_loader_node *
+kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *nodeInfo);
 
 
 /*
- * kmr_gltf_loader_node_create: Prints out matrix transform for each node in struct kmr_gltf_loader_node { @nodeData }
+ * kmr_gltf_loader_node_destroy: Frees any allocated memory created after *_create call.
  *
  * parameters:
- * @kmsgltf - Must pass a pointer to a struct kmr_gltf_loader_node
+ * @node - Pointer to a valid struct kmr_gltf_loader_node
+ *         Free'd members
+ *         struct kmr_gltf_loader_node {
+ *             struct kmr_gltf_loader_node_data *nodeData;
+ *         }
  */
-void kmr_gltf_loader_node_display_matrix_transform(struct kmr_gltf_loader_node *kmsgltf);
+void
+kmr_gltf_loader_node_destroy (struct kmr_gltf_loader_node *node);
 
 
 /*
- * struct kmr_gltf_loader_destroy (kmsroots Shader Destroy)
- *
- * members:
- * @kmr_gltf_loader_file_cnt          - Must pass the amount of elements in struct kmr_gltf_loader_file array
- * @kmr_gltf_loader_file              - Must pass a pointer to an array of valid struct kmr_gltf_loader_file { free'd members: @gltfData }
- * @kmr_gltf_loader_mesh_cnt          - Must pass the amount of elements in struct kmr_gltf_loader_mesh array
- * @kmr_gltf_loader_mesh              - Must pass a pointer to an array of valid struct kmr_gltf_loader_mesh { free'd members: @verticesData }
- * @kmr_gltf_loader_texture_image_cnt - Must pass the amount of elements in struct kmr_gltf_loader_texture_image array
- * @kmr_gltf_loader_texture_image     - Must pass a pointer to an array of valid struct kmr_gltf_loader_texture_image { free'd members: @imageData, @pixels }
- * @kmr_gltf_loader_material_cnt      - Must pass the amount of elements in struct kmr_gltf_loader_material array
- * @kmr_gltf_loader_material          - Must pass a pointer to an array of valid struct kmr_gltf_loader_material { free'd members: @materialData }
- * @kmr_gltf_loader_node_cnt          - Must pass the amount of elements in struct kmr_gltf_loader_node array
- * @kmr_gltf_loader_node              - Must pass a pointer to an array of valid struct kmr_gltf_loader_node { free'd members: @nodeData }
- */
-struct kmr_gltf_loader_destroy {
-	uint32_t                             kmr_gltf_loader_file_cnt;
-	struct kmr_gltf_loader_file          *kmr_gltf_loader_file;
-	uint32_t                             kmr_gltf_loader_mesh_cnt;
-	struct kmr_gltf_loader_mesh          *kmr_gltf_loader_mesh;
-	uint32_t                             kmr_gltf_loader_texture_image_cnt;
-	struct kmr_gltf_loader_texture_image *kmr_gltf_loader_texture_image;
-	uint32_t                             kmr_gltf_loader_material_cnt;
-	struct kmr_gltf_loader_material      *kmr_gltf_loader_material;
-	uint32_t                             kmr_gltf_loader_node_cnt;
-	struct kmr_gltf_loader_node          *kmr_gltf_loader_node;
-};
-
-
-/*
- * kmr_gltf_loader_destroy: frees any allocated memory defined by customer
+ * kmr_gltf_loader_node_display_matrix_transform: Prints out matrix transform for each node in
+ *                                                struct kmr_gltf_loader_node { @nodeData }.
  *
  * parameters:
- * @kmsgltf - pointer to a struct kmr_gltf_loader_destroy contains all objects created during
- *            application lifetime in need freeing
+ * @node - Must pass a pointer to a struct kmr_gltf_loader_node
  */
-void kmr_gltf_loader_destroy(struct kmr_gltf_loader_destroy *kmsgltf);
+void
+kmr_gltf_loader_node_display_matrix_transform (struct kmr_gltf_loader_node *node);
 
 
-#endif
+#endif /* KMR_GLTF_LOADER_H */
