@@ -66,9 +66,9 @@ struct app_vk {
 	/*
 	 * Keep track of data related to FlightHelmet.gltf
 	 */
-	struct kmr_gltf_loader_mesh kmr_gltf_loader_mesh;
-	struct kmr_gltf_loader_texture_image kmr_gltf_loader_texture_image;
-	struct kmr_gltf_loader_material kmr_gltf_loader_material;
+	struct kmr_gltf_loader_mesh *kmr_gltf_loader_mesh;
+	struct kmr_gltf_loader_texture_image *kmr_gltf_loader_texture_image;
+	struct kmr_gltf_loader_material *kmr_gltf_loader_material;
 
 	/*
 	 * Other required data needed for draw operations
@@ -139,7 +139,10 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 int create_vk_depth_image(struct app_vk *app);
 int create_vk_shader_modules(struct app_vk *app);
 int create_vk_command_buffers(struct app_vk *app);
-int create_gltf_load_required_data(struct app_vk *app);
+
+static int
+create_gltf_load_required_data (struct app_vk *app);
+
 int create_vk_buffers(struct app_vk *app);
 int create_vk_texture_images(struct app_vk *app);
 int create_vk_image_sampler(struct app_vk *app);
@@ -809,10 +812,10 @@ int create_vk_buffers(struct app_vk *app)
 	uint32_t vertexBufferDataSize = 0, indexBufferDataSize = 0;
 	uint32_t curVertexBufferIndex = 0, curIndexBufferIndex = 0, index;
 
-	for (m = 0; m < app->kmr_gltf_loader_mesh.meshDataCount; m++) {
+	for (m = 0; m < app->kmr_gltf_loader_mesh->meshDataCount; m++) {
 		app->meshData[m].bufferOffset += vertexBufferDataSize;
-		vertexBufferDataSize += app->kmr_gltf_loader_mesh.meshData[m].vertexBufferDataSize;
-		indexBufferDataSize += app->kmr_gltf_loader_mesh.meshData[m].indexBufferDataSize;
+		vertexBufferDataSize += app->kmr_gltf_loader_mesh->meshData[m].vertexBufferDataSize;
+		indexBufferDataSize += app->kmr_gltf_loader_mesh->meshData[m].indexBufferDataSize;
 	}
 
 	vertexBufferData = alloca(vertexBufferDataSize);		
@@ -823,37 +826,38 @@ int create_vk_buffers(struct app_vk *app)
 	 * Application must take vertex + index buffer arrays created in kmr_gltf_loader_mesh_create(3)
 	 * and populate it's local array before creating and copying buffer into VkBuffer
 	 */
-	for (m = 0; m < app->kmr_gltf_loader_mesh.meshDataCount; m++) {
+	for (m = 0; m < app->kmr_gltf_loader_mesh->meshDataCount; m++) {
 		// kmr_utils_log(KMR_INFO, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
-		for (v = 0; v < app->kmr_gltf_loader_mesh.meshData[m].vertexBufferDataCount; v++) {
+		for (v = 0; v < app->kmr_gltf_loader_mesh->meshData[m].vertexBufferDataCount; v++) {
 			index = curVertexBufferIndex + v;
-			vertexBufferData[index].pos[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[0];
-			vertexBufferData[index].pos[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[1];
-			vertexBufferData[index].pos[2] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].position[2];
+			vertexBufferData[index].pos[0] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].position[0];
+			vertexBufferData[index].pos[1] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].position[1];
+			vertexBufferData[index].pos[2] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].position[2];
 			
-			vertexBufferData[index].color[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[0];
-			vertexBufferData[index].color[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[1];
-			vertexBufferData[index].color[2] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].color[2];
+			vertexBufferData[index].color[0] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].color[0];
+			vertexBufferData[index].color[1] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].color[1];
+			vertexBufferData[index].color[2] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].color[2];
 			
-			vertexBufferData[index].normal[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[0];
-			vertexBufferData[index].normal[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[1];
-			vertexBufferData[index].normal[2] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].normal[2];
+			vertexBufferData[index].normal[0] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].normal[0];
+			vertexBufferData[index].normal[1] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].normal[1];
+			vertexBufferData[index].normal[2] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].normal[2];
 			
-			vertexBufferData[index].texCoord[0] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[0];
-			vertexBufferData[index].texCoord[1] = app->kmr_gltf_loader_mesh.meshData[m].vertexBufferData[v].texCoord[1];
+			vertexBufferData[index].texCoord[0] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].texCoord[0];
+			vertexBufferData[index].texCoord[1] = app->kmr_gltf_loader_mesh->meshData[m].vertexBufferData[v].texCoord[1];
 		}
 
-		for (v = 0; v < app->kmr_gltf_loader_mesh.meshData[m].indexBufferDataCount; v++) {
-			indexBufferData[curIndexBufferIndex + v] = app->kmr_gltf_loader_mesh.meshData[m].indexBufferData[v];
+		for (v = 0; v < app->kmr_gltf_loader_mesh->meshData[m].indexBufferDataCount; v++) {
+			indexBufferData[curIndexBufferIndex + v] = app->kmr_gltf_loader_mesh->meshData[m].indexBufferData[v];
 		}
 
-		curIndexBufferIndex += app->kmr_gltf_loader_mesh.meshData[m].indexBufferDataCount;
-		curVertexBufferIndex += app->kmr_gltf_loader_mesh.meshData[m].vertexBufferDataCount;
+		curIndexBufferIndex += app->kmr_gltf_loader_mesh->meshData[m].indexBufferDataCount;
+		curVertexBufferIndex += app->kmr_gltf_loader_mesh->meshData[m].vertexBufferDataCount;
 		// kmr_utils_log(KMR_WARNING, "curVertexBufferIndex: %u, curIndexBufferIndex: %u", curVertexBufferIndex, curIndexBufferIndex);
 	}
 
 	// Free'ing kmr_gltf_loader_mesh no longer required
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_mesh_cnt = 1, .kmr_gltf_loader_mesh = &app->kmr_gltf_loader_mesh });
+	kmr_gltf_loader_mesh_destroy(app->kmr_gltf_loader_mesh);
+	app->kmr_gltf_loader_mesh = NULL;
 
 	/*
 	 * Create CPU visible buffer [vertex + index]
@@ -965,15 +969,15 @@ int create_vk_texture_images(struct app_vk *app)
 	uint32_t curImage, imageCount = 0;
 	uint8_t textureImageIndex = 2, cpuVisibleImageBuffer = 3;
 
-	imageCount = app->kmr_gltf_loader_texture_image.imageCount;
-	imageData = app->kmr_gltf_loader_texture_image.imageData;
+	imageCount = app->kmr_gltf_loader_texture_image->imageCount;
+	imageData = app->kmr_gltf_loader_texture_image->imageData;
 
 	// Create CPU visible buffer to store pixel data
 	struct kmr_vk_buffer_create_info vkTextureBufferCreateInfo;
 	vkTextureBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	vkTextureBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
 	vkTextureBufferCreateInfo.bufferFlags = 0;
-	vkTextureBufferCreateInfo.bufferSize = app->kmr_gltf_loader_texture_image.totalBufferSize;
+	vkTextureBufferCreateInfo.bufferSize = app->kmr_gltf_loader_texture_image->totalBufferSize;
 	vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	vkTextureBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	vkTextureBufferCreateInfo.queueFamilyIndexCount = 0;
@@ -982,7 +986,8 @@ int create_vk_texture_images(struct app_vk *app)
 
 	app->kmr_vk_buffer[cpuVisibleImageBuffer] = kmr_vk_buffer_create(&vkTextureBufferCreateInfo);
 	if (!app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer || !app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory) {
-		kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+		kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+		app->kmr_gltf_loader_texture_image = NULL;
 		return -1;
 	}
 
@@ -1042,8 +1047,11 @@ int create_vk_texture_images(struct app_vk *app)
 
 	kmr_utils_log(KMR_INFO, "Creating VkImage's/VkImageView's for textures [total amount: %u]", imageCount);
 	app->kmr_vk_image[textureImageIndex] = kmr_vk_image_create(&vkImageCreateInfo);
-	if (!app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image && !app->kmr_vk_image[textureImageIndex].imageViewHandles[curImage].view) {
-		kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+	if (!app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image &&
+	    !app->kmr_vk_image[textureImageIndex].imageViewHandles[curImage].view)
+	{
+		kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+		app->kmr_gltf_loader_texture_image = NULL;
 		return -1;
 	}
 
@@ -1093,7 +1101,8 @@ int create_vk_texture_images(struct app_vk *app)
 		pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 
 		if (kmr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1) {
-			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+			kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+			app->kmr_gltf_loader_texture_image = NULL;
 			return -1;
 		}
 
@@ -1109,7 +1118,8 @@ int create_vk_texture_images(struct app_vk *app)
 		bufferCopyInfo.dstResource = app->kmr_vk_image[textureImageIndex].imageHandles[curImage].image;
 
 		if (kmr_vk_resource_copy(&bufferCopyInfo) == -1) {
-			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+			kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+			app->kmr_gltf_loader_texture_image = NULL;
 			return -1;
 		}
 
@@ -1122,13 +1132,15 @@ int create_vk_texture_images(struct app_vk *app)
 		pipelineBarrierInfo.dstPipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		pipelineBarrierInfo.imageMemoryBarrier = &imageMemoryBarrier;
 		if (kmr_vk_resource_pipeline_barrier(&pipelineBarrierInfo) == -1){
-			kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+			kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+			app->kmr_gltf_loader_texture_image = NULL;
 			return -1;
 		}
 	}
 
 	/* Free up memory after everything is copied */
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
+	kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+	app->kmr_gltf_loader_texture_image = NULL;
 	vkDestroyBuffer(app->kmr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer, NULL);
 	vkFreeMemory(app->kmr_vk_buffer[cpuVisibleImageBuffer].logicalDevice, app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory, NULL);
 	app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer = VK_NULL_HANDLE;
@@ -1139,77 +1151,79 @@ int create_vk_texture_images(struct app_vk *app)
 	return 0;
 }
 
-
-int create_gltf_load_required_data(struct app_vk *app)
+static int
+create_gltf_load_required_data (struct app_vk *app)
 {
-	struct kmr_gltf_loader_file gltfLoaderFile;
+	uint32_t meshIndex;
 
-	struct kmr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
-	gltfLoaderFileLoadInfo.fileName = GLTF_MODEL;
+	struct kmr_gltf_loader_file *gltfLoaderFile = NULL;
+	struct kmr_gltf_loader_node *gltfLoaderFileNodes = NULL;
 
-	gltfLoaderFile = kmr_gltf_loader_file_load(&gltfLoaderFileLoadInfo);
-	if (!gltfLoaderFile.gltfData)
+	struct kmr_gltf_loader_file_create_info gltfLoaderFileCreateInfo;
+	struct kmr_gltf_loader_mesh_create_info gltfMeshInfo;
+	struct kmr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
+	struct kmr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
+	struct kmr_gltf_loader_material_create_info gltfLoaderMaterialInfo;
+
+	gltfLoaderFileCreateInfo.fileName = GLTF_MODEL;
+	gltfLoaderFile = kmr_gltf_loader_file_create(&gltfLoaderFileCreateInfo);
+	if (!gltfLoaderFile->gltfData)
 		return -1;
 
-	struct kmr_gltf_loader_mesh_create_info gltfMeshInfo;
-	gltfMeshInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfMeshInfo.gltfFile = gltfLoaderFile;
 	gltfMeshInfo.bufferIndex = 0;
-
 	app->kmr_gltf_loader_mesh = kmr_gltf_loader_mesh_create(&gltfMeshInfo);
-	if (!app->kmr_gltf_loader_mesh.meshData)
-		goto exit_create_gltf_loader_file_free_gltf_data;
+	if (!app->kmr_gltf_loader_mesh)
+		goto exit_error_create_gltf_load_required_data;
 
-	struct kmr_gltf_loader_texture_image_create_info gltfTextureImagesInfo;
-	gltfTextureImagesInfo.gltfLoaderFile = gltfLoaderFile;
-	gltfTextureImagesInfo.directory = gltfLoaderFileLoadInfo.fileName;
-
+	gltfTextureImagesInfo.gltfFile = gltfLoaderFile;
+	gltfTextureImagesInfo.directory = gltfLoaderFileCreateInfo.fileName;
 	app->kmr_gltf_loader_texture_image = kmr_gltf_loader_texture_image_create(&gltfTextureImagesInfo);
-	if (!app->kmr_gltf_loader_texture_image.imageData)
-		goto exit_create_gltf_loader_file_free_gltf_vertex;
+	if (!app->kmr_gltf_loader_texture_image)
+		goto exit_error_create_gltf_load_required_data;
 
-	struct kmr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
-	gltfLoaderFileNodeInfo.gltfLoaderFile = gltfLoaderFile;
+	gltfLoaderFileNodeInfo.gltfFile = gltfLoaderFile;
 	gltfLoaderFileNodeInfo.sceneIndex = 0;
+	gltfLoaderFileNodes = kmr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
+	if (!gltfLoaderFileNodes->nodeData)
+		goto exit_error_create_gltf_load_required_data;
 
-	struct kmr_gltf_loader_node gltfLoaderFileNodes = kmr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
-	if (!gltfLoaderFileNodes.nodeData)
-		goto exit_create_gltf_loader_file_free_gltf_texture_image;
-
-	struct kmr_gltf_loader_material_create_info gltfLoaderMaterialInfo;
-	gltfLoaderMaterialInfo.gltfLoaderFile = gltfLoaderFile;
-
+	gltfLoaderMaterialInfo.gltfFile = gltfLoaderFile;
 	app->kmr_gltf_loader_material = kmr_gltf_loader_material_create(&gltfLoaderMaterialInfo);
-	if (!app->kmr_gltf_loader_material.materialData)
-		goto exit_create_gltf_loader_file_free_gltf_node;
+	if (!app->kmr_gltf_loader_material)
+		goto exit_error_create_gltf_load_required_data;
 
-	app->meshCount = app->kmr_gltf_loader_mesh.meshDataCount;
+	app->meshCount = app->kmr_gltf_loader_mesh->meshDataCount;
 	app->meshData = calloc(app->meshCount, sizeof(struct mesh_data));
 	if (!app->meshData) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc(app->meshData): %s", strerror(errno));
-		return -1;
+		goto exit_error_create_gltf_load_required_data;
 	}
 
 	// Copy TRS matrix transform data to the passable buffer used during draw operations
-	for (uint32_t meshIndex = 0; meshIndex < gltfLoaderFileNodes.nodeDataCount; meshIndex++) {
-		//glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
-		memcpy(app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix, gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, sizeof(mat4));
-		app->meshData[meshIndex].firstIndex = app->kmr_gltf_loader_mesh.meshData[meshIndex].firstIndex;
-		app->meshData[meshIndex].indexCount = app->kmr_gltf_loader_mesh.meshData[meshIndex].indexBufferDataCount;
+	for (meshIndex = 0; meshIndex < gltfLoaderFileNodes->nodeDataCount; meshIndex++) {
+		// glm_mat4_copy(gltfLoaderFileNodes.nodeData[meshIndex].matrixTransform, app->meshData[gltfLoaderFileNodes.nodeData[meshIndex].objectIndex].matrix);
+		memcpy(app->meshData[gltfLoaderFileNodes->nodeData[meshIndex].objectIndex].matrix, \
+		       gltfLoaderFileNodes->nodeData[meshIndex].matrixTransform, \
+		       sizeof(mat4));
+		app->meshData[meshIndex].firstIndex = app->kmr_gltf_loader_mesh->meshData[meshIndex].firstIndex;
+		app->meshData[meshIndex].indexCount = app->kmr_gltf_loader_mesh->meshData[meshIndex].indexBufferDataCount;
 	}
 
 	// Have everything we need free memory created
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_file_cnt = 1, .kmr_gltf_loader_file = &gltfLoaderFile });
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_node_cnt = 1, .kmr_gltf_loader_node = &gltfLoaderFileNodes });
+	kmr_gltf_loader_node_destroy(gltfLoaderFileNodes);
+	kmr_gltf_loader_file_destroy(gltfLoaderFile);
 	return 0;
 
-exit_create_gltf_loader_file_free_gltf_node:
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_node_cnt = 1, .kmr_gltf_loader_node = &gltfLoaderFileNodes });
-exit_create_gltf_loader_file_free_gltf_texture_image:
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_texture_image_cnt = 1, .kmr_gltf_loader_texture_image = &app->kmr_gltf_loader_texture_image });
-exit_create_gltf_loader_file_free_gltf_vertex:
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_mesh_cnt = 1, .kmr_gltf_loader_mesh = &app->kmr_gltf_loader_mesh });
-exit_create_gltf_loader_file_free_gltf_data:
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_file_cnt = 1, .kmr_gltf_loader_file = &gltfLoaderFile });
+exit_error_create_gltf_load_required_data:
+	kmr_gltf_loader_node_destroy(gltfLoaderFileNodes);
+	kmr_gltf_loader_material_destroy(app->kmr_gltf_loader_material);
+	kmr_gltf_loader_texture_image_destroy(app->kmr_gltf_loader_texture_image);
+	kmr_gltf_loader_mesh_destroy(app->kmr_gltf_loader_mesh);
+	kmr_gltf_loader_file_destroy(gltfLoaderFile);
+	app->kmr_gltf_loader_material = NULL;
+	app->kmr_gltf_loader_texture_image = NULL;
+	app->kmr_gltf_loader_mesh = NULL;
 	return -1;
 }
 
@@ -1249,8 +1263,8 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	VkDescriptorSetLayoutBinding descSetLayoutBindings[3]; // Amount of descriptors in the set
 	uint32_t descriptorBindingCount = ARRAY_LEN(descSetLayoutBindings);
 
-	uint32_t materialCount = app->kmr_gltf_loader_material.materialDataCount;
-	struct kmr_gltf_loader_material_data *materialData = app->kmr_gltf_loader_material.materialData;
+	uint32_t materialCount = app->kmr_gltf_loader_material->materialDataCount;
+	struct kmr_gltf_loader_material_data *materialData = app->kmr_gltf_loader_material->materialData;
 
 	// Uniform descriptor
 	descSetLayoutBindings[0].binding = 0;
@@ -1330,7 +1344,8 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 	}
 
 	// Remove material data no longer required
-	kmr_gltf_loader_destroy(&(struct kmr_gltf_loader_destroy) { .kmr_gltf_loader_material_cnt = 1, .kmr_gltf_loader_material = &app->kmr_gltf_loader_material });
+	kmr_gltf_loader_material_destroy(app->kmr_gltf_loader_material);
+	app->kmr_gltf_loader_material = NULL;
 
 	/* Binds multiple descriptors and their objects to the same set */
 	VkWriteDescriptorSet descriptorWrites[descriptorBindingCount];
