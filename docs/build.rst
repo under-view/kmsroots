@@ -68,4 +68,6 @@ https://www.sphinx-doc.org/en/master/man/sphinx-build.html
         # If build directory exists
         $ meson configure -Ddocs=true build
 
+	$ ninja docs -C build
+
 .. _The C Domain: https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#the-c-domain
