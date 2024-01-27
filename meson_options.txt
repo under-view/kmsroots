@@ -23,11 +23,11 @@ option('shaderc',
        description: 'Enable/disable google shaderc')
 
 option('examples',
-      type: 'boolean', value: 'false',
+      type: 'boolean', value: false,
       description: 'Build examples')
 
 option('tests',
-      type: 'boolean', value: 'false',
+      type: 'boolean', value: false,
       description: 'Build tests')
 
 option('debugging',
@@ -40,5 +40,5 @@ option('gpu',
        description: 'Select VkPhysicalDeviceType to use in examples')
 
 option('docs',
-      type: 'boolean', value: 'false',
+      type: 'boolean', value: false,
       description: 'Build documentation')
