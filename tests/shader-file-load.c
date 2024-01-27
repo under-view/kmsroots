@@ -7,14 +7,12 @@ int main(void)
 {
 	int ret = 0;
 
-	struct kmr_shader_destroy shaderd;
-	memset(&shaderd, 0, sizeof(shaderd));
-
 	/*
 	 * 0. Vertex Shader
 	 * 1. Fragment Shader
 	 */
 	struct kmr_utils_file kmr_shader[2];
+	memset(kmr_shader, 0, sizeof(kmr_shader));
 
 	kmr_utils_log(KMR_WARNING, "LOADING VERTEX SHADER");
 
