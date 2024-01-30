@@ -1,11 +1,12 @@
-📚 API documentation
+📚 API Documentation
 ====================
 
 .. toctree::
-        :maxdepth: 1
-        :caption: API documentations
+	:maxdepth: 1
+	:caption: API Documentation
 
-        buffer
-        dma-buf
-        drm-node
-        vulkan
+	buffer
+	dma-buf
+	drm-node
+	gltf-loader
+	vulkan
