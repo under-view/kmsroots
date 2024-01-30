@@ -5,53 +5,35 @@
 
 int main(void)
 {
-	struct kmr_gltf_loader_destroy gltfLoaderFileDestroy;
-	memset(&gltfLoaderFileDestroy, 0, sizeof(struct kmr_gltf_loader_destroy));
+	int ret = 0;
 
-	struct kmr_gltf_loader_file gltfLoaderFile;
-	struct kmr_gltf_loader_mesh gltfLoaderFileMesh;
-	struct kmr_gltf_loader_node gltfLoaderFileNode;
+	struct kmr_gltf_loader_file *gltfLoaderFile = NULL;
+	struct kmr_gltf_loader_mesh *gltfLoaderFileMesh = NULL;
+	struct kmr_gltf_loader_node *gltfLoaderFileNode = NULL;
 
-	struct kmr_gltf_loader_file_load_info gltfLoaderFileLoadInfo;
-	gltfLoaderFileLoadInfo.fileName = GLTF_MODEL;
-
-	gltfLoaderFile = kmr_gltf_loader_file_load(&gltfLoaderFileLoadInfo);
-	if (!gltfLoaderFile.gltfData)
-		return 1;
-
+	struct kmr_gltf_loader_file_create_info gltfLoaderFileCreateInfo;
 	struct kmr_gltf_loader_mesh_create_info gltfMeshInfo;
-	gltfMeshInfo.gltfLoaderFile = gltfLoaderFile;
-	gltfMeshInfo.bufferIndex = 0;
-
-	gltfLoaderFileMesh = kmr_gltf_loader_mesh_create(&gltfMeshInfo);
-	if (!gltfLoaderFileMesh.meshData)
-		goto exit_gltf_loader_file_free_cgltf_data;
-
 	struct kmr_gltf_loader_node_create_info gltfLoaderFileNodeInfo;
-	gltfLoaderFileNodeInfo.gltfLoaderFile = gltfLoaderFile;
+
+	gltfLoaderFileCreateInfo.fileName = GLTF_MODEL;
+	gltfLoaderFile = kmr_gltf_loader_file_create(&gltfLoaderFileCreateInfo);
+	if (!gltfLoaderFile) { ret = 1; goto exit_error_gltf_file_loading; }
+
+	gltfMeshInfo.gltfFile = gltfLoaderFile;
+	gltfMeshInfo.bufferIndex = 0;
+	gltfLoaderFileMesh = kmr_gltf_loader_mesh_create(&gltfMeshInfo);
+	if (!gltfLoaderFileMesh) { ret = 1; goto exit_error_gltf_file_loading; }
+
+	gltfLoaderFileNodeInfo.gltfFile = gltfLoaderFile;
 	gltfLoaderFileNodeInfo.sceneIndex = 0;
-
 	gltfLoaderFileNode = kmr_gltf_loader_node_create(&gltfLoaderFileNodeInfo);
-	if (!gltfLoaderFileNode.nodeData)
-		goto exit_gltf_loader_file_free_vertex_data;
+	if (!gltfLoaderFileNode) { ret = 1; goto exit_error_gltf_file_loading; }
 
-	kmr_gltf_loader_node_display_matrix_transform(&gltfLoaderFileNode);
+	kmr_gltf_loader_node_display_matrix_transform(gltfLoaderFileNode);
 
-	gltfLoaderFileDestroy.kmr_gltf_loader_node_cnt = 1;
-	gltfLoaderFileDestroy.kmr_gltf_loader_node = &gltfLoaderFileNode;
-	gltfLoaderFileDestroy.kmr_gltf_loader_mesh_cnt = 1;
-	gltfLoaderFileDestroy.kmr_gltf_loader_mesh = &gltfLoaderFileMesh;
-	gltfLoaderFileDestroy.kmr_gltf_loader_file_cnt = 1;
-	gltfLoaderFileDestroy.kmr_gltf_loader_file = &gltfLoaderFile;
-	kmr_gltf_loader_destroy(&gltfLoaderFileDestroy);
-	return 0;
-
-exit_gltf_loader_file_free_vertex_data:
-	gltfLoaderFileDestroy.kmr_gltf_loader_mesh_cnt = 1;
-	gltfLoaderFileDestroy.kmr_gltf_loader_mesh = &gltfLoaderFileMesh;
-exit_gltf_loader_file_free_cgltf_data:
-	gltfLoaderFileDestroy.kmr_gltf_loader_file_cnt = 1;
-	gltfLoaderFileDestroy.kmr_gltf_loader_file = &gltfLoaderFile;
-	kmr_gltf_loader_destroy(&gltfLoaderFileDestroy);
-	return 1;
+exit_error_gltf_file_loading:
+	kmr_gltf_loader_node_destroy(gltfLoaderFileNode);
+	kmr_gltf_loader_mesh_destroy(gltfLoaderFileMesh);
+	kmr_gltf_loader_file_destroy(gltfLoaderFile);
+	return ret;
 }
