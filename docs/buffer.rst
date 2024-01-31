@@ -37,6 +37,10 @@ Functions
 1. :c:func:`kmr_buffer_create`
 #. :c:func:`kmr_buffer_destroy`
 
+=================
+Function Pointers
+=================
+
 API Documentation
 ~~~~~~~~~~~~~~~~~
 

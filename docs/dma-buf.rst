@@ -38,6 +38,10 @@ Functions
 #. :c:func:`kmr_dma_buf_export_sync_file_create`
 #. :c:func:`kmr_dma_buf_export_sync_file_destroy`
 
+=================
+Function Pointers
+=================
+
 API Documentation
 ~~~~~~~~~~~~~~~~~
 

@@ -126,6 +126,10 @@ Functions
 #. :c:func:`kmr_vk_memory_export_external_fd`
 #. :c:func:`kmr_vk_memory_map`
 
+=================
+Function Pointers
+=================
+
 API Documentation
 ~~~~~~~~~~~~~~~~~
 
