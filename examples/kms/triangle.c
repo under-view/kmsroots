@@ -63,7 +63,7 @@ struct app_kms {
 	struct kmr_drm_node_atomic_request *kmr_drm_node_atomic_request;
 	struct kmr_buffer *kmr_buffer;
 	struct kmr_dma_buf_export_sync_file *kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
-	struct kmr_input kmr_input;
+	struct kmr_input *kmr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
 #endif
@@ -247,6 +247,37 @@ render (volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 int
 main (void)
 {
+	VkExtent2D extent2D;
+	VkSurfaceFormatKHR surfaceFormat;
+
+	uint64_t inputReturnCode;
+	int kmsfd = -1, inputfd = -1;
+	int nfds = -1, epollfd = -1, n;
+	enum libinput_event_type eventType;
+	struct libinput *input = NULL;
+	struct libinput_event *inputEvent = NULL;
+	struct libinput_event_keyboard *keyEvent = NULL;
+	struct epoll_event event, events[MAX_EPOLL_EVENTS];
+
+	struct app_kms kms;
+	struct app_vk app;
+	struct kmr_vk_destroy appd;
+
+	struct kmr_input_create_info inputInfo;
+	struct kmr_drm_node_handle_drm_event_info drmEventInfo;
+
+	static int fbid = 0;
+	static uint8_t cbuf = 0;
+	static volatile bool running = true;
+	static struct app_vk_kms passData;
+
+	memset(&app, 0, sizeof(app));
+	memset(&appd, 0, sizeof(appd));
+	memset(&kms, 0, sizeof(kms));
+
+	passData.app_kms = &kms;
+	passData.app_vk = &app;
+
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
 		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
 		return 1;
@@ -263,17 +294,6 @@ main (void)
 	}
 
 	kmr_utils_set_log_level(KMR_ALL);
-
-	struct app_vk app;
-	struct kmr_vk_destroy appd;
-	memset(&app, 0, sizeof(app));
-	memset(&appd, 0, sizeof(appd));
-
-	struct app_kms kms;
-	memset(&kms, 0, sizeof(kms));
-
-	VkExtent2D extent2D;
-	VkSurfaceFormatKHR surfaceFormat;
 
 	if (create_vk_instance(&app) == -1)
 		goto exit_error;
@@ -318,31 +338,20 @@ main (void)
 	if (create_vk_buffers(&app) == -1)
 		goto exit_error;
 
-	static int fbid = 0;
-	static uint8_t cbuf = 0;
-	static volatile bool running = true;
-
-	static struct app_vk_kms passData;
-	passData.app_kms = &kms;
-	passData.app_vk = &app;
-
 	if (create_kms_atomic_request_instance(&passData, &cbuf, &fbid, &running) == -1)
 		goto exit_error;
 
-	struct epoll_event event, events[MAX_EPOLL_EVENTS];
-	int nfds = -1, epollfd = -1, kmsfd = -1, inputfd = -1, n;
-
-	struct kmr_input_create_info inputInfo;
 #ifdef INCLUDE_LIBSEAT
 	inputInfo.session = kms.kmr_session;
 #endif
-
 	kms.kmr_input = kmr_input_create(&inputInfo);
-	if (!kms.kmr_input.input)
+	if (!kms.kmr_input)
 		goto exit_error;
 
-	inputfd = kms.kmr_input.inputfd;
+	input = kms.kmr_input->inputInst;
+	inputfd = kms.kmr_input->inputfd;
 	kmsfd = kms.kmr_drm_node->kmsfd;
+	drmEventInfo.kmsfd = kmsfd;
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
@@ -364,13 +373,6 @@ main (void)
 		goto exit_error;
 	}
 
-	struct kmr_drm_node_handle_drm_event_info drmEventInfo;
-	drmEventInfo.kmsfd = kmsfd;
-
-	uint64_t inputReturnCode;
-	struct kmr_input_handle_input_event_info inputEventInfo;
-	inputEventInfo.input = kms.kmr_input;
-
 	while (running) {
 		nfds = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, -1);
 		if (nfds == -1) {
@@ -380,7 +382,25 @@ main (void)
 
 		for (n = 0; n < nfds; n++) {
 			if (events[n].data.fd == inputfd) {
-				inputReturnCode = kmr_input_handle_input_event(&inputEventInfo);
+				libinput_dispatch(input);
+
+				inputEvent = libinput_get_event(input);
+				if (!inputEvent)
+					continue;
+
+				eventType = libinput_event_get_type(inputEvent);
+
+				switch (eventType) {
+					case LIBINPUT_EVENT_KEYBOARD_KEY:
+						keyEvent = libinput_event_get_keyboard_event(inputEvent);
+						inputReturnCode = libinput_event_keyboard_get_key(keyEvent);
+						break;
+					default:
+						break;
+				}
+
+				libinput_event_destroy(inputEvent);
+				libinput_dispatch(input);
 
 				/*
 				 * input-event-codes.h
@@ -431,6 +451,8 @@ exit_error:
 		kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file[destroyLoop]);
 
 	kmr_buffer_destroy(kms.kmr_buffer);
+
+	kmr_input_destroy(kms.kmr_input);
 
 	kmr_drm_node_atomic_request_destroy(kms.kmr_drm_node_atomic_request);
 	kmr_drm_node_display_destroy(kms.kmr_drm_node_display);
