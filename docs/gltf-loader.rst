@@ -113,7 +113,8 @@ kmr_gltf_loader_file_destroy
 
 .. c:function:: void kmr_gltf_loader_file_destroy(struct kmr_gltf_loader_file *gltfFile);
 
-	Frees any allocated memory created after :c:func:`kmr_gltf_loader_file_create` call.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_gltf_loader_file_create` call.
 
 	Parameters:
 		| **gltfFile** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_file`
@@ -262,7 +263,8 @@ kmr_gltf_loader_mesh_destroy
 
 .. c:function:: void kmr_gltf_loader_mesh_destroy(struct kmr_gltf_loader_mesh *mesh);
 
-	Frees any allocated memory created after :c:func:`kmr_gltf_loader_mesh_create` call.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_gltf_loader_mesh_create` call.
 
 	Parameters:
 		| **mesh** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_mesh`
@@ -341,7 +343,8 @@ kmr_gltf_loader_texture_image_destroy
 
 .. c:function:: void kmr_gltf_loader_texture_image_destroy (struct kmr_gltf_loader_texture_image *textureImage);
 
-	Frees any allocated memory created after :c:func:`kmr_gltf_loader_texture_image_create` call.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_gltf_loader_texture_image_create` call.
 
 	Parameters:
 		| **textureImage** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_texture_image`
@@ -528,7 +531,8 @@ kmr_gltf_loader_material_destroy
 
 .. c:function:: void kmr_gltf_loader_material_destroy(struct kmr_gltf_loader_material *material);
 
-	Frees any allocated memory created after :c:func:`kmr_gltf_loader_material_create` call.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_gltf_loader_material_create` call.
 
 	Parameters:
 		| **material** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_material`
@@ -662,7 +666,8 @@ kmr_gltf_loader_node_destroy
 
 .. c:function:: void kmr_gltf_loader_node_destroy(struct kmr_gltf_loader_node *node);
 
-	Frees any allocated memory created after :c:func:`kmr_gltf_loader_node_create` call.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_gltf_loader_node_create` call.
 
 	Parameters:
 		| **node** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_node`

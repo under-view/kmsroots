@@ -133,7 +133,8 @@ kmr_drm_node_destroy
 
 .. c:function:: void kmr_drm_node_destroy(struct kmr_drm_node *node);
 
-	Frees any allocated memory defined by user.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_drm_node_create` call.
 
 	Parameters:
 		| **node:** Pointer to a valid ``struct`` :c:struct:`kmr_drm_node`
@@ -350,7 +351,8 @@ kmr_drm_node_display_destroy
 
 .. c:function:: void kmr_drm_node_display_destroy(struct kmr_drm_node_display *display);
 
-	Frees any allocated memory defined by user
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_drm_node_display_create` call.
 
 	Parameters:
 		| **display:** Pointer to a valid ``struct`` :c:struct:`kmr_drm_node_display`
@@ -531,7 +533,8 @@ kmr_drm_node_atomic_request_destroy
 
 .. c:function:: void kmr_drm_node_atomic_request_destroy(struct kmr_drm_node_atomic_request *atomic);
 
-	Frees any allocated memory defined by user
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_drm_node_atomic_request_create` call.
 
 	Parameters:
 		| **atomic:** Pointer to a valid ``struct`` :c:struct:`kmr_drm_node_atomic_request`

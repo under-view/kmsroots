@@ -70,8 +70,9 @@ struct kmr_drm_node_create_info {
  *                      So, if a graphical session is already active on the current VT function fails.
  *
  * parameters:
- * @nodeInfo - Pointer to a struct kmr_drm_node_create_info used to pass a DRI/KMS device file that we may want to use
- *             and to store information about the current seatd/sytemd-logind D-bus session.
+ * @nodeInfo - Pointer to a struct kmr_drm_node_create_info used to pass a DRI/KMS
+ *             device file that we may want to use and to store information about
+ *             the current seatd/sytemd-logind D-bus session.
  * returns:
  *	on success Pointer to a struct kmr_drm_node
  *	on failure NULL
@@ -81,7 +82,8 @@ kmr_drm_node_create (struct kmr_drm_node_create_info *nodeInfo);
 
 
 /*
- * kmr_drm_node_destroy: Frees any allocated memory defined by user
+ * kmr_drm_node_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                       kmr_drm_node_create() call.
  *
  * parameters:
  * @node - Pointer to a valid struct kmr_drm_node
@@ -248,7 +250,8 @@ kmr_drm_node_display_create (struct kmr_drm_node_display_create_info *displayInf
 
 
 /*
- * kmr_drm_node_display_destroy: Frees any allocated memory defined by user
+ * kmr_drm_node_display_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                               kmr_drm_node_display_create() call.
  *
  * parameters:
  * @display - Pointer to a valid struct kmr_drm_node_display
@@ -380,7 +383,8 @@ kmr_drm_node_atomic_request_create (struct kmr_drm_node_atomic_request_create_in
 
 
 /*
- * kmr_drm_node_atomic_request_destroy: Frees any allocated memory defined by user
+ * kmr_drm_node_atomic_request_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                                      kmr_drm_node_atomic_request_create() call.
  *
  * parameters:
  * @atomic - Pointer to a valid struct kmr_drm_node_atomic_request

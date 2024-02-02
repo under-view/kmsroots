@@ -222,8 +222,8 @@ kmr_buffer_destroy
 
 .. c:function:: void kmr_buffer_destroy(struct kmr_buffer *buffer);
 
-	Function free's all allocate objects and closes all file descriptors
-	associated with a given buffer.
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_buffer_create` call.
 
 	Parameters:
 		| **buffer:**

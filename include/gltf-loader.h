@@ -45,7 +45,8 @@ kmr_gltf_loader_file_create (struct kmr_gltf_loader_file_create_info *gltfFileIn
 
 
 /*
- * kmr_gltf_loader_file_destroy: Frees any allocated memory created after kmr_gltf_loader_file_create() call.
+ * kmr_gltf_loader_file_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                               kmr_gltf_loader_file_create() call.
  *
  * parameters:
  * @gltfFile - Pointer to a valid struct kmr_gltf_loader_file
@@ -156,7 +157,8 @@ kmr_gltf_loader_mesh_create (struct kmr_gltf_loader_mesh_create_info *meshInfo);
 
 
 /*
- * kmr_gltf_loader_mesh_destroy: Frees any allocated memory created after kmr_gltf_loader_mesh_create() call.
+ * kmr_gltf_loader_mesh_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                               kmr_gltf_loader_mesh_create() call.
  *
  * parameters:
  * @mesh - Pointer to a valid struct kmr_gltf_loader_mesh
@@ -219,7 +221,8 @@ kmr_gltf_loader_texture_image_create (struct kmr_gltf_loader_texture_image_creat
 
 
 /*
- * kmr_gltf_loader_texture_image_destroy: Frees any allocated memory created after kmr_gltf_loader_texture_image_create() call.
+ * kmr_gltf_loader_texture_image_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                                        kmr_gltf_loader_texture_image_create() call.
  *
  * parameters:
  * @textureImage - Pointer to a valid struct kmr_gltf_loader_texture_image
@@ -366,7 +369,8 @@ kmr_gltf_loader_material_create (struct kmr_gltf_loader_material_create_info *ma
 
 
 /*
- * kmr_gltf_loader_material_destroy: Frees any allocated memory created after kmr_gltf_loader_material_create() call.
+ * kmr_gltf_loader_material_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                                   kmr_gltf_loader_material_create() call.
  *
  * parameters:
  * @material - Pointer to a valid struct kmr_gltf_loader_material
@@ -461,7 +465,8 @@ kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *nodeInfo);
 
 
 /*
- * kmr_gltf_loader_node_destroy: Frees any allocated memory created after kmr_gltf_loader_node_create() call.
+ * kmr_gltf_loader_node_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                               kmr_gltf_loader_node_create() call.
  *
  * parameters:
  * @node - Pointer to a valid struct kmr_gltf_loader_node

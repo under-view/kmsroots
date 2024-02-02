@@ -178,7 +178,8 @@ kmr_dma_buf_export_sync_file_destroy
 
 .. c:function:: void kmr_dma_buf_export_sync_file_destroy(struct kmr_dma_buf_export_sync_file *exportSyncFile);
 
-	Frees any allocated memory defined by user
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_dma_buf_export_sync_file_create` call.
 
 	Parameters:
 		| **exportSyncFile:** Pointer to a valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`

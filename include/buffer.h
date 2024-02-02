@@ -125,7 +125,8 @@ kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo);
 
 
 /*
- * kmr_buffer_destroy: Function free's all allocate objects associated with a given buffer
+ * kmr_buffer_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                     kmr_buffer_create() call.
  *
  * parameters:
  * @buffer - Must pass a valid pointer to a struct kmr_buffer

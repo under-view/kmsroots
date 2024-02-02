@@ -102,7 +102,8 @@ kmr_dma_buf_export_sync_file_create (struct kmr_dma_buf_export_sync_file_create_
 
 
 /*
- * kmr_dma_buf_export_sync_file_destroy: Frees any allocated memory defined by user
+ * kmr_dma_buf_export_sync_file_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                                       kmr_dma_buf_export_sync_file_create() call.
  *
  * parameters:
  * @exportSyncFile - Pointer to a valid struct kmr_dma_buf_export_sync_file
