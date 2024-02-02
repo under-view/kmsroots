@@ -26,4 +26,4 @@ if get_option('wayland').enabled()
   main_headers += ['wclient.h']
 endif
 
-install_headers(main_headers, subdir: 'kmr')
+install_headers(main_headers, subdir: 'kmsroots')
