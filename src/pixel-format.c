@@ -5,6 +5,10 @@
 #include "pixel-format.h"
 
 
+/******************************************
+ * START GLOBAL {struct,enum} DEFINITIONS *
+ ******************************************/
+
 struct kmr_pixel_format {
 	uint32_t   gbmFormat; // Just a redifinition of @drmFormat
 	uint32_t   drmFormat;
@@ -251,10 +255,21 @@ static const struct kmr_pixel_format formats[] = {
 	},
 };
 
+/****************************************
+ * END GLOBAL {struct,enum} DEFINITIONS *
+ ****************************************/
 
-uint32_t kmr_pixel_format_convert_name(kmr_pixel_format_conv_type conv, uint32_t format)
+
+/****************************************************
+ * START OF kmr_pixel_format_convert_name FUNCTIONS *
+ ****************************************************/
+
+uint32_t
+kmr_pixel_format_convert_name (kmr_pixel_format_conv_type conv, uint32_t format)
 {
-	for (uint8_t i = 0; i < ARRAY_LEN(formats); i++) {
+	uint8_t i;
+
+	for (i = 0; i < ARRAY_LEN(formats); i++) {
 		switch (conv) {
 			case KMR_PIXEL_FORMAT_CONV_GBM_TO_VK:
 				if (format == formats[i].gbmFormat)
@@ -289,10 +304,21 @@ uint32_t kmr_pixel_format_convert_name(kmr_pixel_format_conv_type conv, uint32_t
 	return UINT32_MAX;
 }
 
+/**************************************************
+ * END OF kmr_pixel_format_convert_name FUNCTIONS *
+ **************************************************/
 
-const char *kmr_pixel_format_get_name(kmr_pixel_format_type formatType, uint32_t format)
+
+/************************************************
+ * START OF kmr_pixel_format_get_name FUNCTIONS *
+ ************************************************/
+
+const char *
+kmr_pixel_format_get_name (kmr_pixel_format_type formatType, uint32_t format)
 {
-	for (uint8_t i = 0; i < ARRAY_LEN(formats); i++) {
+	uint8_t i;
+
+	for (i = 0; i < ARRAY_LEN(formats); i++) {
 		switch (formatType) {
 			case KMR_PIXEL_FORMAT_VK:
 				if (format == formats[i].vkFormat)
@@ -305,3 +331,7 @@ const char *kmr_pixel_format_get_name(kmr_pixel_format_type formatType, uint32_t
 	}
 	return NULL;
 }
+
+/**********************************************
+ * END OF kmr_pixel_format_get_name FUNCTIONS *
+ **********************************************/
