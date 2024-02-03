@@ -19,6 +19,11 @@
 #include "session.h"
 #endif
 
+
+/*************************************************
+ * START OF kmr_input_{create,destroy} FUNCTIONS *
+ *************************************************/
+
 static int
 open_restricted (const char *path, int UNUSED flags, void UNUSED *data)
 {
@@ -117,3 +122,7 @@ kmr_input_destroy (struct kmr_input *input)
 	libinput_unref(input->inputInst);
 	free(input);
 }
+
+/***********************************************
+ * END OF kmr_input_{create,destroy} FUNCTIONS *
+ ***********************************************/
