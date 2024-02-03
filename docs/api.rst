@@ -10,4 +10,5 @@
 	drm-node
 	gltf-loader
 	input
+	pixel-format
 	vulkan
