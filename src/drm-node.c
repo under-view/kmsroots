@@ -141,7 +141,7 @@ setup_atomic_modeset (int kmsfd)
 
 
 static int
-open_drm_node (struct kmr_drm_node_create_info *nodeInfo,
+open_drm_node (struct kmr_drm_node_create_info UNUSED *nodeInfo,
                const char *deviceNode)
 {
 	int kmsfd = -1;
