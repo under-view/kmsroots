@@ -2,7 +2,9 @@
 #define KMR_INPUT_H
 
 #include "utils.h"
+#ifdef INCLUDE_LIBSEAT
 #include "session.h"
+#endif
 
 #include <libinput.h>
 
@@ -39,11 +41,11 @@ struct kmr_input_create_info {
 
 
 /*
- * kmr_input_create: Creates a libinput instance 
+ * kmr_input_create: Creates a libinput instance and pollable fd.
  *
  * parameters:
- * @input - Pointer to a struct kmr_input_create_info used store information about
- *          the current seatd/sytemd-logind D-Bus session
+ * @inputInfo - Pointer to a struct kmr_input_create_info used store information about
+ *              the current seatd/sytemd-logind D-Bus session
  * returns:
  *	on success: Pointer to a struct kmr_input
  *	on failure: NULL
@@ -53,10 +55,11 @@ kmr_input_create (struct kmr_input_create_info *inputInfo);
 
 
 /*
- * kmr_intput_destroy: Destroy any and all information
+ * kmr_intput_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                     kmr_input_create() call.
  *
  * parameters:
- * @input - Pointer to a struct kmr_input
+ * @input - Must pass a valid pointer to a struct kmr_input
  */
 void
 kmr_input_destroy (struct kmr_input *input);

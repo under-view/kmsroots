@@ -9,4 +9,5 @@
 	dma-buf
 	drm-node
 	gltf-loader
+	input
 	vulkan
