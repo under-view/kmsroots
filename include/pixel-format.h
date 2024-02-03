@@ -29,10 +29,11 @@ typedef enum _kmr_pixel_format_conv_type {
  * @conv   - Enum constant specifying the format to convert from then to.
  * @format - Unsigned 32bit integer representing the type of pixel format.
  * returns:
- * 	on success GBM/DRM/VK format (unsigned 32bit integer)
- * 	on failure UINT32_MAX
+ * 	on success: GBM/DRM/VK format (unsigned 32bit integer)
+ * 	on failure: UINT32_MAX
  */
-uint32_t kmr_pixel_format_convert_name(kmr_pixel_format_conv_type conv, uint32_t format);
+uint32_t
+kmr_pixel_format_convert_name (kmr_pixel_format_conv_type conv, uint32_t format);
 
 
 /*
@@ -52,10 +53,11 @@ typedef enum _kmr_pixel_format_type {
  * @formatType - Enum constant specifying the API (GBM/DRM/VK) format name.
  * @format     - Unsigned 32bit integer representing the type of pixel format.
  * returns:
- * 	on success GBM/DRM/VK format in string form
- * 	on failure UINT32_MAX
+ * 	on success: GBM/DRM/VK format in string form
+ * 	on failure: NULL
  */
-const char *kmr_pixel_format_get_name(kmr_pixel_format_type formatType, uint32_t format);
+const char *
+kmr_pixel_format_get_name (kmr_pixel_format_type formatType, uint32_t format);
 
 
 #endif
