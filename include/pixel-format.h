@@ -6,7 +6,7 @@
 /*
  * enum kmr_pixel_format_conv_type (kmsroots Pixel Format Conversion Type)
  *
- * Specifies the type of pixel format name conversion to perform
+ * Specifies the type of pixel format name conversion to perform.
  */
 typedef enum _kmr_pixel_format_conv_type {
 	KMR_PIXEL_FORMAT_CONV_GBM_TO_VK  = 0,
