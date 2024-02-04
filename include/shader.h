@@ -3,22 +3,20 @@
 
 #include "utils.h"
 
-#include <shaderc/shaderc.h>
-
 
 /*
  * struct kmr_shader_spirv (kmsroots Shader SPIRV [Standard Portable Intermediate Representation - Vulkan])
  *
  * members:
- * @result   - An opaque handle to the results of a call to any shaderc_compile_into_*()
- *             Unfortunately we can't release until after the shader module is created.
- * @bytes    - Buffer that stores a given file's content
- * @byteSize - Size of buffer storing a given file's content
+ * @result   - Pointer to an opaque handle to the results of a call to any shaderc_compile_into_*()
+ *             Unfortunately we can't release/free until after the shader module is created.
+ * @bytes    - Buffer that stores a spirv byte code.
+ * @byteSize - Size of spirv byte code buffer.
  */
 struct kmr_shader_spirv {
-	shaderc_compilation_result_t result;
-	const unsigned char          *bytes;
-	unsigned long                byteSize;
+	void                *result;
+	const unsigned char *bytes;
+	unsigned long       byteSize;
 };
 
 
@@ -57,8 +55,8 @@ kmr_shader_spirv_create (struct kmr_shader_spirv_create_info *spirvInfo);
 
 
 /*
- * kmr_shader_destroy: Frees any allocated memory and closes FD’s (if open) created after
- *                     kmr_shader_spirv_create() call.
+ * kmr_shader_spirv_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                           kmr_shader_spirv_create() call.
  *
  * parameters:
  * @spirv - Must pass a valid pointer to a struct kmr_shader_spirv
