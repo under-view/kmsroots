@@ -12,4 +12,5 @@
 	input
 	pixel-format
 	session
+	shader
 	vulkan
