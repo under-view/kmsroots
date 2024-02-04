@@ -326,7 +326,7 @@ main (void)
 	VkExtent2D extent2D;
 	VkSurfaceFormatKHR surfaceFormat;
 
-	uint64_t inputReturnCode;
+	uint64_t inputReturnCode = 0;
 	int kmsfd = -1, inputfd = -1;
 	int nfds = -1, epollfd = -1, n;
 	enum libinput_event_type eventType;
