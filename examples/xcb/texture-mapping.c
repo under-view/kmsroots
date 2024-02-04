@@ -655,6 +655,14 @@ int create_vk_shader_modules(struct app_vk *app)
 {
 	int ret = 0;
 
+	uint32_t currentShader;
+
+	struct kmr_vk_shader_module_create_info shaderModuleCreateInfo;
+
+	const char *shaderModuleNames[] = {
+		"vertex", "fragment"
+	};
+
 #ifdef INCLUDE_SHADERC
 	const char vertexShader[] =
 		"#version 450\n" // GLSL 4.5
@@ -702,14 +710,14 @@ int create_vk_shader_modules(struct app_vk *app)
 	 * 0. Vertex Shader
 	 * 1. Fragment Shader
 	 */
-	struct kmr_shader_spirv kmr_shader[2];
+	struct kmr_shader_spirv *kmr_shader[2];
 	memset(kmr_shader, 0, sizeof(kmr_shader));
 
-	kmr_shader[0] = kmr_shader_compile_buffer_to_spirv(&vertexShaderCreateInfo);
-	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	kmr_shader[0] = kmr_shader_spirv_create(&vertexShaderCreateInfo);
+	if (!kmr_shader[0]) { ret = -1 ; goto exit_distroy_shader ; }
 
-	kmr_shader[1] = kmr_shader_compile_buffer_to_spirv(&fragmentShaderCreateInfo);
-	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	kmr_shader[1] = kmr_shader_spirv_create(&fragmentShaderCreateInfo);
+	if (!kmr_shader[1]) { ret = -1 ; goto exit_distroy_shader ; }
 
 #else
 	/*
@@ -727,15 +735,15 @@ int create_vk_shader_modules(struct app_vk *app)
 
 #endif
 
-	const char *shaderModuleNames[] = {
-		"vertex", "fragment"
-	};
-
-	struct kmr_vk_shader_module_create_info shaderModuleCreateInfo;
-	for (uint32_t currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
+	for (currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
 		shaderModuleCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+#ifdef INCLUDE_SHADERC
+		shaderModuleCreateInfo.sprivByteSize = kmr_shader[currentShader]->byteSize;
+		shaderModuleCreateInfo.sprivBytes = kmr_shader[currentShader]->bytes;
+#else
 		shaderModuleCreateInfo.sprivByteSize = kmr_shader[currentShader].byteSize;
 		shaderModuleCreateInfo.sprivBytes = kmr_shader[currentShader].bytes;
+#endif
 		shaderModuleCreateInfo.shaderName = shaderModuleNames[currentShader];
 
 		app->kmr_vk_shader_module[currentShader] = kmr_vk_shader_module_create(&shaderModuleCreateInfo);
@@ -743,16 +751,13 @@ int create_vk_shader_modules(struct app_vk *app)
 	}
 
 exit_distroy_shader:
+	for (currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
 #ifdef INCLUDE_SHADERC
-	struct kmr_shader_destroy shaderd;
-	memset(&shaderd, 0, sizeof(shaderd));
-	shaderd.kmr_shader_spirv_cnt = ARRAY_LEN(kmr_shader);
-	shaderd.kmr_shader_spirv = kmr_shader;
-	kmr_shader_destroy(&shaderd);
+		kmr_shader_spirv_destroy(kmr_shader[currentShader]);
 #else
-	free(kmr_shader[0].bytes);
-	free(kmr_shader[1].bytes);
+		free(kmr_shader[currentShader].bytes);
 #endif
+	}
 	return ret;
 }
 
