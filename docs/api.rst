@@ -11,4 +11,5 @@
 	gltf-loader
 	input
 	pixel-format
+	session
 	vulkan
