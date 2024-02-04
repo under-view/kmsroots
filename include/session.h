@@ -31,11 +31,22 @@ struct kmr_session {
  * parameters:
  * @session - pointer to a struct kmr_session stores information about the current session
  * returns:
- *	on success pointer to a struct kmr_session { members populated }
+ *	on success pointer to a struct kmr_session
  *	on failure NULL
  */
-struct kmr_session *kmr_session_create();
+struct kmr_session *
+kmr_session_create (void);
 
+
+/*
+ * kmr_session_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                      kmr_session_create() call.
+ *
+ * parameters:
+ * @session - pointer to a struct kmr_session stores information about the current session
+ */
+void
+kmr_session_destroy (struct kmr_session *session);
 
 
 /*
@@ -51,7 +62,8 @@ struct kmr_session *kmr_session_create();
  *	on success 0
  *	on failure -1
  */
-int kmr_session_switch_vt(struct kmr_session *session, unsigned int vt);
+int
+kmr_session_switch_vt (struct kmr_session *session, unsigned int vt);
 
 
 /*
@@ -68,7 +80,8 @@ int kmr_session_switch_vt(struct kmr_session *session, unsigned int vt);
  *	on success an open file descriptor
  *	on failure -1
  */
-int kmr_session_take_control_of_device(struct kmr_session *session, const char *devpath);
+int
+kmr_session_take_control_of_device (struct kmr_session *session, const char *devpath);
 
 
 /*
@@ -80,16 +93,8 @@ int kmr_session_take_control_of_device(struct kmr_session *session, const char *
  * @session - pointer to a struct kmr_session stores information about the current session
  * @fd      - file descriptor associated with a given opened character device file
  */
-void kmr_session_release_device(struct kmr_session *session, int fd);
-
-
-/*
- * kmr_session_destroy: Destroy logind session and free up allocated space assigning to members
- *
- * parameters:
- * @kmssd - pointer to a struct kmr_session stores information about the current session
- */
-void kmr_session_destroy(struct kmr_session *session);
+void
+kmr_session_release_device (struct kmr_session *session, int fd);
 
 
 #endif
