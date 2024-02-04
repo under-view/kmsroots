@@ -7,6 +7,22 @@
 
 
 /*
+ * struct kmr_shader_spirv (kmsroots Shader SPIRV [Standard Portable Intermediate Representation - Vulkan])
+ *
+ * members:
+ * @result   - An opaque handle to the results of a call to any shaderc_compile_into_*()
+ *             Unfortunately we can't release until after the shader module is created.
+ * @bytes    - Buffer that stores a given file's content
+ * @byteSize - Size of buffer storing a given file's content
+ */
+struct kmr_shader_spirv {
+	shaderc_compilation_result_t result;
+	const unsigned char          *bytes;
+	unsigned long                byteSize;
+};
+
+
+/*
  * struct kmr_shader_spirv_create_info (kmsroots Shader SPIRV Create Information)
  *
  * members:
@@ -26,57 +42,30 @@ struct kmr_shader_spirv_create_info {
 
 
 /*
- * struct kmr_shader_spirv (kmsroots Shader SPIRV [Standard Portable Intermediate Representation - Vulkan])
- *
- * members:
- * @result   - An opaque handle to the results of a call to any shaderc_compile_into_*()
- *             Unfortunately we can't release until after the shader module is created.
- * @bytes    - Buffer that stores a given file's content
- * @byteSize - Size of buffer storing a given file's content
- */
-struct kmr_shader_spirv {
-	shaderc_compilation_result_t result;
-	const unsigned char          *bytes;
-	unsigned long                byteSize;
-};
-
-
-/*
- * kmr_shader_compile_buffer_to_spirv: Takes in a character buffer containing shader code, it then compiles
- *                                     char buff into SPIRV-bytes at runtime. These SPIRV-bytes can later be
- *                                     passed to vulkan. struct kmr_shader_spirv member result can be free'd
- *                                     with a call to kmr_shader_destroy(3).
+ * kmr_shader_spirv_create: Takes in a character buffer containing shader code, it then compiles
+ *                          char buff into SPIRV-bytes at runtime. These SPIRV-bytes can later be
+ *                          passed to vulkan.
  *
  * parameters:
- * @kmsshader - Pointer to a struct kmr_shader_spirv_create_info containing infromation about what ops to do
+ * @spirvInfo - Pointer to a struct kmr_shader_spirv_create_info
  * returns:
- *	on success struct kmr_shader_spirv
- *	on failure struct kmr_shader_spirv { with member nulled }
+ *	on success: struct kmr_shader_spirv
+ *	on failure: NULL
  */
-struct kmr_shader_spirv kmr_shader_compile_buffer_to_spirv(struct kmr_shader_spirv_create_info *kmsshader);
+struct kmr_shader_spirv *
+kmr_shader_spirv_create (struct kmr_shader_spirv_create_info *spirvInfo);
 
 
 /*
- * struct kmr_shader_destroy (kmsroots Shader Destroy)
- *
- * members:
- * @kmr_shader_spirv_cnt - Must pass the amount of elements in struct kmr_shader_spirv array
- * @kmr_shader_spirv     - Must pass a pointer to an array of valid struct kmr_shader_spirv { free'd  members: shaderc_compilation_result_t handle }
- */
-struct kmr_shader_destroy {
-	uint32_t                kmr_shader_spirv_cnt;
-	struct kmr_shader_spirv *kmr_shader_spirv;
-};
-
-
-/*
- * kmr_shader_destroy: frees any allocated memory defined by customer
+ * kmr_shader_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                     kmr_shader_spirv_create() call.
  *
  * parameters:
- * @kmsshader - pointer to a struct kmr_shader_destroy contains all objects created during
- *              application lifetime in need freeing
+ * @spirv - Must pass a valid pointer to a struct kmr_shader_spirv
+ *        
  */
-void kmr_shader_destroy(struct kmr_shader_destroy *kmsshader);
+void
+kmr_shader_spirv_destroy (struct kmr_shader_spirv *spirv);
 
 
 #endif
