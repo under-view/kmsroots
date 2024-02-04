@@ -2,6 +2,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <shaderc/shaderc.h>
+
 #include "shader.h"
 
 
@@ -59,9 +61,9 @@ kmr_shader_spirv_create (struct kmr_shader_spirv_create_info *spirvInfo)
 
 	shaderc_compile_options_set_optimization_level(options, shaderc_optimization_level_size);
 
-	spirv->result = shaderc_compile_into_spv(compiler, spirvInfo->source, strlen(spirvInfo->source),
-	                                         shader_map_table[spirvInfo->kind], spirvInfo->filename,
-	                                         spirvInfo->entryPoint, options);
+	spirv->result = (void *) shaderc_compile_into_spv(compiler, spirvInfo->source, strlen(spirvInfo->source),
+	                                                  shader_map_table[spirvInfo->kind], spirvInfo->filename,
+	                                                  spirvInfo->entryPoint, options);
 
 	if (!spirv->result) {
 		kmr_utils_log(KMR_DANGER, "[x] shaderc_compile_into_spv: %s", shaderc_result_get_error_message(spirv->result));
