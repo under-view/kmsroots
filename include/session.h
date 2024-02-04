@@ -26,13 +26,13 @@ struct kmr_session {
 
 /*
  * kmr_session_create: Create logind/seatd session to access devices without being root.
- *                     Function populates all the members of the kmr_session struct
+ *                     Function populates all the members of the struct kmr_session.
  *
  * parameters:
  * @session - pointer to a struct kmr_session stores information about the current session
  * returns:
- *	on success pointer to a struct kmr_session
- *	on failure NULL
+ *	on success: pointer to a struct kmr_session
+ *	on failure: NULL
  */
 struct kmr_session *
 kmr_session_create (void);
@@ -43,7 +43,7 @@ kmr_session_create (void);
  *                      kmr_session_create() call.
  *
  * parameters:
- * @session - pointer to a struct kmr_session stores information about the current session
+ * @session - Must pass a valid pointer to a struct kmr_session
  */
 void
 kmr_session_destroy (struct kmr_session *session);
@@ -59,8 +59,8 @@ kmr_session_destroy (struct kmr_session *session);
  * @vt      - Unsigned integer number of the TTY/VT (Virtual Terminal) a given seat or
  *            seatd/systemd logind session should switch to.
  * returns:
- *	on success 0
- *	on failure -1
+ *	on success: 0
+ *	on failure: -1
  */
 int
 kmr_session_switch_vt (struct kmr_session *session, unsigned int vt);
@@ -77,8 +77,8 @@ kmr_session_switch_vt (struct kmr_session *session, unsigned int vt);
  * @session - pointer to a struct kmr_session stores information about the current session
  * @devpath - Path to a given character device associated with a connected device
  * returns:
- *	on success an open file descriptor
- *	on failure -1
+ *	on success: an open file descriptor
+ *	on failure: -1
  */
 int
 kmr_session_take_control_of_device (struct kmr_session *session, const char *devpath);
@@ -87,11 +87,11 @@ kmr_session_take_control_of_device (struct kmr_session *session, const char *dev
 /*
  * kmr_session_release_device: The ReleaseDevice systemd-logind D-Bus interface function allows for one
  *                             to release control over a given device (i.e GPU,keyboard,mouse,etc). The
- *                             function also close the passed file descriptor.
+ *                             function also closes the passed file descriptor.
  *
  * parameters:
- * @session - pointer to a struct kmr_session stores information about the current session
- * @fd      - file descriptor associated with a given opened character device file
+ * @session - Must pass a pointer to a struct kmr_session
+ * @fd      - Open file descriptor associated with a given character device file
  */
 void
 kmr_session_release_device (struct kmr_session *session, int fd);
