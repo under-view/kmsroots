@@ -115,7 +115,7 @@ int create_vk_sync_objs(struct app_vk *app);
 int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
-void render(volatile bool *running, uint32_t *imageIndex, void *data)
+void render(volatile bool *running, uint8_t *imageIndex, void *data)
 {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_xcb *vkxcb = (struct app_vk_xcb *) data;
@@ -131,7 +131,8 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 
 	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
+	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain,
+	                      UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*) imageIndex);
 
 	record_vk_draw_commands(app, *imageIndex, extent2D);
 
@@ -162,7 +163,7 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &app->kmr_vk_swapchain.swapchain;
-	presentInfo.pImageIndices = imageIndex;
+	presentInfo.pImageIndices = (uint32_t*) imageIndex;
 	presentInfo.pResults = NULL;
 
 	vkQueuePresentKHR(app->kmr_vk_queue.queue, &presentInfo);
@@ -186,7 +187,7 @@ int main(void)
 
 	struct kmr_xcb_window_handle_event_info eventInfo;
 
-	static uint32_t cbuf = 0;
+	static uint8_t cbuf = 0;
 	static volatile bool running = true;
 
 	static struct app_vk_xcb vkxc;
