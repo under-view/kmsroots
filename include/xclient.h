@@ -11,11 +11,12 @@
  * struct kmr_xcb_window (kmsroots XCB Window)
  *
  * members:
- * @conn       - A structure that contain all data that XCB needs to communicate with an X server.
+ * @conn       - A structure that contain all data that XCB needs to communicate
+ *               with an X server.
  * @window     - Stores the XID of the current window. XID is neeed to create
  *               windows and manage its properties
- * @delWindow  - Used to by kmr_xcb_window_wait_for_event() to verify when the window manager
- *               attempts to destroy the window.
+ * @delWindow  - Used to by kmr_xcb_window_wait_for_event() to verify when
+ *               the window manager attempts to destroy the window.
  */
 struct kmr_xcb_window {
 	xcb_connection_t        *conn;
@@ -50,10 +51,10 @@ struct kmr_xcb_window_create_info {
 
 
 /*
- * kmr_xcb_window_create: create a fulls xcb client window (can be fullscreen).
+ * kmr_xcb_window_create: Create an xcb client window instance (can be fullscreen).
  *
  * parameters:
- * @xcbWindowInfo - pointer to a struct kmr_xcb_window_create_info contains all information
+ * @xcbWindowInfo - Pointer to a struct kmr_xcb_window_create_info contains all information
  *                  required to created an xcb client and some added window configuration options.
  * returns:
  *	on success: pointer to a struct kmr_xcb_window
@@ -103,11 +104,13 @@ typedef void (*kmr_xcb_renderer_impl)(volatile bool*, uint8_t*, void*);
  * struct kmr_xcb_window_handle_event_info (kmsroots XCB Window Handle Event Information)
  *
  * members:
- * @xcbWindowObject       - Pointer to a struct kmr_xcb_window contains all objects necessary to manage xcb client
- * @renderer              - Function pointer that allows custom external renderers to be executed by the api
- *                          when before registering a frame wl_callback. Renderer before presenting
- * @rendererData          - Pointer to an optional address. This address may be the address of a struct. Reference
- *                          passed depends on external render function.
+ * @xcbWindowObject       - Pointer to a struct kmr_xcb_window contains all objects necessary
+ *                          to manage xcb client.
+ * @renderer              - Function pointer that allows custom external renderers to be
+ *                          executed by the api.
+ * @rendererData          - Pointer to an optional address that will be passed though.
+ *                          This address may be the address of a struct. Reference passed
+ *                          depends on external render function.
  * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer
  * @rendererRunning       - Pointer to a boolean that determines if a given window/surface is actively running
  */
@@ -125,13 +128,16 @@ struct kmr_xcb_window_handle_event_info {
  *                              xcb_poll_for_event which doesn't block operations and returns events from
  *                              X server when available. The main event watched by function is KEY_PRESSING,
  *                              when either the 'Q' or 'ESC' keys are pressed the function will return
- *                              failure status. Function is meant to be utilized as a while loop conditional/expression.
+ *                              failure status.
  *
- *                              https://xcb.freedesktop.org/tutorial/events
+ *                              Function is meant to be utilized as a while loop conditional/expression.
+ *
+ *                              See: https://xcb.freedesktop.org/tutorial/events
  *
  * parameters:
- * @xcbEventInfo - pointer to a struct kmr_xcb_window_wait_for_event_info contains all objects necessary for an
- *                 xcb client to run and pointer to custom renderer to execute and the arguments used by said renderer.
+ * @xcbEventInfo - Pointer to a struct kmr_xcb_window_wait_for_event_info contains all
+ *                 objects necessary for an xcb client to run and pointer to custom renderer
+ *                 to execute and the arguments used by said renderer.
  * returns:
  *	on success: 1
  *	on failure: 0

@@ -14,3 +14,4 @@
 	session
 	shader
 	vulkan
+	xclient
