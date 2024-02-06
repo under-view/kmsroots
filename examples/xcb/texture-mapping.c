@@ -136,7 +136,7 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window *xc);
+int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window **xc);
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -217,6 +217,24 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
  */
 int main(void)
 {
+	VkExtent2D extent2D = { };
+	VkSurfaceFormatKHR surfaceFormat;
+
+	struct app_vk app;
+	struct kmr_vk_destroy appd;
+
+	struct kmr_xcb_window *xc = NULL;
+
+	struct kmr_xcb_window_handle_event_info eventInfo;
+
+	static uint32_t cbuf = 0;
+	static volatile bool running = true;
+
+	static struct app_vk_xcb vkxc;
+
+	memset(&app, 0, sizeof(app));
+	memset(&appd, 0, sizeof(appd));
+
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
 		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
 		return 1;
@@ -234,16 +252,6 @@ int main(void)
 
 	kmr_utils_set_log_level(KMR_ALL);
 
-	struct app_vk app;
-	struct kmr_vk_destroy appd;
-	memset(&app, 0, sizeof(app));
-	memset(&appd, 0, sizeof(appd));
-
-	struct kmr_xcb_window xc;
-	struct kmr_xcb_destroy xcd;
-	memset(&xc, 0, sizeof(xc));
-	memset(&xcd, 0, sizeof(xcd));
-
 	if (create_vk_instance(&app) == -1)
 		goto exit_error;
 
@@ -257,8 +265,9 @@ int main(void)
 	if (create_vk_device(&app) == -1)
 		goto exit_error;
 
-	VkSurfaceFormatKHR surfaceFormat;
-	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
+	extent2D.width = WIDTH;
+	extent2D.height = HEIGHT;
+
 	if (create_vk_swapchain(&app, &surfaceFormat, extent2D) == -1)
 		goto exit_error;
 
@@ -296,17 +305,12 @@ int main(void)
 		goto exit_error;
 
 	/* Map the window to the screen */
-	kmr_xcb_window_make_visible(&xc);
+	kmr_xcb_window_make_visible(xc);
 
-	static uint32_t cbuf = 0;
-	static volatile bool running = true;
-
-	static struct app_vk_xcb vkxc;
-	vkxc.kmr_xcb_window = &xc;
+	vkxc.kmr_xcb_window = xc;
 	vkxc.app_vk = &app;
 
-	struct kmr_xcb_window_handle_event_info eventInfo;
-	eventInfo.xcbWindowObject = &xc;
+	eventInfo.xcbWindowObject = xc;
 	eventInfo.renderer = render;
 	eventInfo.rendererData = &vkxc;
 	eventInfo.rendererCurrentBuffer = &cbuf;
@@ -354,13 +358,13 @@ exit_error:
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
 
-	xcd.kmr_xcb_window = xc;
-	kmr_xcb_destroy(&xcd);
+	kmr_xcb_window_destroy(xc);
+
 	return 0;
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window *xc)
+int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window **xc)
 {
 	/*
 	 * Create xcb client
@@ -375,7 +379,7 @@ int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window *xc)
 	xcbWindowCreateInfo.transparent = false;
 
 	*xc = kmr_xcb_window_create(&xcbWindowCreateInfo);
-	if (!xc->conn)
+	if (!(*xc))
 		return -1;
 
 	/*
@@ -384,8 +388,8 @@ int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window *xc)
 	struct kmr_vk_surface_create_info vkSurfaceCreateInfo;
 	vkSurfaceCreateInfo.surfaceType = KMR_SURFACE_XCB_CLIENT;
 	vkSurfaceCreateInfo.instance = app->instance;
-	vkSurfaceCreateInfo.display = xc->conn;
-	vkSurfaceCreateInfo.window = xc->window;
+	vkSurfaceCreateInfo.display = (*xc)->conn;
+	vkSurfaceCreateInfo.window = (*xc)->window;
 
 	app->surface = kmr_vk_surface_create(&vkSurfaceCreateInfo);
 	if (!app->surface)
