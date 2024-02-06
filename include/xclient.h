@@ -53,13 +53,25 @@ struct kmr_xcb_window_create_info {
  * kmr_xcb_window_create: create a fulls xcb client window (can be fullscreen).
  *
  * parameters:
- * @kmsxcb - pointer to a struct kmr_xcb_window_create_info contains all information
- *           required to created an xcb client and some added window configuration options.
+ * @xcbWindowInfo - pointer to a struct kmr_xcb_window_create_info contains all information
+ *                  required to created an xcb client and some added window configuration options.
  * returns:
- *	on success struct kmr_xcb_window
- *	on failure struct kmr_xcb_window { with members nulled }
+ *	on success: pointer to a struct kmr_xcb_window
+ *	on failure: NULL
  */
-struct kmr_xcb_window kmr_xcb_window_create(struct kmr_xcb_window_create_info *kmsxcb);
+struct kmr_xcb_window *
+kmr_xcb_window_create (struct kmr_xcb_window_create_info *xcbWindowInfo);
+
+
+/*
+ * kmr_xcb_window_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                         kmr_xcb_window_create() call.
+ *
+ * parameters:
+ * @xcb - Must past a valid pointer to a struct kmr_xcb_window
+ */
+void
+kmr_xcb_window_destroy (struct kmr_xcb_window *xcb);
 
 
 /*
@@ -70,10 +82,11 @@ struct kmr_xcb_window kmr_xcb_window_create(struct kmr_xcb_window_create_info *k
  *                              attachment #0 mip level 0 has width (1848) smaller than the corresponding framebuffer width (1920).
  *
  * parameters:
- * @kmsxcb - pointer to a struct kmr_xcb_window contains all objects necessary
- *           for an xcb client window to display.
+ * @xcb - pointer to a struct kmr_xcb_window contains all objects necessary
+ *        for an xcb client window to display.
  */
-void kmr_xcb_window_make_visible(struct kmr_xcb_window *kmsxcb);
+void
+kmr_xcb_window_make_visible (struct kmr_xcb_window *xcb);
 
 
 /*
@@ -117,33 +130,14 @@ struct kmr_xcb_window_handle_event_info {
  *                              https://xcb.freedesktop.org/tutorial/events
  *
  * parameters:
- * @client - pointer to a struct kmr_xcb_window_wait_for_event_info contains all objects necessary for an
- *           xcb client to run and pointer to custom renderer to execute and the arguments used by said renderer.
+ * @xcbEventInfo - pointer to a struct kmr_xcb_window_wait_for_event_info contains all objects necessary for an
+ *                 xcb client to run and pointer to custom renderer to execute and the arguments used by said renderer.
  * returns:
- *	on success 1
- *	on failure 0
+ *	on success: 1
+ *	on failure: 0
  */
-int kmr_xcb_window_handle_event(struct kmr_xcb_window_handle_event_info *kmsxcb);
+int
+kmr_xcb_window_handle_event (struct kmr_xcb_window_handle_event_info *xcbEventInfo);
 
-
-/*
- * struct kmsxcb (kmsroots XCB Destroy)
- *
- * members:
- * @kmr_xcb_window - Must pass a valid struct kmr_xcb_window { free'd members: xcb_connection_t *conn, xcb_window_t window }
- */
-struct kmr_xcb_destroy {
-	struct kmr_xcb_window kmr_xcb_window;
-};
-
-
-/*
- * kmr_xcb_destroy: frees all allocated memory contained in struct kmsxcb
- *
- * parameters:
- * @kmsxcb - pointer to a struct kmsxcb_destroy contains all objects
- *           created during window lifetime in need of destruction
- */
-void kmr_xcb_destroy(struct kmr_xcb_destroy *kmsxcb);
 
 #endif
