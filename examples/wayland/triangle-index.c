@@ -46,8 +46,8 @@ struct app_vk {
 
 
 struct app_wc {
-	struct kmr_wc_core_interface kmr_wc_core_interface;
-	struct kmr_wc_surface kmr_wc_surface;
+	struct kmr_wc_core *kmr_wc_core;
+	struct kmr_wc_surface *kmr_wc_surface;
 };
 
 
@@ -105,7 +105,12 @@ static void run_stop(int UNUSED signum)
 }
 
 
-int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, volatile bool *running);
+static int
+create_wc_vk_surface (struct app_vk *app,
+                      struct app_wc *wc,
+		      uint32_t *cbuf,
+		      volatile bool *running);
+
 int create_vk_instance(struct app_vk *app);
 int create_vk_device(struct app_vk *app);
 int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
@@ -178,8 +183,24 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 /*
  * Example code demonstrating how use Vulkan with Wayland
  */
-int main(void)
+int
+main (void)
 {
+	VkExtent2D extent2D;
+	VkSurfaceFormatKHR surfaceFormat;
+
+	struct app_vk app;
+	struct kmr_vk_destroy appd;
+
+	struct app_wc wc;
+
+	static uint32_t cbuf = 0;
+	static volatile bool running = true;
+
+	memset(&app, 0, sizeof(app));
+	memset(&appd, 0, sizeof(appd));
+	memset(&wc, 0, sizeof(wc));
+
 	if (signal(SIGINT, run_stop) == SIG_ERR) {
 		kmr_utils_log(KMR_DANGER, "[x] signal: Error while installing SIGINT signal handler.");
 		return 1;
@@ -197,21 +218,9 @@ int main(void)
 
 	kmr_utils_set_log_level(KMR_ALL);
 
-	struct app_vk app;
-	struct kmr_vk_destroy appd;
-	memset(&app, 0, sizeof(app));
-	memset(&appd, 0, sizeof(appd));
-
-	struct app_wc wc;
-	struct kmr_wc_destroy wcd;
-	memset(&wcd, 0, sizeof(wcd));
-	memset(&wc, 0, sizeof(wc));
-
 	if (create_vk_instance(&app) == -1)
 		goto exit_error;
 
-	static uint32_t cbuf = 0;
-	static volatile bool running = true;
 	if (create_wc_vk_surface(&app, &wc, &cbuf, &running) == -1)
 		goto exit_error;
 
@@ -222,8 +231,8 @@ int main(void)
 	if (create_vk_device(&app) == -1)
 		goto exit_error;
 
-	VkSurfaceFormatKHR surfaceFormat;
-	VkExtent2D extent2D = {WIDTH, HEIGHT};
+	extent2D.width = WIDTH;
+	extent2D.height = HEIGHT;
 	if (create_vk_swapchain(&app, &surfaceFormat, extent2D) == -1)
 		goto exit_error;
 
@@ -248,7 +257,7 @@ int main(void)
 	if (create_vk_buffers(&app) == -1)
 		goto exit_error;
 
-	while (wl_display_dispatch(wc.kmr_wc_core_interface.wlDisplay) != -1 && running) {
+	while (wl_display_dispatch(wc.kmr_wc_core->wlDisplay) != -1 && running) {
 		// Leave blank
 	}
 
@@ -283,32 +292,37 @@ exit_error:
 	appd.kmr_vk_buffer = app.kmr_vk_buffer;
 	kmr_vk_destroy(&appd);
 
-	wcd.kmr_wc_core_interface = wc.kmr_wc_core_interface;
-	wcd.kmr_wc_surface = wc.kmr_wc_surface;
-	kmr_wc_destroy(&wcd);
+	kmr_wc_surface_destroy(wc.kmr_wc_surface);
+	kmr_wc_core_destroy(wc.kmr_wc_core);
+
 	return 0;
 }
 
 
-int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, volatile bool *running)
+static int
+create_wc_vk_surface (struct app_vk *app,
+                      struct app_wc *wc,
+		      uint32_t *cbuf,
+		      volatile bool *running)
 {
-	struct kmr_wc_core_interface_create_info coreInterfacesCreateInfo;
-	coreInterfacesCreateInfo.displayName = NULL;
-	coreInterfacesCreateInfo.iType = KMR_WC_INTERFACE_WL_COMPOSITOR | KMR_WC_INTERFACE_XDG_WM_BASE |
-	KMR_WC_INTERFACE_WL_SEAT | KMR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1;
-
-	wc->kmr_wc_core_interface = kmr_wc_core_interface_create(&coreInterfacesCreateInfo);
-	if (!wc->kmr_wc_core_interface.wlDisplay || !wc->kmr_wc_core_interface.wlRegistry || !wc->kmr_wc_core_interface.wlCompositor)
-		return -1;
+	struct kmr_wc_core_create_info coreCreateInfo;
+	struct kmr_wc_surface_create_info wcSurfaceCreateInfo;
+	struct kmr_vk_surface_create_info vkSurfaceCreateInfo;
 
 	static struct app_vk_wc vkwc;
+
+	coreCreateInfo.displayName = NULL;
+	coreCreateInfo.iType = KMR_WC_INTERFACE_WL_COMPOSITOR | KMR_WC_INTERFACE_XDG_WM_BASE |
+	                       KMR_WC_INTERFACE_WL_SEAT | KMR_WC_INTERFACE_ZWP_FULLSCREEN_SHELL_V1;
+	wc->kmr_wc_core = kmr_wc_core_create(&coreCreateInfo);
+	if (!wc->kmr_wc_core)
+		return -1;
+
 	vkwc.app_wc = wc;
 	vkwc.app_vk = app;
 
-	struct kmr_wc_surface_create_info wcSurfaceCreateInfo;
-	wcSurfaceCreateInfo.coreInterface = &wc->kmr_wc_core_interface;
-	wcSurfaceCreateInfo.wcBufferObject = NULL;
-	wcSurfaceCreateInfo.bufferCount = 0;
+	wcSurfaceCreateInfo.core = wc->kmr_wc_core;
+	wcSurfaceCreateInfo.buffer = NULL;
 	wcSurfaceCreateInfo.appName = "Triangle Index Buffer Example App";
 	wcSurfaceCreateInfo.fullscreen = true;
 	wcSurfaceCreateInfo.renderer = render;
@@ -317,17 +331,16 @@ int create_wc_vk_surface(struct app_vk *app, struct app_wc *wc, uint32_t *cbuf, 
 	wcSurfaceCreateInfo.rendererRunning = running;
 
 	wc->kmr_wc_surface = kmr_wc_surface_create(&wcSurfaceCreateInfo);
-	if (!wc->kmr_wc_surface.wlSurface)
+	if (!wc->kmr_wc_surface)
 		return -1;
 
 	/*
 	 * Create Vulkan Surface
 	 */
-	struct kmr_vk_surface_create_info vkSurfaceCreateInfo;
 	vkSurfaceCreateInfo.surfaceType = KMR_SURFACE_WAYLAND_CLIENT;
 	vkSurfaceCreateInfo.instance = app->instance;
-	vkSurfaceCreateInfo.display = wc->kmr_wc_core_interface.wlDisplay;
-	vkSurfaceCreateInfo.surface = wc->kmr_wc_surface.wlSurface;
+	vkSurfaceCreateInfo.display = wc->kmr_wc_core->wlDisplay;
+	vkSurfaceCreateInfo.surface = wc->kmr_wc_surface->wlSurface;
 
 	app->surface = kmr_vk_surface_create(&vkSurfaceCreateInfo);
 	if (!app->surface)

@@ -24,7 +24,7 @@ typedef enum _kmr_wc_interface_type {
 
 
 /*
- * struct kmr_wc_core_interface (kmsroots Wayland Client Core Interface)
+ * struct kmr_wc_core (kmsroots Wayland Client Core Interface)
  *
  * members:
  * @iType              - Wayland object to bind to or not. These objects give access to interfaces which defines what requests
@@ -44,7 +44,7 @@ typedef enum _kmr_wc_interface_type {
  * @wlSeat             - A singleton global object used to represent a group of hot-pluggable input devices
  * @fullScreenShell    - A singleton global object that has an interface that allow for displaying of fullscreen surfaces.
  */
-struct kmr_wc_core_interface {
+struct kmr_wc_core {
 	kmr_wc_interface_type          iType;
 	struct wl_display              *wlDisplay;
 	struct wl_registry             *wlRegistry;
@@ -57,7 +57,7 @@ struct kmr_wc_core_interface {
 
 
 /*
- * struct kmr_wc_core_interface_create_info (kmsroots Wayland Client Core Interface Create Information)
+ * struct kmr_wc_core_create_info (kmsroots Wayland Client Core Interface Create Information)
  *
  * parameters:
  * @iType       - Wayland global objects to include or exclude when the registry emits events
@@ -65,26 +65,39 @@ struct kmr_wc_core_interface {
  *                will set the $WAYLAND_DISPLAY variable to the desired display. Passing NULL will
  *                result in opening unix domain socket /run/user/1000/wayland-0
  */
-struct kmr_wc_core_interface_create_info {
+struct kmr_wc_core_create_info {
 	kmr_wc_interface_type iType;
 	const char            *displayName;
 };
 
 
 /*
- * kmr_wc_core_interface_create: Establishes connection to the wayland display server and sets up client specified
- *                               global objects that define what requests and events are possible.
+ * kmr_wc_core_create: Establishes connection to the wayland display server and sets up client specified
+ *                     global objects that define what requests and events are possible.
  *
  * parameters:
- * @kmrwc - Pointer to a struct kmr_wc_core_interface_create_info which contains the name of the server
- *          to connected to and the core client specified globals to bind to a given client. Only if the
- *          server supports these globals.
+ * @coreInfo - Pointer to a struct kmr_wc_core_create_info which contains
+ *             the name of the server to connected to and the client specified
+ *             globals to bind to a given wayland client. Only if the server
+ *             supports these globals.
  *
  * returns:
- *	on success struct kmr_wc_core_interface
- *	on failure struct kmr_wc_core_interface { with members nulled }
+ *	on success: pointer to a struct kmr_wc_core
+ *	on failure: NULL
  */
-struct kmr_wc_core_interface kmr_wc_core_interface_create(struct kmr_wc_core_interface_create_info *kmrwc);
+struct kmr_wc_core *
+kmr_wc_core_create (struct kmr_wc_core_create_info *coreInfo);
+
+
+/*
+ * kmr_wc_core_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                      kmr_wc_core_create() call.
+ *
+ * parameters:
+ * @core - Must pass a valid pointer to a struct kmr_wc_core
+ */
+void
+kmr_wc_core_destroy (struct kmr_wc_core *core);
 
 
 /*
@@ -125,8 +138,8 @@ struct kmr_wc_wl_buffer_handle {
  * @wlBufferHandles  - Pointer to an array of struct kmrwcwlbuf containing compositor assigned buffer object
  */
 struct kmr_wc_buffer {
-	int bufferCount;
-	struct kmr_wc_shm_buffer *shmBufferObjects;
+	int                            bufferCount;
+	struct kmr_wc_shm_buffer       *shmBufferObjects;
 	struct kmr_wc_wl_buffer_handle *wlBufferHandles;
 };
 
@@ -135,7 +148,7 @@ struct kmr_wc_buffer {
  * struct kmr_wc_buffer_create_info (kmsroots Wayland Client Buffer Create Information)
  *
  * members:
- * @coreInterface - Must pass a valid pointer to all binded/exposed wayland core interfaces
+ * @core          - Must pass a valid pointer to all binded/exposed wayland core interfaces
  *                  (important interfaces used: wl_shm)
  * @bufferCount   - The amount of buffers to allocate when storing pixel data
  *                  2 is generally a good option as it allows for double buffering
@@ -145,27 +158,41 @@ struct kmr_wc_buffer {
  * @pixelFormat   - Memory layout of an individual pixel
  */
 struct kmr_wc_buffer_create_info {
-	struct kmr_wc_core_interface *coreInterface;
-	int                          bufferCount;
-	int                          width;
-	int                          height;
-	int                          bytesPerPixel;
-	uint64_t                     pixelFormat;
+	struct kmr_wc_core *core;
+	int                bufferCount;
+	int                width;
+	int                height;
+	int                bytesPerPixel;
+	uint64_t           pixelFormat;
 };
 
 
 /*
- * kmr_wc_buffer_create: Adds way to get pixels from client to compositor by creating writable shared memory buffers.
+ * kmr_wc_buffer_create: Adds way to get pixels from client to compositor by creating
+ *                       writable shared memory buffers.
  *
  * parameters:
- * @kmrwc - Must pass a valid pointer to a struct kmr_wc_buffer_create_info which gives
- *          details of how a buffer should be allocated and how many to allocations to make.
+ * @bufferInfo - Must pass a valid pointer to a struct kmr_wc_buffer_create_info
+ *               which gives details of how a buffer should be allocated and how
+ *               many to allocations to make.
  *
  * returns:
- *	on success struct kmr_wc_buffer
- *	on failure struct kmr_wc_buffer { with members nulled, integers set to -1 }
+ *	on success: pointer to a struct kmr_wc_buffer
+ *	on failure: NULL
  */
-struct kmr_wc_buffer kmr_wc_buffer_create(struct kmr_wc_buffer_create_info *kmrwc);
+struct kmr_wc_buffer *
+kmr_wc_buffer_create (struct kmr_wc_buffer_create_info *bufferInfo);
+
+
+/*
+ * kmr_wc_buffer_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                        kmr_wc_buffer_create() call.
+ *
+ * parameters:
+ * @buffer - Must pass a valid pointer to a struct kmr_wc_buffer
+ */
+void
+kmr_wc_buffer_destroy (struct kmr_wc_buffer *buffer);
 
 
 /*
@@ -209,14 +236,12 @@ struct kmr_wc_surface {
  * struct kmr_wc_surface_create_info (kmsroots Wayland Client Surface Create Information)
  *
  * members:
- * @coreInterface         - Pointer to a struct kmr_wc_core_interface contains all objects/interfaces
+ * @core                  - Pointer to a struct kmr_wc_core contains all objects/interfaces
  *                          necessary for a client to run.
- * @wcBufferObject        - Must pass a valid pointer to a struct kmr_wc_buffer need to attach a wl_buffer object
+ * @buffer                - Must pass a valid pointer to a struct kmr_wc_buffer need to attach a wl_buffer object
  *                          to a wl_surface object. If NULL passed no buffer will be attached to surface. Thus nothing
  *                          will be displayed. Passing this variable also enables in API swapping between shm buffers.
- *                          Swapping goes up to @bufferCount.
- * @bufferCount           - Unrelated to @wcBufferObject. If value assigned not zero and @wcBufferObject equals NULL. Then
- *                          this variable will be utilzed to swap between buffers.
+ *                          Swapping goes up to struct kmr_wc_buffer { @bufferCount }.
  * @appName               - Sets the window name.
  * @fullscreen            - Determines if window should be fullscreen or not
  * @renderer              - Function pointer that allows custom external renderers to be executed by the api
@@ -227,15 +252,15 @@ struct kmr_wc_surface {
  * @rendererRunning       - Pointer to a boolean that determines if a given window/surface is actively running
  */
 struct kmr_wc_surface_create_info {
-	struct kmr_wc_core_interface *coreInterface;
-	struct kmr_wc_buffer         *wcBufferObject;
-	uint32_t                     bufferCount;
-	const char                   *appName;
-	bool                         fullscreen;
-	kmr_wc_renderer_impl         renderer;
-	void                         *rendererData;
-	uint32_t                     *rendererCurrentBuffer;
-	volatile bool                *rendererRunning;
+	struct kmr_wc_core   *core;
+	struct kmr_wc_buffer *buffer;
+	uint32_t             bufferCount;
+	const char           *appName;
+	bool                 fullscreen;
+	kmr_wc_renderer_impl renderer;
+	void                 *rendererData;
+	uint32_t             *rendererCurrentBuffer;
+	volatile bool        *rendererRunning;
 };
 
 
@@ -243,39 +268,27 @@ struct kmr_wc_surface_create_info {
  * kmr_wc_surface_create: Creates a surface to place pixels in and a window for displaying surface pixels.
  *
  * parameters:
- * @kmrwc - Must pass a valid pointer to a struct kmr_wc_surface_create_info which gives
- *          details on what buffers are associated with surface object, the name of the
- *          window, how the window should be displayed, (more info TBA).
+ * @surfaceInfo - Must pass a valid pointer to a struct kmr_wc_surface_create_info
+ *                which gives details on what buffers are associated with surface
+ *                object, the name of the window, and how the window should be displayed.
  *
  * returns:
- *	on success struct kmr_wc_surface
- *	on failure struct kmr_wc_surface { with members nulled }
+ *	on success: pointer to struct kmr_wc_surface
+ *	on failure: NULL
  */
-struct kmr_wc_surface kmr_wc_surface_create(struct kmr_wc_surface_create_info *kmrwc);
+struct kmr_wc_surface *
+kmr_wc_surface_create (struct kmr_wc_surface_create_info *surfaceInfo);
 
 
 /*
- * struct kmr_wc_destroy (kmsroots Wayland Client Destroy)
- *
- * members:
- * @kmr_wc_core_interface - Must pass a valid struct kmr_wc_core_interface, to release all binded members
- * @kmr_wc_buffer         - Must pass a valid struct kmr_wc_buffer, to free all allocated memory
- * @kmr_wc_surface        - Must pass a valid struct kmr_wc_surface, to free all allocated memory
- */
-struct kmr_wc_destroy {
-	struct kmr_wc_core_interface kmr_wc_core_interface;
-	struct kmr_wc_buffer         kmr_wc_buffer;
-	struct kmr_wc_surface        kmr_wc_surface;
-};
-
-
-/*
- * kmr_wc_destroy: frees any remaining allocated memory contained in struct kmr_wc_destroy
+ * kmr_wc_surface_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                         kmr_wc_surface_create() call.
  *
  * parameters:
- * @kmrwc - pointer to a struct kmr_wc contains all objects/interfaces
- *          necessary for an xcb client to run.
+ * @surface - Must pass a valid pointer to a struct kmr_wc_surface
  */
-void kmr_wc_destroy(struct kmr_wc_destroy *kmrwc);
+void
+kmr_wc_surface_destroy (struct kmr_wc_surface *surface);
+
 
 #endif
