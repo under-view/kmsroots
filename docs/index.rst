@@ -12,7 +12,7 @@ kmsroots Documentation
 
 .. toctree::
    :maxdepth: 3
-   :caption: API
+   :caption: API (Interfaces)
 
    api
 
