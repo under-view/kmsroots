@@ -211,7 +211,7 @@ kmr_wc_buffer_create (struct kmr_wc_buffer_create_info *bufferInfo)
 
 	struct kmr_wc_buffer *buffer = NULL;
 	struct kmr_wc_shm_buffer *shmBufferObjects = NULL;
-	struct kmr_wc_wl_buffer_handle *wlBufferHandles = NULL;
+	struct kmr_wc_buffer_handle *wlBufferHandles = NULL;
 
 	buffer = calloc(1, sizeof(struct kmr_wc_buffer));
 	if (!buffer) {
@@ -232,7 +232,7 @@ kmr_wc_buffer_create (struct kmr_wc_buffer_create_info *bufferInfo)
 
 	buffer->shmBufferObjects = shmBufferObjects;
 
-	wlBufferHandles = calloc(bufferInfo->bufferCount, sizeof(struct kmr_wc_wl_buffer_handle));
+	wlBufferHandles = calloc(bufferInfo->bufferCount, sizeof(struct kmr_wc_buffer_handle));
 	if (!wlBufferHandles) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
 		goto exit_error_kmr_wc_buffer_create;
