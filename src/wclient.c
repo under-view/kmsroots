@@ -351,7 +351,7 @@ struct kmr_wc_renderer_info {
 	struct kmr_wc_surface *surface;
 	kmr_wc_renderer_impl  renderer;
 	void                  *rendererData;
-	uint32_t              *rendererCurrentBuffer;
+	uint8_t               *rendererCurrentBuffer;
 	volatile bool         *rendererRunning;
 	bool                  waitForConfigure;
 };
