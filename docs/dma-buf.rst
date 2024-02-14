@@ -107,7 +107,8 @@ kmr_dma_buf_import_sync_file_create
 	into an array of DMA-BUF file descriptors with ``drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)``.
 
 	Parameters:
-		| **importSyncFileInfo:** pointer to a ``struct`` :c:struct:`kmr_dma_buf_import_sync_file_create_info`
+		| **importSyncFileInfo**
+		| Pointer to a ``struct`` :c:struct:`kmr_dma_buf_import_sync_file_create_info`
 
 	Returns:
 		| **on success:** 0
@@ -166,7 +167,8 @@ kmr_dma_buf_export_sync_file_create
 	DMA-BUF file descriptors with ``drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)``.
 
 	Parameters:
-		| **exportSyncFileInfo:** pointer to a ``struct`` :c:struct:`kmr_dma_buf_export_sync_file_create_info`
+		| **exportSyncFileInfo**
+		| Pointer to a ``struct`` :c:struct:`kmr_dma_buf_export_sync_file_create_info`
 
 	Returns:
 		| **on success:** Pointer to a ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
@@ -182,7 +184,8 @@ kmr_dma_buf_export_sync_file_destroy
 	:c:func:`kmr_dma_buf_export_sync_file_create` call.
 
 	Parameters:
-		| **exportSyncFile:** Pointer to a valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
+		| **exportSyncFile**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_dma_buf_export_sync_file`
 
 		.. code-block::
 

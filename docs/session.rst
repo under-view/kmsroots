@@ -94,7 +94,8 @@ kmr_session_destroy
 	:c:func:`kmr_session_create` call
 
 	Parameters:
-		| **session** - Must pass a valid pointer to a ``struct`` :c:struct:`kmr_session`
+		| **session**
+		| Must pass a valid pointer to a ``struct`` :c:struct:`kmr_session`
 
 	.. code-block::
 
