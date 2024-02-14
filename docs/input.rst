@@ -104,7 +104,8 @@ kmr_input_destroy
 	:c:func:`kmr_input_create` call.
 
 	Parameters:
-		| **input** - Must pass a valid pointer to a ``struct`` :c:struct:`kmr_input`
+		| **input**
+		| Must pass a valid pointer to a ``struct`` :c:struct:`kmr_input`
 
 		.. code-block::
 

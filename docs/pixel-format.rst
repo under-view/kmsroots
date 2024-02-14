@@ -56,24 +56,25 @@ kmr_pixel_format_conv_type
 		KMR_PIXEL_FORMAT_CONV_DRM_TO_GBM
 
 	Specifies the type of pixel format name conversion to perform.
+	Values may not be bitwise or'd together.
 
 	:c:macro:`KMR_PIXEL_FORMAT_CONV_GBM_TO_VK`
-		| Value set to ``0``
+		| Convert `GBM format`_ to `VkFormat`_
 
 	:c:macro:`KMR_PIXEL_FORMAT_CONV_GBM_TO_DRM`
-		| Value set to ``1``
+		| Convert `GBM format`_ to `DRM format`_
 
 	:c:macro:`KMR_PIXEL_FORMAT_CONV_VK_TO_GBM`
-		| Value set to ``2``
+		| Convert `VkFormat`_ to `GBM format`_
 
 	:c:macro:`KMR_PIXEL_FORMAT_CONV_VK_TO_DRM`
-		| Value set to ``3``
+		| Convert `VkFormat`_ to `DRM format`_
 
 	:c:macro:`KMR_PIXEL_FORMAT_CONV_DRM_TO_VK`
-		| Value set to ``4``
+		| Convert `DRM format`_ to `VkFormat`_
 
 	:c:macro:`KMR_PIXEL_FORMAT_CONV_DRM_TO_GBM`
-		| Value set to ``5``
+		| Convert `DRM Format`_ to `GBM format`_
 
 =============================
 kmr_pixel_format_convert_name
@@ -88,13 +89,14 @@ kmr_pixel_format_convert_name
 	GBM buffer object.
 
 	Parameters:
-		| **inputInfo**
-		| Pointer to a struct kmr_input_create_info used store information about
-		| the current seatd/sytemd-logind D-Bus session
+		| **conv**
+		| Enum constant specifying the format to convert from then to.
+		| **format**
+		| Unsigned 32bit integer representing the type of pixel format.
 
 	Returns:
-		| **on success:** Pointer to a ``struct`` :c:struct:`kmr_input`
-		| **on failure:** ``NULL``
+		| **on success:** GBM/DRM/VK format (unsigned 32bit integer)
+		| **on failure:** UINT32_MAX
 
 =========================================================================================================================================
 
@@ -110,7 +112,7 @@ kmr_pixel_format_type
 	Specifies the type of pixel format to choose from which API (DRM/GBM/VK)
 
 	:c:macro:`KMR_PIXEL_FORMAT_VK`
-		| Value set to ``0``
+		| Use `Vkformat`_ for operations
 
 =========================
 kmr_pixel_format_get_name
@@ -119,9 +121,17 @@ kmr_pixel_format_get_name
 .. c:function:: const char *kmr_pixel_format_get_name(kmr_pixel_format_type formatType, uint32_t format);
 
 	Parameters:
-		| **formatType** - Enum constant specifying the API (GBM/DRM/VK) format name.
-		| **format** - Unsigned 32bit integer representing the type of pixel format.
+		| **formatType**
+		| Enum constant specifying the API (GBM/DRM/VK) format name.
+		| **format**
+		| Unsigned 32bit integer representing the type of pixel format.
 
 	Returns:
 		**on success:** GBM/DRM/VK format in string form
 		**on failure:** NULL
+
+=========================================================================================================================================
+
+.. _VkFormat: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFormat.html
+.. _DRM format: https://github.com/under-view/kmsroots/blob/master/src/pixel-format.c
+.. _GBM format: https://github.com/under-view/kmsroots/blob/master/src/pixel-format.c

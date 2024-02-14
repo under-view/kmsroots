@@ -224,7 +224,8 @@ kmr_vk_instance_create
         Client should enable those extensions inorder to gain access to those particular capabilities.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_instance_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_instance_create_info`
 
         Returns:
                 | **on success:** `VkInstance`_
@@ -292,7 +293,8 @@ kmr_vk_surface_create
         if vulkan swapchain exists.
 
         Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_surface_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_surface_create_info`
 
         Returns:
                 | **on success:** `VkSurfaceKHR`_
@@ -373,7 +375,8 @@ kmr_vk_phdev_create
 	Also retrieves a given physical device properties and features to be later used by the application.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_phdev_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_phdev_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_phdev`
@@ -435,7 +438,8 @@ kmr_vk_queue_create
 	are used in vulkan to submit commands up to the GPU.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_queue_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_queue_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_queue`
@@ -526,7 +530,8 @@ kmr_vk_lgdev_create
 	requires a logical device handle.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_lgdev_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_lgdev_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_lgdev`
@@ -638,7 +643,8 @@ kmr_vk_swapchain_create
 	The `VkSwapchainKHR`_ can be defined as a set of images that can be drawn to and presented to a `VkSurfaceKHR`_.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_swapchain_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_swapchain_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_swapchain`
@@ -904,7 +910,8 @@ kmr_vk_image_create
 	based upon ``struct`` :c:struct:`kmr_vk_image_create_info` { ``imageCount`` }.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_image_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_image_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_image`
@@ -966,7 +973,8 @@ kmr_vk_shader_module_create
 	Function creates `VkShaderModule`_ from passed SPIR-V byte code.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_shader_module_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_shader_module_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_shader_module`
@@ -1039,7 +1047,8 @@ kmr_vk_pipeline_layout_create
 	data that will be given to the pipeline for a single draw operation.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_pipeline_layout_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_pipeline_layout_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_pipeline_layout`
@@ -1121,7 +1130,8 @@ kmr_vk_render_pass_create
 	color in the center of a triangle. We want to give the appearance of depth to an image.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_render_pass_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_render_pass_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_render_pass`
@@ -1243,7 +1253,8 @@ kmr_vk_graphics_pipeline_create
 	fragment shader to then color in.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_graphics_pipeline_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_graphics_pipeline_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_graphics_pipeline`
@@ -1353,7 +1364,8 @@ kmr_vk_framebuffer_create
 	must have one `VkImage`_ for color and one `VkImage`_ for depth.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_framebuffer_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_framebuffer_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_framebuffer`
@@ -1433,7 +1445,8 @@ kmr_vk_command_buffer_create
 	`VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT`_
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_command_buffer`
@@ -1473,7 +1486,8 @@ kmr_vk_command_buffer_record_begin
 	are later put into a queue to be sent off to the GPU.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_record_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_record_info`
 
 	Returns:
 		| **on success:** 0
@@ -1488,7 +1502,8 @@ kmr_vk_command_buffer_record_end
 	Function stops command buffer to recording. Thus, ending each command buffers ability to accept commands.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_record_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_command_buffer_record_info`
 
 	Returns:
 		| **on success:** 0
@@ -1593,7 +1608,8 @@ kmr_vk_sync_obj_create
 	happen after.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_sync_obj`
@@ -1671,7 +1687,8 @@ kmr_vk_sync_obj_import_external_sync_fd
 	:c:func:`kmr_dma_buf_export_sync_file_create`.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_import_external_sync_fd_info`
 
 	Returns:
 		| **on success:** 0
@@ -1708,7 +1725,8 @@ kmr_vk_sync_obj_export_external_sync_fd
 	:c:func:`kmr_dma_buf_import_sync_file_create`.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_sync_obj_export_external_sync_fd_info`
 
 	Returns:
 		| **on success:** POSIX file descriptor associated with Vulkan sync object
@@ -1798,7 +1816,8 @@ kmr_vk_buffer_create
 	to the GPU.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_buffer_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_buffer_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_buffer`
@@ -1865,7 +1884,8 @@ kmr_vk_descriptor_set_layout_create
 	resources, and at what pipeline stage.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_descriptor_set_layout_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_descriptor_set_layout_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_descriptor_set_layout`
@@ -1978,7 +1998,8 @@ kmr_vk_descriptor_set_create
 	=============== =========  =====  === ===
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_descriptor_set_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_descriptor_set_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_descriptor_set`
@@ -2096,7 +2117,8 @@ kmr_vk_sampler_create
 	Loaded images (png, jpg) -> `VkImage`_ -> Sampler interacts with the `VkImage`_.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_sampler_create_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_sampler_create_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_sampler`
@@ -2210,7 +2232,8 @@ kmr_vk_resource_copy
 	GPU can acquire data (vertex data) more quickly.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_resource_copy_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_resource_copy_info`
 
 	Returns:
 		| **on success:** 0
@@ -2270,7 +2293,8 @@ kmr_vk_resource_pipeline_barrier
 	ensuring that a write to a resources finishes before reading from it.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_resource_pipeline_barrier_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_resource_pipeline_barrier_info`
 
 	Returns:
 		| **on success:** 0
@@ -2288,8 +2312,10 @@ kmr_vk_get_surface_capabilities
 	Queries what a physical device is capable of supporting for any given surface.
 
 	Parameters:
-		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
-		| **surface:** Must pass a valid `VkSurfaceKHR`_ handle
+		| **physDev**
+		| Must pass a valid `VkPhysicalDevice`_ handle.
+		| **surface**
+		| Must pass a valid `VkSurfaceKHR`_ handle.
 
 	Returns:
 		| Populated `VkSurfaceCapabilitiesKHR`_
@@ -2323,8 +2349,10 @@ kmr_vk_get_surface_formats
 	``struct`` :c:struct:`kmr_vk_surface_format` { ``surfaceFormats`` }.
 
 	Parameters:
-		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
-		| **surface:** Must pass a valid `VkSurfaceKHR`_ handle
+		| **physDev**
+		| Must pass a valid `VkPhysicalDevice`_ handle
+		| **surface**
+		| Must pass a valid `VkSurfaceKHR`_ handle
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_surface_format`
@@ -2360,8 +2388,10 @@ kmr_vk_get_surface_present_modes
 	`VkPresentModeKHR`_
 
 	Parameters:
-		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
-		| **surface:** Must pass a valid `VkSurfaceKHR`_ handle
+		| **physDev**
+		| Must pass a valid `VkPhysicalDevice`_ handle
+		| **surface**
+		| Must pass a valid `VkSurfaceKHR`_ handle
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_surface_present_mode`
@@ -2425,7 +2455,8 @@ kmr_vk_get_phdev_format_properties
 	Application must free ``struct`` :c:struct:`kmr_vk_phdev_format_prop` { ``formatProperties`` }
 
 	Parameters:
-		| **kmrvk:** Pointer to a ``struct`` :c:struct:`kmr_vk_phdev_format_prop_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_phdev_format_prop_info`
 
 	Returns:
 		| **on success:** ``struct`` :c:struct:`kmr_vk_phdev_format_prop`
@@ -2442,7 +2473,8 @@ kmr_vk_get_external_semaphore_properties
 	Function returns a given physical device external semaphore handle capabilities.
 
 	Parameters:
-		| **physDev:** Must pass a valid `VkPhysicalDevice`_ handle
+		| **physDev**
+		| Must pass a valid `VkPhysicalDevice`_ handle
 		| **handleType:**
 		| Must pass bitwise or value specifying the external semaphore
 		| handle type for which capabilities/properties will be returned.
@@ -2462,9 +2494,11 @@ kmr_vk_get_external_fd_memory_properties
 	Get Properties of External Memory File Descriptors
 
 	Parameters:
-		| **logicalDevice:** Must pass a valid `VkDevice`_ handle (Logical Device)
-		| **externalMemoryFd:** File descriptor to externally create memory.
-		| **handleType:**
+		| **logicalDevice**
+		| Must pass a valid `VkDevice`_ handle (Logical Device)
+		| **externalMemoryFd**
+		| File descriptor to externally create memory.
+		| **handleType**
 		| Describes the type of file descriptor ``externalMemoryFd`` is.
 		| See: `VkExternalMemoryHandleTypeFlagBits`_
 
@@ -2507,7 +2541,8 @@ kmr_vk_memory_export_external_fd
 	descriptor.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:struct:`kmr_vk_memory_export_external_fd_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_memory_export_external_fd_info`
 
 	Returns:
 		| **on success:** POSIX file descriptor associated with `VkDeviceMemory`_
@@ -2560,7 +2595,8 @@ kmr_vk_memory_map
 	in multiple kmsroots examples.
 
 	Parameters:
-		| **kmrvk:** pointer to a ``struct`` :c:member:`kmr_vk_memory_map_info`
+		| **kmrvk**
+		| Pointer to a ``struct`` :c:member:`kmr_vk_memory_map_info`
 
 =========================================================================================================================================
 

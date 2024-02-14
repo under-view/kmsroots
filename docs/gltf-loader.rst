@@ -100,8 +100,8 @@ kmr_gltf_loader_file_create
 	This function is used to parse and load gltf files content into memory.
 
 	Parameters:
-		| **gltfFileInfo** - Must pass a pointer to a
-		| ``struct`` :c:struct:`kmr_gltf_loader_file_create_info`
+		| **gltfFileInfo**
+		| Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_file_create_info`
 
 	Returns:
 		| **on success:** Pointer to a ``struct`` :c:struct:`kmr_gltf_loader_file`
@@ -117,7 +117,8 @@ kmr_gltf_loader_file_destroy
 	:c:func:`kmr_gltf_loader_file_create` call.
 
 	Parameters:
-		| **gltfFile** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_file`
+		| **gltfFile**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_file`
 
 	.. code-block::
 
@@ -251,7 +252,8 @@ kmr_gltf_loader_mesh_create
 	"meshes" (json key) array.
 
 	Parameters:
-		| **meshInfo** - Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_mesh_create_info`
+		| **meshInfo**
+		| Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_mesh_create_info`
 
 	Returns:
 		| **on success:** pointer to a ``struct`` :c:struct:`kmr_gltf_loader_mesh`
@@ -267,7 +269,8 @@ kmr_gltf_loader_mesh_destroy
 	:c:func:`kmr_gltf_loader_mesh_create` call.
 
 	Parameters:
-		| **mesh** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_mesh`
+		| **mesh**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_mesh`
 
 	.. code-block::
 
@@ -331,7 +334,8 @@ kmr_gltf_loader_texture_image_create
 	Function Loads all images associated with gltf file into memory.
 
 	Parameters:
-		| **textureImageInfo** - Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_texture_image_create_info`
+		| **textureImageInfo**
+		| Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_texture_image_create_info`
 
 	Returns:
 		| **on success:** pointer to a ``struct`` :c:struct:`kmr_gltf_loader_texture_image`
@@ -347,7 +351,8 @@ kmr_gltf_loader_texture_image_destroy
 	:c:func:`kmr_gltf_loader_texture_image_create` call.
 
 	Parameters:
-		| **textureImage** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_texture_image`
+		| **textureImage**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_texture_image`
 
 	.. code-block::
 
@@ -519,7 +524,8 @@ kmr_gltf_loader_material_create
 	Function Loads necessary material information associated with gltf file into memory.
 
 	Parameters:
-		| **materialInfo** - Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_material_create_infoi`
+		| **materialInfo**
+		| Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_material_create_infoi`
 
 	Returns:
 		| **on success:** pointer to a ``struct`` :c:struct:`kmr_gltf_loader_material`
@@ -535,7 +541,8 @@ kmr_gltf_loader_material_destroy
 	:c:func:`kmr_gltf_loader_material_create` call.
 
 	Parameters:
-		| **material** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_material`
+		| **material**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_material`
 
 	.. code-block::
 
@@ -654,7 +661,8 @@ kmr_gltf_loader_node_create
 	the index of that object in the GLTF file "Insert Object Name" array.
 
 	Parameters:
-		| **nodeInfo** - Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_node_create_info`
+		| **nodeInfo**
+		| Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_node_create_info`
 
 	Returns:
 		| **on success:** pointer to a ``struct`` :c:struct:`kmr_gltf_loader_node`
@@ -670,7 +678,8 @@ kmr_gltf_loader_node_destroy
 	:c:func:`kmr_gltf_loader_node_create` call.
 
 	Parameters:
-		| **node** - Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_node`
+		| **node**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_gltf_loader_node`
 
 	.. code-block::
 
@@ -691,7 +700,8 @@ kmr_gltf_loader_node_display_matrix_transform
 	``struct`` :c:struct:`kmr_gltf_loader_node` { ``nodeData`` }.
 
 	Parameters:
-		| **node** - Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_node`
+		| **node**
+		| Must pass a pointer to a ``struct`` :c:struct:`kmr_gltf_loader_node`
 
 =========================================================================================================================================
 

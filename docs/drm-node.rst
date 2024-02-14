@@ -118,7 +118,7 @@ kmr_drm_node_create
 	the current VT this function will fail.
 
 	Parameters:
-		| **nodeInfo:**
+		| **nodeInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_drm_node_create_info` used to pass a DRI/KMS
 		| device file that we may want to use and to store information about
 		| the current seatd/sytemd-logind D-bus session.
@@ -137,7 +137,8 @@ kmr_drm_node_destroy
 	:c:func:`kmr_drm_node_create` call.
 
 	Parameters:
-		| **node:** Pointer to a valid ``struct`` :c:struct:`kmr_drm_node`
+		| **node**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_drm_node`
 
 	.. code-block::
 
@@ -192,7 +193,8 @@ kmr_drm_node_get_device_capabilities
 	by :c:func:`kmr_drm_node_create`, but is exposed to the application developer for their own use.
 
 	Parameters:
-		| **kmsfd:** Number associated with open KMS device node.
+		| **kmsfd**
+		| Number associated with open KMS device node.
 
 	Returns:
 		| ``struct`` :c:struct:`kmr_drm_node_device_capabilites`
@@ -337,7 +339,7 @@ kmr_drm_node_display_create
 	information will be later used in modesetting.
 
 	Parameters:
-		| **displayInfo:**
+		| **displayInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_drm_node_display_create_info` used
 		| to determine what operation will happen in the function
 
@@ -355,7 +357,8 @@ kmr_drm_node_display_destroy
 	:c:func:`kmr_drm_node_display_create` call.
 
 	Parameters:
-		| **display:** Pointer to a valid ``struct`` :c:struct:`kmr_drm_node_display`
+		| **display**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_drm_node_display`
 
 	.. code-block::
 
@@ -393,7 +396,7 @@ kmr_drm_node_display_mode_set
 	and refresh to the highest possible value.
 
 	Parameters:
-		| **displayModeInfo:**
+		| **displayModeInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_drm_node_display_mode_info` used to
 		| set highest display mode.
 
@@ -410,7 +413,7 @@ kmr_drm_node_display_mode_reset
 	Clears the current display mode setting
 
 	Parameters:
-		| **displayModeInfo:**
+		| **displayModeInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_drm_node_display_mode_info` used to
 		| set highest display mode.
 
@@ -519,7 +522,7 @@ kmr_drm_node_atomic_request_create
 	operation. After all the application needs to do is wait for page-flip events to happen.
 
 	Parameters:
-		| **atomicInfo:**
+		| **atomicInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_drm_node_atomic_request_create_info` used to set
 		| external renderer and arguments of the external renderer.
 
@@ -537,7 +540,8 @@ kmr_drm_node_atomic_request_destroy
 	:c:func:`kmr_drm_node_atomic_request_create` call.
 
 	Parameters:
-		| **atomic:** Pointer to a valid ``struct`` :c:struct:`kmr_drm_node_atomic_request`
+		| **atomic**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_drm_node_atomic_request`
 
 		.. code-block::
 
@@ -572,7 +576,8 @@ kmr_drm_node_handle_drm_event
 	file-descriptor has polled readable.
 
 	Parameters:
-		| **eventInfo:** Pointer to a ``struct`` :c:struct:`kmr_drm_node_handle_drm_event_info`
+		| **eventInfo**
+		| Pointer to a ``struct`` :c:struct:`kmr_drm_node_handle_drm_event_info`
 
 	Returns:
 		| **on success:** 0
