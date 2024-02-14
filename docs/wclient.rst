@@ -392,7 +392,7 @@ kmr_wc_surface
 		struct xdg_surface          *xdgSurface;
 		struct wl_surface           *wlSurface;
 		struct wl_callback          *wlCallback;
-		uint32_t                    bufferCount;
+		uint8_t                     bufferCount;
 		struct kmr_wc_buffer_handle *wlBufferHandles;
 		void                        *rendererInfo;
 
@@ -433,12 +433,12 @@ kmr_wc_surface_create_info
 	.. c:member::
 		struct kmr_wc_core   *core;
 		struct kmr_wc_buffer *buffer;
-		uint32_t             bufferCount;
+		uint8_t              bufferCount;
 		const char           *appName;
 		bool                 fullscreen;
 		kmr_wc_renderer_impl renderer;
 		void                 *rendererData;
-		uint32_t             *rendererCurrentBuffer;
+		uint8_t              *rendererCurrentBuffer;
 		volatile bool        *rendererRunning;
 
 	:c:member:`core`

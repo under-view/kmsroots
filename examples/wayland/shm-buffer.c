@@ -42,7 +42,7 @@ next_color (uint8_t cur, unsigned int mod)
 
 
 static void
-render (volatile bool *running, uint32_t *cbuf, void *data)
+render (volatile bool *running, uint8_t *cbuf, void *data)
 {
 	struct app_wc *wc = data;
 
@@ -82,7 +82,7 @@ main (void)
 	struct kmr_wc_buffer_create_info bufferCreateInfo;
 	struct kmr_wc_surface_create_info surfaceCreateInfo;
 
-	static uint32_t cbuf = 0;
+	static uint8_t cbuf = 0;
 	static volatile bool running = true;
 
 	if (signal(SIGINT, run_stop) == SIG_ERR) {

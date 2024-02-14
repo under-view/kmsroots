@@ -134,7 +134,7 @@ static void run_stop(int UNUSED signum)
 static int
 create_wc_vk_surface (struct app_vk *app,
                       struct app_wc *wc,
-		      uint32_t *cbuf,
+		      uint8_t *cbuf,
 		      volatile bool *running);
 
 int create_vk_instance(struct app_vk *app);
@@ -159,7 +159,7 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
 
 
-void render(volatile bool *running, uint32_t *imageIndex, void *data)
+void render(volatile bool *running, uint8_t *imageIndex, void *data)
 {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_wc *vkwc = data;
@@ -175,7 +175,8 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 
 	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain, UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, imageIndex);
+	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain,
+	                      UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*)imageIndex);
 
 	record_vk_draw_commands(app, *imageIndex, extent2D);
 	update_uniform_buffer(app, *imageIndex, extent2D);
@@ -207,7 +208,7 @@ void render(volatile bool *running, uint32_t *imageIndex, void *data)
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &app->kmr_vk_swapchain.swapchain;
-	presentInfo.pImageIndices = imageIndex;
+	presentInfo.pImageIndices = (uint32_t*) imageIndex;
 	presentInfo.pResults = NULL;
 
 	vkQueuePresentKHR(app->kmr_vk_queue.queue, &presentInfo);
@@ -229,7 +230,7 @@ main (void)
 	struct app_vk app;
 	struct kmr_vk_destroy appd;
 
-	static uint32_t cbuf = 0;
+	static uint8_t cbuf = 0;
 	static volatile bool running = true;
 
 	memset(&app, 0, sizeof(app));
@@ -360,7 +361,7 @@ exit_error:
 static int 
 create_wc_vk_surface (struct app_vk *app,
                       struct app_wc *wc,
-		      uint32_t *cbuf,
+		      uint8_t *cbuf,
 		      volatile bool *running)
 {
 	struct kmr_wc_core_create_info coreCreateInfo;
