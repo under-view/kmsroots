@@ -31,8 +31,8 @@ Structs
 Functions
 =========
 
-1. :c:func:`kmr_session_spirv_create`
-#. :c:func:`kmr_session_spirv_destroy`
+1. :c:func:`kmr_shader_spirv_create`
+#. :c:func:`kmr_shader_spirv_destroy`
 
 =================
 Function Pointers
