@@ -44,6 +44,12 @@ kmr_session_create (void);
  *
  * parameters:
  * @session - Must pass a valid pointer to a struct kmr_session
+ *
+ *            Free'd members with fd's closed
+ *            struct kmr_session {
+ *                int seatFd;
+ *                struct libseat *seat;
+ *            };
  */
 void
 kmr_session_destroy (struct kmr_session *session);

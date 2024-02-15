@@ -138,7 +138,7 @@ kmr_xcb_window_destroy
 
 		.. code-block::
 
-			/* Free'd and file descriptors closed members */
+			/* Free'd members with fd's closed */
 			struct kmr_xcb_window {
 				xcb_connection_t        *conn;
 				xcb_window_t            window;

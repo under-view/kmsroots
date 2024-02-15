@@ -50,7 +50,8 @@ kmr_gltf_loader_file_create (struct kmr_gltf_loader_file_create_info *gltfFileIn
  *
  * parameters:
  * @gltfFile - Pointer to a valid struct kmr_gltf_loader_file
- *             Free'd members
+ *
+ *             Free'd members with fd's closed
  *             struct kmr_gltf_loader_file {
  *                 cgltf_data *gltfData;
  *             }
@@ -162,7 +163,8 @@ kmr_gltf_loader_mesh_create (struct kmr_gltf_loader_mesh_create_info *meshInfo);
  *
  * parameters:
  * @mesh - Pointer to a valid struct kmr_gltf_loader_mesh
- *         Free'd members
+ *
+ *         Free'd members with fd's closed
  *         struct kmr_gltf_loader_mesh {
  *             struct kmr_gltf_loader_mesh_data {
  *                 uint32_t *indexBufferData;
@@ -226,7 +228,8 @@ kmr_gltf_loader_texture_image_create (struct kmr_gltf_loader_texture_image_creat
  *
  * parameters:
  * @textureImage - Pointer to a valid struct kmr_gltf_loader_texture_image
- *                 Free'd members
+ *
+ *                 Free'd members with fd's closed
  *                 struct kmr_gltf_loader_mesh {
  *                     struct kmr_gltf_loader_mesh_data {
  *                         uint32_t *indexBufferData;
@@ -374,7 +377,8 @@ kmr_gltf_loader_material_create (struct kmr_gltf_loader_material_create_info *ma
  *
  * parameters:
  * @material - Pointer to a valid struct kmr_gltf_loader_material
- *             Free'd members
+ *
+ *             Free'd members with fd's closed
  *             struct kmr_gltf_loader_material {
  *                 struct kmr_gltf_loader_material_data {
  *                     char *materialName;
@@ -470,7 +474,8 @@ kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *nodeInfo);
  *
  * parameters:
  * @node - Pointer to a valid struct kmr_gltf_loader_node
- *         Free'd members
+ *
+ *         Free'd members with fd's closed
  *         struct kmr_gltf_loader_node {
  *             struct kmr_gltf_loader_node_data *nodeData;
  *         }

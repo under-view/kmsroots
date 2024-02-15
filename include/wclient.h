@@ -109,7 +109,7 @@ kmr_wc_core_create (struct kmr_wc_core_create_info *coreInfo);
  *             struct wl_shm                  *wlShm;
  *             struct wl_seat                 *wlSeat;
  *             struct zwp_fullscreen_shell_v1 *fullScreenShell;
- *         }
+ *         };
  */
 void
 kmr_wc_core_destroy (struct kmr_wc_core *core);

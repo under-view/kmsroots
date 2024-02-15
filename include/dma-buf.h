@@ -107,6 +107,7 @@ kmr_dma_buf_export_sync_file_create (struct kmr_dma_buf_export_sync_file_create_
  *
  * parameters:
  * @exportSyncFile - Pointer to a valid struct kmr_dma_buf_export_sync_file
+ *
  *                   Free'd members with fd's closed
  *                   struct kmr_dma_buf_export_sync_file {
  *          	         int *syncFileFds;
@@ -114,5 +115,6 @@ kmr_dma_buf_export_sync_file_create (struct kmr_dma_buf_export_sync_file_create_
  */
 void
 kmr_dma_buf_export_sync_file_destroy (struct kmr_dma_buf_export_sync_file *exportSyncFile);
+
 
 #endif /* KMR_DMA_BUF_H */

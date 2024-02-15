@@ -109,7 +109,7 @@ kmr_input_destroy
 
 		.. code-block::
 
-			/* Free'd and file descriptors closed members */
+			/* Free'd members with fd's closed */
 			struct kmr_input {
 				struct libinput *inputInst;
 				int             inputfd;
