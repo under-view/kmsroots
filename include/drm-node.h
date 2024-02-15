@@ -87,6 +87,7 @@ kmr_drm_node_create (struct kmr_drm_node_create_info *nodeInfo);
  *
  * parameters:
  * @node - Pointer to a valid struct kmr_drm_node
+ *
  *         Free'd members with fd's closed
  *         struct kmr_drm_node {
  *             int kmsfd;
@@ -255,7 +256,8 @@ kmr_drm_node_display_create (struct kmr_drm_node_display_create_info *displayInf
  *
  * parameters:
  * @display - Pointer to a valid struct kmr_drm_node_display
- *            Free'd members
+ *
+ *            Free'd members with fd's closed
  *            struct kmr_drm_node_display {
  *                struct kmr_drm_node_display_object_props connector.propsData;
  *                struct kmr_drm_node_display_object_props crtc.propsData;
@@ -388,7 +390,8 @@ kmr_drm_node_atomic_request_create (struct kmr_drm_node_atomic_request_create_in
  *
  * parameters:
  * @atomic - Pointer to a valid struct kmr_drm_node_atomic_request
- *           Free'd members
+ *
+ *           Free'd members with fd's closed
  *           struct kmr_drm_node_atomic_request {
  *               drmModeAtomicReq *atomicRequest;
  *               void             *rendererInfo;

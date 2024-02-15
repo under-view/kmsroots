@@ -122,7 +122,7 @@ kmr_gltf_loader_file_destroy
 
 	.. code-block::
 
-		/* Free'd members */
+		/* Free'd members with fd's closed */
 		struct kmr_gltf_loader_file {
 			cgltf_data *gltfData;
 		}
@@ -274,7 +274,7 @@ kmr_gltf_loader_mesh_destroy
 
 	.. code-block::
 
-		/* Free'd members */
+		/* Free'd members with fd's closed */
 		struct kmr_gltf_loader_mesh {
 			struct kmr_gltf_loader_mesh_data {
 				uint32_t *indexBufferData;
@@ -356,7 +356,7 @@ kmr_gltf_loader_texture_image_destroy
 
 	.. code-block::
 
-		/* Free'd members */
+		/* Free'd members with fd's closed */
 		struct kmr_gltf_loader_mesh {
 			struct kmr_gltf_loader_mesh_data {
 				uint32_t *indexBufferData;
@@ -546,7 +546,7 @@ kmr_gltf_loader_material_destroy
 
 	.. code-block::
 
-		/* Free'd members */
+		/* Free'd members with fd's closed */
 		struct kmr_gltf_loader_material {
 			struct kmr_gltf_loader_material_data {
 				char *materialName;
@@ -683,7 +683,7 @@ kmr_gltf_loader_node_destroy
 
 	.. code-block::
 
-		/* Free'd members */
+		/* Free'd members with fd's closed */
 		struct kmr_gltf_loader_node {
 			struct kmr_gltf_loader_node_data *nodeData;
 		}

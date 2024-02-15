@@ -63,6 +63,10 @@ kmr_shader_spirv_create (struct kmr_shader_spirv_create_info *spirvInfo);
  * parameters:
  * @spirv - Must pass a valid pointer to a struct kmr_shader_spirv
  *        
+ *          Free'd members with fd's closed
+ *          struct kmr_shader_spirv {
+ *              void *result;
+ *          };
  */
 void
 kmr_shader_spirv_destroy (struct kmr_shader_spirv *spirv);

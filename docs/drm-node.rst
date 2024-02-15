@@ -362,7 +362,7 @@ kmr_drm_node_display_destroy
 
 	.. code-block::
 
-		/* Free'd members */
+		/* Free'd members with fd's closed */
 		struct kmr_drm_node_display {
 			struct kmr_drm_node_display_object_props connector.propsData;
 			struct kmr_drm_node_display_object_props crtc.propsData;

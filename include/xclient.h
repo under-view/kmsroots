@@ -70,6 +70,13 @@ kmr_xcb_window_create (struct kmr_xcb_window_create_info *xcbWindowInfo);
  *
  * parameters:
  * @xcb - Must past a valid pointer to a struct kmr_xcb_window
+ *
+ *        Free'd members with fd's closed
+ *        struct kmr_xcb_window {
+ *            xcb_connection_t        *conn;
+ *            xcb_window_t            window;
+ *            xcb_intern_atom_reply_t *delWindow;
+ *        };
  */
 void
 kmr_xcb_window_destroy (struct kmr_xcb_window *xcb);

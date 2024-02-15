@@ -60,6 +60,12 @@ kmr_input_create (struct kmr_input_create_info *inputInfo);
  *
  * parameters:
  * @input - Must pass a valid pointer to a struct kmr_input
+ *
+ *          Free'd members with fd's closed
+ *          struct kmr_input {
+ *              struct libinput *inputInst;
+ *              int             inputfd;
+ *          };
  */
 void
 kmr_input_destroy (struct kmr_input *input);
