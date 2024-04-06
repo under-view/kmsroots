@@ -19,6 +19,10 @@
 #define MAX_SCENE_OBJECTS 2
 #define PRECEIVED_SWAPCHAIN_IMAGE_SIZE 5
 
+/***************************
+ * Structs used by example *
+ ***************************/
+
 struct app_vk {
 	VkInstance instance;
 	struct kmr_vk_phdev kmr_vk_phdev;
@@ -70,6 +74,7 @@ struct app_vk {
 	struct kmr_utils_aligned_buffer modelTransferSpace;
 };
 
+
 struct app_vk_xcb {
 	struct kmr_xcb_window *kmr_xcb_window;
 	struct app_vk *app_vk;
@@ -93,6 +98,10 @@ struct app_uniform_buffer_scene {
 	mat4 projection;
 };
 
+
+/***********
+ * Globals *
+ ***********/
 
 /*
  * Comments define how to draw rectangle without index buffer
@@ -130,32 +139,90 @@ const uint16_t indices[] = {
 static volatile sig_atomic_t prun = 1;
 
 
-static void run_stop(int UNUSED signum)
+/***********************
+ * Function Prototypes *
+ ***********************/
+
+static int
+create_xcb_vk_surface (struct app_vk *app,
+                       struct kmr_xcb_window **xc);
+
+static int
+create_vk_instance (struct app_vk *app);
+
+static int
+create_vk_device (struct app_vk *app);
+
+static int
+create_vk_swapchain (struct app_vk *app,
+                     VkSurfaceFormatKHR *surfaceFormat,
+                     VkExtent2D extent2D);
+
+static int
+create_vk_swapchain_images (struct app_vk *app,
+                            VkSurfaceFormatKHR *surfaceFormat);
+
+static VkFormat
+choose_depth_image_format (struct app_vk *app,
+                           VkImageTiling imageTiling,
+                           VkFormatFeatureFlags formatFeatureFlags);
+
+static int
+create_vk_depth_image (struct app_vk *app);
+
+static int
+create_vk_shader_modules (struct app_vk *app);
+
+static int
+create_vk_command_buffers (struct app_vk *app);
+
+static int
+create_vk_buffers (struct app_vk *app);
+
+static int
+create_vk_texture_image (struct app_vk *app);
+
+static int
+create_vk_image_sampler (struct app_vk *app);
+
+static int
+create_vk_resource_descriptor_sets (struct app_vk *app);
+
+static int
+create_vk_graphics_pipeline (struct app_vk *app,
+                             VkSurfaceFormatKHR *surfaceFormat,
+                             VkExtent2D extent2D);
+
+static int
+create_vk_framebuffers (struct app_vk *app, VkExtent2D extent2D);
+
+static int
+create_vk_sync_objs (struct app_vk *app);
+
+static int
+record_vk_draw_commands (struct app_vk *app,
+                         uint32_t swapchainImageIndex,
+                         VkExtent2D extent2D);
+
+static void
+update_uniform_buffer (struct app_vk *app,
+                       uint32_t swapchainImageIndex,
+                       VkExtent2D extent2D);
+
+
+/************************************
+ * Start of function implementation *
+ ************************************/
+
+static void
+run_stop (int UNUSED signum)
 {
 	prun = 0;
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window **xc);
-int create_vk_instance(struct app_vk *app);
-int create_vk_device(struct app_vk *app);
-int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
-int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat);
-int create_vk_depth_image(struct app_vk *app);
-int create_vk_shader_modules(struct app_vk *app);
-int create_vk_command_buffers(struct app_vk *app);
-int create_vk_buffers(struct app_vk *app);
-int create_vk_texture_image(struct app_vk *app);
-int create_vk_image_sampler(struct app_vk *app);
-int create_vk_resource_descriptor_sets(struct app_vk *app);
-int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D);
-int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D);
-int create_vk_sync_objs(struct app_vk *app);
-int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
-void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D);
-
-
-void render(volatile bool *running, uint8_t *imageIndex, void *data)
+static void
+render (volatile bool *running, uint8_t *imageIndex, void *data)
 {
 	VkExtent2D extent2D = { .width = WIDTH, .height = HEIGHT };
 	struct app_vk_xcb *vkxcb = (struct app_vk_xcb *) data;
@@ -216,7 +283,8 @@ void render(volatile bool *running, uint8_t *imageIndex, void *data)
 /*
  * Example code demonstrating how use Vulkan with XCB
  */
-int main(void)
+int
+main (void)
 {
 	VkExtent2D extent2D = { };
 	VkSurfaceFormatKHR surfaceFormat;
@@ -365,7 +433,9 @@ exit_error:
 }
 
 
-int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window **xc)
+static int
+create_xcb_vk_surface (struct app_vk *app,
+                       struct kmr_xcb_window **xc)
 {
 	/*
 	 * Create xcb client
@@ -400,7 +470,8 @@ int create_xcb_vk_surface(struct app_vk *app, struct kmr_xcb_window **xc)
 }
 
 
-int create_vk_instance(struct app_vk *app)
+static int
+create_vk_instance (struct app_vk *app)
 {
 	/*
 	 * "VK_LAYER_KHRONOS_validation"
@@ -436,7 +507,8 @@ int create_vk_instance(struct app_vk *app)
 }
 
 
-int create_vk_device(struct app_vk *app)
+static int
+create_vk_device (struct app_vk *app)
 {
 	const char *deviceExtensions[] = {
 		"VK_KHR_swapchain"
@@ -485,8 +557,11 @@ int create_vk_device(struct app_vk *app)
 }
 
 
-/* choose swap chain surface format & present mode */
-int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D)
+/* choose swapchain surface format & present mode */
+static int
+create_vk_swapchain (struct app_vk *app,
+                     VkSurfaceFormatKHR *surfaceFormat,
+                     VkExtent2D extent2D)
 {
 	uint32_t i;
 	VkPresentModeKHR presentMode;
@@ -497,7 +572,9 @@ int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 
 	/* Choose surface format based */
 	for (i = 0; i < surfaceFormats.surfaceFormatCount; i++) {
-		if (surfaceFormats.surfaceFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB && surfaceFormats.surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+		if (surfaceFormats.surfaceFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB && \
+                    surfaceFormats.surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+		{
 			*surfaceFormat = surfaceFormats.surfaceFormats[i];
 		}
 	}
@@ -535,7 +612,9 @@ int create_vk_swapchain(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, V
 }
 
 
-int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat)
+static int
+create_vk_swapchain_images (struct app_vk *app,
+                            VkSurfaceFormatKHR *surfaceFormat)
 {
 	struct kmr_vk_image_view_create_info imageViewCreateInfo;
 	imageViewCreateInfo.imageViewflags = 0;
@@ -570,36 +649,47 @@ int create_vk_swapchain_images(struct app_vk *app, VkSurfaceFormatKHR *surfaceFo
 }
 
 
-VkFormat choose_depth_image_format(struct app_vk *app, VkImageTiling imageTiling, VkFormatFeatureFlags formatFeatureFlags)
+static VkFormat
+choose_depth_image_format (struct app_vk *app,
+                           VkImageTiling imageTiling,
+                           VkFormatFeatureFlags formatFeatureFlags)
 {
-	VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
-	VkFormat format = VK_FORMAT_UNDEFINED;
+	uint32_t fp;
 
+	VkFormat format = VK_FORMAT_UNDEFINED;
+	VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
+
+	struct kmr_vk_phdev_format_prop physDeviceFormatProps;
 	struct kmr_vk_phdev_format_prop_info formatPropsInfo;
+
 	formatPropsInfo.physDev = app->kmr_vk_phdev.physDevice;
 	formatPropsInfo.formats = formats;
 	formatPropsInfo.formatCount = ARRAY_LEN(formats);
 	formatPropsInfo.modifierProperties = NULL;
 	formatPropsInfo.modifierCount = 0;
 
-	struct kmr_vk_phdev_format_prop physDeviceFormatProps = kmr_vk_get_phdev_format_properties(&formatPropsInfo);
-	for (uint32_t fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
-		if (imageTiling == VK_IMAGE_TILING_OPTIMAL && (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags) {
+	physDeviceFormatProps = kmr_vk_get_phdev_format_properties(&formatPropsInfo);
+	for (fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
+		if (imageTiling == VK_IMAGE_TILING_OPTIMAL && \
+                   (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
+		{
 			format = formats[fp];
-			goto exit_choose_depth_image_format;
-		} else if (imageTiling == VK_IMAGE_TILING_LINEAR && (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags) {
+			break;
+		} else if (imageTiling == VK_IMAGE_TILING_LINEAR && \
+                          (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
+		{
 			format = formats[fp];
-			goto exit_choose_depth_image_format;
+			break;
 		}
 	}
 
-exit_choose_depth_image_format:
 	free(physDeviceFormatProps.formatProperties);
 	return format;
 }
 
 
-int create_vk_depth_image(struct app_vk *app)
+static int
+create_vk_depth_image (struct app_vk *app)
 {
 	VkImageTiling imageTiling = VK_IMAGE_TILING_OPTIMAL;
 
@@ -656,7 +746,8 @@ int create_vk_depth_image(struct app_vk *app)
 }
 
 
-int create_vk_shader_modules(struct app_vk *app)
+static int
+create_vk_shader_modules (struct app_vk *app)
 {
 	int ret = 0;
 
@@ -719,10 +810,10 @@ int create_vk_shader_modules(struct app_vk *app)
 	memset(kmr_shader, 0, sizeof(kmr_shader));
 
 	kmr_shader[0] = kmr_shader_spirv_create(&vertexShaderCreateInfo);
-	if (!kmr_shader[0]) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[0]) { ret = -1 ; goto exit_destroy_shader ; }
 
 	kmr_shader[1] = kmr_shader_spirv_create(&fragmentShaderCreateInfo);
-	if (!kmr_shader[1]) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[1]) { ret = -1 ; goto exit_destroy_shader ; }
 
 #else
 	/*
@@ -733,10 +824,10 @@ int create_vk_shader_modules(struct app_vk *app)
 	memset(kmr_shader, 0, sizeof(kmr_shader));
 
 	kmr_shader[0] = kmr_utils_file_load(VERTEX_SHADER_SPIRV);
-	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_destroy_shader ; }
 
 	kmr_shader[1] = kmr_utils_file_load(FRAGMENT_SHADER_SPIRV);
-	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_destroy_shader ; }
 
 #endif
 
@@ -752,10 +843,10 @@ int create_vk_shader_modules(struct app_vk *app)
 		shaderModuleCreateInfo.shaderName = shaderModuleNames[currentShader];
 
 		app->kmr_vk_shader_module[currentShader] = kmr_vk_shader_module_create(&shaderModuleCreateInfo);
-		if (!app->kmr_vk_shader_module[currentShader].shaderModule) { ret = -1 ; goto exit_distroy_shader ; }
+		if (!app->kmr_vk_shader_module[currentShader].shaderModule) { ret = -1 ; goto exit_destroy_shader ; }
 	}
 
-exit_distroy_shader:
+exit_destroy_shader:
 	for (currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
 #ifdef INCLUDE_SHADERC
 		kmr_shader_spirv_destroy(kmr_shader[currentShader]);
@@ -767,7 +858,8 @@ exit_distroy_shader:
 }
 
 
-int create_vk_command_buffers(struct app_vk *app)
+static int
+create_vk_command_buffers (struct app_vk *app)
 {
 	struct kmr_vk_command_buffer_create_info commandBufferCreateInfo;
 	commandBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
@@ -782,7 +874,8 @@ int create_vk_command_buffers(struct app_vk *app)
 }
 
 
-int create_vk_buffers(struct app_vk *app)
+static int
+create_vk_buffers (struct app_vk *app)
 {
 	uint8_t cpuVisibleBuffer = 0, gpuVisibleBuffer = 1;
 
@@ -894,7 +987,8 @@ int create_vk_buffers(struct app_vk *app)
 }
 
 
-int create_vk_texture_image(struct app_vk *app)
+static int
+create_vk_texture_image (struct app_vk *app)
 {
 	struct kmr_utils_image_buffer imageData;
 	uint8_t cpuVisibleImageBuffer = 3, textureImageIndex = 2, imageTransferIndex = 0;
@@ -1052,7 +1146,8 @@ int create_vk_texture_image(struct app_vk *app)
 }
 
 
-int create_vk_image_sampler(struct app_vk *app)
+static int
+create_vk_image_sampler (struct app_vk *app)
 {
 	struct kmr_vk_sampler_create_info vkSamplerCreateInfo;
 	vkSamplerCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
@@ -1081,7 +1176,8 @@ int create_vk_image_sampler(struct app_vk *app)
 }
 
 
-int create_vk_resource_descriptor_sets(struct app_vk *app)
+static int
+create_vk_resource_descriptor_sets (struct app_vk *app)
 {
 	uint32_t i;
 	VkDescriptorSetLayoutBinding descSetLayoutBindings[3]; // Amount of descriptors in the set
@@ -1180,7 +1276,10 @@ int create_vk_resource_descriptor_sets(struct app_vk *app)
 }
 
 
-int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceFormat, VkExtent2D extent2D)
+static int
+create_vk_graphics_pipeline (struct app_vk *app,
+                             VkSurfaceFormatKHR *surfaceFormat,
+                             VkExtent2D extent2D)
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1459,17 +1558,23 @@ int create_vk_graphics_pipeline(struct app_vk *app, VkSurfaceFormatKHR *surfaceF
 }
 
 
-int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
+static int
+create_vk_framebuffers (struct app_vk *app, VkExtent2D extent2D)
 {
-	uint8_t framebufferCount = app->kmr_vk_image[0].imageCount;
-	struct kmr_vk_framebuffer_images framebufferImages[framebufferCount];
-
-	for (uint8_t i = 0; i < framebufferCount; i++) {
-		framebufferImages[i].imageAttachments[0] = app->kmr_vk_image[0].imageViewHandles[i].view; // VkImageView->VkImage for color image attachment
-		framebufferImages[i].imageAttachments[1] = app->kmr_vk_image[1].imageViewHandles[0].view; // VkImageView->VkImage for depth buffer image attachment
-	}
+	uint8_t framebufferCount, i;
 
 	struct kmr_vk_framebuffer_create_info framebufferInfo;
+	struct kmr_vk_framebuffer_images *framebufferImages = NULL;
+
+	framebufferCount = app->kmr_vk_image[0].imageCount;
+	framebufferImages = alloca(framebufferCount * sizeof(struct kmr_vk_framebuffer_images));
+	for (i = 0; i < framebufferCount; i++) {
+		// VkImageView->VkImage for color image attachment
+		framebufferImages[i].imageAttachments[0] = app->kmr_vk_image[0].imageViewHandles[i].view;
+		// VkImageView->VkImage for depth buffer image attachment
+		framebufferImages[i].imageAttachments[1] = app->kmr_vk_image[1].imageViewHandles[0].view;
+	}
+
 	framebufferInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	framebufferInfo.framebufferCount = framebufferCount;      // Amount of framebuffers to create
 	framebufferInfo.framebufferImageAttachmentCount = 2;
@@ -1487,7 +1592,8 @@ int create_vk_framebuffers(struct app_vk *app, VkExtent2D extent2D)
 }
 
 
-int create_vk_sync_objs(struct app_vk *app)
+static int
+create_vk_sync_objs (struct app_vk *app)
 {
 	struct kmr_vk_sync_obj_create_info syncObjsCreateInfo;
 	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
@@ -1503,7 +1609,10 @@ int create_vk_sync_objs(struct app_vk *app)
 }
 
 
-int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D)
+static int
+record_vk_draw_commands (struct app_vk *app,
+                         uint32_t swapchainImageIndex,
+                         VkExtent2D extent2D)
 {
 	struct kmr_vk_command_buffer_record_info commandBufferRecordInfo;
 	commandBufferRecordInfo.commandBufferCount = app->kmr_vk_command_buffer.commandBufferCount;
@@ -1591,7 +1700,10 @@ int record_vk_draw_commands(struct app_vk *app, uint32_t swapchainImageIndex, Vk
 }
 
 
-void update_uniform_buffer(struct app_vk *app, uint32_t swapchainImageIndex, VkExtent2D extent2D)
+static void
+update_uniform_buffer (struct app_vk *app,
+                       uint32_t swapchainImageIndex,
+                       VkExtent2D extent2D)
 {
 	VkDeviceMemory uniformBufferDeviceMemory = app->kmr_vk_buffer[2].deviceMemory;
 	uint32_t uboSize = sizeof(struct app_uniform_buffer_scene);
