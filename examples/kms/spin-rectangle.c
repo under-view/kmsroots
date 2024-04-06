@@ -815,32 +815,35 @@ choose_depth_image_format (struct app_vk *app,
                            VkImageTiling imageTiling,
                            VkFormatFeatureFlags formatFeatureFlags)
 {
-	VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
-	VkFormat format = VK_FORMAT_UNDEFINED;
+	uint32_t fp;
 
+	VkFormat format = VK_FORMAT_UNDEFINED;
+	VkFormat formats[3] = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
+
+	struct kmr_vk_phdev_format_prop physDeviceFormatProps;
 	struct kmr_vk_phdev_format_prop_info formatPropsInfo;
+
 	formatPropsInfo.physDev = app->kmr_vk_phdev.physDevice;
 	formatPropsInfo.formats = formats;
 	formatPropsInfo.formatCount = ARRAY_LEN(formats);
 	formatPropsInfo.modifierProperties = NULL;
 	formatPropsInfo.modifierCount = 0;
 
-	struct kmr_vk_phdev_format_prop physDeviceFormatProps = kmr_vk_get_phdev_format_properties(&formatPropsInfo);
-	for (uint32_t fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
+	physDeviceFormatProps = kmr_vk_get_phdev_format_properties(&formatPropsInfo);
+	for (fp = 0; fp < physDeviceFormatProps.formatPropertyCount; fp++) {
 		if (imageTiling == VK_IMAGE_TILING_OPTIMAL && \
 		   (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
 		{
 			format = formats[fp];
-			goto exit_choose_depth_image_format;
+			break;
 		} else if (imageTiling == VK_IMAGE_TILING_LINEAR && \
 		         (physDeviceFormatProps.formatProperties[fp].optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
 		{
 			format = formats[fp];
-			goto exit_choose_depth_image_format;
+			break;
 		}
 	}
 
-exit_choose_depth_image_format:
 	free(physDeviceFormatProps.formatProperties);
 	return format;
 }
@@ -966,10 +969,10 @@ create_vk_shader_modules (struct app_vk *app)
 	memset(kmr_shader, 0, sizeof(kmr_shader));
 
 	kmr_shader[0] = kmr_shader_spirv_create(&vertexShaderCreateInfo);
-	if (!kmr_shader[0]) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[0]) { ret = -1 ; goto exit_destroy_shader ; }
 
 	kmr_shader[1] = kmr_shader_spirv_create(&fragmentShaderCreateInfo);
-	if (!kmr_shader[1]) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[1]) { ret = -1 ; goto exit_destroy_shader ; }
 
 #else
 	/*
@@ -980,10 +983,10 @@ create_vk_shader_modules (struct app_vk *app)
 	memset(kmr_shader, 0, sizeof(kmr_shader));
 
 	kmr_shader[0] = kmr_utils_file_load(VERTEX_SHADER_SPIRV);
-	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[0].bytes) { ret = -1 ; goto exit_destroy_shader ; }
 
 	kmr_shader[1] = kmr_utils_file_load(FRAGMENT_SHADER_SPIRV);
-	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_distroy_shader ; }
+	if (!kmr_shader[1].bytes) { ret = -1 ; goto exit_destroy_shader ; }
 
 #endif
 
@@ -999,10 +1002,10 @@ create_vk_shader_modules (struct app_vk *app)
 		shaderModuleCreateInfo.shaderName = shaderModuleNames[currentShader];
 
 		app->kmr_vk_shader_module[currentShader] = kmr_vk_shader_module_create(&shaderModuleCreateInfo);
-		if (!app->kmr_vk_shader_module[currentShader].shaderModule) { ret = -1 ; goto exit_distroy_shader ; }
+		if (!app->kmr_vk_shader_module[currentShader].shaderModule) { ret = -1 ; goto exit_destroy_shader ; }
 	}
 
-exit_distroy_shader:
+exit_destroy_shader:
 	for (currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
 #ifdef INCLUDE_SHADERC
 		kmr_shader_spirv_destroy(kmr_shader[currentShader]);
@@ -1509,17 +1512,20 @@ create_vk_graphics_pipeline (struct app_vk *app,
 static int
 create_vk_framebuffers (struct app_vk *app, VkExtent2D extent2D)
 {
-	uint8_t framebufferCount = app->kmr_vk_image[0].imageCount;
-	struct kmr_vk_framebuffer_images framebufferImages[framebufferCount];
+	uint8_t framebufferCount, i;
 
-	for (uint8_t i = 0; i < framebufferCount; i++) {
+	struct kmr_vk_framebuffer_create_info framebufferInfo;
+	struct kmr_vk_framebuffer_images *framebufferImages = NULL;
+
+	framebufferCount = app->kmr_vk_image[0].imageCount;
+	framebufferImages = alloca(framebufferCount * sizeof(struct kmr_vk_framebuffer_images));
+	for (i = 0; i < framebufferCount; i++) {
 		// VkImageView->VkImage for color image attachment
 		framebufferImages[i].imageAttachments[0] = app->kmr_vk_image[0].imageViewHandles[i].view;
 		// VkImageView->VkImage for depth buffer image attachment
 		framebufferImages[i].imageAttachments[1] = app->kmr_vk_image[1].imageViewHandles[0].view;
 	}
 
-	struct kmr_vk_framebuffer_create_info framebufferInfo;
 	framebufferInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
 	framebufferInfo.framebufferCount = framebufferCount;      // Amount of framebuffers to create
 	framebufferInfo.framebufferImageAttachmentCount = 2;
