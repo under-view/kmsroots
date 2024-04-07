@@ -6,6 +6,9 @@
 
 #include "xclient.h"
 
+/******************************************************
+ * START OF kmr_xcb_window_{create,destroy} FUNCTIONS *
+ ******************************************************/
 
 struct kmr_xcb_window *
 kmr_xcb_window_create (struct kmr_xcb_window_create_info *xcbWindowInfo)
@@ -145,6 +148,14 @@ kmr_xcb_window_destroy(struct kmr_xcb_window *xcb)
 	free(xcb);
 }
 
+/****************************************************
+ * END OF kmr_xcb_window_{create,destroy} FUNCTIONS *
+ ****************************************************/
+
+
+/*************************************************
+ * START OF kmr_xcb_window_make_visible FUNCTION *
+ *************************************************/
 
 void
 kmr_xcb_window_make_visible (struct kmr_xcb_window *xcb)
@@ -153,54 +164,64 @@ kmr_xcb_window_make_visible (struct kmr_xcb_window *xcb)
 	xcb_flush(xcb->conn);
 }
 
+/***********************************************
+ * END OF kmr_xcb_window_make_visible FUNCTION *
+ ***********************************************/
+
+
+/*************************************************
+ * START OF kmr_xcb_window_handle_event FUNCTION *
+ *************************************************/
 
 int
 kmr_xcb_window_handle_event (struct kmr_xcb_window_handle_event_info *xcbEventInfo)
 {
+	int ret = 1;
+
 	xcb_generic_event_t *event = NULL;
 	xcb_key_press_event_t *press = NULL;
 	xcb_client_message_event_t *message = NULL;
 
 	event = xcb_poll_for_event(xcbEventInfo->xcbWindowObject->conn);
-	if (!event) {
-		goto exit_xcb_window_event_loop;
+	if (event) {
+		switch (event->response_type & ~0x80) {
+			case XCB_KEY_PRESS:
+			{
+				press = (xcb_key_press_event_t *) event;
+
+				/* ESCAPE key, Q key */
+				if (press->detail == 9 || press->detail == 24) {
+					xcbEventInfo->rendererRunning = false;
+					ret = 0;
+				}
+				break;
+			}
+			case XCB_CLIENT_MESSAGE:
+			{
+				message = (xcb_client_message_event_t *) event;
+
+				if (message->data.data32[0] == xcbEventInfo->xcbWindowObject->delWindow->atom) {
+					xcbEventInfo->rendererRunning = false;
+					ret = 0;
+				}
+				break;
+			}
+			default: /* Unknown event type, ignore it */
+				break;
+		}
 	}
 
-	switch (event->response_type & ~0x80) {
-		case XCB_KEY_PRESS:
-		{
-			press = (xcb_key_press_event_t *) event;
+	if (ret) {
+		/* Execute application defined renderer */
+		xcbEventInfo->renderer(xcbEventInfo->rendererRunning,
+		                       xcbEventInfo->rendererCurrentBuffer,
+				       xcbEventInfo->rendererData);
+	}
 
-			/* ESCAPE key, Q key */
-			if (press->detail == 9 || press->detail == 24) {
-				xcbEventInfo->rendererRunning = false;
-				goto error_exit_xcb_window_event_loop;
-			}
-			break;
-		}
-		case XCB_CLIENT_MESSAGE:
-		{
-			message = (xcb_client_message_event_t *) event;
-
-			if (message->data.data32[0] == xcbEventInfo->xcbWindowObject->delWindow->atom) {
-				xcbEventInfo->rendererRunning = false;
-				goto error_exit_xcb_window_event_loop;
-			}
-			break;
-		}
-		default: /* Unknown event type, ignore it */
-			break;
-  }
-
-exit_xcb_window_event_loop:
-	/* Execute application defined renderer */
-	xcbEventInfo->renderer(xcbEventInfo->rendererRunning,
-	                       xcbEventInfo->rendererCurrentBuffer,
-	                       xcbEventInfo->rendererData);
 	free(event);
-	return 1;
-
-error_exit_xcb_window_event_loop:
-	free(event);
-	return 0;
+	return ret;
 }
+
+/***********************************************
+ * END OF kmr_xcb_window_handle_event FUNCTION *
+ ***********************************************/
