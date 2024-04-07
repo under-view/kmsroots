@@ -66,10 +66,10 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	appd.instance = app.instance;
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	kmr_vk_destroy(&appd);
+	kmr_vk_instance_destroy(app.instance);
 
 	kmr_buffer_destroy(kms.kmr_buffer);
 

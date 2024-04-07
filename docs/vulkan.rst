@@ -95,6 +95,7 @@ Functions
 =========
 
 1. :c:func:`kmr_vk_instance_create`
+#. :c:func:`kmr_vk_instance_destroy`
 #. :c:func:`kmr_vk_surface_create`
 #. :c:func:`kmr_vk_phdev_create`
 #. :c:func:`kmr_vk_queue_create`
@@ -215,7 +216,7 @@ kmr_vk_instance_create_info
 kmr_vk_instance_create
 ======================
 
-.. c:function:: VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk);
+.. c:function:: VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *instanceCreateInfo);
 
         Creates a `VkInstance`_ object which allows the Vulkan API to better reference & store object
 	state/data. It also acts as an easy wrapper that allows one to define instance extensions.
@@ -224,12 +225,25 @@ kmr_vk_instance_create
         Client should enable those extensions inorder to gain access to those particular capabilities.
 
 	Parameters:
-		| **kmrvk**
+		| **instanceCreateInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_vk_instance_create_info`
 
         Returns:
-                | **on success:** `VkInstance`_
-                | **on faliure:** `VK_NULL_HANDLE`_
+                | **on success:** `VkInstance`_ handle
+                | **on faliure:** NULL
+
+=======================
+kmr_vk_instance_destroy
+=======================
+
+.. c:function:: void kmr_vk_instance_destroy (VkInstance instance);
+
+	Frees any allocated memory and closes FD’s (if open) created after
+	:c:func:`kmr_vk_instance_create` call.
+
+	.. code-block::
+
+		vkDestroyInstance(instance, NULL);
 
 =========================================================================================================================================
 

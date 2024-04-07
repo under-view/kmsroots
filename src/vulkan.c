@@ -10,11 +10,16 @@
 #include "vulkan.h"
 
 
+/***************************************
+ * START OF GLOBAL FUNCTIONS/VARIABLES *
+ ***************************************/
+
 /*
  * Taken from lunarG vulkan API
  * https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkResult.html
  */
-static const char *vkres_msg(int err)
+static const char *
+vkres_msg (int err)
 {
 	switch (err) {
 		case VK_ERROR_OUT_OF_HOST_MEMORY:
@@ -96,12 +101,17 @@ static const char *vkres_msg(int err)
 }
 
 
-static uint32_t retrieve_memory_type_index(VkPhysicalDevice physDev, uint32_t memoryType, VkMemoryPropertyFlags properties)
+static uint32_t
+retrieve_memory_type_index (VkPhysicalDevice physDev,
+                            uint32_t memoryType,
+                            VkMemoryPropertyFlags properties)
 {
+	uint32_t i;
+
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(physDev, &memProperties);
 
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+	for (i = 0; i < memProperties.memoryTypeCount; i++) {
 		if (memoryType & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
 			return i;
 		}
@@ -113,7 +123,17 @@ static uint32_t retrieve_memory_type_index(VkPhysicalDevice physDev, uint32_t me
 }
 
 
-VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk)
+/*************************************
+ * END OF GLOBAL FUNCTIONS/VARIABLES *
+ *************************************/
+
+
+/*******************************************************
+ * START OF kmr_vk_instance_{create,destroy} FUNCTIONS *
+ *******************************************************/
+
+VkInstance
+kmr_vk_instance_create (struct kmr_vk_instance_create_info *instanceCreateInfo)
 {
 	VkResult res = VK_RESULT_MAX_ENUM;
 	VkInstance instance = VK_NULL_HANDLE;
@@ -122,9 +142,9 @@ VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk)
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = NULL;
-	appInfo.pApplicationName = kmrvk->appName;
+	appInfo.pApplicationName = instanceCreateInfo->appName;
 	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-	appInfo.pEngineName = kmrvk->engineName;
+	appInfo.pEngineName = instanceCreateInfo->engineName;
 	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
 	appInfo.apiVersion = VK_MAKE_VERSION(1, 3, 0);
 
@@ -141,13 +161,13 @@ VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk)
 	 */
 	VkInstanceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pNext = (kmrvk->enabledLayerNames) ? &features : NULL;
+	createInfo.pNext = (instanceCreateInfo->enabledLayerNames) ? &features : NULL;
 	createInfo.flags = 0;
 	createInfo.pApplicationInfo = &appInfo;
-	createInfo.enabledLayerCount = kmrvk->enabledLayerCount;
-	createInfo.ppEnabledLayerNames = kmrvk->enabledLayerNames;
-	createInfo.enabledExtensionCount = kmrvk->enabledExtensionCount;
-	createInfo.ppEnabledExtensionNames = kmrvk->enabledExtensionNames;
+	createInfo.enabledLayerCount = instanceCreateInfo->enabledLayerCount;
+	createInfo.ppEnabledLayerNames = instanceCreateInfo->enabledLayerNames;
+	createInfo.enabledExtensionCount = instanceCreateInfo->enabledExtensionCount;
+	createInfo.ppEnabledExtensionNames = instanceCreateInfo->enabledExtensionNames;
 
 	/* Create the instance */
 	res = vkCreateInstance(&createInfo, NULL, &instance);
@@ -162,7 +182,25 @@ VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk)
 }
 
 
-VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk)
+void
+kmr_vk_instance_destroy (VkInstance instance) {
+	if (!instance)
+		return;
+
+	vkDestroyInstance(instance, NULL);
+}
+
+/*****************************************************
+ * END OF kmr_vk_instance_{create,destroy} FUNCTIONS *
+ *****************************************************/
+
+
+/******************************************************
+ * START OF kmr_vk_surface_{create,destroy} FUNCTIONS *
+ ******************************************************/
+
+VkSurfaceKHR
+kmr_vk_surface_create (struct kmr_vk_surface_create_info *kmrvk)
 {
 	VkResult UNUSED res = VK_RESULT_MAX_ENUM;
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -1885,6 +1923,4 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 
 	if (kmrvk->surface)
 		vkDestroySurfaceKHR(kmrvk->instance, kmrvk->surface, NULL);
-	if (kmrvk->instance)
-		vkDestroyInstance(kmrvk->instance, NULL);
 }

@@ -382,7 +382,6 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	appd.instance = app.instance;
 	appd.surface = app.surface;
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
@@ -413,6 +412,7 @@ exit_error:
 	appd.kmr_vk_sampler_cnt = 1;
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
+	kmr_vk_instance_destroy(app.instance);
 
 	kmr_wc_surface_destroy(wc.kmr_wc_surface);
 	kmr_wc_core_destroy(wc.kmr_wc_core);

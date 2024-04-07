@@ -73,12 +73,24 @@ struct kmr_vk_instance_create_info {
  *                         Client should enable those extensions inorder to gain access to those particular capabilities.
  *
  * parameters:
- * @kmrvk - pointer to a struct kmr_vk_instance_create_info
+ * @instanceCreateInfo - pointer to a struct kmr_vk_instance_create_info
  * returns:
  *	on success VkInstance handle
- *	on failure VK_NULL_HANDLE
+ *	on failure NULL
  */
-VkInstance kmr_vk_instance_create(struct kmr_vk_instance_create_info *kmrvk);
+VkInstance
+kmr_vk_instance_create (struct kmr_vk_instance_create_info *instanceCreateInfo);
+
+
+/*
+ * kmr_vk_instance_destroy: Frees any allocated memory and closes FD's (if open) created after
+ *                          kmr_vk_instance_create() call.
+ *
+ * parameters:
+ * @instance - Must pass a valid VkInstance handle
+ */
+void
+kmr_vk_instance_destroy (VkInstance instance);
 
 
 /*
