@@ -28,7 +28,7 @@ struct app_vk {
 	struct kmr_vk_lgdev kmr_vk_lgdev;
 	struct kmr_vk_queue kmr_vk_queue;
 
-	VkSurfaceKHR surface;
+	struct kmr_vk_surface *kmr_vk_surface;
 	struct kmr_vk_swapchain kmr_vk_swapchain;
 
 	/*
@@ -382,7 +382,6 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	appd.surface = app.surface;
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	appd.kmr_vk_swapchain_cnt = 1;
@@ -412,6 +411,7 @@ exit_error:
 	appd.kmr_vk_sampler_cnt = 1;
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
+	kmr_vk_surface_destroy(app.kmr_vk_surface);
 	kmr_vk_instance_destroy(app.instance);
 
 	kmr_wc_surface_destroy(wc.kmr_wc_surface);
@@ -464,8 +464,8 @@ create_wc_vk_surface (struct app_vk *app,
 	vkSurfaceCreateInfo.display = wc->kmr_wc_core->wlDisplay;
 	vkSurfaceCreateInfo.surface = wc->kmr_wc_surface->wlSurface;
 
-	app->surface = kmr_vk_surface_create(&vkSurfaceCreateInfo);
-	if (!app->surface)
+	app->kmr_vk_surface = kmr_vk_surface_create(&vkSurfaceCreateInfo);
+	if (!app->kmr_vk_surface)
 		return -1;
 
 	return 0;
@@ -566,9 +566,9 @@ create_vk_swapchain (struct app_vk *app,
 	uint32_t i;
 	VkPresentModeKHR presentMode;
 
-	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev.physDevice, app->surface);
-	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev.physDevice, app->surface);
-	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev.physDevice, app->surface);
+	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
+	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
+	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
 
 	/* Choose surface format based */
 	for (i = 0; i < surfaceFormats.surfaceFormatCount; i++) {
@@ -589,7 +589,7 @@ create_vk_swapchain (struct app_vk *app,
 
 	struct kmr_vk_swapchain_create_info swapchainCreateInfo;
 	swapchainCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	swapchainCreateInfo.surface = app->surface;
+	swapchainCreateInfo.surface = app->kmr_vk_surface->surface;
 	swapchainCreateInfo.surfaceCapabilities = surfaceCapabilities;
 	swapchainCreateInfo.surfaceFormat = *surfaceFormat;
 	swapchainCreateInfo.extent2D = extent2D;

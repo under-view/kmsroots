@@ -106,6 +106,19 @@ typedef enum kmr_vk_surface_type {
 
 
 /*
+ * struct kmr_vk_surface (kmsroots Vulkan Surface)
+ *
+ * members:
+ * @surface  - Interface between vulkan VkImage's and the underlying windowing implementation
+ * @instance - VkInstance handle associated with VkSurfaceKHR
+ */
+struct kmr_vk_surface {
+	VkSurfaceKHR surface;
+	VkInstance   instance;
+};
+
+
+/*
  * struct kmr_vk_surface_create_info (kmsroots Vulkan Surface Create Information)
  *
  * members:
@@ -127,16 +140,33 @@ struct kmr_vk_surface_create_info {
 
 /*
  * kmr_vk_surface_create: Creates a VkSurfaceKHR object based upon platform specific information about the given surface.
- *                        VkSurfaceKHR are the interface between the window and Vulkan defined images in a given swapchain
- *                        if vulkan swapchain exists.
+ *                        VkSurfaceKHR are the interface between the underlying windowing implementation and Vulkan defined
+ *                        images in a given swapchain if vulkan swapchain exists.
  *
  * parameters:
- * @kmrvk - pointer to a struct kmr_vk_surface_create_info
+ * @surfaceCreateInfo - pointer to a struct kmr_vk_surface_create_info
  * returns:
- *	on success VkSurfaceKHR handle
- *	on failure VK_NULL_HANDLE
+ *	on success pointer to a struct kmr_vk_surface
+ *	on failure NULL
  */
-VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
+struct kmr_vk_surface *
+kmr_vk_surface_create (struct kmr_vk_surface_create_info *surfaceCreateInfo);
+
+
+/*
+ * kmr_vk_surface_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                         kmr_vk_surface_create() call.
+ *
+ * parameters:
+ * @surface - Must pass a valid pointer to a struct kmr_vk_surface
+ *        
+ *          Free'd members with fd's closed
+ *          struct kmr_vk_surface {
+ *              VkSurfaceKHR surface;
+ *          };
+ */
+void
+kmr_vk_surface_destroy (struct kmr_vk_surface *surface);
 
 
 /*

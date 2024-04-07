@@ -34,6 +34,7 @@ Structs
 =======
 
 1. :c:struct:`kmr_vk_instance_create_info`
+#. :c:struct:`kmr_vk_surface`
 #. :c:struct:`kmr_vk_surface_create_info`
 #. :c:struct:`kmr_vk_phdev`
 #. :c:struct:`kmr_vk_phdev_create_info`
@@ -97,6 +98,7 @@ Functions
 1. :c:func:`kmr_vk_instance_create`
 #. :c:func:`kmr_vk_instance_destroy`
 #. :c:func:`kmr_vk_surface_create`
+#. :c:func:`kmr_vk_surface_destroy`
 #. :c:func:`kmr_vk_phdev_create`
 #. :c:func:`kmr_vk_queue_create`
 #. :c:func:`kmr_vk_lgdev_create`
@@ -253,12 +255,12 @@ kmr_vk_surface_type
 
 .. c:enum:: kmr_vk_surface_type
 
-        .. c:macro::
-                KMR_SURFACE_WAYLAND_CLIENT
-                KMR_SURFACE_XCB_CLIENT
+	.. c:macro::
+		KMR_SURFACE_WAYLAND_CLIENT
+		KMR_SURFACE_XCB_CLIENT
 
-        Display server protocol options. ENUM used by :c:func:`kmr_vk_surface_create`
-        to create a `VkSurfaceKHR`_ object based upon platform specific information
+	Display server protocol options. ENUM used by :c:func:`kmr_vk_surface_create`
+	to create a `VkSurfaceKHR`_ object based upon platform specific information
 
 	:c:macro:`KMR_SURFACE_WAYLAND_CLIENT`
 		| Value set to ``0``
@@ -266,53 +268,90 @@ kmr_vk_surface_type
 	:c:macro:`KMR_SURFACE_XCB_CLIENT`
 		| Value set to ``1``
 
+==============
+kmr_vk_surface
+==============
+
+.. c:struct:: kmr_vk_surface
+
+	.. c:member::
+		VkSurfaceKHR surface;
+		VkInstance   instance;
+
+	:c:member:`surface`
+		| Interface between vulkan `VkImage`_'s and the underlying windowing implementation
+
+	:c:member:`instance`
+		| `VkInstance`_ handle associated with `VkSurfaceKHR`_
+
 ==========================
 kmr_vk_surface_create_info
 ==========================
 
 .. c:struct:: kmr_vk_surface_create_info
 
-        .. c:member::
-                kmr_vk_surface_type surfaceType;
-                VkInstance          instance;
-                void                *surface;
-                void                *display;
-                unsigned int        window;
+	.. c:member::
+		kmr_vk_surface_type surfaceType;
+		VkInstance          instance;
+		void                *surface;
+		void                *display;
+		unsigned int        window;
 
-        :c:member:`surfaceType`
+	:c:member:`surfaceType`
 		| Must pass a valid enum :c:enum:`kmr_vk_surface_type` value. Used in determine what
 		| vkCreate*SurfaceKHR function and associated structs to utilize when creating the
 		| `VkSurfaceKHR`_ object.
 
-        :c:member:`instance`
+	:c:member:`instance`
 		| Must pass a valid `VkInstance`_ handle to associate `VkSurfaceKHR`_ with a `VkInstance`_.
 
-        :c:member:`surface`
+	:c:member:`surface`
 		| Must pass a pointer to a ``struct`` wl_surface object
 
-        :c:member:`display`
+	:c:member:`display`
 		| Must pass either a pointer to ``struct`` wl_display object or a pointer to an xcb_connection_t
 
-        :c:member:`window`
+	:c:member:`window`
 		| Must pass an xcb_window_t window id or an unsigned int representing XID
 
 =====================
 kmr_vk_surface_create
 =====================
 
-.. c:function:: VkSurfaceKHR kmr_vk_surface_create(struct kmr_vk_surface_create_info *kmrvk);
+.. c:function:: struct kmr_vk_surface *kmr_vk_surface_create(struct kmr_vk_surface_create_info *surfaceCreateInfo);
 
-        Creates a `VkSurfaceKHR`_ object based upon platform specific information about the given surface.
-        `VkSurfaceKHR`_ are the interface between the window and Vulkan defined images in a given swapchain
-        if vulkan swapchain exists.
+	Creates a `VkSurfaceKHR`_ object based upon platform specific information about the given surface.
 
-        Parameters:
-		| **kmrvk**
+	`VkSurfaceKHR`_ are the interface between the underlying window'ing implementation and Vulkan defined
+	images in a given swapchain if vulkan swapchain exists.
+
+	Parameters:
+		| **surfaceCreateInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_vk_surface_create_info`
 
-        Returns:
-                | **on success:** `VkSurfaceKHR`_
-                | **on faliure:** `VK_NULL_HANDLE`_
+	Returns:
+		| **on success:** pointer to ``struct`` :c:struct:`kmr_vk_surface`
+		| **on faliure:** NULL
+
+======================
+kmr_vk_surface_destroy
+======================
+
+.. c:function:: void kmr_vk_surface_destroy(struct kmr_vk_surface *surface);
+
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_vk_surface_create` call.
+
+	Parameters:
+		| **surface**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_vk_surface`
+
+	.. code-block::
+
+		/* Free'd members with fd's closed */
+		struct kmr_vk_surface {
+			VkSurfaceKHR surface;
+		}
 
 =========================================================================================================================================
 

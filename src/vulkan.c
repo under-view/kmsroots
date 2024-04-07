@@ -199,64 +199,95 @@ kmr_vk_instance_destroy (VkInstance instance) {
  * START OF kmr_vk_surface_{create,destroy} FUNCTIONS *
  ******************************************************/
 
-VkSurfaceKHR
-kmr_vk_surface_create (struct kmr_vk_surface_create_info *kmrvk)
+struct kmr_vk_surface *
+kmr_vk_surface_create (struct kmr_vk_surface_create_info *surfaceCreateInfo)
 {
 	VkResult UNUSED res = VK_RESULT_MAX_ENUM;
-	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	struct kmr_vk_surface *surface = NULL;
 
-	if (!kmrvk->instance) {
+	if (!surfaceCreateInfo->instance) {
 		kmr_utils_log(KMR_DANGER, "[x] kmr_vk_surface_create: VkInstance not instantiated");
 		kmr_utils_log(KMR_DANGER, "[x] Make a call to kmr_vk_create_instance");
-		return VK_NULL_HANDLE;
+		return NULL;
 	}
 
-	if (kmrvk->surfaceType != KMR_SURFACE_WAYLAND_CLIENT && kmrvk->surfaceType != KMR_SURFACE_XCB_CLIENT) {
+	if (surfaceCreateInfo->surfaceType != KMR_SURFACE_WAYLAND_CLIENT && \
+	    surfaceCreateInfo->surfaceType != KMR_SURFACE_XCB_CLIENT)
+	{
 		kmr_utils_log(KMR_DANGER, "[x] kmr_vk_surface_create: Must specify correct enum kmrvk_surface_type");
-		return VK_NULL_HANDLE;
+		return NULL;
 	}
+
+	surface = calloc(1, sizeof(struct kmr_vk_surface));
+	if (!surface) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_vk_surface_create;
+	}
+
+	surface->instance = surfaceCreateInfo->instance;
 
 #ifdef INCLUDE_WAYLAND
-	if (kmrvk->surfaceType == KMR_SURFACE_WAYLAND_CLIENT) {
+	if (surfaceCreateInfo->surfaceType == KMR_SURFACE_WAYLAND_CLIENT) {
 		VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo = {};
 		waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
 		waylandSurfaceCreateInfo.pNext = NULL;
 		waylandSurfaceCreateInfo.flags = 0;
-		waylandSurfaceCreateInfo.display = kmrvk->display;
-		waylandSurfaceCreateInfo.surface = kmrvk->surface;
+		waylandSurfaceCreateInfo.display = surfaceCreateInfo->display;
+		waylandSurfaceCreateInfo.surface = surfaceCreateInfo->surface;
 
-		res = vkCreateWaylandSurfaceKHR(kmrvk->instance, &waylandSurfaceCreateInfo, NULL, &surface);
+		res = vkCreateWaylandSurfaceKHR(surface->instance, &waylandSurfaceCreateInfo, NULL, &surface->surface);
 		if (res) {
 			kmr_utils_log(KMR_DANGER, "[x] vkCreateWaylandSurfaceKHR: %s", vkres_msg(res));
-			return VK_NULL_HANDLE;
+			goto exit_error_vk_surface_create;
 		}
 	}
 #endif
 
 #ifdef INCLUDE_XCB
-	if (kmrvk->surfaceType == KMR_SURFACE_XCB_CLIENT) {
+	if (surfaceCreateInfo->surfaceType == KMR_SURFACE_XCB_CLIENT) {
 		VkXcbSurfaceCreateInfoKHR xcbSurfaceCreateInfo = {};
 		xcbSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
 		xcbSurfaceCreateInfo.pNext = NULL;
 		xcbSurfaceCreateInfo.flags = 0;
-		xcbSurfaceCreateInfo.connection = kmrvk->display;
-		xcbSurfaceCreateInfo.window = kmrvk->window;
+		xcbSurfaceCreateInfo.connection = surfaceCreateInfo->display;
+		xcbSurfaceCreateInfo.window = surfaceCreateInfo->window;
 
-		res = vkCreateXcbSurfaceKHR(kmrvk->instance, &xcbSurfaceCreateInfo, NULL, &surface);
+		res = vkCreateXcbSurfaceKHR(surface->instance, &xcbSurfaceCreateInfo, NULL, &surface->surface);
 		if (res) {
 			kmr_utils_log(KMR_DANGER, "[x] vkCreateXcbSurfaceKHR: %s", vkres_msg(res));
-			return VK_NULL_HANDLE;
+			goto exit_error_vk_surface_create;
 		}
 	}
 #endif
 
-#if defined(INCLUDE_WAYLAND) || defined(INCLUDE_XCB)
-	kmr_utils_log(KMR_SUCCESS, "kmr_vk_surface_create: VkSurfaceKHR created retval(%p)", surface);
-#endif
+	kmr_utils_log(KMR_SUCCESS, "kmr_vk_surface_create: VkSurfaceKHR created retval(%p)", surface->surface);
 
 	return surface;
+
+exit_error_vk_surface_create:
+	kmr_vk_surface_destroy(surface);
+	return NULL;
 }
 
+
+void
+kmr_vk_surface_destroy (struct kmr_vk_surface *surface)
+{
+	if (!surface)
+		return;
+
+	vkDestroySurfaceKHR(surface->instance, surface->surface, NULL);
+	free(surface);
+}
+
+/****************************************************
+ * END OF kmr_vk_surface_{create,destroy} FUNCTIONS *
+ ****************************************************/
+
+
+/****************************************************
+ * START OF kmr_vk_phdev_{create,destroy} FUNCTIONS *
+ ****************************************************/
 
 struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
 {
@@ -1920,7 +1951,4 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 			vkDestroyDevice(kmrvk->kmr_vk_lgdev[i].logicalDevice, NULL);
 		}
 	}
-
-	if (kmrvk->surface)
-		vkDestroySurfaceKHR(kmrvk->instance, kmrvk->surface, NULL);
 }
