@@ -5,16 +5,26 @@ kmsroots Documentation
 ======================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Getting Started
+	:maxdepth: 2
+	:caption: Getting Started
 
-   build
+	build
 
 .. toctree::
-   :maxdepth: 3
-   :caption: API (Interfaces)
+	:maxdepth: 4
+	:caption: API (Interfaces)
 
-   api
+	buffer
+	dma-buf
+	drm-node
+	gltf-loader
+	input
+	pixel-format
+	session
+	shader
+	vulkan
+	wclient
+	xclient
 
 Indices and Tables
 ==================

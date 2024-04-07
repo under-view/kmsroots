@@ -1,40 +1,34 @@
-Build kmsroots
-==============
-
 Dependencies
-~~~~~~~~~~~~
+============
 
 For better dependency version control underview builds all packages required from source.
 
-=======================
 Build Underview Depends
-=======================
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Follow `build-underview-depends`_ repo README to get going.
 
-.. code-block::
+.. code-block:: bash
 
 	$ git clone https://github.com/under-view/build-underview-depends.git
 	$ source setenvars.sh
 
-=================
 Yocto Project SDK
-=================
+~~~~~~~~~~~~~~~~~
 
 Download SDK from `build-underview-depends (releases)`_
 
-.. code-block::
+.. code-block:: bash
 
 	$ ./x86_64-0.1.0-underview.sh
 	sdk # Folder to place libs
 	$ source environment-setup-zen1-underview-linux
 
 Meson
-~~~~~
+=====
 
-=======
 Options
-=======
+~~~~~~~
 
 All options/features are disabled by default.
 
@@ -56,16 +50,15 @@ All options/features are disabled by default.
         tests=true        # Default [false]
         docs=true         # Default [false]
 
-==============
 Build (Normal)
-==============
+~~~~~~~~~~~~~~
 
-.. code-block::
+.. code-block:: bash
 
         $ meson setup [options] build
         $ ninja -C build -j$(nproc)
 
-.. code-block::
+.. code-block:: bash
 
 	# Discrete GPU (Normally test with AMDGPU [Radeon 6600])
 	$ meson setup -Dgpu="discrete" \
@@ -80,7 +73,7 @@ Build (Normal)
 		      -Dlibinput="enabled" \
 		      build
 
-.. code-block::
+.. code-block:: bash
 
 	# Embedded GPU (Normally test on the Udoo Bolt v3)
 	$ meson setup -Dgpu="integrated" \
@@ -95,11 +88,10 @@ Build (Normal)
 		      -Dlibinput="enabled" \
 		      build
 
-===========
 Build (SDK)
-===========
+~~~~~~~~~~~
 
-.. code-block::
+.. code-block:: bash
 
 	# For Yocto SDK builds
 	$ meson setup --prefix="${SDKTARGETSYSROOT}/usr" \
@@ -108,7 +100,7 @@ Build (SDK)
 	              build
         $ ninja -C build -j$(nproc)
 
-.. code-block::
+.. code-block:: bash
 
 	# Discrete GPU (Normally test with AMDGPU [Radeon 6600])
 	$ meson setup --prefix="${SDKTARGETSYSROOT}/usr" \
@@ -125,7 +117,7 @@ Build (SDK)
 		      -Dlibinput="enabled" \
 		      build
 
-.. code-block::
+.. code-block:: bash
 
 	# Embedded GPU (Normally test on the Udoo Bolt v3)
 	$ meson setup --prefix="${SDKTARGETSYSROOT}/usr" \
@@ -142,11 +134,10 @@ Build (SDK)
 		      -Dlibinput="enabled" \
 		      build
 
-=======
 Include
-=======
+~~~~~~~
 
-.. code-block::
+.. code-block:: meson
         :linenos:
 
         # Clone kmsroots or create a kmsroots.wrap under <source_root>/subprojects
@@ -157,23 +148,21 @@ Include
         executable('exe', 'src/main.c', dependencies : kmsroots_dep)
 
 Documentation (Sphinx)
-~~~~~~~~~~~~~~~~~~~~~~
+======================
 
 kmsroots uses sphinx framework for documentation. Primarily utilizing `The C Domain`_.
 
 https://www.sphinx-doc.org/en/master/man/sphinx-build.html
 
-============
 Dependencies
-============
+~~~~~~~~~~~~
 
 - python3-pip
 
-==========
 Build Docs
-==========
+~~~~~~~~~~
 
-.. code-block::
+.. code-block:: bash
 
         $ git clone https://github.com/under-view/kmsroots.git
         $ cd kmsroots
@@ -188,13 +177,12 @@ Build Docs
 	$ ninja docs -C build
 
 Running Examples
-~~~~~~~~~~~~~~~~
+================
 
-======
 Normal
-======
+~~~~~~
 
-.. code-block::
+.. code-block:: bash
 
 	# Examples can exit with either CTRL-C, ESC, or Q.
 	$ ./build/examples/xcb/kmsroots-xcb-client-*
@@ -205,11 +193,10 @@ Normal
 	# Enable verbose DRM logging
 	$ echo "0x19F" | sudo tee "/sys/module/drm/parameters/debug"
 
-=================
 Yocto Project SDK
-=================
+~~~~~~~~~~~~~~~~~
 
-.. code-block::
+.. code-block:: bash
 
 	# Vulkan loader can't find ic driver set LD_LIBRARY_PATH so it's discoverable
 	# Examples can exit with either CTRL-C, ESC, or Q.
