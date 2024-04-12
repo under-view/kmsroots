@@ -289,20 +289,47 @@ kmr_vk_surface_destroy (struct kmr_vk_surface *surface)
  * START OF kmr_vk_phdev_{create,destroy} FUNCTIONS *
  ****************************************************/
 
-struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
+struct kmr_vk_phdev *
+kmr_vk_phdev_create (struct kmr_vk_phdev_create_info *phdevCreateInfo)
 {
+	int err = -1;
+	bool enter = 0;
+
+	uint8_t i;
+
 	VkResult res = VK_RESULT_MAX_ENUM;
 	VkPhysicalDevice physDevice = VK_NULL_HANDLE;
+
 	uint32_t deviceCount = 0;
 	VkPhysicalDevice *devices = NULL;
 
-	if (!kmrvk->instance) {
+	VkPhysicalDeviceFeatures physDeviceFeatures;
+	VkPhysicalDeviceProperties physDeviceProperties;
+
+	struct kmr_vk_phdev *phdev = NULL;
+
+#ifdef INCLUDE_KMS
+	struct stat drmStat = {0};
+	VkPhysicalDeviceProperties2 physDeviceProperties2;
+	VkPhysicalDeviceDrmPropertiesEXT physDeviceDrmProperties;
+	dev_t combinedPrimaryDeviceId, combinedRenderDeviceId;
+#endif /* INCLUDE_KMS */
+
+	if (!phdevCreateInfo->instance) {
 		kmr_utils_log(KMR_DANGER, "[x] kmr_vk_create_phdev: VkInstance not instantiated");
 		kmr_utils_log(KMR_DANGER, "[x] Make a call to kmr_vk_create_instance");
-		goto exit_error_vk_phdev_create;
+		return NULL;
 	}
 
-	res = vkEnumeratePhysicalDevices(kmrvk->instance, &deviceCount, NULL);
+	phdev = calloc(1, sizeof(struct kmr_vk_phdev));
+	if (!phdev) {
+		kmr_utils_log(KMR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
+		return NULL;
+	}
+
+	phdev->instance = phdevCreateInfo->instance;
+
+	res = vkEnumeratePhysicalDevices(phdev->instance, &deviceCount, NULL);
 	if (res) {
 		kmr_utils_log(KMR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
 		goto exit_error_vk_phdev_create;
@@ -315,7 +342,7 @@ struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
 
 	devices = (VkPhysicalDevice *) alloca((deviceCount * sizeof(VkPhysicalDevice)) + 1);
 
-	res = vkEnumeratePhysicalDevices(kmrvk->instance, &deviceCount, devices);
+	res = vkEnumeratePhysicalDevices(phdev->instance, &deviceCount, devices);
 	if (res) {
 		kmr_utils_log(KMR_DANGER, "[x] vkEnumeratePhysicalDevices: %s", vkres_msg(res));
 		goto exit_error_vk_phdev_create;
@@ -323,45 +350,40 @@ struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
 
 #ifdef INCLUDE_KMS
 	/* Get KMS fd stats */
-	struct stat drmStat = {0};
-	if (kmrvk->kmsfd != -1) {
-		if (fstat(kmrvk->kmsfd, &drmStat) == -1) {
-			kmr_utils_log(KMR_DANGER, "[x] fstat('%d'): %s", kmrvk->kmsfd, strerror(errno));
+	phdev->kmsfd = phdevCreateInfo->kmsfd;
+	if (0 < phdev->kmsfd) {
+		err = fstat(phdev->kmsfd, &drmStat);
+		if (err == -1) {
+			kmr_utils_log(KMR_DANGER, "[x] fstat('%d'): %s", phdev->kmsfd, strerror(errno));
 			goto exit_error_vk_phdev_create;
 		}
 	}
 
 	/* Taken from wlroots: https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/vulkan/vulkan.c#L349 */
-	VkPhysicalDeviceProperties2 physDeviceProperties2;
-	VkPhysicalDeviceDrmPropertiesEXT physDeviceDrmProperties;
 	memset(&physDeviceProperties2, 0, sizeof(VkPhysicalDeviceProperties2));
 	memset(&physDeviceDrmProperties, 0, sizeof(VkPhysicalDeviceDrmPropertiesEXT));
 
 	physDeviceDrmProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
 	physDeviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-#endif
-
-	bool enter = 0;
-	VkPhysicalDeviceFeatures physDeviceFeatures;
-	VkPhysicalDeviceProperties physDeviceProperties;
+#endif /* INCLUDE_KMS */
 
 	/*
 	 * get a physical device that is suitable
 	 * to do the graphics related task that we need
 	 */
-	for (uint8_t i = 0; i < deviceCount; i++) {
+	for (i = 0; i < deviceCount; i++) {
 		vkGetPhysicalDeviceFeatures(devices[i], &physDeviceFeatures); /* Query device features */
 		vkGetPhysicalDeviceProperties(devices[i], &physDeviceProperties); /* Query device properties */
 
 #ifdef INCLUDE_KMS
-		if (kmrvk->kmsfd) {
+		if (0 < phdev->kmsfd) {
 			/* Taken from wlroots: https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/vulkan/vulkan.c#L311 */
 			physDeviceProperties2.pNext = &physDeviceDrmProperties;
 			vkGetPhysicalDeviceProperties2(devices[i], &physDeviceProperties2);
 
 			physDeviceDrmProperties.pNext = physDeviceProperties2.pNext;
-			dev_t combinedPrimaryDeviceId = makedev(physDeviceDrmProperties.primaryMajor, physDeviceDrmProperties.primaryMinor);
-			dev_t combinedRenderDeviceId = makedev(physDeviceDrmProperties.renderMajor, physDeviceDrmProperties.renderMinor);
+			combinedPrimaryDeviceId = makedev(physDeviceDrmProperties.primaryMajor, physDeviceDrmProperties.primaryMinor);
+			combinedRenderDeviceId = makedev(physDeviceDrmProperties.renderMajor, physDeviceDrmProperties.renderMinor);
 
 			/*
 			 * Enter will be one if condition succeeds
@@ -369,15 +391,19 @@ struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
 			 * Need to make sure even if we have a valid DRI device node fd.
 			 * That the customer choosen device type is the same as the DRI device node.
 			 */
-			enter |= ((combinedPrimaryDeviceId == drmStat.st_rdev || combinedRenderDeviceId == drmStat.st_rdev) && physDeviceProperties.deviceType == kmrvk->deviceType);
+			enter |= ( \
+				(combinedPrimaryDeviceId == drmStat.st_rdev || combinedRenderDeviceId == drmStat.st_rdev) && \
+				physDeviceProperties.deviceType == phdevCreateInfo->deviceType \
+			);
 		}
-#endif
+#endif /* INCLUDE_KMS */
 
 		/* Enter will be one if condition succeeds */
-		enter |= (physDeviceProperties.deviceType == kmrvk->deviceType);
+		enter |= (physDeviceProperties.deviceType == phdevCreateInfo->deviceType);
 		if (enter) {
 			memmove(&physDevice, &devices[i], sizeof(devices[i]));
-			kmr_utils_log(KMR_SUCCESS, "Suitable GPU Found: %s, api version: %u", physDeviceProperties.deviceName, physDeviceProperties.apiVersion);
+			kmr_utils_log(KMR_SUCCESS, "Suitable GPU Found: %s, api version: %u", \
+			              physDeviceProperties.deviceName, physDeviceProperties.apiVersion);
 			break;
 		}
 	}
@@ -387,26 +413,34 @@ struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk)
 		goto exit_error_vk_phdev_create;
 	}
 
-	return (struct kmr_vk_phdev) { .instance = kmrvk->instance, .physDevice = physDevice, .physDeviceProperties = physDeviceProperties, .physDeviceFeatures = physDeviceFeatures,
+	phdev->physDevice = physDevice;
+	phdev->physDeviceProperties = physDeviceProperties;
+	phdev->physDeviceFeatures = physDeviceFeatures;
+
 #ifdef INCLUDE_KMS
-	                               .kmsfd = kmrvk->kmsfd, .physDeviceDrmProperties = physDeviceDrmProperties
+	phdev->physDeviceDrmProperties = physDeviceDrmProperties;
 #endif
-	};
+
+	return phdev;
 
 exit_error_vk_phdev_create:
-	memset(&physDeviceFeatures, 0, sizeof(VkPhysicalDeviceFeatures));
-	memset(&physDeviceProperties, 0, sizeof(VkPhysicalDeviceProperties));
-
-#ifdef INCLUDE_KMS
-	memset(&physDeviceDrmProperties, 0, sizeof(VkPhysicalDeviceDrmPropertiesEXT));
-#endif
-
-	return (struct kmr_vk_phdev) { .instance = VK_NULL_HANDLE, .physDevice = VK_NULL_HANDLE, .physDeviceProperties = physDeviceProperties, .physDeviceFeatures = physDeviceFeatures,
-#ifdef INCLUDE_KMS
-	                               .kmsfd = -1, .physDeviceDrmProperties = physDeviceDrmProperties
-#endif
-	};
+	kmr_vk_phdev_destroy(phdev);
+	return NULL;
 }
+
+
+void
+kmr_vk_phdev_destroy (struct kmr_vk_phdev *phdev)
+{
+	if (!phdev)
+		return;
+
+	free(phdev);
+}
+
+/**************************************************
+ * END OF kmr_vk_phdev_{create,destroy} FUNCTIONS *
+ **************************************************/
 
 
 struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk)

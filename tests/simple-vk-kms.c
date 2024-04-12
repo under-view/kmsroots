@@ -7,7 +7,7 @@
 
 struct app_vk {
 	VkInstance instance;
-	struct kmr_vk_phdev kmr_vk_phdev;
+	struct kmr_vk_phdev *kmr_vk_phdev;
 	struct kmr_vk_lgdev kmr_vk_lgdev;
 	struct kmr_vk_queue kmr_vk_queue;
 };
@@ -69,6 +69,7 @@ exit_error:
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	kmr_vk_destroy(&appd);
+	kmr_vk_phdev_destroy(app.kmr_vk_phdev);
 	kmr_vk_instance_destroy(app.instance);
 
 	kmr_buffer_destroy(kms.kmr_buffer);
@@ -196,11 +197,11 @@ create_vk_device(struct app_vk *app, struct app_kms *kms)
 	phdevCreateInfo.kmsfd = kms->kmr_drm_node->kmsfd;
 
 	app->kmr_vk_phdev = kmr_vk_phdev_create(&phdevCreateInfo);
-	if (!app->kmr_vk_phdev.physDevice)
+	if (!app->kmr_vk_phdev)
 		return -1;
 
 	struct kmr_vk_queue_create_info queueCreateInfo;
-	queueCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	queueCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
 	app->kmr_vk_queue = kmr_vk_queue_create(&queueCreateInfo);
@@ -214,8 +215,8 @@ create_vk_device(struct app_vk *app, struct app_kms *kms)
 	 */
 	struct kmr_vk_lgdev_create_info lgdevCreateInfo;
 	lgdevCreateInfo.instance = app->instance;
-	lgdevCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
-	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev.physDeviceFeatures;
+	lgdevCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
+	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev->physDeviceFeatures;
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
 	lgdevCreateInfo.enabledExtensionNames = device_extensions;
 	lgdevCreateInfo.queueCount = 1;

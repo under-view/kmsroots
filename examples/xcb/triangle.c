@@ -21,7 +21,7 @@
 
 struct app_vk {
 	VkInstance instance;
-	struct kmr_vk_phdev kmr_vk_phdev;
+	struct kmr_vk_phdev *kmr_vk_phdev;
 	struct kmr_vk_lgdev kmr_vk_lgdev;
 	struct kmr_vk_queue kmr_vk_queue;
 
@@ -418,11 +418,11 @@ create_vk_device (struct app_vk *app)
 #endif
 
 	app->kmr_vk_phdev = kmr_vk_phdev_create(&phdevCreateInfo);
-	if (!app->kmr_vk_phdev.physDevice)
+	if (!app->kmr_vk_phdev)
 		return -1;
 
 	struct kmr_vk_queue_create_info queueCreateInfo;
-	queueCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	queueCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
 	app->kmr_vk_queue = kmr_vk_queue_create(&queueCreateInfo);
@@ -432,12 +432,12 @@ create_vk_device (struct app_vk *app)
 	/*
 	 * Can Hardset features prior
 	 * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-	 * app->kmr_vk_phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
+	 * app->kmr_vk_phdev->physDeviceFeatures.depthBiasClamp = VK_TRUE;
 	 */
 	struct kmr_vk_lgdev_create_info lgdevCreateInfo;
 	lgdevCreateInfo.instance = app->instance;
-	lgdevCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
-	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev.physDeviceFeatures;
+	lgdevCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
+	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev->physDeviceFeatures;
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(deviceExtensions);
 	lgdevCreateInfo.enabledExtensionNames = deviceExtensions;
 	lgdevCreateInfo.queueCount = 1;
@@ -460,9 +460,9 @@ create_vk_swapchain (struct app_vk *app,
 	uint32_t i;
 	VkPresentModeKHR presentMode;
 
-	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
-	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
-	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
+	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev->physDevice, app->kmr_vk_surface->surface);
+	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev->physDevice, app->kmr_vk_surface->surface);
+	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev->physDevice, app->kmr_vk_surface->surface);
 
 	/* Choose surface format based */
 	for (i = 0; i < surfaceFormats.surfaceFormatCount; i++) {
@@ -651,7 +651,7 @@ create_vk_buffers (struct app_vk *app)
 	// Create CPU visible vertex buffer
 	struct kmr_vk_buffer_create_info vkVertexBufferCreateInfo;
 	vkVertexBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	vkVertexBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	vkVertexBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkVertexBufferCreateInfo.bufferFlags = 0;
 	vkVertexBufferCreateInfo.bufferSize = sizeof(meshData);
 	vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
@@ -678,7 +678,7 @@ create_vk_buffers (struct app_vk *app)
 		// Create GPU visible vertex buffer
 		struct kmr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
 		vkVertexBufferGPUCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 		vkVertexBufferGPUCreateInfo.bufferFlags = 0;
 		vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
 		vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;

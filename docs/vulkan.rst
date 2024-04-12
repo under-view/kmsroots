@@ -100,6 +100,7 @@ Functions
 #. :c:func:`kmr_vk_surface_create`
 #. :c:func:`kmr_vk_surface_destroy`
 #. :c:func:`kmr_vk_phdev_create`
+#. :c:func:`kmr_vk_phdev_destroy`
 #. :c:func:`kmr_vk_queue_create`
 #. :c:func:`kmr_vk_lgdev_create`
 #. :c:func:`kmr_vk_swapchain_create`
@@ -422,18 +423,37 @@ kmr_vk_phdev_create_info
 kmr_vk_phdev_create
 ===================
 
-.. c:function::	struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk);
+.. c:function::	struct kmr_vk_phdev *kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *phdevCreateInfo);
 
 	Retrieves a `VkPhysicalDevice`_ handle if certain characteristics of a physical device are meet.
 	Also retrieves a given physical device properties and features to be later used by the application.
 
 	Parameters:
-		| **kmrvk**
+		| **phdevCreateInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_vk_phdev_create_info`
 
 	Returns:
-		| **on success:** ``struct`` :c:struct:`kmr_vk_phdev`
-		| **on failure:** ``struct`` :c:struct:`kmr_vk_phdev` { with members nulled, int's set to -1 }
+		| **on success:** pointer to a ``struct`` :c:struct:`kmr_vk_phdev`
+		| **on failure:** NULL
+
+====================
+kmr_vk_phdev_destroy
+====================
+
+.. c:function:: void kmr_vk_phdev_destroy(struct kmr_vk_phdev *phdev);
+
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_vk_phdev_create` call.
+
+	Parameters:
+		| **phdev**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_vk_phdev`
+
+	.. code-block::
+
+		/* Free'd members with fd's closed */
+		struct kmr_vk_phdev {
+		}
 
 =========================================================================================================================================
 

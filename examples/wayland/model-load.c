@@ -24,7 +24,7 @@
 
 struct app_vk {
 	VkInstance instance;
-	struct kmr_vk_phdev kmr_vk_phdev;
+	struct kmr_vk_phdev *kmr_vk_phdev;
 	struct kmr_vk_lgdev kmr_vk_lgdev;
 	struct kmr_vk_queue kmr_vk_queue;
 
@@ -412,6 +412,7 @@ exit_error:
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
 	kmr_vk_surface_destroy(app.kmr_vk_surface);
+	kmr_vk_phdev_destroy(app.kmr_vk_phdev);
 	kmr_vk_instance_destroy(app.instance);
 
 	kmr_wc_surface_destroy(wc.kmr_wc_surface);
@@ -524,11 +525,11 @@ create_vk_device (struct app_vk *app)
 #endif
 
 	app->kmr_vk_phdev = kmr_vk_phdev_create(&phdevCreateInfo);
-	if (!app->kmr_vk_phdev.physDevice)
+	if (!app->kmr_vk_phdev)
 		return -1;
 
 	struct kmr_vk_queue_create_info queueCreateInfo;
-	queueCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	queueCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 	app->kmr_vk_queue = kmr_vk_queue_create(&queueCreateInfo);
 	if (app->kmr_vk_queue.familyIndex == -1)
@@ -537,14 +538,14 @@ create_vk_device (struct app_vk *app)
 	/*
 	 * Can Hardset features prior
 	 * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-	 * app->kmr_vk_phdev.physDeviceFeatures.depthBiasClamp = VK_TRUE;
+	 * app->kmr_vk_phdev->physDeviceFeatures.depthBiasClamp = VK_TRUE;
 	 */
-	app->kmr_vk_phdev.physDeviceFeatures.samplerAnisotropy = VK_TRUE;
+	app->kmr_vk_phdev->physDeviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	struct kmr_vk_lgdev_create_info lgdevCreateInfo;
 	lgdevCreateInfo.instance = app->instance;
-	lgdevCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
-	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev.physDeviceFeatures;
+	lgdevCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
+	lgdevCreateInfo.enabledFeatures = &app->kmr_vk_phdev->physDeviceFeatures;
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(deviceExtensions);
 	lgdevCreateInfo.enabledExtensionNames = deviceExtensions;
 	lgdevCreateInfo.queueCount = 1;
@@ -566,9 +567,9 @@ create_vk_swapchain (struct app_vk *app,
 	uint32_t i;
 	VkPresentModeKHR presentMode;
 
-	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
-	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
-	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev.physDevice, app->kmr_vk_surface->surface);
+	VkSurfaceCapabilitiesKHR surfaceCapabilities = kmr_vk_get_surface_capabilities(app->kmr_vk_phdev->physDevice, app->kmr_vk_surface->surface);
+	struct kmr_vk_surface_format surfaceFormats = kmr_vk_get_surface_formats(app->kmr_vk_phdev->physDevice, app->kmr_vk_surface->surface);
+	struct kmr_vk_surface_present_mode surfacePresentModes = kmr_vk_get_surface_present_modes(app->kmr_vk_phdev->physDevice, app->kmr_vk_surface->surface);
 
 	/* Choose surface format based */
 	for (i = 0; i < surfaceFormats.surfaceFormatCount; i++) {
@@ -661,7 +662,7 @@ choose_depth_image_format (struct app_vk *app,
 	struct kmr_vk_phdev_format_prop physDeviceFormatProps;
 	struct kmr_vk_phdev_format_prop_info formatPropsInfo;
 
-	formatPropsInfo.physDev = app->kmr_vk_phdev.physDevice;
+	formatPropsInfo.physDev = app->kmr_vk_phdev->physDevice;
 	formatPropsInfo.formats = formats;
 	formatPropsInfo.formatCount = ARRAY_LEN(formats);
 	formatPropsInfo.modifierProperties = NULL;
@@ -734,7 +735,7 @@ create_vk_depth_image (struct app_vk *app)
 	imageCreateInfo.imageCount = 1;
 	imageCreateInfo.imageViewCreateInfos = &imageViewCreateInfo;
 	imageCreateInfo.imageCreateInfos = &vimageCreateInfo;
-	imageCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	imageCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	imageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	imageCreateInfo.useExternalDmaBuffer = false;
 
@@ -964,7 +965,7 @@ create_vk_buffers (struct app_vk *app)
 	 */
 	struct kmr_vk_buffer_create_info vkVertexBufferCreateInfo;
 	vkVertexBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	vkVertexBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	vkVertexBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkVertexBufferCreateInfo.bufferFlags = 0;
 	vkVertexBufferCreateInfo.bufferSize = vertexBufferDataSize + indexBufferDataSize;
 	vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
@@ -996,7 +997,7 @@ create_vk_buffers (struct app_vk *app)
 		// Create GPU visible vertex buffer
 		struct kmr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
 		vkVertexBufferGPUCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 		vkVertexBufferGPUCreateInfo.bufferFlags = 0;
 		vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
 		vkVertexBufferGPUCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -1036,7 +1037,7 @@ create_vk_buffers (struct app_vk *app)
 	struct kmr_utils_aligned_buffer_create_info modelUniformBufferAlignment;
 	modelUniformBufferAlignment.bytesToAlign = sizeof(struct app_uniform_buffer_scene_model);
 	modelUniformBufferAlignment.bytesToAlignCount = app->meshCount;
-	modelUniformBufferAlignment.bufferAlignment = app->kmr_vk_phdev.physDeviceProperties.limits.minUniformBufferOffsetAlignment;
+	modelUniformBufferAlignment.bufferAlignment = app->kmr_vk_phdev->physDeviceProperties.limits.minUniformBufferOffsetAlignment;
 
 	app->modelTransferSpace = kmr_utils_aligned_buffer_create(&modelUniformBufferAlignment);
 	if (!app->modelTransferSpace.alignedBufferMemory)
@@ -1045,7 +1046,7 @@ create_vk_buffers (struct app_vk *app)
 	// Create CPU visible uniform buffer to store (view projection matrices in first have) (Dynamic uniform buffer (model matrix) in second half)
 	struct kmr_vk_buffer_create_info vkUniformBufferCreateInfo;
 	vkUniformBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	vkUniformBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	vkUniformBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkUniformBufferCreateInfo.bufferFlags = 0;
 	vkUniformBufferCreateInfo.bufferSize = (sizeof(struct app_uniform_buffer_scene) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE) + \
 	                                       (app->modelTransferSpace.bufferAlignment * app->meshCount);
@@ -1076,7 +1077,7 @@ create_vk_texture_images (struct app_vk *app)
 	// Create CPU visible buffer to store pixel data
 	struct kmr_vk_buffer_create_info vkTextureBufferCreateInfo;
 	vkTextureBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	vkTextureBufferCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	vkTextureBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkTextureBufferCreateInfo.bufferFlags = 0;
 	vkTextureBufferCreateInfo.bufferSize = app->kmr_gltf_loader_texture_image->totalBufferSize;
 	vkTextureBufferCreateInfo.bufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -1142,7 +1143,7 @@ create_vk_texture_images (struct app_vk *app)
 	vkImageCreateInfo.imageCount = imageCount;                         // Creating @imageCount amount of VkImage(VkDeviceMemory)/VkImageView resource's to store pixel data
 	vkImageCreateInfo.imageViewCreateInfos = imageViewCreateInfos;
 	vkImageCreateInfo.imageCreateInfos = vimageCreateInfos;
-	vkImageCreateInfo.physDevice = app->kmr_vk_phdev.physDevice;
+	vkImageCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkImageCreateInfo.memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	vkImageCreateInfo.useExternalDmaBuffer = false;
 
@@ -1348,7 +1349,7 @@ create_vk_image_sampler (struct app_vk *app)
 	vkSamplerCreateInfo.samplerUnnormalizedCoordinates = VK_FALSE;
 	vkSamplerCreateInfo.samplerBorderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	vkSamplerCreateInfo.samplerAnisotropyEnable = VK_TRUE;
-	vkSamplerCreateInfo.samplerMaxAnisotropy = app->kmr_vk_phdev.physDeviceProperties.limits.maxSamplerAnisotropy;
+	vkSamplerCreateInfo.samplerMaxAnisotropy = app->kmr_vk_phdev->physDeviceProperties.limits.maxSamplerAnisotropy;
 	vkSamplerCreateInfo.samplerCompareEnable = VK_FALSE;
 
 	app->kmr_vk_sampler = kmr_vk_sampler_create(&vkSamplerCreateInfo);

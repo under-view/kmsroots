@@ -222,12 +222,28 @@ struct kmr_vk_phdev_create_info {
  *                      Also retrieves a given physical device properties and features to be later used by the application.
  *
  * parameters:
- * @kmrvk - pointer to a struct kmr_vk_phdev_create_info
+ * @phdevCreateInfo - pointer to a struct kmr_vk_phdev_create_info
  * returns:
- *	on success struct kmr_vk_phdev
- *	on failure struct kmr_vk_phdev { with members nulled, int's set to -1 }
+ *	on success pointer to a struct kmr_vk_phdev
+ *	on failure NULL
  */
-struct kmr_vk_phdev kmr_vk_phdev_create(struct kmr_vk_phdev_create_info *kmrvk);
+struct kmr_vk_phdev *
+kmr_vk_phdev_create (struct kmr_vk_phdev_create_info *phdevCreateInfo);
+
+
+/*
+ * kmr_vk_phdev_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                       kmr_vk_phdev_create() call.
+ *
+ * parameters:
+ * @phdev - Must pass a valid pointer to a struct kmr_vk_phdev
+ *
+ *          Free'd members with fd's closed
+ *          struct kmr_vk_phdev {
+ *          };
+ */
+void
+kmr_vk_phdev_destroy (struct kmr_vk_phdev *phdev);
 
 
 /*
