@@ -443,65 +443,96 @@ kmr_vk_phdev_destroy (struct kmr_vk_phdev *phdev)
  **************************************************/
 
 
-struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk)
+/****************************************************
+ * START OF kmr_vk_queue_{create,destroy} FUNCTIONS *
+ ****************************************************/
+
+struct kmr_vk_queue *
+kmr_vk_queue_create (struct kmr_vk_queue_create_info *queueCreateInfo)
 {
 	uint8_t flagCount = 0;
-	uint32_t queueCount = 0;
+	uint32_t queueCount = 0, i;
 	VkQueueFamilyProperties *queueFamilies = NULL;
-	struct kmr_vk_queue queue;
 
-	flagCount += (kmrvk->queueFlag & VK_QUEUE_GRAPHICS_BIT) ? 1 : 0;
-	flagCount += (kmrvk->queueFlag & VK_QUEUE_COMPUTE_BIT) ? 1 : 0;
-	flagCount += (kmrvk->queueFlag & VK_QUEUE_TRANSFER_BIT) ? 1 : 0;
-	flagCount += (kmrvk->queueFlag & VK_QUEUE_SPARSE_BINDING_BIT) ? 1 : 0;
-	flagCount += (kmrvk->queueFlag & VK_QUEUE_PROTECTED_BIT) ? 1 : 0;
+	struct kmr_vk_queue *queue = NULL;
+
+	queue = calloc(1, sizeof(struct kmr_vk_queue));
+	if (!queue) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_vk_queue_create;
+	}
+
+	flagCount += (queueCreateInfo->queueFlag & VK_QUEUE_GRAPHICS_BIT);
+	flagCount += (queueCreateInfo->queueFlag & VK_QUEUE_COMPUTE_BIT);
+	flagCount += (queueCreateInfo->queueFlag & VK_QUEUE_TRANSFER_BIT);
+	flagCount += (queueCreateInfo->queueFlag & VK_QUEUE_SPARSE_BINDING_BIT);
+	flagCount += (queueCreateInfo->queueFlag & VK_QUEUE_PROTECTED_BIT);
 
 	if (flagCount != 1) {
-		kmr_utils_log(KMR_DANGER, "[x] kmr_vk_queue_create: Multiple VkQueueFlags specified, only one allowed per queue");
-		goto err_vk_queue_create;
+		kmr_utils_log(KMR_DANGER, "[x] Multiple VkQueueFlags specified, only one allowed per queue");
+		goto exit_error_vk_queue_create;
 	}
 
 	/*
 	 * Almost every operation in Vulkan, requires commands to be submitted to a queue
 	 * Find queue family index for a given queue
 	 */
-	vkGetPhysicalDeviceQueueFamilyProperties(kmrvk->physDevice, &queueCount, NULL);
+	vkGetPhysicalDeviceQueueFamilyProperties(queueCreateInfo->physDevice, &queueCount, NULL);
 	queueFamilies = (VkQueueFamilyProperties *) alloca(queueCount * sizeof(VkQueueFamilyProperties));
-	vkGetPhysicalDeviceQueueFamilyProperties(kmrvk->physDevice, &queueCount, queueFamilies);
+	vkGetPhysicalDeviceQueueFamilyProperties(queueCreateInfo->physDevice, &queueCount, queueFamilies);
 
-	for (uint32_t i = 0; i < queueCount; i++) {
-		queue.queueCount = queueFamilies[i].queueCount;
-		if (queueFamilies[i].queueFlags & kmrvk->queueFlag & VK_QUEUE_GRAPHICS_BIT) {
-			strncpy(queue.name, "graphics", sizeof(queue.name));
-			queue.familyIndex = i; break;
-		}
+	for (i = 0; i < queueCount; i++) {
+		queue->familyIndex = i;
+		queue->queueCount = queueFamilies[i].queueCount;
 
-		if (queueFamilies[i].queueFlags & kmrvk->queueFlag & VK_QUEUE_COMPUTE_BIT) {
-			strncpy(queue.name, "compute", sizeof(queue.name));
-			queue.familyIndex = i; break;
-		}
-
-		if (queueFamilies[i].queueFlags & kmrvk->queueFlag & VK_QUEUE_TRANSFER_BIT) {
-			strncpy(queue.name, "transfer", sizeof(queue.name));
-			queue.familyIndex = i; break;
-		}
-
-		if (queueFamilies[i].queueFlags & kmrvk->queueFlag & VK_QUEUE_SPARSE_BINDING_BIT) {
-			strncpy(queue.name, "sparse_binding", sizeof(queue.name));
-			queue.familyIndex = i; break;
-		}
-
-		if (queueFamilies[i].queueFlags & kmrvk->queueFlag & VK_QUEUE_PROTECTED_BIT) {
-			strncpy(queue.name, "protected", sizeof(queue.name));
-			queue.familyIndex = i; break;
+		switch (queueFamilies[i].queueFlags & queueCreateInfo->queueFlag) {
+			case VK_QUEUE_GRAPHICS_BIT:
+				queue->name = strndup("graphics", 9);
+				queueCount = i;
+				break;
+			case VK_QUEUE_COMPUTE_BIT:
+				queue->name = strndup("compute", 8);
+				queueCount = i;
+				break;
+			case VK_QUEUE_TRANSFER_BIT:
+				queue->name = strndup("transfer", 9);
+				queueCount = i;
+				break;
+			case VK_QUEUE_SPARSE_BINDING_BIT:
+				queue->name = strndup("sparse_binding", 15);
+				queueCount = i;
+				break;
+			case VK_QUEUE_PROTECTED_BIT:
+				queue->name = strndup("protected", 10);
+				queueCount = i;
+				break;
+			default:
+				kmr_utils_log(KMR_DANGER, "[x] no VkQueueFlags specified");
+				goto exit_error_vk_queue_create;
 		}
 	}
 
 	return queue;
 
-err_vk_queue_create:
-	return (struct kmr_vk_queue) { .name[0] = '\0', .queue = VK_NULL_HANDLE, .familyIndex = -1, .queueCount = -1 };
+exit_error_vk_queue_create:
+	kmr_vk_queue_destroy(queue);
+	return NULL;
 }
+
+
+void
+kmr_vk_queue_destroy (struct kmr_vk_queue *queue)
+{
+	if (!queue)
+		return;
+
+	free(queue->name);
+	free(queue);
+}
+
+/**************************************************
+ * END OF kmr_vk_queue_{create,destroy} FUNCTIONS *
+ **************************************************/
 
 
 struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk)

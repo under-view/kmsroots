@@ -102,6 +102,7 @@ Functions
 #. :c:func:`kmr_vk_phdev_create`
 #. :c:func:`kmr_vk_phdev_destroy`
 #. :c:func:`kmr_vk_queue_create`
+#. :c:func:`kmr_vk_queue_destroy`
 #. :c:func:`kmr_vk_lgdev_create`
 #. :c:func:`kmr_vk_swapchain_create`
 #. :c:func:`kmr_vk_image_create`
@@ -464,7 +465,7 @@ kmr_vk_queue
 .. c:struct:: kmr_vk_queue
 
 	.. c:member::
-		char    name[20];
+		char    *name;
 		VkQueue queue;
 		int     familyIndex;
 		int     queueCount;
@@ -473,12 +474,12 @@ kmr_vk_queue
 		| Stores the name of the queue in string format. **Not required by API**.
 
 	:c:member:`queue`
-		| `VkQueue`_ handle used when submitting command buffers to physical device. Address
-		| given to handle in :c:func:`kmr_vk_lgdev_create` after `VkDevice`_ handle creation.
+		| `VkQueue`_ handle used when submitting command buffers to physical device.
+		| Address given to the queue is given by :c:func:`kmr_vk_lgdev_create` which handles
+		| `VkDevice`_ creation.
 
 	:c:member:`familyIndex`
-		| `VkQueue`_ family index associate with selected ``struct`` :c:struct:`kmr_vk_queue_create_info`
-		| { ``queueFlag`` }.
+		| Family index of the caller selected `VkQueue`_.
 
 	:c:member:`queueCount`
 		| Number of queues in a given `VkQueue`_ family
@@ -504,19 +505,41 @@ kmr_vk_queue_create_info
 kmr_vk_queue_create
 ===================
 
-.. c:function::	struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk);
+.. c:function::	struct kmr_vk_queue *kmr_vk_queue_create(struct kmr_vk_queue_create_info *queueCreateInfo);
 
 	Queries the queues a given physical device contains. Then returns a queue
 	family index and the queue count given a single `VkQueueFlagBits`_. Queue
 	are used in vulkan to submit commands up to the GPU.
 
 	Parameters:
-		| **kmrvk**
-		| Pointer to a ``struct`` :c:struct:`kmr_vk_queue_create_info`
+		| **queueCreateInfo**
+		| Pointer to a ``struct`` :c:struct:`kmr_vk_queue_create_info`. Contains information
+		| on which queue family we are trying to find and the physical device
+		| that supports said queue family.
 
 	Returns:
-		| **on success:** ``struct`` :c:struct:`kmr_vk_queue`
-		| **on failure:** ``struct`` :c:struct:`kmr_vk_queue` { with members nulled, int's set to -1 }
+		| **on success:** pointer to ``struct`` :c:struct:`kmr_vk_queue`
+		| **on failure:** NULL
+
+====================
+kmr_vk_queue_destroy
+====================
+
+.. c:function:: void kmr_vk_queue_destroy(struct kmr_vk_queue *queue);
+
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_vk_queue_create` call.
+
+	Parameters:
+		| **queue**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_vk_queue`
+
+	.. code-block::
+
+		/* Free'd members with fd's closed */
+		struct kmr_vk_queue {
+			char *name;
+		}
 
 =========================================================================================================================================
 

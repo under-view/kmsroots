@@ -251,14 +251,15 @@ kmr_vk_phdev_destroy (struct kmr_vk_phdev *phdev);
  *
  * members:
  * @name        - Stores the name of the queue in string format. Not required by API.
- * @queue       - VkQueue handle used when submitting command buffers to physical device. Address given to
- *                handle in kmr_vk_lgdev_create after VkDevice handle creation.
- * @familyIndex - VkQueue family index associate with struct kmr_vk_queue_create_info { @queueFlag } selected
- * @queueCount  - Count of queues in a given VkQueue family
+ * @queue       - VkQueue handle used when submitting command buffers to physical device.
+ *                Address to the queue is given by kmr_vk_lgdev_create which handles
+ *                VkDevice creation.
+ * @familyIndex - Family index of the caller selected VkQueue
+ * @queueCount  - Amount of queues in a given VkQueue family
  */
 struct kmr_vk_queue {
-	char    name[20];
 	VkQueue queue;
+	char    *name;
 	int     familyIndex;
 	int     queueCount;
 };
@@ -269,7 +270,8 @@ struct kmr_vk_queue {
  *
  * members:
  * @physDevice - Must pass a valid VkPhysicalDevice handle to query queues associate with phsyical device
- * @queueFlag  - Must pass one VkQueueFlagBits, if multiple flags are or'd function will fail to return VkQueue family index (struct kmr_vk_queue).
+ * @queueFlag  - Must pass one VkQueueFlagBits, if multiple flags are bitwised or'd function will fail to
+ *               return VkQueue family index (struct kmr_vk_queue).
  *               https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html
  */
 struct kmr_vk_queue_create_info {
@@ -284,13 +286,31 @@ struct kmr_vk_queue_create_info {
  *                      are used in vulkan to submit commands up to the GPU.
  *
  * parameters:
- * @kmrvk - pointer to a struct kmr_vk_queue_create_info. Contains information on which queue family
- *          we are trying to find and the physical device that supports said queue family.
+ * @queueCreateInfo - pointer to a struct kmr_vk_queue_create_info. Contains information
+ *                    on which queue family we are trying to find and the physical device
+ *                    that supports said queue family.
  * returns:
- *	on success struct kmr_vk_queue
- *	on failure struct kmr_vk_queue { with members nulled, int's set to -1 }
+ *	on success pointer to a struct kmr_vk_queue
+ *	on failure NULL
  */
-struct kmr_vk_queue kmr_vk_queue_create(struct kmr_vk_queue_create_info *kmrvk);
+struct kmr_vk_queue *
+kmr_vk_queue_create (struct kmr_vk_queue_create_info *queueCreateInfo);
+
+
+/*
+ * kmr_vk_queue_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                       kmr_vk_queue_create() call.
+ *
+ * parameters:
+ * @queue - Must pass a valid pointer to a struct kmr_vk_queue
+ *
+ *          Free'd members with fd's closed
+ *          struct kmr_vk_queue {
+ *          	char *name;
+ *          };
+ */
+void
+kmr_vk_queue_destroy (struct kmr_vk_queue *queue);
 
 
 /*

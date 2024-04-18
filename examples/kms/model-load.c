@@ -29,7 +29,7 @@ struct app_vk {
 	VkInstance instance;
 	struct kmr_vk_phdev *kmr_vk_phdev;
 	struct kmr_vk_lgdev kmr_vk_lgdev;
-	struct kmr_vk_queue kmr_vk_queue;
+	struct kmr_vk_queue *kmr_vk_queue;
 
 	/*
 	 * 0. Swapchain Images (DMA-BUF's -> VkImage's->VkDeviceMemory's)
@@ -288,7 +288,7 @@ render (volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
 	/* Submit draw command */
-	vkQueueSubmit(app->kmr_vk_queue.queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueSubmit(app->kmr_vk_queue->queue, 1, &submitInfo, VK_NULL_HANDLE);
 
 	/*
 	 * Synchronous wait to ensure DMA-BUF is populated before
@@ -538,6 +538,7 @@ exit_error:
 	appd.kmr_vk_sampler_cnt = 1;
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
+	kmr_vk_queue_destroy(app.kmr_vk_queue);
 	kmr_vk_phdev_destroy(app.kmr_vk_phdev);
 	kmr_vk_instance_destroy(app.instance);
 
@@ -716,7 +717,7 @@ create_vk_device (struct app_vk *app, struct app_kms *kms)
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
 	app->kmr_vk_queue = kmr_vk_queue_create(&queueCreateInfo);
-	if (app->kmr_vk_queue.familyIndex == -1)
+	if (!app->kmr_vk_queue)
 		return -1;
 
 	/*
@@ -733,7 +734,7 @@ create_vk_device (struct app_vk *app, struct app_kms *kms)
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(deviceExtensions);
 	lgdevCreateInfo.enabledExtensionNames = deviceExtensions;
 	lgdevCreateInfo.queueCount = 1;
-	lgdevCreateInfo.queues = &app->kmr_vk_queue;
+	lgdevCreateInfo.queues = app->kmr_vk_queue;
 
 	app->kmr_vk_lgdev = kmr_vk_lgdev_create(&lgdevCreateInfo);
 	if (!app->kmr_vk_lgdev.logicalDevice)
@@ -1074,7 +1075,7 @@ create_vk_command_buffers (struct app_vk *app)
 {
 	struct kmr_vk_command_buffer_create_info commandBufferCreateInfo;
 	commandBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-	commandBufferCreateInfo.queueFamilyIndex = app->kmr_vk_queue.familyIndex;
+	commandBufferCreateInfo.queueFamilyIndex = app->kmr_vk_queue->familyIndex;
 	commandBufferCreateInfo.commandBufferCount = 1;
 
 	app->kmr_vk_command_buffer = kmr_vk_command_buffer_create(&commandBufferCreateInfo);
@@ -1209,7 +1210,7 @@ create_vk_buffers (struct app_vk *app)
 		bufferCopyInfo.resourceCopyType = KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_BUFFER;
 		bufferCopyInfo.resourceCopyInfo = &bufferToBufferCopyInfo;
 		bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-		bufferCopyInfo.queue = app->kmr_vk_queue.queue;
+		bufferCopyInfo.queue = app->kmr_vk_queue->queue;
 		bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleBuffer].buffer;
 		bufferCopyInfo.dstResource = app->kmr_vk_buffer[gpuVisibleBuffer].buffer;
 
@@ -1350,7 +1351,7 @@ create_vk_texture_images (struct app_vk *app)
 
 	struct kmr_vk_resource_pipeline_barrier_info pipelineBarrierInfo;
 	pipelineBarrierInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-	pipelineBarrierInfo.queue = app->kmr_vk_queue.queue;
+	pipelineBarrierInfo.queue = app->kmr_vk_queue->queue;
 
 	VkBufferImageCopy copyRegion;
 	copyRegion.bufferRowLength = 0;
@@ -1365,7 +1366,7 @@ create_vk_texture_images (struct app_vk *app)
 	bufferCopyInfo.resourceCopyType = KMR_VK_RESOURCE_COPY_VK_BUFFER_TO_VK_IMAGE;
 	bufferCopyInfo.resourceCopyInfo = &bufferToImageCopyInfo;
 	bufferCopyInfo.commandBuffer = app->kmr_vk_command_buffer.commandBufferHandles[0].commandBuffer;
-	bufferCopyInfo.queue = app->kmr_vk_queue.queue;
+	bufferCopyInfo.queue = app->kmr_vk_queue->queue;
 	bufferCopyInfo.srcResource = app->kmr_vk_buffer[cpuVisibleImageBuffer].buffer;
 
 	for (curImage = 0; curImage < imageCount; curImage++) {

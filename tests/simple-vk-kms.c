@@ -9,7 +9,7 @@ struct app_vk {
 	VkInstance instance;
 	struct kmr_vk_phdev *kmr_vk_phdev;
 	struct kmr_vk_lgdev kmr_vk_lgdev;
-	struct kmr_vk_queue kmr_vk_queue;
+	struct kmr_vk_queue *kmr_vk_queue;
 };
 
 
@@ -69,6 +69,7 @@ exit_error:
 	appd.kmr_vk_lgdev_cnt = 1;
 	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	kmr_vk_destroy(&appd);
+	kmr_vk_queue_destroy(app.kmr_vk_queue);
 	kmr_vk_phdev_destroy(app.kmr_vk_phdev);
 	kmr_vk_instance_destroy(app.instance);
 
@@ -127,7 +128,7 @@ create_kms_instance (struct app_kms *kms)
 
 #ifdef INCLUDE_LIBSEAT
 	kms->kmr_session = kmr_session_create();
-	if (!kms->kmr_session->seat)
+	if (!kms->kmr_session)
 		return -1;
 
 	kmsNodeCreateInfo.session = kms->kmr_session;
@@ -205,7 +206,7 @@ create_vk_device(struct app_vk *app, struct app_kms *kms)
 	queueCreateInfo.queueFlag = VK_QUEUE_GRAPHICS_BIT;
 
 	app->kmr_vk_queue = kmr_vk_queue_create(&queueCreateInfo);
-	if (app->kmr_vk_queue.familyIndex == -1)
+	if (!app->kmr_vk_queue)
 		return -1;
 
 	/*
@@ -220,7 +221,7 @@ create_vk_device(struct app_vk *app, struct app_kms *kms)
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
 	lgdevCreateInfo.enabledExtensionNames = device_extensions;
 	lgdevCreateInfo.queueCount = 1;
-	lgdevCreateInfo.queues = &app->kmr_vk_queue;
+	lgdevCreateInfo.queues = app->kmr_vk_queue;
 
 	app->kmr_vk_lgdev = kmr_vk_lgdev_create(&lgdevCreateInfo);
 	if (!app->kmr_vk_lgdev.logicalDevice)
