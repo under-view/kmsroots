@@ -663,54 +663,90 @@ kmr_vk_lgdev_destroy (struct kmr_vk_lgdev *lgdev)
  **************************************************/
 
 
-struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk)
+/********************************************************
+ * START OF kmr_vk_swapchain_{create,destroy} FUNCTIONS *
+ ********************************************************/
+
+struct kmr_vk_swapchain *
+kmr_vk_swapchain_create (struct kmr_vk_swapchain_create_info *swapchainCreateInfo)
 {
 	VkResult res = VK_RESULT_MAX_ENUM;
-	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-
-	if (kmrvk->surfaceCapabilities.currentExtent.width != UINT32_MAX) {
-		kmrvk->extent2D = kmrvk->surfaceCapabilities.currentExtent;
-	} else {
-		kmrvk->extent2D.width = fmax(kmrvk->surfaceCapabilities.minImageExtent.width, fmin(kmrvk->surfaceCapabilities.maxImageExtent.width, kmrvk->extent2D.width));
-		kmrvk->extent2D.height = fmax(kmrvk->surfaceCapabilities.minImageExtent.height, fmin(kmrvk->surfaceCapabilities.maxImageExtent.height, kmrvk->extent2D.height));
-	}
 
 	VkSwapchainCreateInfoKHR createInfo;
+	
+	struct kmr_vk_swapchain *swapchain = NULL;
+
+	swapchain = calloc(1, sizeof(struct kmr_vk_swapchain));
+	if (!swapchain) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_kmr_vk_swapchain_create;
+	}
+
+	swapchain->logicalDevice = swapchainCreateInfo->logicalDevice;
+
+	if (swapchainCreateInfo->surfaceCapabilities.currentExtent.width != UINT32_MAX) {
+		swapchainCreateInfo->extent2D = swapchainCreateInfo->surfaceCapabilities.currentExtent;
+	} else {
+		swapchainCreateInfo->extent2D.width = fmax(swapchainCreateInfo->surfaceCapabilities.minImageExtent.width,
+		                                      fmin(swapchainCreateInfo->surfaceCapabilities.maxImageExtent.width,
+		                                      swapchainCreateInfo->extent2D.width));
+		swapchainCreateInfo->extent2D.height = fmax(swapchainCreateInfo->surfaceCapabilities.minImageExtent.height,
+		                                       fmin(swapchainCreateInfo->surfaceCapabilities.maxImageExtent.height,
+		                                       swapchainCreateInfo->extent2D.height));
+	}
+
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	createInfo.pNext = NULL;
 	createInfo.flags = 0;
-	createInfo.surface = kmrvk->surface;
-	if (kmrvk->surfaceCapabilities.maxImageCount > 0 && (kmrvk->surfaceCapabilities.minImageCount + 1) < kmrvk->surfaceCapabilities.maxImageCount)
-		createInfo.minImageCount = kmrvk->surfaceCapabilities.maxImageCount;
+	createInfo.surface = swapchainCreateInfo->surface;
+	if (swapchainCreateInfo->surfaceCapabilities.maxImageCount > 0 && \
+	   (swapchainCreateInfo->surfaceCapabilities.minImageCount + 1) < swapchainCreateInfo->surfaceCapabilities.maxImageCount)
+		createInfo.minImageCount = swapchainCreateInfo->surfaceCapabilities.maxImageCount;
 	else
-		createInfo.minImageCount = kmrvk->surfaceCapabilities.minImageCount + 1;
-	createInfo.imageFormat = kmrvk->surfaceFormat.format;
-	createInfo.imageColorSpace = kmrvk->surfaceFormat.colorSpace;
-	createInfo.imageExtent = kmrvk->extent2D;
-	createInfo.imageArrayLayers = kmrvk->imageArrayLayers;
-	createInfo.imageUsage = kmrvk->imageUsage;
-	createInfo.imageSharingMode = kmrvk->imageSharingMode;
-	createInfo.queueFamilyIndexCount = kmrvk->queueFamilyIndexCount;
-	createInfo.pQueueFamilyIndices = kmrvk->queueFamilyIndices;
-	createInfo.preTransform = kmrvk->surfaceCapabilities.currentTransform;
-	createInfo.compositeAlpha = kmrvk->compositeAlpha;
-	createInfo.presentMode = kmrvk->presentMode;
-	createInfo.clipped = kmrvk->clipped;
-	createInfo.oldSwapchain = kmrvk->oldSwapChain;
+		createInfo.minImageCount = swapchainCreateInfo->surfaceCapabilities.minImageCount + 1;
+	createInfo.imageFormat = swapchainCreateInfo->surfaceFormat.format;
+	createInfo.imageColorSpace = swapchainCreateInfo->surfaceFormat.colorSpace;
+	createInfo.imageExtent = swapchainCreateInfo->extent2D;
+	createInfo.imageArrayLayers = swapchainCreateInfo->imageArrayLayers;
+	createInfo.imageUsage = swapchainCreateInfo->imageUsage;
+	createInfo.imageSharingMode = swapchainCreateInfo->imageSharingMode;
+	createInfo.queueFamilyIndexCount = swapchainCreateInfo->queueFamilyIndexCount;
+	createInfo.pQueueFamilyIndices = swapchainCreateInfo->queueFamilyIndices;
+	createInfo.preTransform = swapchainCreateInfo->surfaceCapabilities.currentTransform;
+	createInfo.compositeAlpha = swapchainCreateInfo->compositeAlpha;
+	createInfo.presentMode = swapchainCreateInfo->presentMode;
+	createInfo.clipped = swapchainCreateInfo->clipped;
+	createInfo.oldSwapchain = swapchainCreateInfo->oldSwapChain;
 
-	res = vkCreateSwapchainKHR(kmrvk->logicalDevice, &createInfo, NULL, &swapchain);
+	res = vkCreateSwapchainKHR(swapchain->logicalDevice, &createInfo, NULL, &swapchain->swapchain);
 	if (res) {
 		kmr_utils_log(KMR_DANGER, "[x] vkCreateSwapchainKHR: %s", vkres_msg(res));
-		goto exit_vk_swapchain;
+		goto exit_error_kmr_vk_swapchain_create;
 	}
 
-	kmr_utils_log(KMR_SUCCESS, "kmr_vk_swapchain_create: VkSwapchainKHR successfully created retval(%p)", swapchain);
+	kmr_utils_log(KMR_SUCCESS, "kmr_vk_swapchain_create: VkSwapchainKHR successfully created retval(%p)", swapchain->swapchain);
 
-	return (struct kmr_vk_swapchain) { .logicalDevice = kmrvk->logicalDevice, .swapchain = swapchain };
+	return swapchain;
 
-exit_vk_swapchain:
-	return (struct kmr_vk_swapchain) { .logicalDevice = VK_NULL_HANDLE, .swapchain = VK_NULL_HANDLE };
+exit_error_kmr_vk_swapchain_create:
+	kmr_vk_swapchain_destroy(swapchain);
+	return NULL;
 }
+
+
+void
+kmr_vk_swapchain_destroy (struct kmr_vk_swapchain *swapchain)
+{
+	if (!swapchain)
+		return;
+
+	vkDestroySwapchainKHR(swapchain->logicalDevice, swapchain->swapchain, NULL);
+	free(swapchain);
+}
+
+/******************************************************
+ * END OF kmr_vk_swapchain_{create,destroy} FUNCTIONS *
+ ******************************************************/
 
 
 #define MAX_DMABUF_PLANES 4
@@ -2036,13 +2072,6 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 			}
 			free(kmrvk->kmr_vk_image[i].imageHandles);
 			free(kmrvk->kmr_vk_image[i].imageViewHandles);
-		}
-	}
-
-	if (kmrvk->kmr_vk_swapchain) {
-		for (i = 0; i < kmrvk->kmr_vk_swapchain_cnt; i++) {
-			if (kmrvk->kmr_vk_swapchain[i].logicalDevice && kmrvk->kmr_vk_swapchain[i].swapchain)
-				vkDestroySwapchainKHR(kmrvk->kmr_vk_swapchain[i].logicalDevice, kmrvk->kmr_vk_swapchain[i].swapchain, NULL);
 		}
 	}
 }

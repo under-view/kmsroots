@@ -30,7 +30,7 @@ struct app_vk {
 	struct kmr_vk_queue *kmr_vk_queue;
 
 	struct kmr_vk_surface *kmr_vk_surface;
-	struct kmr_vk_swapchain kmr_vk_swapchain;
+	struct kmr_vk_swapchain *kmr_vk_swapchain;
 
 	/*
 	 * 0. Swapchain Images
@@ -224,7 +224,7 @@ render (volatile bool *running, uint8_t *imageIndex, void *data)
 
 	vkWaitForFences(app->kmr_vk_lgdev->logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->kmr_vk_lgdev->logicalDevice, app->kmr_vk_swapchain.swapchain,
+	vkAcquireNextImageKHR(app->kmr_vk_lgdev->logicalDevice, app->kmr_vk_swapchain->swapchain,
 	                      UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*) imageIndex);
 
 	record_vk_draw_commands(app, *imageIndex, extent2D);
@@ -256,7 +256,7 @@ render (volatile bool *running, uint8_t *imageIndex, void *data)
 	presentInfo.waitSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &app->kmr_vk_swapchain.swapchain;
+	presentInfo.pSwapchains = &app->kmr_vk_swapchain->swapchain;
 	presentInfo.pImageIndices = (uint32_t*) imageIndex;
 	presentInfo.pResults = NULL;
 
@@ -376,8 +376,6 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	appd.kmr_vk_swapchain_cnt = 1;
-	appd.kmr_vk_swapchain = &app.kmr_vk_swapchain;
 	appd.kmr_vk_image_cnt = ARRAY_LEN(app.kmr_vk_image);
 	appd.kmr_vk_image = app.kmr_vk_image;
 	appd.kmr_vk_shader_module_cnt = ARRAY_LEN(app.kmr_vk_shader_module);
@@ -401,6 +399,7 @@ exit_error:
 	appd.kmr_vk_descriptor_set_cnt = 1;
 	appd.kmr_vk_descriptor_set = &app.kmr_vk_descriptor_set;
 	kmr_vk_destroy(&appd);
+	kmr_vk_swapchain_destroy(app.kmr_vk_swapchain);
 	kmr_vk_lgdev_destroy(app.kmr_vk_lgdev);
 	kmr_vk_queue_destroy(app.kmr_vk_queue);
 	kmr_vk_surface_destroy(app.kmr_vk_surface);
@@ -583,7 +582,7 @@ create_vk_swapchain (struct app_vk *app,
 	swapchainCreateInfo.oldSwapChain = VK_NULL_HANDLE;
 
 	app->kmr_vk_swapchain = kmr_vk_swapchain_create(&swapchainCreateInfo);
-	if (!app->kmr_vk_swapchain.swapchain)
+	if (!app->kmr_vk_swapchain)
 		return -1;
 
 	return 0;
@@ -610,7 +609,7 @@ create_vk_swapchain_images (struct app_vk *app,
 
 	struct kmr_vk_image_create_info swapchainImagesInfo;
 	swapchainImagesInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
-	swapchainImagesInfo.swapchain = app->kmr_vk_swapchain.swapchain;
+	swapchainImagesInfo.swapchain = app->kmr_vk_swapchain->swapchain;
 	swapchainImagesInfo.imageCount = 0;                                                   // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
 	swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
 	/* Not creating images manually so rest of struct members can be safely ignored */

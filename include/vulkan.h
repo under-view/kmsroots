@@ -460,12 +460,29 @@ struct kmr_vk_swapchain_create_info {
  *                          The VkSwapchainKHR can be defined as a set of images that can be drawn to and presented to a VkSurfaceKHR.
  *
  * parameters:
- * @kmrvk - pointer to a struct kmr_vk_swapchain_create_info
+ * @swapchainCreateInfo - pointer to a struct kmr_vk_swapchain_create_info
  * returns:
- *	on success struct kmr_vk_swapchain
- *	on failure struct kmr_vk_swapchain { with members nulled }
+ *	on success pointer to a struct kmr_vk_swapchain
+ *	on failure NULL
  */
-struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk);
+struct kmr_vk_swapchain *
+kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *swapchainCreateInfo);
+
+
+/*
+ * kmr_vk_swapchain_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                           kmr_vk_swapchain_create() call.
+ *
+ * parameters:
+ * @swapchain - Must pass a valid pointer to a struct kmr_vk_swapchain
+ *
+ *              Free'd members with fd's closed
+ *              struct kmr_vk_swapchain {
+ *              	VkSwapchainKHR swapchain;
+ *               };
+ */
+void
+kmr_vk_swapchain_destroy (struct kmr_vk_swapchain *swapchain);
 
 
 /*

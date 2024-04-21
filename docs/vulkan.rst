@@ -106,6 +106,7 @@ Functions
 #. :c:func:`kmr_vk_lgdev_create`
 #. :c:func:`kmr_vk_lgdev_destroy`
 #. :c:func:`kmr_vk_swapchain_create`
+#. :c:func:`kmr_vk_swapchain_destroy`
 #. :c:func:`kmr_vk_image_create`
 #. :c:func:`kmr_vk_shader_module_create`
 #. :c:func:`kmr_vk_pipeline_layout_create`
@@ -753,19 +754,39 @@ kmr_vk_swapchain_create_info
 kmr_vk_swapchain_create
 =======================
 
-.. c:function:: struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk);
+.. c:function:: struct kmr_vk_swapchain *kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *swapchainCreateInfo);
 
-	Creates `VkSwapchainKHR`_ object that provides ability to present renderered results to a given `VkSurfaceKHR`_
+	Creates `VkSwapchainKHR`_ object that provides ability to present renderered results to a given `VkSurfaceKHR`_.
 	Minimum image count is equal to `VkSurfaceCapabilitiesKHR`_.minImageCount + 1.
 	The `VkSwapchainKHR`_ can be defined as a set of images that can be drawn to and presented to a `VkSurfaceKHR`_.
 
 	Parameters:
-		| **kmrvk**
+		| **swapchainCreateInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_vk_swapchain_create_info`
 
 	Returns:
-		| **on success:** ``struct`` :c:struct:`kmr_vk_swapchain`
-		| **on failure:** ``struct`` :c:struct:`kmr_vk_swapchain` { with members nulled }
+		| **on success:** pointer to a ``struct`` :c:struct:`kmr_vk_swapchain`
+		| **on failure:** NULL
+
+========================
+kmr_vk_swapchain_destroy
+========================
+
+.. c:function:: void kmr_vk_swapchain_destroy(struct kmr_vk_swapchain *swapchain);
+
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_vk_swapchain_create` call.
+
+	Parameters:
+		| **swapchain**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_vk_swapchain`
+
+	.. code-block::
+
+		/* Free'd members with fd's closed */
+		struct kmr_vk_swapchain {
+			VkSwapchainKHR swapchain;
+		}
 
 =========================================================================================================================================
 
