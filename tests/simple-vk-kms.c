@@ -8,7 +8,7 @@
 struct app_vk {
 	VkInstance instance;
 	struct kmr_vk_phdev *kmr_vk_phdev;
-	struct kmr_vk_lgdev kmr_vk_lgdev;
+	struct kmr_vk_lgdev *kmr_vk_lgdev;
 	struct kmr_vk_queue *kmr_vk_queue;
 };
 
@@ -43,9 +43,7 @@ int
 main (void)
 {
 	struct app_vk app;
-	struct kmr_vk_destroy appd;
 	memset(&app, 0, sizeof(app));
-	memset(&appd, 0, sizeof(appd));
 
 	struct app_kms kms;
 	memset(&kms, 0, sizeof(kms));
@@ -66,9 +64,7 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	appd.kmr_vk_lgdev_cnt = 1;
-	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
-	kmr_vk_destroy(&appd);
+	kmr_vk_lgdev_destroy(app.kmr_vk_lgdev);
 	kmr_vk_queue_destroy(app.kmr_vk_queue);
 	kmr_vk_phdev_destroy(app.kmr_vk_phdev);
 	kmr_vk_instance_destroy(app.instance);
@@ -221,10 +217,10 @@ create_vk_device(struct app_vk *app, struct app_kms *kms)
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(device_extensions);
 	lgdevCreateInfo.enabledExtensionNames = device_extensions;
 	lgdevCreateInfo.queueCount = 1;
-	lgdevCreateInfo.queues = app->kmr_vk_queue;
+	lgdevCreateInfo.queues = &app->kmr_vk_queue;
 
 	app->kmr_vk_lgdev = kmr_vk_lgdev_create(&lgdevCreateInfo);
-	if (!app->kmr_vk_lgdev.logicalDevice)
+	if (!app->kmr_vk_lgdev)
 		return -1;
 
 	return 0;

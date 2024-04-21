@@ -104,6 +104,7 @@ Functions
 #. :c:func:`kmr_vk_queue_create`
 #. :c:func:`kmr_vk_queue_destroy`
 #. :c:func:`kmr_vk_lgdev_create`
+#. :c:func:`kmr_vk_lgdev_destroy`
 #. :c:func:`kmr_vk_swapchain_create`
 #. :c:func:`kmr_vk_image_create`
 #. :c:func:`kmr_vk_shader_module_create`
@@ -552,7 +553,7 @@ kmr_vk_lgdev
 	.. c:member::
 		VkDevice            logicalDevice;
 		uint32_t            queueCount;
-		struct kmr_vk_queue *queues;
+		struct kmr_vk_queue **queues;
 
 	:c:member:`logicalDevice`
 		| Returned `VkDevice`_ handle which represents vulkan's access to physical device
@@ -582,7 +583,7 @@ kmr_vk_lgdev_create_info
 		uint32_t                 enabledExtensionCount;
 		const char *const        *enabledExtensionNames;
 		uint32_t                 queueCount;
-		struct kmr_vk_queue      *queues;
+		struct kmr_vk_queue      **queues;
 
 	:c:member:`instance`
 		| Must pass a valid `VkInstance`_ handle to create `VkDevice`_ handle from.
@@ -611,7 +612,7 @@ kmr_vk_lgdev_create_info
 kmr_vk_lgdev_create
 ===================
 
-.. c:function:: struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk);
+.. c:function:: struct kmr_vk_lgdev *kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *lgdevCreateInfo);
 
 	Creates a `VkDevice`_ handle and allows vulkan to have a connection to a given physical device.
 	The `VkDevice`_ handle is more of a local object its state and operations are local
@@ -626,12 +627,32 @@ kmr_vk_lgdev_create
 	requires a logical device handle.
 
 	Parameters:
-		| **kmrvk**
+		| **lgdevCreateInfo**
 		| Pointer to a ``struct`` :c:struct:`kmr_vk_lgdev_create_info`
 
 	Returns:
-		| **on success:** ``struct`` :c:struct:`kmr_vk_lgdev`
-		| **on failure:** ``struct`` :c:struct:`kmr_vk_lgdev` { with members nulled, int's set to -1 }
+		| **on success:** pointer to a ``struct`` :c:struct:`kmr_vk_lgdev`
+		| **on failure:** NULL
+
+====================
+kmr_vk_lgdev_destroy
+====================
+
+.. c:function:: void kmr_vk_lgdev_destroy(struct kmr_vk_lgdev *lgdev);
+
+	Frees any allocated memory and closes FD's (if open) created after
+	:c:func:`kmr_vk_lgdev_create` call.
+
+	Parameters:
+		| **lgdev**
+		| Pointer to a valid ``struct`` :c:struct:`kmr_vk_lgdev`
+
+	.. code-block::
+
+		/* Free'd members with fd's closed */
+		struct kmr_vk_lgdev {
+			VkDevice logicalDevice;
+		}
 
 =========================================================================================================================================
 

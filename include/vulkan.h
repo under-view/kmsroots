@@ -328,7 +328,7 @@ kmr_vk_queue_destroy (struct kmr_vk_queue *queue);
 struct kmr_vk_lgdev {
 	VkDevice            logicalDevice;
 	uint32_t            queueCount;
-	struct kmr_vk_queue *queues;
+	struct kmr_vk_queue **queues;
 };
 
 
@@ -353,7 +353,7 @@ struct kmr_vk_lgdev_create_info {
 	uint32_t                 enabledExtensionCount;
 	const char *const        *enabledExtensionNames;
 	uint32_t                 queueCount;
-	struct kmr_vk_queue      *queues;
+	struct kmr_vk_queue      **queues;
 };
 
 
@@ -371,12 +371,29 @@ struct kmr_vk_lgdev_create_info {
  *                      requires a logical device handle.
  *
  * parameters:
- * @kmrvk - pointer to a struct kmr_vk_lgdev_create_info
+ * @lgdevCreateInfo - pointer to a struct kmr_vk_lgdev_create_info
  * returns:
- *	on success struct kmr_vk_lgdev
- *	on failure struct kmr_vk_lgdev { with members nulled, int's set to -1 }
+ *	on success pointer to a struct kmr_vk_lgdev
+ *	on failure NULL
  */
-struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk);
+struct kmr_vk_lgdev *
+kmr_vk_lgdev_create (struct kmr_vk_lgdev_create_info *lgdevCreateInfo);
+
+
+/*
+ * kmr_vk_lgdev_destroy: Frees any allocated memory and closes FD’s (if open) created after
+ *                       kmr_vk_lgdev_create() call.
+ *
+ * parameters:
+ * @lgdev - Must pass a valid pointer to a struct kmr_vk_lgdev
+ *
+ *          Free'd members with fd's closed
+ *          struct kmr_vk_lgdev {
+ *          	VkDevice logicalDevice;
+ *          };
+ */
+void
+kmr_vk_lgdev_destroy (struct kmr_vk_lgdev *lgdev);
 
 
 /*

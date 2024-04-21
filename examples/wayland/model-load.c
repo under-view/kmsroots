@@ -25,7 +25,7 @@
 struct app_vk {
 	VkInstance instance;
 	struct kmr_vk_phdev *kmr_vk_phdev;
-	struct kmr_vk_lgdev kmr_vk_lgdev;
+	struct kmr_vk_lgdev *kmr_vk_lgdev;
 	struct kmr_vk_queue *kmr_vk_queue;
 
 	struct kmr_vk_surface *kmr_vk_surface;
@@ -236,9 +236,9 @@ render (volatile bool *running, uint8_t *imageIndex, void *data)
 	VkSemaphore imageSemaphore = app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore;
 	VkSemaphore renderSemaphore = app->kmr_vk_sync_obj.semaphoreHandles[1].semaphore;
 
-	vkWaitForFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(app->kmr_vk_lgdev->logicalDevice, 1, &imageFence, VK_TRUE, UINT64_MAX);
 
-	vkAcquireNextImageKHR(app->kmr_vk_lgdev.logicalDevice, app->kmr_vk_swapchain.swapchain,
+	vkAcquireNextImageKHR(app->kmr_vk_lgdev->logicalDevice, app->kmr_vk_swapchain.swapchain,
 	                      UINT64_MAX, imageSemaphore, VK_NULL_HANDLE, (uint32_t*)imageIndex);
 
 	record_vk_draw_commands(app, *imageIndex, extent2D);
@@ -259,7 +259,7 @@ render (volatile bool *running, uint8_t *imageIndex, void *data)
 	submitInfo.signalSemaphoreCount = ARRAY_LEN(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	vkResetFences(app->kmr_vk_lgdev.logicalDevice, 1, &imageFence);
+	vkResetFences(app->kmr_vk_lgdev->logicalDevice, 1, &imageFence);
 
 	/* Submit draw command */
 	vkQueueSubmit(app->kmr_vk_queue->queue, 1, &submitInfo, imageFence);
@@ -382,8 +382,6 @@ exit_error:
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
-	appd.kmr_vk_lgdev_cnt = 1;
-	appd.kmr_vk_lgdev = &app.kmr_vk_lgdev;
 	appd.kmr_vk_swapchain_cnt = 1;
 	appd.kmr_vk_swapchain = &app.kmr_vk_swapchain;
 	appd.kmr_vk_image_cnt = ARRAY_LEN(app.kmr_vk_image);
@@ -411,6 +409,7 @@ exit_error:
 	appd.kmr_vk_sampler_cnt = 1;
 	appd.kmr_vk_sampler = &app.kmr_vk_sampler;
 	kmr_vk_destroy(&appd);
+	kmr_vk_lgdev_destroy(app.kmr_vk_lgdev);
 	kmr_vk_queue_destroy(app.kmr_vk_queue);
 	kmr_vk_surface_destroy(app.kmr_vk_surface);
 	kmr_vk_phdev_destroy(app.kmr_vk_phdev);
@@ -550,9 +549,9 @@ create_vk_device (struct app_vk *app)
 	lgdevCreateInfo.enabledExtensionCount = ARRAY_LEN(deviceExtensions);
 	lgdevCreateInfo.enabledExtensionNames = deviceExtensions;
 	lgdevCreateInfo.queueCount = 1;
-	lgdevCreateInfo.queues = app->kmr_vk_queue;
+	lgdevCreateInfo.queues = &app->kmr_vk_queue;
 	app->kmr_vk_lgdev = kmr_vk_lgdev_create(&lgdevCreateInfo);
-	if (!app->kmr_vk_lgdev.logicalDevice)
+	if (!app->kmr_vk_lgdev)
 		return -1;
 
 	return 0;
@@ -590,7 +589,7 @@ create_vk_swapchain (struct app_vk *app,
 	free(surfacePresentModes.presentModes); surfacePresentModes.presentModes = NULL;
 
 	struct kmr_vk_swapchain_create_info swapchainCreateInfo;
-	swapchainCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	swapchainCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	swapchainCreateInfo.surface = app->kmr_vk_surface->surface;
 	swapchainCreateInfo.surfaceCapabilities = surfaceCapabilities;
 	swapchainCreateInfo.surfaceFormat = *surfaceFormat;
@@ -632,7 +631,7 @@ create_vk_swapchain_images (struct app_vk *app,
 	imageViewCreateInfo.imageViewSubresourceRange.layerCount = 1;                         // Number of array levels to view
 
 	struct kmr_vk_image_create_info swapchainImagesInfo;
-	swapchainImagesInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	swapchainImagesInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	swapchainImagesInfo.swapchain = app->kmr_vk_swapchain.swapchain;
 	swapchainImagesInfo.imageCount = 0;                                                  // set to zero as VkSwapchainKHR != VK_NULL_HANDLE
 	swapchainImagesInfo.imageViewCreateInfos = &imageViewCreateInfo;
@@ -731,7 +730,7 @@ create_vk_depth_image (struct app_vk *app)
 	vimageCreateInfo.imageDmaBufferMemTypeBits = NULL;
 
 	struct kmr_vk_image_create_info imageCreateInfo;
-	imageCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	imageCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	imageCreateInfo.swapchain = VK_NULL_HANDLE;
 	imageCreateInfo.imageCount = 1;
 	imageCreateInfo.imageViewCreateInfos = &imageViewCreateInfo;
@@ -861,7 +860,7 @@ create_vk_shader_modules (struct app_vk *app)
 #endif
 
 	for (currentShader = 0; currentShader < ARRAY_LEN(kmr_shader); currentShader++) {
-		shaderModuleCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+		shaderModuleCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 #ifdef INCLUDE_SHADERC
 		shaderModuleCreateInfo.sprivByteSize = kmr_shader[currentShader]->byteSize;
 		shaderModuleCreateInfo.sprivBytes = kmr_shader[currentShader]->bytes;
@@ -891,7 +890,7 @@ static int
 create_vk_command_buffers (struct app_vk *app)
 {
 	struct kmr_vk_command_buffer_create_info commandBufferCreateInfo;
-	commandBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	commandBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	commandBufferCreateInfo.queueFamilyIndex = app->kmr_vk_queue->familyIndex;
 	commandBufferCreateInfo.commandBufferCount = 1;
 
@@ -965,7 +964,7 @@ create_vk_buffers (struct app_vk *app)
 	 * Create CPU visible buffer [vertex + index]
 	 */
 	struct kmr_vk_buffer_create_info vkVertexBufferCreateInfo;
-	vkVertexBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkVertexBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	vkVertexBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkVertexBufferCreateInfo.bufferFlags = 0;
 	vkVertexBufferCreateInfo.bufferSize = vertexBufferDataSize + indexBufferDataSize;
@@ -982,7 +981,7 @@ create_vk_buffers (struct app_vk *app)
 
 	// Copy GLTF buffer into Vulkan API created CPU visible buffer memory
 	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
-	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleBuffer].deviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = 0;
 	deviceMemoryCopyInfo.memoryBufferSize = vertexBufferDataSize;
@@ -997,7 +996,7 @@ create_vk_buffers (struct app_vk *app)
 	if (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 		// Create GPU visible vertex buffer
 		struct kmr_vk_buffer_create_info vkVertexBufferGPUCreateInfo;
-		vkVertexBufferGPUCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+		vkVertexBufferGPUCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 		vkVertexBufferGPUCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 		vkVertexBufferGPUCreateInfo.bufferFlags = 0;
 		vkVertexBufferGPUCreateInfo.bufferSize = vkVertexBufferCreateInfo.bufferSize;
@@ -1046,7 +1045,7 @@ create_vk_buffers (struct app_vk *app)
 
 	// Create CPU visible uniform buffer to store (view projection matrices in first have) (Dynamic uniform buffer (model matrix) in second half)
 	struct kmr_vk_buffer_create_info vkUniformBufferCreateInfo;
-	vkUniformBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkUniformBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	vkUniformBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkUniformBufferCreateInfo.bufferFlags = 0;
 	vkUniformBufferCreateInfo.bufferSize = (sizeof(struct app_uniform_buffer_scene) * PRECEIVED_SWAPCHAIN_IMAGE_SIZE) + \
@@ -1077,7 +1076,7 @@ create_vk_texture_images (struct app_vk *app)
 
 	// Create CPU visible buffer to store pixel data
 	struct kmr_vk_buffer_create_info vkTextureBufferCreateInfo;
-	vkTextureBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkTextureBufferCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	vkTextureBufferCreateInfo.physDevice = app->kmr_vk_phdev->physDevice;
 	vkTextureBufferCreateInfo.bufferFlags = 0;
 	vkTextureBufferCreateInfo.bufferSize = app->kmr_gltf_loader_texture_image->totalBufferSize;
@@ -1096,7 +1095,7 @@ create_vk_texture_images (struct app_vk *app)
 
 	/* Map all GLTF texture images into CPU Visible buffer memory */
 	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
-	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = app->kmr_vk_buffer[cpuVisibleImageBuffer].deviceMemory;
 
 	struct kmr_vk_image_view_create_info imageViewCreateInfos[imageCount];
@@ -1139,7 +1138,7 @@ create_vk_texture_images (struct app_vk *app)
 
 	/* Create a VkImage/VkImageView for each texture */
 	struct kmr_vk_image_create_info vkImageCreateInfo;
-	vkImageCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkImageCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	vkImageCreateInfo.swapchain = VK_NULL_HANDLE;                      // set VkSwapchainKHR to VK_NULL_HANDLE as we manually create images
 	vkImageCreateInfo.imageCount = imageCount;                         // Creating @imageCount amount of VkImage(VkDeviceMemory)/VkImageView resource's to store pixel data
 	vkImageCreateInfo.imageViewCreateInfos = imageViewCreateInfos;
@@ -1335,7 +1334,7 @@ static int
 create_vk_image_sampler (struct app_vk *app)
 {
 	struct kmr_vk_sampler_create_info vkSamplerCreateInfo;
-	vkSamplerCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	vkSamplerCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	vkSamplerCreateInfo.samplerFlags = 0;
 	vkSamplerCreateInfo.samplerMagFilter = VK_FILTER_LINEAR;                  // Close to texture: 50/50 sample of two pixels if camera inbetween to pixels
 	vkSamplerCreateInfo.samplerMinFilter = VK_FILTER_LINEAR;                  // Away from texture
@@ -1396,7 +1395,7 @@ create_vk_resource_descriptor_sets (struct app_vk *app)
 	descSetLayoutBindings[2].pImmutableSamplers = NULL;
 
 	struct kmr_vk_descriptor_set_layout_create_info descriptorCreateInfo;
-	descriptorCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	descriptorCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	descriptorCreateInfo.descriptorSetLayoutCreateflags = 0;
 	descriptorCreateInfo.descriptorSetLayoutBindingCount = ARRAY_LEN(descSetLayoutBindings);
 	descriptorCreateInfo.descriptorSetLayoutBindings = descSetLayoutBindings;
@@ -1418,7 +1417,7 @@ create_vk_resource_descriptor_sets (struct app_vk *app)
 
 	// Should allocate one pool. With one set containing multiple descriptors
 	struct kmr_vk_descriptor_set_create_info descriptorSetsCreateInfo;
-	descriptorSetsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	descriptorSetsCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	descriptorSetsCreateInfo.descriptorPoolInfos = descriptorPoolInfos;
 	descriptorSetsCreateInfo.descriptorPoolInfoCount = ARRAY_LEN(descriptorPoolInfos);
 	descriptorSetsCreateInfo.descriptorSetLayouts = &app->kmr_vk_descriptor_set_layout.descriptorSetLayout;
@@ -1467,7 +1466,7 @@ create_vk_resource_descriptor_sets (struct app_vk *app)
 		descriptorWrites[i].pTexelBufferView = NULL;
 	}
 
-	vkUpdateDescriptorSets(app->kmr_vk_lgdev.logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
+	vkUpdateDescriptorSets(app->kmr_vk_lgdev->logicalDevice, descriptorBindingCount, descriptorWrites, 0, NULL);
 
 	return 0;
 }
@@ -1645,7 +1644,7 @@ create_vk_graphics_pipeline (struct app_vk *app,
 	*/
 
 	struct kmr_vk_pipeline_layout_create_info graphicsPipelineLayoutCreateInfo;
-	graphicsPipelineLayoutCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	graphicsPipelineLayoutCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	graphicsPipelineLayoutCreateInfo.descriptorSetLayoutCount = 1;
 	graphicsPipelineLayoutCreateInfo.descriptorSetLayouts = &app->kmr_vk_descriptor_set_layout.descriptorSetLayout;
 	graphicsPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
@@ -1725,7 +1724,7 @@ create_vk_graphics_pipeline (struct app_vk *app,
 	subpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 	struct kmr_vk_render_pass_create_info renderPassInfo;
-	renderPassInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	renderPassInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	renderPassInfo.attachmentDescriptionCount = ARRAY_LEN(attachmentDescriptions);
 	renderPassInfo.attachmentDescriptions = attachmentDescriptions;
 	renderPassInfo.subpassDescriptionCount = 1;
@@ -1738,7 +1737,7 @@ create_vk_graphics_pipeline (struct app_vk *app,
 		return -1;
 
 	struct kmr_vk_graphics_pipeline_create_info graphicsPipelineInfo;
-	graphicsPipelineInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	graphicsPipelineInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	graphicsPipelineInfo.shaderStageCount = ARRAY_LEN(shaderStages);
 	graphicsPipelineInfo.shaderStages = shaderStages;
 	graphicsPipelineInfo.vertexInputState = &vertexInputInfo;
@@ -1780,7 +1779,7 @@ create_vk_framebuffers (struct app_vk *app,
 		framebufferImages[i].imageAttachments[1] = app->kmr_vk_image[1].imageViewHandles[0].view;
 	}
 
-	framebufferInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	framebufferInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	framebufferInfo.framebufferCount = framebufferCount;      // Amount of framebuffers to create
 	framebufferInfo.framebufferImageAttachmentCount = 2;
 	framebufferInfo.framebufferImages = framebufferImages;    // image attachments per framebuffer
@@ -1801,7 +1800,7 @@ static int
 create_vk_sync_objs (struct app_vk *app)
 {
 	struct kmr_vk_sync_obj_create_info syncObjsCreateInfo;
-	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	syncObjsCreateInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	syncObjsCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_BINARY;
 	syncObjsCreateInfo.semaphoreCount = 2;
 	syncObjsCreateInfo.fenceCount = 1;
@@ -1944,7 +1943,7 @@ update_uniform_buffer (struct app_vk *app,
 
 	// Copy UBO Scene data
 	struct kmr_vk_memory_map_info deviceMemoryCopyInfo;
-	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
+	deviceMemoryCopyInfo.logicalDevice = app->kmr_vk_lgdev->logicalDevice;
 	deviceMemoryCopyInfo.deviceMemory = uniformBufferDeviceMemory;
 	deviceMemoryCopyInfo.deviceMemoryOffset = swapchainImageIndex * uboSize;
 	deviceMemoryCopyInfo.memoryBufferSize = uboSize;

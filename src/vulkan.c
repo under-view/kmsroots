@@ -535,35 +535,55 @@ kmr_vk_queue_destroy (struct kmr_vk_queue *queue)
  **************************************************/
 
 
-struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk)
+/****************************************************
+ * START OF kmr_vk_lgdev_{create,destroy} FUNCTIONS *
+ ****************************************************/
+
+struct kmr_vk_lgdev *
+kmr_vk_lgdev_create (struct kmr_vk_lgdev_create_info *lgdevCreateInfo)
 {
 	uint32_t qc;
 	void *pNext = NULL;
 	VkDevice logicalDevice = VK_NULL_HANDLE;
 	VkResult res = VK_RESULT_MAX_ENUM;
 
-	VkDeviceQueueCreateInfo *queueCreateInfo = (VkDeviceQueueCreateInfo *) calloc(kmrvk->queueCount, sizeof(VkDeviceQueueCreateInfo));
-	if (!queueCreateInfo) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto err_vk_lgdev_create;
-	}
+	const float queuePriorities = 1.f;
+
+	VkDeviceCreateInfo deviceCreateInfo = {};
+
+	VkDeviceQueueCreateInfo *queueCreateInfo = NULL;
+	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timelineSemaphoreFeatures;
 
 	VkPhysicalDeviceSynchronization2FeaturesKHR externalSemaphoreInfo;
+
+	struct kmr_vk_lgdev *lgdev = NULL;
+
+	lgdev = calloc(1, sizeof(struct kmr_vk_lgdev));
+	if (!lgdev) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_kmr_vk_lgdev_create;
+	}
+
+	queueCreateInfo = calloc(lgdevCreateInfo->queueCount, sizeof(VkDeviceQueueCreateInfo));
+	if (!queueCreateInfo) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		goto exit_error_kmr_vk_lgdev_create;
+	}
+
 	externalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
 	externalSemaphoreInfo.pNext = NULL;
 	externalSemaphoreInfo.synchronization2 = VK_TRUE;
 
-	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timelineSemaphoreFeatures;
 	timelineSemaphoreFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
 	timelineSemaphoreFeatures.pNext = NULL;
 	timelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
 
-	for (qc = 0; qc < kmrvk->enabledExtensionCount; qc++) {
-		if (!strncmp(kmrvk->enabledExtensionNames[qc], VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME, 30)) {
+	for (qc = 0; qc < lgdevCreateInfo->enabledExtensionCount; qc++) {
+		if (!strncmp(lgdevCreateInfo->enabledExtensionNames[qc], VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME, 30)) {
 			timelineSemaphoreFeatures.pNext = &externalSemaphoreInfo;
 		}
-	
-		if (!strncmp(kmrvk->enabledExtensionNames[qc], VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME, 30)) {
+
+		if (!strncmp(lgdevCreateInfo->enabledExtensionNames[qc], VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME, 30)) {
 			pNext = &timelineSemaphoreFeatures;
 		}
 	}
@@ -572,57 +592,75 @@ struct kmr_vk_lgdev kmr_vk_lgdev_create(struct kmr_vk_lgdev_create_info *kmrvk)
 	 * https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html#devsandqueues-priority
 	 * set the default priority of all queues to be the highest
 	 */
-	const float queuePriorities = 1.f;
-	for (qc = 0; qc < kmrvk->queueCount; qc++) {
+	for (qc = 0; qc < lgdevCreateInfo->queueCount; qc++) {
 		queueCreateInfo[qc].flags = 0;
 		queueCreateInfo[qc].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo[qc].queueFamilyIndex = kmrvk->queues[qc].familyIndex;
-		queueCreateInfo[qc].queueCount = kmrvk->queues[qc].queueCount;
+		queueCreateInfo[qc].queueFamilyIndex = lgdevCreateInfo->queues[qc]->familyIndex;
+		queueCreateInfo[qc].queueCount = lgdevCreateInfo->queues[qc]->queueCount;
 		queueCreateInfo[qc].pQueuePriorities = &queuePriorities;
 	}
 
-	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceCreateInfo.pNext = pNext;
 	deviceCreateInfo.flags = 0;
-	deviceCreateInfo.queueCreateInfoCount = kmrvk->queueCount;
+	deviceCreateInfo.queueCreateInfoCount = lgdevCreateInfo->queueCount;
 	deviceCreateInfo.pQueueCreateInfos = queueCreateInfo;
 	deviceCreateInfo.enabledLayerCount = 0; // Deprecated and ignored
 	deviceCreateInfo.ppEnabledLayerNames = NULL; // Deprecated and ignored
-	deviceCreateInfo.enabledExtensionCount = kmrvk->enabledExtensionCount;
-	deviceCreateInfo.ppEnabledExtensionNames = kmrvk->enabledExtensionNames;
-	deviceCreateInfo.pEnabledFeatures = kmrvk->enabledFeatures;
+	deviceCreateInfo.enabledExtensionCount = lgdevCreateInfo->enabledExtensionCount;
+	deviceCreateInfo.ppEnabledExtensionNames = lgdevCreateInfo->enabledExtensionNames;
+	deviceCreateInfo.pEnabledFeatures = lgdevCreateInfo->enabledFeatures;
 
 	/* Create logic device */
-	res = vkCreateDevice(kmrvk->physDevice, &deviceCreateInfo, NULL, &logicalDevice);
+	res = vkCreateDevice(lgdevCreateInfo->physDevice, &deviceCreateInfo, NULL, &logicalDevice);
 	if (res) {
 		kmr_utils_log(KMR_DANGER, "[x] vkCreateDevice: %s", vkres_msg(res));
-		goto err_vk_lgdev_free_queueCreateInfo;
+		goto exit_error_kmr_vk_lgdev_create;
 	}
 
-	for (qc = 0; qc < kmrvk->queueCount; qc++) {
-		vkGetDeviceQueue(logicalDevice, kmrvk->queues[qc].familyIndex, 0, &kmrvk->queues[qc].queue);
-		if (!kmrvk->queues[qc].queue)  {
-			kmr_utils_log(KMR_DANGER, "[x] vkGetDeviceQueue: Failed to get %s queue handle", kmrvk->queues[qc].name);
-			goto err_vk_lgdev_destroy;
+	lgdev->logicalDevice = logicalDevice;
+	lgdev->queues = lgdevCreateInfo->queues;
+	lgdev->queueCount = lgdevCreateInfo->queueCount;
+
+	for (qc = 0; qc < lgdevCreateInfo->queueCount; qc++) {
+		vkGetDeviceQueue(logicalDevice, lgdevCreateInfo->queues[qc]->familyIndex, 0, &lgdevCreateInfo->queues[qc]->queue);
+		if (!lgdevCreateInfo->queues[qc]->queue)  {
+			kmr_utils_log(KMR_DANGER, "[x] vkGetDeviceQueue: Failed to get %s queue handle", lgdevCreateInfo->queues[qc]->name);
+			goto exit_error_kmr_vk_lgdev_create;
 		}
 
-		kmr_utils_log(KMR_SUCCESS, "kmr_vk_lgdev_create: '%s' VkQueue successfully created retval(%p)", kmrvk->queues[qc].name, kmrvk->queues[qc].queue);
+		kmr_utils_log(KMR_SUCCESS, "kmr_vk_lgdev_create: '%s' VkQueue successfully created retval(%p)",
+		              lgdevCreateInfo->queues[qc]->name, lgdevCreateInfo->queues[qc]->queue);
 	}
 
 	kmr_utils_log(KMR_SUCCESS, "kmr_vk_lgdev_create: VkDevice created retval(%p)", logicalDevice);
 
 	free(queueCreateInfo);
-	return (struct kmr_vk_lgdev) { .logicalDevice = logicalDevice, .queueCount = kmrvk->queueCount, .queues = kmrvk->queues };
 
-err_vk_lgdev_destroy:
-	if (logicalDevice)
-		vkDestroyDevice(logicalDevice, NULL);
-err_vk_lgdev_free_queueCreateInfo:
+	return lgdev;
+
+exit_error_kmr_vk_lgdev_create:
 	free(queueCreateInfo);
-err_vk_lgdev_create:
-	return (struct kmr_vk_lgdev) { .logicalDevice = VK_NULL_HANDLE, .queueCount = -1, .queues = NULL };
+	kmr_vk_lgdev_destroy(lgdev);
+	return NULL;
 }
+
+
+void
+kmr_vk_lgdev_destroy (struct kmr_vk_lgdev *lgdev)
+{
+	if (!lgdev)
+		return;
+
+	vkDeviceWaitIdle(lgdev->logicalDevice);
+	vkDestroyDevice(lgdev->logicalDevice, NULL);
+
+	free(lgdev);
+}
+
+/**************************************************
+ * END OF kmr_vk_lgdev_{create,destroy} FUNCTIONS *
+ **************************************************/
 
 
 struct kmr_vk_swapchain kmr_vk_swapchain_create(struct kmr_vk_swapchain_create_info *kmrvk)
@@ -1885,16 +1923,11 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 {
 	uint32_t i, j, p;
 
-	for (i = 0; i < kmrvk->kmr_vk_lgdev_cnt; i++) {
-		if (kmrvk->kmr_vk_lgdev[i].logicalDevice) {
-			vkDeviceWaitIdle(kmrvk->kmr_vk_lgdev[i].logicalDevice);
-		}
-	}
-
 	if (kmrvk->kmr_vk_sync_obj) {
 		for (i = 0; i < kmrvk->kmr_vk_sync_obj_cnt; i++) {
 			for (j = 0; j < kmrvk->kmr_vk_sync_obj[i].fenceCount; j++) {
 				if (kmrvk->kmr_vk_sync_obj[i].fenceHandles[j].fence) {
+					vkDeviceWaitIdle(kmrvk->kmr_vk_sync_obj[i].logicalDevice);
 					vkDestroyFence(kmrvk->kmr_vk_sync_obj[i].logicalDevice, kmrvk->kmr_vk_sync_obj[i].fenceHandles[j].fence, NULL);
 				}
 			}
@@ -1910,8 +1943,10 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 
 	if (kmrvk->kmr_vk_command_buffer) {
 		for (i = 0; i < kmrvk->kmr_vk_command_buffer_cnt; i++) {
-			if (kmrvk->kmr_vk_command_buffer[i].logicalDevice && kmrvk->kmr_vk_command_buffer[i].commandPool)
+			if (kmrvk->kmr_vk_command_buffer[i].logicalDevice && kmrvk->kmr_vk_command_buffer[i].commandPool) {
+				vkDeviceWaitIdle(kmrvk->kmr_vk_command_buffer[i].logicalDevice);
 				vkDestroyCommandPool(kmrvk->kmr_vk_command_buffer[i].logicalDevice, kmrvk->kmr_vk_command_buffer[i].commandPool, NULL);
+			}
 			free(kmrvk->kmr_vk_command_buffer[i].commandBufferHandles);
 		}
 	}
@@ -2008,12 +2043,6 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 		for (i = 0; i < kmrvk->kmr_vk_swapchain_cnt; i++) {
 			if (kmrvk->kmr_vk_swapchain[i].logicalDevice && kmrvk->kmr_vk_swapchain[i].swapchain)
 				vkDestroySwapchainKHR(kmrvk->kmr_vk_swapchain[i].logicalDevice, kmrvk->kmr_vk_swapchain[i].swapchain, NULL);
-		}
-	}
-
-	for (i = 0; i < kmrvk->kmr_vk_lgdev_cnt; i++) {
-		if (kmrvk->kmr_vk_lgdev[i].logicalDevice) {
-			vkDestroyDevice(kmrvk->kmr_vk_lgdev[i].logicalDevice, NULL);
 		}
 	}
 }
