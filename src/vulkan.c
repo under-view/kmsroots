@@ -749,10 +749,16 @@ kmr_vk_swapchain_destroy (struct kmr_vk_swapchain *swapchain)
  ******************************************************/
 
 
+/****************************************************
+ * START OF kmr_vk_image_{create,destroy} FUNCTIONS *
+ ****************************************************/
+
 #define MAX_DMABUF_PLANES 4
 
 
-static VkImageAspectFlagBits choose_memory_plane_aspect(uint8_t i) {
+static VkImageAspectFlagBits
+choose_memory_plane_aspect (uint8_t i)
+{
 	switch (i) {
 		case 0: return VK_IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT;
 		case 1: return VK_IMAGE_ASPECT_MEMORY_PLANE_1_BIT_EXT;
@@ -763,11 +769,95 @@ static VkImageAspectFlagBits choose_memory_plane_aspect(uint8_t i) {
 }
 
 
-struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmrvk)
+static VkResult
+swapchain_images_create (struct kmr_vk_image *image,
+                         struct kmr_vk_image_create_info *imageCreateInfo)
+{
+	VkImage *images = NULL;
+	VkResult res = VK_RESULT_MAX_ENUM;
+
+	uint32_t imageCount = 0, i;
+
+	VkImageViewCreateInfo imageViewCreateInfo;
+
+	struct kmr_vk_image_view_handle *imageViewHandles = NULL;
+
+	res = vkGetSwapchainImagesKHR(image->logicalDevice, image->swapchain, &imageCount, NULL);
+	if (res) {
+		kmr_utils_log(KMR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
+		return res;
+	}
+
+	image->imageCount = imageCount;
+	vkImages = alloc(imageCount, sizeof(VkImage));
+
+	res = vkGetSwapchainImagesKHR(image->logicalDevice, image->swapchain, &imageCount, vkImages);
+	if (res) {
+		kmr_utils_log(KMR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
+		return res;
+	}
+
+	kmr_utils_log(KMR_INFO, "kmr_vk_image_create: Total images in swapchain %u", imageCount);
+
+	imageViewHandles = calloc(imageCount, sizeof(struct kmr_vk_image_view_handle));
+	if (!imageViewHandles) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		return VK_ERROR_UNKNOWN;
+	}
+
+	image->imageViewHandles = imageViewHandles;
+
+	imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	imageViewCreateInfo.pNext = NULL;
+
+	for (i = 0; i < imageCount; i++) {
+		imageViewCreateInfo.flags = imageCreateInfo->imageViewCreateInfos[i].imageViewflags;
+		imageViewCreateInfo.viewType = imageCreateInfo->imageViewCreateInfos[i].imageViewType;
+		imageViewCreateInfo.format = imageCreateInfo->imageViewCreateInfos[i].imageViewFormat;
+		imageViewCreateInfo.components = imageCreateInfo->imageViewCreateInfos[i].imageViewComponents;
+		imageViewCreateInfo.subresourceRange = imageCreateInfo->imageViewCreateInfos[i].imageViewSubresourceRange;
+		imageViewCreateInfo.image = vkImages[i];
+
+		res = vkCreateImageView(image->logicalDevice, &imageViewCreateInfo, NULL, &imageViewHandles[i].view);
+		if (res) {
+			kmr_utils_log(KMR_DANGER, "[x] vkCreateImageView: %s", vkres_msg(res));
+			return res;
+		}
+
+		kmr_utils_log(KMR_SUCCESS, "kmr_vk_image_create: VkImageView successfully created retval(%p)", imageViewHandles[i].view);
+	}
+
+	return VK_SUCCESS;
+}
+
+
+static VkResult
+vk_images_create (struct kmr_vk_image *image,
+                  struct kmr_vk_image_create_info *imageCreateInfo)
 {
 	VkResult res = VK_RESULT_MAX_ENUM;
+
+	int dupFd = -1;
+	bool disjointPlane = false;
 	uint32_t imageCount = 0, curImage = 0, i, p;
+	uint32_t memPropertyFlags = 0, memoryTypeBits = 0, imageFlags = 0;
+
 	VkImage *vkImages = NULL;
+
+	VkImageCreateInfo vimageCreateInfo;
+	VkMemoryRequirements2 memoryRequirements2;
+	VkImageMemoryRequirementsInfo2 imageMemoryRequirementsInfo;
+
+	VkExternalMemoryImageCreateInfo externalMemImageInfo;
+	VkImageDrmFormatModifierExplicitCreateInfoEXT imageModifierInfo;
+
+	VkMemoryAllocateInfo allocInfo = {};
+	VkMemoryDedicatedAllocateInfo dedicatedAllocInfo;
+	VkImportMemoryFdInfoKHR importMemoryFdInfo;
+	VkImagePlaneMemoryRequirementsInfo planeMemoryRequirementsInfo;
+
+	VkBindImageMemoryInfo bindImageMemoryInfos[MAX_DMABUF_PLANES] = {0};
+	VkBindImagePlaneMemoryInfo bindPlaneMemoryInfos[MAX_DMABUF_PLANES] = {0};
 
 	struct _device_memory {
 		VkDeviceMemory memory[MAX_DMABUF_PLANES];
@@ -777,264 +867,266 @@ struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmrvk)
 	struct kmr_vk_image_handle *imageHandles = NULL;
 	struct kmr_vk_image_view_handle *imageViewHandles = NULL;
 
-	if (kmrvk->swapchain) {
-		res = vkGetSwapchainImagesKHR(kmrvk->logicalDevice, kmrvk->swapchain, &imageCount, NULL);
-		if (res) {
-			kmr_utils_log(KMR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
-			goto exit_vk_image;
+	imageCount = imageCreateInfo->imageCount;
+	vkImages = alloca(imageCount * sizeof(VkImage));
+	deviceMemories = alloca(imageCount * sizeof(struct _device_memory));
+
+	imageHandles = calloc(imageCount, sizeof(struct kmr_vk_image_handle));
+	if (!imageHandles) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		return VK_ERROR_UNKNOWN;
+	}
+
+	image->imageHandles = imageHandles;
+
+	imageViewHandles = calloc(imageCount, sizeof(struct kmr_vk_image_view_handle));
+	if (!imageViewHandles) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		return VK_ERROR_UNKNOWN;
+	}
+
+	image->imageViewHandles = imageViewHandles;
+
+	memset(vkImages, 0, imageCount * sizeof(VkImage));
+	memset(deviceMemories, 0, imageCount * sizeof(VkDeviceMemory));
+
+	imageModifierInfo.sType = VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT;
+	imageModifierInfo.pNext = NULL;
+
+	// Specify that an image may be backed by external memory
+	externalMemImageInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
+	externalMemImageInfo.pNext = &imageModifierInfo;
+	externalMemImageInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCreateInfo.pNext = (imageCreateInfo->useExternalDmaBuffer) ? &externalMemImageInfo : NULL;
+
+	memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+	memoryRequirements2.pNext = NULL;
+
+	planeMemoryRequirementsInfo.sType = VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO;
+	planeMemoryRequirementsInfo.pNext = NULL;
+
+	imageMemoryRequirementsInfo.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2;
+	imageMemoryRequirementsInfo.pNext = NULL;
+
+	dedicatedAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
+	dedicatedAllocInfo.pNext = NULL;
+	dedicatedAllocInfo.image = VK_NULL_HANDLE;
+	dedicatedAllocInfo.buffer = VK_NULL_HANDLE;
+
+	importMemoryFdInfo.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR;
+	importMemoryFdInfo.pNext = &dedicatedAllocInfo;
+	importMemoryFdInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.pNext = (imageCreateInfo->useExternalDmaBuffer) ? &importMemoryFdInfo : NULL;
+
+	for (i = 0; i < imageCount; i++) {
+		curImage = (imageCreateInfo->imageCount) ? i : 0;
+
+		if (kmrvk->useExternalDmaBuffer) {
+			imageModifierInfo.drmFormatModifier = imageCreateInfo->imageCreateInfos[curImage].imageDmaBufferFormatModifier;
+			imageModifierInfo.drmFormatModifierPlaneCount = imageCreateInfo->imageCreateInfos[curImage].imageDmaBufferCount;
+			imageModifierInfo.pPlaneLayouts = imageCreateInfo->imageCreateInfos[curImage].imageDmaBufferResourceInfo;
+			disjointPlane = (imageModifierInfo.drmFormatModifierPlaneCount > 1);
+			if (disjointPlane) {
+				imageFlags = VK_IMAGE_CREATE_DISJOINT_BIT;
+				imageMemoryRequirementsInfo.pNext = &planeMemoryRequirementsInfo;
+			}
 		}
 
-		vkImages = alloca(imageCount * sizeof(VkImage));
+		vimageCreateInfo.flags = imageCreateInfo->imageCreateInfos[curImage].imageflags | imageFlags;
+		vimageCreateInfo.imageType = imageCreateInfo->imageCreateInfos[curImage].imageType;
+		vimageCreateInfo.format = imageCreateInfo->imageCreateInfos[curImage].imageFormat;
+		vimageCreateInfo.extent = imageCreateInfo->imageCreateInfos[curImage].imageExtent3D;
+		vimageCreateInfo.mipLevels = imageCreateInfo->imageCreateInfos[curImage].imageMipLevels;
+		vimageCreateInfo.arrayLayers = imageCreateInfo->imageCreateInfos[curImage].imageArrayLayers;
+		vimageCreateInfo.samples = imageCreateInfo->imageCreateInfos[curImage].imageSamples;
+		vimageCreateInfo.tiling = imageCreateInfo->imageCreateInfos[curImage].imageTiling;
+		vimageCreateInfo.usage = imageCreateInfo->imageCreateInfos[curImage].imageUsage;
+		vimageCreateInfo.sharingMode = imageCreateInfo->imageCreateInfos[curImage].imageSharingMode;
+		vimageCreateInfo.queueFamilyIndexCount = imageCreateInfo->imageCreateInfos[curImage].imageQueueFamilyIndexCount;
+		vimageCreateInfo.pQueueFamilyIndices = imageCreateInfo->imageCreateInfos[curImage].imageQueueFamilyIndices;
+		vimageCreateInfo.initialLayout = imageCreateInfo->imageCreateInfos[curImage].imageInitialLayout;
 
-		res = vkGetSwapchainImagesKHR(kmrvk->logicalDevice, kmrvk->swapchain, &imageCount, vkImages);
+		res = vkCreateImage(image->logicalDevice, &vimageCreateInfo, NULL, &vkImages[i]);
 		if (res) {
-			kmr_utils_log(KMR_DANGER, "[x] vkGetSwapchainImagesKHR: %s", vkres_msg(res));
-			goto exit_vk_image;
+			kmr_utils_log(KMR_DANGER, "[x] vkCreateImage: %s", vkres_msg(res));
+			return NULL;
 		}
 
-		kmr_utils_log(KMR_INFO, "kmr_vk_image_create: Total images in swapchain %u", imageCount);
-	} else {
-		imageCount = kmrvk->imageCount;
-		vkImages = alloca(imageCount * sizeof(VkImage));
-		deviceMemories = alloca(imageCount * sizeof(struct _device_memory));
+		image->imageHandles[i].image = vkImages[i];
+		dedicatedAllocInfo.image = vkImages[i];
+		imageMemoryRequirementsInfo.image = vkImages[i];
 
-		memset(vkImages, 0, imageCount * sizeof(VkImage));
-		memset(deviceMemories, 0, imageCount * sizeof(VkDeviceMemory));
-
-		uint32_t memPropertyFlags = kmrvk->memPropertyFlags, memoryTypeBits = 0, imageFlags = 0;
-		bool disjointPlane = false;
-		int dupFd = -1;
-
-		VkImageDrmFormatModifierExplicitCreateInfoEXT imageModifierInfo;
-		imageModifierInfo.sType = VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT;
-		imageModifierInfo.pNext = NULL;
-
-		// Specify that an image may be backed by external memory
-		VkExternalMemoryImageCreateInfo externalMemImageInfo;
-		externalMemImageInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
-		externalMemImageInfo.pNext = &imageModifierInfo;
-		externalMemImageInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
-
-		VkImageCreateInfo imageCreateInfo;
-		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageCreateInfo.pNext = (kmrvk->useExternalDmaBuffer) ? &externalMemImageInfo : NULL;
-
-		VkMemoryRequirements2 memoryRequirements2;
-		memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		memoryRequirements2.pNext = NULL;
-
-		VkImagePlaneMemoryRequirementsInfo planeMemoryRequirementsInfo;
-		planeMemoryRequirementsInfo.sType = VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO;
-		planeMemoryRequirementsInfo.pNext = NULL;
-
-		VkImageMemoryRequirementsInfo2 imageMemoryRequirementsInfo;
-		imageMemoryRequirementsInfo.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2;
-		imageMemoryRequirementsInfo.pNext = NULL;
-
-		VkMemoryDedicatedAllocateInfo dedicatedAllocInfo;
-		dedicatedAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-		dedicatedAllocInfo.pNext = NULL;
-		dedicatedAllocInfo.image = VK_NULL_HANDLE;
-		dedicatedAllocInfo.buffer = VK_NULL_HANDLE;
-
-		VkImportMemoryFdInfoKHR importMemoryFdInfo;
-		importMemoryFdInfo.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR;
-		importMemoryFdInfo.pNext = &dedicatedAllocInfo;
-		importMemoryFdInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.pNext = (kmrvk->useExternalDmaBuffer) ? &importMemoryFdInfo : NULL;
-
-		VkBindImageMemoryInfo bindImageMemoryInfos[MAX_DMABUF_PLANES] = {0};
-		VkBindImagePlaneMemoryInfo bindPlaneMemoryInfos[MAX_DMABUF_PLANES] = {0};
-
-		for (i = 0; i < imageCount; i++) {
-			curImage = (kmrvk->imageCount) ? i : 0;
-
-			if (kmrvk->useExternalDmaBuffer) {
-				imageModifierInfo.drmFormatModifier = kmrvk->imageCreateInfos[curImage].imageDmaBufferFormatModifier;
-				imageModifierInfo.drmFormatModifierPlaneCount = kmrvk->imageCreateInfos[curImage].imageDmaBufferCount;
-				imageModifierInfo.pPlaneLayouts = kmrvk->imageCreateInfos[curImage].imageDmaBufferResourceInfo;
-				disjointPlane = (imageModifierInfo.drmFormatModifierPlaneCount > 1);
-				if (disjointPlane) {
-					imageFlags = VK_IMAGE_CREATE_DISJOINT_BIT;
-					imageMemoryRequirementsInfo.pNext = &planeMemoryRequirementsInfo;
+		if (imageCreateInfo->useExternalDmaBuffer) {
+			deviceMemories[i].memoryCount = imageModifierInfo.drmFormatModifierPlaneCount;
+			imageHandles[i].deviceMemoryCount = deviceMemories[i].memoryCount;
+			for (p = 0; p < imageModifierInfo.drmFormatModifierPlaneCount; p++) {
+				/*
+				 * Taken From: https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/vulkan/texture.c
+				 * Since importing transfers ownership of the FD to Vulkan, we have
+				 * to duplicate it since this operation does not transfer ownership
+				 * of the attribs to this texture. Will be closed by Vulkan on
+				 * vkFreeMemory.
+				 */
+				dupFd = fcntl(imageCreateInfo->imageCreateInfos[curImage].imageDmaBufferFds[p], F_DUPFD_CLOEXEC, 0);
+				if (dupFd == -1) {
+					kmr_utils_log(KMR_DANGER, "[x] fcntl(F_DUPFD_CLOEXEC): %s", strerror(errno));
+					return VK_ERROR_UNKNOWN;
 				}
-			}
 
-			imageCreateInfo.flags = kmrvk->imageCreateInfos[curImage].imageflags | imageFlags;
-			imageCreateInfo.imageType = kmrvk->imageCreateInfos[curImage].imageType;
-			imageCreateInfo.format = kmrvk->imageCreateInfos[curImage].imageFormat;
-			imageCreateInfo.extent = kmrvk->imageCreateInfos[curImage].imageExtent3D;
-			imageCreateInfo.mipLevels = kmrvk->imageCreateInfos[curImage].imageMipLevels;
-			imageCreateInfo.arrayLayers = kmrvk->imageCreateInfos[curImage].imageArrayLayers;
-			imageCreateInfo.samples = kmrvk->imageCreateInfos[curImage].imageSamples;
-			imageCreateInfo.tiling = kmrvk->imageCreateInfos[curImage].imageTiling;
-			imageCreateInfo.usage = kmrvk->imageCreateInfos[curImage].imageUsage;
-			imageCreateInfo.sharingMode = kmrvk->imageCreateInfos[curImage].imageSharingMode;
-			imageCreateInfo.queueFamilyIndexCount = kmrvk->imageCreateInfos[curImage].imageQueueFamilyIndexCount;
-			imageCreateInfo.pQueueFamilyIndices = kmrvk->imageCreateInfos[curImage].imageQueueFamilyIndices;
-			imageCreateInfo.initialLayout = kmrvk->imageCreateInfos[curImage].imageInitialLayout;
+				importMemoryFdInfo.fd = dupFd;
+				planeMemoryRequirementsInfo.planeAspect = choose_memory_plane_aspect(p);
 
-			res = vkCreateImage(kmrvk->logicalDevice, &imageCreateInfo, NULL, &vkImages[i]);
-			if (res) {
-				kmr_utils_log(KMR_DANGER, "[x] vkCreateImage: %s", vkres_msg(res));
-				goto exit_vk_image_free_images;
-			}
-
-			dedicatedAllocInfo.image = vkImages[i];
-			imageMemoryRequirementsInfo.image = vkImages[i];
-
-			if (kmrvk->useExternalDmaBuffer) {
-				deviceMemories[i].memoryCount = imageModifierInfo.drmFormatModifierPlaneCount;
-				for (p = 0; p < imageModifierInfo.drmFormatModifierPlaneCount; p++) {
-					/*
-					 * Taken From: https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/vulkan/texture.c
-					 * Since importing transfers ownership of the FD to Vulkan, we have
-					 * to duplicate it since this operation does not transfer ownership
-					 * of the attribs to this texture. Will be closed by Vulkan on
-					 * vkFreeMemory.
-					 */
-					dupFd = fcntl(kmrvk->imageCreateInfos[curImage].imageDmaBufferFds[p], F_DUPFD_CLOEXEC, 0);
-					if (dupFd == -1) {
-						kmr_utils_log(KMR_DANGER, "[x] fcntl(F_DUPFD_CLOEXEC): %s", strerror(errno));
-						goto exit_vk_image_free_images;
-					}
-
-					importMemoryFdInfo.fd = dupFd;
-					planeMemoryRequirementsInfo.planeAspect = choose_memory_plane_aspect(p);
-
-					vkGetImageMemoryRequirements2(kmrvk->logicalDevice, &imageMemoryRequirementsInfo, &memoryRequirements2);
-
-					allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
-					memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits | kmrvk->imageCreateInfos[curImage].imageDmaBufferMemTypeBits[p];
-					allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmrvk->physDevice, memoryTypeBits, memPropertyFlags);
-					if (allocInfo.memoryTypeIndex == UINT32_MAX)
-						goto exit_vk_image_free_images;
-
-					res = vkAllocateMemory(kmrvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i].memory[p]);
-					if (res) {
-						kmr_utils_log(KMR_DANGER, "[x] vkAllocateMemory: %s", vkres_msg(res));
-						goto exit_vk_image_free_images;
-					}
-
-					bindPlaneMemoryInfos[p].sType = VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO;
-					bindPlaneMemoryInfos[p].pNext = NULL;
-					bindPlaneMemoryInfos[p].planeAspect = planeMemoryRequirementsInfo.planeAspect;
-
-					bindImageMemoryInfos[p].sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
-					bindImageMemoryInfos[p].pNext = (disjointPlane) ? &bindPlaneMemoryInfos[p] : NULL;
-					bindImageMemoryInfos[p].image = vkImages[i];
-					bindImageMemoryInfos[p].memory = deviceMemories[i].memory[p];
-					bindImageMemoryInfos[p].memoryOffset = 0;
-
-					memoryRequirements2.memoryRequirements.memoryTypeBits = memoryTypeBits = 0;
-					memoryRequirements2.memoryRequirements.size = allocInfo.allocationSize = 0;
-					allocInfo.memoryTypeIndex = 0;
-				}
-			} else {
-				deviceMemories[i].memoryCount = 1;
-
-				vkGetImageMemoryRequirements2(kmrvk->logicalDevice, &imageMemoryRequirementsInfo, &memoryRequirements2);
+				vkGetImageMemoryRequirements2(im->logicalDevice, &imageMemoryRequirementsInfo, &memoryRequirements2);
 
 				allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
-				memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits;
+				memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits | \
+				                 imageCreateInfo->imageCreateInfos[curImage].imageDmaBufferMemTypeBits[p];
 				allocInfo.memoryTypeIndex = retrieve_memory_type_index(kmrvk->physDevice, memoryTypeBits, memPropertyFlags);
 				if (allocInfo.memoryTypeIndex == UINT32_MAX)
-					goto exit_vk_image_free_images;
+					return VK_ERROR_UNKOWN;
 
-				res = vkAllocateMemory(kmrvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i].memory[0]);
+				res = vkAllocateMemory(kmrvk->logicalDevice, &allocInfo, NULL, &deviceMemories[i].memory[p]);
 				if (res) {
 					kmr_utils_log(KMR_DANGER, "[x] vkAllocateMemory: %s", vkres_msg(res));
-					goto exit_vk_image_free_images;
+					return VK_ERROR_UNKNOWN;
 				}
 
-				bindImageMemoryInfos[0].sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
-				bindImageMemoryInfos[0].pNext = NULL;
-				bindImageMemoryInfos[0].image = vkImages[i];
-				bindImageMemoryInfos[0].memory = deviceMemories[i].memory[0];
-				bindImageMemoryInfos[0].memoryOffset = 0;
+				imageHandles[i].deviceMemory[p] = deviceMemories[i].memory[p];
+
+				bindPlaneMemoryInfos[p].sType = VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO;
+				bindPlaneMemoryInfos[p].pNext = NULL;
+				bindPlaneMemoryInfos[p].planeAspect = planeMemoryRequirementsInfo.planeAspect;
+
+				bindImageMemoryInfos[p].sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
+				bindImageMemoryInfos[p].pNext = (disjointPlane) ? &bindPlaneMemoryInfos[p] : NULL;
+				bindImageMemoryInfos[p].image = vkImages[i];
+				bindImageMemoryInfos[p].memory = deviceMemories[i].memory[p];
+				bindImageMemoryInfos[p].memoryOffset = 0;
 
 				memoryRequirements2.memoryRequirements.memoryTypeBits = memoryTypeBits = 0;
 				memoryRequirements2.memoryRequirements.size = allocInfo.allocationSize = 0;
 				allocInfo.memoryTypeIndex = 0;
 			}
+		} else {
+			deviceMemories[i].memoryCount = 1;
 
-			vkBindImageMemory2(kmrvk->logicalDevice, deviceMemories[i].memoryCount, bindImageMemoryInfos);
+			vkGetImageMemoryRequirements2(kmrvk->logicalDevice, &imageMemoryRequirementsInfo, &memoryRequirements2);
 
-			memset(bindImageMemoryInfos, 0, sizeof(bindImageMemoryInfos));
-			memset(bindPlaneMemoryInfos, 0, sizeof(bindPlaneMemoryInfos));
+			allocInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
+			memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits;
+			allocInfo.memoryTypeIndex = retrieve_memory_type_index(imageCreateInfo->physDevice,
+			                                                       memoryTypeBits,
+									       memPropertyFlags);
+			if (allocInfo.memoryTypeIndex == UINT32_MAX)
+				return VK_ERROR_UNKOWN;
+
+			res = vkAllocateMemory(image->logicalDevice, &allocInfo, NULL, &deviceMemories[i].memory[0]);
+			if (res) {
+				kmr_utils_log(KMR_DANGER, "[x] vkAllocateMemory: %s", vkres_msg(res));
+				goto exit_vk_image_free_images;
+			}
+
+			bindImageMemoryInfos[0].sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
+			bindImageMemoryInfos[0].pNext = NULL;
+			bindImageMemoryInfos[0].image = vkImages[i];
+			bindImageMemoryInfos[0].memory = deviceMemories[i].memory[0];
+			bindImageMemoryInfos[0].memoryOffset = 0;
+
+			memoryRequirements2.memoryRequirements.memoryTypeBits = memoryTypeBits = 0;
+			memoryRequirements2.memoryRequirements.size = allocInfo.allocationSize = 0;
+			allocInfo.memoryTypeIndex = 0;
 		}
-	}
 
-	imageHandles = calloc(imageCount, sizeof(struct kmr_vk_image_handle));
-	if (!imageHandles) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_vk_image_free_images;
-	}
+		vkBindImageMemory2(image->logicalDevice, deviceMemories[i].memoryCount, bindImageMemoryInfos);
 
-	imageViewHandles = calloc(imageCount, sizeof(struct kmr_vk_image_view_handle));
-	if (!imageViewHandles) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_vk_image_free_images;
+		memset(bindImageMemoryInfos, 0, sizeof(bindImageMemoryInfos));
+		memset(bindPlaneMemoryInfos, 0, sizeof(bindPlaneMemoryInfos));
 	}
-
-	VkImageViewCreateInfo imageViewCreateInfo;
-	imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	imageViewCreateInfo.pNext = NULL;
 
 	for (i = 0; i < imageCount; i++) {
-		curImage = (kmrvk->imageCount) ? i : 0;
+		curImage = (imageCreateInfo->imageCount) ? i : 0;
 
-		imageViewCreateInfo.flags = kmrvk->imageViewCreateInfos[curImage].imageViewflags;
-		imageViewCreateInfo.viewType = kmrvk->imageViewCreateInfos[curImage].imageViewType;
-		imageViewCreateInfo.format = kmrvk->imageViewCreateInfos[curImage].imageViewFormat;
-		imageViewCreateInfo.components = kmrvk->imageViewCreateInfos[curImage].imageViewComponents;
-		imageViewCreateInfo.subresourceRange = kmrvk->imageViewCreateInfos[curImage].imageViewSubresourceRange;
+		imageViewCreateInfo.flags = imageCreateInfo->imageViewCreateInfos[curImage].imageViewflags;
+		imageViewCreateInfo.viewType = imageCreateInfo->imageViewCreateInfos[curImage].imageViewType;
+		imageViewCreateInfo.format = imageCreateInfo->imageViewCreateInfos[curImage].imageViewFormat;
+		imageViewCreateInfo.components = imageCreateInfo->imageViewCreateInfos[curImage].imageViewComponents;
+		imageViewCreateInfo.subresourceRange = imageCreateInfo->imageViewCreateInfos[curImage].imageViewSubresourceRange;
 		imageViewCreateInfo.image = imageHandles[i].image = vkImages[i];
 
-		if (deviceMemories) {
-			imageHandles[i].deviceMemoryCount = deviceMemories[i].memoryCount;
-			for (p = 0; p < imageHandles[i].deviceMemoryCount; p++)
-				imageHandles[i].deviceMemory[p] = deviceMemories[i].memory[p];
-		}
-
-		res = vkCreateImageView(kmrvk->logicalDevice, &imageViewCreateInfo, NULL, &imageViewHandles[i].view);
+		res = vkCreateImageView(image->logicalDevice, &imageViewCreateInfo, NULL, &imageViewHandles[i].view);
 		if (res) {
 			kmr_utils_log(KMR_DANGER, "[x] vkCreateImageView: %s", vkres_msg(res));
-			goto exit_vk_image_free_image_views;
+			return res;
 		}
+	}
 
-		kmr_utils_log(KMR_WARNING, "kmr_vk_image_create: VkImage (%p) associate with VkImageView", imageHandles[i].image);
-		kmr_utils_log(KMR_SUCCESS, "kmr_vk_image_create: VkImageView successfully created retval(%p)", imageViewHandles[i].view);
+	return VK_SUCCESS;
+}
+
+
+struct kmr_vk_image *
+kmr_vk_image_create (struct kmr_vk_image_create_info *imageCreateInfo)
+{
+	VkResult res = VK_RESULT_MAX_ENUM;
+
+	struct kmr_vk_image *image = NULL;
+
+	image = calloc(1, sizeof(struct kmr_vk_image));
+	if (!image) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+		return NULL;
+	}
+
+	image->logicalDevice = imageCreateInfo->logicalDevice;
+	if (imageCreateInfo->swapchain) {
+		image->swapchain = imageCreateInfo->swapchain;
+		res = swapchain_images_create(image, imageCreateInfo);
+	} else {
+		res = vk_images_create(image, imageCreateInfo);
 	}
 
 	return (struct kmr_vk_image) { .logicalDevice = kmrvk->logicalDevice, .imageCount = imageCount, .imageHandles = imageHandles,
 	                               .imageViewHandles = imageViewHandles, .swapchain = kmrvk->swapchain };
 
-exit_vk_image_free_image_views:
-	if (imageViewHandles) {
-		for (i = 0; i < imageCount; i++) {
-			if (imageViewHandles[i].view)
-				vkDestroyImageView(kmrvk->logicalDevice, imageViewHandles[i].view, NULL);
-		}
-	}
-	free(imageViewHandles);
-exit_vk_image_free_images:
-	if (vkImages && deviceMemories && !kmrvk->swapchain) {
-		for (i = 0; i < imageCount; i++) {
-			if (vkImages[i])
-				vkDestroyImage(kmrvk->logicalDevice, vkImages[i], NULL);
-			for (p = 0; p < deviceMemories[i].memoryCount; p++)
-				vkFreeMemory(kmrvk->logicalDevice, deviceMemories[i].memory[p], NULL);
-		}
-	}
-	free(imageHandles);
-exit_vk_image:
-	return (struct kmr_vk_image) { .logicalDevice = VK_NULL_HANDLE, .imageCount = 0, .imageHandles = NULL,
-	                               .imageViewHandles = NULL, .swapchain = VK_NULL_HANDLE };
+exit_error_vk_image_create:
+	kmr_vk_image_destroy(image);
+	return NULL;
 }
+
+
+void
+kmr_vk_image_destroy (struct kmr_vk_image *image)
+{
+	uint32_t i, p;
+
+	if (!image)
+		return;
+
+	if (!image->swapchain) {
+		for (i = 0; i < image->imageCount; i++) {
+			for (p = 0; p < image->imageHandles[i].memoryCount; p++)
+				vkFreeMemory(image->logicalDevice, image->imageHandles[i].memory[p], NULL);
+			vkDestroyImage(image->logicalDevice, vkImages[i], NULL);
+		}
+	}
+
+	if (image->imageViewHandles) {
+		for (i = 0; i < image->imageCount; i++) 
+			vkDestroyImageView(image->logicalDevice, image->imageViewHandles[i].view, NULL);
+		free(image->imageViewHandles);
+	}
+
+	free(image->imageHandles);
+	free(image);
+}
+
+/****************************************************
+ * END OF kmr_vk_image_{create,destroy} FUNCTIONS *
+ ****************************************************/
 
 
 struct kmr_vk_shader_module kmr_vk_shader_module_create(struct kmr_vk_shader_module_create_info *kmrvk)
@@ -2053,25 +2145,6 @@ void kmr_vk_destroy(struct kmr_vk_destroy *kmrvk)
 		for (i = 0; i < kmrvk->kmr_vk_sampler_cnt; i++) {
 			if (kmrvk->kmr_vk_sampler[i].logicalDevice && kmrvk->kmr_vk_sampler[i].sampler)
 			vkDestroySampler(kmrvk->kmr_vk_sampler[i].logicalDevice, kmrvk->kmr_vk_sampler[i].sampler, NULL);
-		}
-	}
-
-	if (kmrvk->kmr_vk_image) {
-		for (i = 0; i < kmrvk->kmr_vk_image_cnt; i++) {
-			for (j = 0; j < kmrvk->kmr_vk_image[i].imageCount; j++) {
-				if (!kmrvk->kmr_vk_image[i].swapchain) {
-					if (kmrvk->kmr_vk_image[i].logicalDevice && kmrvk->kmr_vk_image[i].imageHandles[j].image)
-						vkDestroyImage(kmrvk->kmr_vk_image[i].logicalDevice, kmrvk->kmr_vk_image[i].imageHandles[j].image, NULL);
-					for (p = 0; p < kmrvk->kmr_vk_image[i].imageHandles[j].deviceMemoryCount; p++) {
-						if (kmrvk->kmr_vk_image[i].logicalDevice && kmrvk->kmr_vk_image[i].imageHandles[j].deviceMemory[p])
-							vkFreeMemory(kmrvk->kmr_vk_image[i].logicalDevice, kmrvk->kmr_vk_image[i].imageHandles[j].deviceMemory[p], NULL);
-					}
-				}
-				if (kmrvk->kmr_vk_image[i].logicalDevice && kmrvk->kmr_vk_image[i].imageViewHandles[j].view)
-					vkDestroyImageView(kmrvk->kmr_vk_image[i].logicalDevice, kmrvk->kmr_vk_image[i].imageViewHandles[j].view, NULL);
-			}
-			free(kmrvk->kmr_vk_image[i].imageHandles);
-			free(kmrvk->kmr_vk_image[i].imageViewHandles);
 		}
 	}
 }

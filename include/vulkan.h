@@ -657,10 +657,15 @@ struct kmr_vk_image_create_info {
  * parameters:
  * @kmrvk - pointer to a struct kmr_vk_image_create_info
  * returns:
- *	on success struct kmr_vk_image
- *	on failure struct kmr_vk_image { with member nulled }
+ *	on success pointer to a struct kmr_vk_image
+ *	on failure NULL
  */
-struct kmr_vk_image kmr_vk_image_create(struct kmr_vk_image_create_info *kmrvk);
+struct kmr_vk_image *
+kmr_vk_image_create (struct kmr_vk_image_create_info *kmrvk);
+
+
+void
+kmr_vk_image_destroy (struct kmr_vk_image *image);
 
 
 /*
