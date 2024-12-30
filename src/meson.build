@@ -1,6 +1,7 @@
 ################################################################################
 # Core files and dependency
 ################################################################################
+libcando = dependency('cando', required: true)
 vulkan = dependency('vulkan', version: '>=1.3.213', required: true)
 libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
@@ -9,7 +10,7 @@ librt = cc.find_library('rt', required: true)
 libcglm = dependency('cglm', required: true)
 
 fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c', 'stb_image.c' ]
-lib_kmr_deps = [vulkan, libmath, librt]
+lib_kmr_deps = [vulkan, libmath, librt, libcando]
 
 
 ################################################################################
