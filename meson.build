@@ -13,6 +13,7 @@ project(
 
 pargs = []
 so_version = meson.project_version()
+project_name = meson.project_name()
 cc = meson.get_compiler('c')
 
 debuging = get_option('debugging')
@@ -24,14 +25,24 @@ inc = include_directories('include', 'external/include')
 subdir('include')
 subdir('src')
 
-lib_kmsroots = library(
-  meson.project_name(),
-  version: '.'.join(so_version),
-  link_whole: lib_kmsroots_static,
-  include_directories: inc,
-  c_args: pargs,
-  install: true
-)
+lib_kmsroots = library(project_name,
+                       cglue_code, files(fs),
+                       version: '.'.join(so_version),
+                       include_directories: inc,
+                       dependencies: lib_kmr_deps,
+                       c_args: pargs,
+                       install: true)
+
+pkg = import('pkgconfig')
+
+pkglibs = []
+pkgsubdirs = []
+pkg.generate(libraries: [pkglibs, lib_kmsroots],
+             subdirs : pkgsubdirs,
+             version : so_version,
+             name : project_name,
+             filebase : 'kmsroots',
+             description : 'Library to help write vulkan renderers.')
 
 if get_option('examples')
   subdir('examples')

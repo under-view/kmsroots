@@ -9,7 +9,7 @@ librt = cc.find_library('rt', required: true)
 # Needed by `gltf-loader.c`
 libcglm = dependency('cglm', required: true)
 
-fs = [ 'vulkan.c', 'utils.c', 'gltf-loader.c', 'stb_image.c' ]
+fs = [ 'src/vulkan.c', 'src/utils.c', 'src/gltf-loader.c', 'src/stb_image.c' ]
 lib_kmr_deps = [vulkan, libmath, librt, libcando]
 
 
@@ -20,7 +20,7 @@ libshaderc = dependency('shaderc', required: get_option('shaderc'))
 if libshaderc.found()
   pargs += ['-DINCLUDE_SHADERC=1']
   lib_kmr_deps += [libshaderc]
-  fs += ['shader.c']
+  fs += ['src/shader.c']
 endif
 
 
@@ -35,18 +35,18 @@ libudev = dependency('libudev', required: get_option('kms').enabled() or get_opt
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
   lib_kmr_deps += [libdrm]
-  fs += ['drm-node.c', 'dma-buf.c']
+  fs += ['src/drm-node.c', 'src/dma-buf.c']
 endif
 
 if libseat.found()
   pargs += ['-DINCLUDE_LIBSEAT=1']
   lib_kmr_deps += [libseat]
-  fs += ['session.c']
+  fs += ['src/session.c']
 endif
 
 if libgbm.found()
   lib_kmr_deps += [libgbm]
-  fs += ['buffer.c']
+  fs += ['src/buffer.c']
 endif
 
 if libudev.found()
@@ -55,11 +55,11 @@ endif
 
 if libinput.found()
   lib_kmr_deps += [libinput]
-  fs += ['input.c']
+  fs += ['src/input.c']
 endif
 
 if libgbm.found() and libdrm.found() and vulkan.found()
-  fs += ['pixel-format.c']
+  fs += ['src/pixel-format.c']
 endif
 
 ################################################################################
@@ -70,7 +70,7 @@ libxcbewmh = dependency('xcb-ewmh', required: get_option('xcb'))
 
 if libxcb.found() and libxcbewmh.found()
   pargs += ['-DINCLUDE_XCB=1']
-  fs += ['xclient.c']
+  fs += ['src/xclient.c']
   lib_kmr_deps += [libxcb, libxcbewmh]
 endif
 
@@ -118,14 +118,6 @@ if wayland_client.found()
   endforeach
 
   pargs += ['-DINCLUDE_WAYLAND=1']
-  fs += ['wclient.c']
+  fs += ['src/wclient.c']
   lib_kmr_deps += [wayland_client]
 endif
-
-
-lib_kmsroots_static = static_library(
-  'kms', cglue_code, files(fs),
-  dependencies: lib_kmr_deps,
-  include_directories: inc,
-  c_args: pargs
-)
