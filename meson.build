@@ -61,6 +61,6 @@ if get_option('docs')
     subdir('docs')
     custom_target('docs',
                   command: [sphinx, '-W', '-b', 'html', docs_dir, '@OUTPUT@'],
-                  input: docs_src, output: 'docs', install: true, install_dir: '')
+                  input: docs_src, output: 'docs', install: false, install_dir: '')
   endif
 endif
