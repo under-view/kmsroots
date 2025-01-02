@@ -3,37 +3,107 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
+
 #include <drm.h>
 #include <drm_fourcc.h>
 #include <drm_mode.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#include <gbm.h>
+
+#include <cando/cando.h>
+
 #include "buffer.h"
 
+#define MAX_BUFFER_COUNT 5
+#define MAX_PLANE_COUNT 4
 
-/**************************************************
- * START OF kmr_buffer_{create,destroy} FUNCTIONS *
- **************************************************/
+/*
+ * @brief struct kmr_buffer_object (kmsroots Buffer Object)
+ *
+ * @member bo           - Handle to some GEM allocated buffer. Used to get GEM handles,
+ *                        DMA buffer fds (fd associate with GEM buffer), pitches, and
+ *                        offsets for the buffer used by DRI device (GPU).
+ * @member fbid         - Framebuffer ID
+ * @member format       - The format of an image details how each pixel color channels
+ *                        is laid out in memory: (i.e. RAM, VRAM, etc...). So, basically
+ *                        the width in bits, type, and ordering of each pixels color channels.
+ * @member modifier     - The modifier details information on how pixels should be within a
+ *                        buffer for different types of operations such as scan out or rendering.
+ *                        (i.e linear, tiled, compressed, etc...)
+ *                        https://01.org/linuxgraphics/Linux-Window-Systems-with-DRM
+ * @member planeCount   - Number of Planar Formats. The number of @dmaBufferFds, @offsets,
+ *                        @pitches retrieved per plane. More information may be found
+ *                        https://en.wikipedia.org/wiki/Planar_(computer_graphics).
+ * @member pitches      - Width in bytes for each plane.
+ * @member offsets      - Offset of each plane. More information can be found
+ *                        https://gitlab.freedesktop.org/mesa/drm/-/blob/main/include/drm/drm_mode.h#L589
+ * @member dmaBufferFds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware.
+ * @member kmsfd        - File descriptor to open DRI device
+ */
+struct kmr_buffer_object
+{
+	struct gbm_bo *bo;
+	int           fbid;
+	unsigned int  format;
+	uint64_t      modifier;
+	unsigned int  planeCount;
+	unsigned int  pitches[MAX_PLANE_COUNT];
+	unsigned int  offsets[MAX_PLANE_COUNT];
+	int           dmaBufferFds[MAX_PLANE_COUNT];
+	int           kmsfd;
+};
+
+
+/*
+ * @brief struct kmr_buffer (kmsroots Buffer)
+ *
+ * @member err           - Stores information about the error that occured
+ *                         for the given instance and may later be retrieved
+ *                         by caller.
+ * @member gbmDevice     - A handle used to allocate gbm buffers & surfaces
+ * @member bufferCount   - Array size of @bufferObjects
+ * @member bufferObjects - Stores an array of gbm_bo's and corresponding
+ *                         information about the individual buffer.
+ */
+struct kmr_buffer
+{
+	struct cando_log_error_struct err;
+	struct gbm_device             *gbmDevice;
+	unsigned int                  bufferCount;
+	struct kmr_buffer_object      bufferObjects[MAX_BUFFER_COUNT];
+};
+
+
+/****************************************
+ * Start of kmr_buffer_create functions *
+ ****************************************/
 
 /*
  * Type defines to shorten code blocks.
  * Hopefully makes it more readable in the future.
  */
-typedef struct gbm_bo * (*gbm_func_impl)(struct gbm_device *,
-                                         struct kmr_buffer_create_info *);
+typedef struct gbm_bo * \
+(*gbm_func_impl) (struct gbm_device *,
+                  const struct kmr_buffer_create_info *);
 
-typedef int (*framebuffer_func_impl)(struct kmr_buffer *,
-                                     struct kmr_buffer_create_info *,
-                                     uint32_t,
-                                     unsigned *);
+
+typedef int \
+(*framebuffer_func_impl) (struct kmr_buffer *,
+                          const struct kmr_buffer_create_info *,
+                          const unsigned int,
+                          const unsigned int *);
+
 
 static struct gbm_bo *
 gbm_buffer_create_impl (struct gbm_device *gbmDevice,
-                        struct kmr_buffer_create_info *bufferInfo)
+                        const struct kmr_buffer_create_info *bufferInfo)
 {
 	return gbm_bo_create(gbmDevice,
 	                     bufferInfo->width,
@@ -45,22 +115,32 @@ gbm_buffer_create_impl (struct gbm_device *gbmDevice,
 
 static int
 gbm_framebuffer_create_impl (struct kmr_buffer *buffer,
-                             struct kmr_buffer_create_info *bufferInfo,
-                             uint32_t currentBuffer,
-                             unsigned *gemHandles)
+                             const struct kmr_buffer_create_info *bufferInfo,
+                             const unsigned int currentBuffer,
+                             const unsigned int *gemHandles)
 {
+	int ret = -1;
+
 	struct drm_mode_fb_cmd framebuffer;
+
+	struct kmr_buffer_object *bufferObject = NULL;
+
 	memset(&framebuffer,0,sizeof(struct drm_mode_fb_cmd));
+
+	bufferObject = &(buffer->bufferObjects[currentBuffer]);
 
 	framebuffer.bpp    = bufferInfo->bitsPerPixel;
 	framebuffer.depth  = bufferInfo->bitDepth;
 	framebuffer.width  = bufferInfo->width;
 	framebuffer.height = bufferInfo->height;
-	framebuffer.pitch  = buffer->bufferObjects[currentBuffer].pitches[0];
+	framebuffer.pitch  = bufferObject->pitches[0];
 	framebuffer.handle = gemHandles[0];
 
-	if (ioctl(buffer->bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB, &framebuffer) == -1) {
-		kmr_utils_log(KMR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB): %s", strerror(errno));
+	ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_MODE_ADDFB, &framebuffer);
+	if (ret == -1) {
+		cando_log_set_err(buffer, errno,
+		                  "ioctl(DRM_IOCTL_MODE_ADDFB): %s",
+		                  strerror(errno));
 		return -1;
 	}
 
@@ -70,7 +150,7 @@ gbm_framebuffer_create_impl (struct kmr_buffer *buffer,
 
 static struct gbm_bo *
 gbm_buffer_create_with_modifiers_impl (struct gbm_device *gbmDevice,
-                                       struct kmr_buffer_create_info *bufferInfo)
+                                       const struct kmr_buffer_create_info *bufferInfo)
 {
 	return gbm_bo_create_with_modifiers2(gbmDevice,
 	                                     bufferInfo->width,
@@ -84,25 +164,35 @@ gbm_buffer_create_with_modifiers_impl (struct gbm_device *gbmDevice,
 
 static int
 gbm_framebuffer_create_with_modifiers_impl (struct kmr_buffer *buffer,
-                                            struct kmr_buffer_create_info *bufferInfo,
-                                            uint32_t currentBuffer,
-                                            unsigned *gemHandles)
+                                            const struct kmr_buffer_create_info *bufferInfo,
+                                            const unsigned int currentBuffer,
+                                            const unsigned int *gemHandles)
 {
+	int ret = -1;
+
 	struct drm_mode_fb_cmd2 framebuffer;
+
+	struct kmr_buffer_object *bufferObject = NULL;
+
+	bufferObject = &(buffer->bufferObjects[currentBuffer]);
+
 	memset(&framebuffer,0,sizeof(struct drm_mode_fb_cmd2));
 
 	framebuffer.width  = bufferInfo->width;
 	framebuffer.height = bufferInfo->height;
-	framebuffer.pixel_format = buffer->bufferObjects[currentBuffer].format;
+	framebuffer.pixel_format = bufferObject->format;
 	framebuffer.flags = DRM_MODE_FB_MODIFIERS;
 
 	memcpy(framebuffer.handles, gemHandles, sizeof(framebuffer.handles));
-	memcpy(framebuffer.pitches, buffer->bufferObjects[currentBuffer].pitches, sizeof(framebuffer.pitches));
-	memcpy(framebuffer.offsets, buffer->bufferObjects[currentBuffer].offsets, sizeof(framebuffer.offsets));
+	memcpy(framebuffer.pitches, bufferObject->pitches, sizeof(framebuffer.pitches));
+	memcpy(framebuffer.offsets, bufferObject->offsets, sizeof(framebuffer.offsets));
 	memcpy(framebuffer.modifier, bufferInfo->modifiers, sizeof(framebuffer.modifier));
 
-	if (ioctl(buffer->bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_MODE_ADDFB2, &framebuffer) == -1) {
-		kmr_utils_log(KMR_DANGER, "[x] ioctl(DRM_IOCTL_MODE_ADDFB2): %s", strerror(errno));
+	ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_MODE_ADDFB2, &framebuffer);
+	if (ret == -1) {
+		cando_log_set_err(buffer, errno,
+		                  "ioctl(DRM_IOCTL_MODE_ADDFB2): %s",
+		                  strerror(errno));
 		return -1;
 	}
 
@@ -110,18 +200,23 @@ gbm_framebuffer_create_with_modifiers_impl (struct kmr_buffer *buffer,
 }
 
 
-struct gbm_func_impl {
+struct gbm_func_impl
+{
 	gbm_func_impl         gbm_bo_create;
 	framebuffer_func_impl get_framebuffer_id;
 };
 
 
-struct gbm_func_impl gbmFuncs[KMR_BUFFER_MAX_TYPE] = {
-	[KMR_BUFFER_GBM_BUFFER] =  {
+struct gbm_func_impl gbmFuncs[KMR_BUFFER_MAX_TYPE] = \
+{
+	[KMR_BUFFER_GBM_BUFFER] = \
+	{
 		.gbm_bo_create = gbm_buffer_create_impl,
 		.get_framebuffer_id = gbm_framebuffer_create_impl,
 	},
-	[KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS] = {
+
+	[KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS] = \
+	{
 		.gbm_bo_create = gbm_buffer_create_with_modifiers_impl,
 		.get_framebuffer_id = gbm_framebuffer_create_with_modifiers_impl,
 	}
@@ -129,86 +224,116 @@ struct gbm_func_impl gbmFuncs[KMR_BUFFER_MAX_TYPE] = {
 
 
 static int
-create_gbm_buffers (struct kmr_buffer *buffer,
-                    struct kmr_buffer_create_info *bufferInfo)
+create_planes (struct kmr_buffer *buffer,
+               unsigned int currentBuffer,
+               unsigned int *gemHandles)
 {
-	// Stores GEM handles per plane used to retrieve an FD to a DMA-BUF
-	// and retrieve a KMS framebuffer ID for modesetting purposes.
-	unsigned gemHandles[4];
+	int ret = -1;
 
-	uint32_t currentBuffer, currentPlane;
+	uint32_t currentPlane;
+
 	union gbm_bo_handle boHandle;
-	struct kmr_buffer_object *bufferObjects = NULL;
+
 	struct drm_prime_handle drmPrimeRequest;
 
-	bufferObjects = buffer->bufferObjects;
+	struct kmr_buffer_object *bufferObject = &(buffer->bufferObjects[currentBuffer]);
 
-	buffer->gbmDevice = gbm_create_device(bufferInfo->kmsfd);
-	if (!buffer->gbmDevice)
-		return -1;
+	for (currentPlane = 0; currentPlane < bufferObject->planeCount; currentPlane++) {
+		memset(&boHandle,0,sizeof(boHandle));
 
-	for (currentBuffer = 0; currentBuffer < bufferInfo->bufferCount; currentBuffer++) {
-		bufferObjects[currentBuffer].kmsfd = bufferInfo->kmsfd;
-		bufferObjects[currentBuffer].bo = gbmFuncs[bufferInfo->bufferType].gbm_bo_create(buffer->gbmDevice, bufferInfo);
-		if (!bufferObjects[currentBuffer].bo) {
-			kmr_utils_log(KMR_DANGER,
-				      "[x] %s: failed to create gbm_bo with res %u x %u",
-				      bufferInfo->bufferType == KMR_BUFFER_GBM_BUFFER ? "gbm_bo_create" : "gbm_bo_create_with_modifiers2",
-				      bufferInfo->width, bufferInfo->height);
+		boHandle = gbm_bo_get_handle_for_plane(bufferObject->bo, currentPlane);
+		if (!boHandle.u32 || boHandle.s32 == -1) {
+			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+					  "failed to get BO plane %d gem handle (modifier 0x%" PRIx64 ")",
+					  currentPlane, bufferObject->modifier);
 			return -1;
 		}
 
-		bufferObjects[currentBuffer].planeCount = gbm_bo_get_plane_count(bufferObjects[currentBuffer].bo);
-		bufferObjects[currentBuffer].modifier = gbm_bo_get_modifier(bufferObjects[currentBuffer].bo);
-		bufferObjects[currentBuffer].format = gbm_bo_get_format(bufferObjects[currentBuffer].bo);
+		bufferObject->pitches[currentPlane] = gbm_bo_get_stride_for_plane(bufferObject->bo, currentPlane);
+		bufferObject->offsets[currentPlane] = gbm_bo_get_offset(bufferObject->bo, currentPlane);
+
+		gemHandles[currentPlane] = boHandle.u32;
+		drmPrimeRequest.handle = gemHandles[currentPlane];
+		drmPrimeRequest.flags  = DRM_RDWR;
+		drmPrimeRequest.fd     = -1;
+
+		/*
+		 * Retrieve a DMA-BUF fd (PRIME fd) for a given GEM buffer via the GEM handle.
+		 * This fd can be passed along to other processes
+		 */
+		ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &drmPrimeRequest);
+		if (ret == -1)  {
+			cando_log_set_err(buffer, errno,
+					  "ioctl(DRM_IOCTL_PRIME_HANDLE_TO_FD): %s",
+					  strerror(errno));
+			return -1;
+		}
+
+		bufferObject->dmaBufferFds[currentPlane] = drmPrimeRequest.fd;
+	}
+
+	return 0;
+}
+
+
+static int
+create_gbm_buffers (struct kmr_buffer *buffer,
+                    const struct kmr_buffer_create_info *bufferInfo)
+{
+	int ret = -1;
+
+	/*
+	 * Stores GEM handles per plane used to retrieve an FD to a DMA-BUF
+	 * and retrieve a KMS framebuffer ID for modesetting purposes.
+	 */
+	unsigned int gemHandles[4];
+
+	unsigned int currentBuffer;
+
+	struct kmr_buffer_object *bufferObject = NULL;
+
+	buffer->gbmDevice = gbm_create_device(bufferInfo->kmsfd);
+	if (!(buffer->gbmDevice)) {
+		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+		                  "Failed to create gbm device context.");
+		return -1;
+	}
+
+	for (currentBuffer = 0; currentBuffer < bufferInfo->bufferCount; currentBuffer++) {
+
+		bufferObject = &(buffer->bufferObjects[currentBuffer]);
+
+		bufferObject->kmsfd = bufferInfo->kmsfd;
+		bufferObject->bo = gbmFuncs[bufferInfo->bufferType].gbm_bo_create(buffer->gbmDevice, bufferInfo);
+		if (!(bufferObject->bo)) {
+			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			                  "%s: failed to create gbm_bo with res %u x %u",
+			                  bufferInfo->bufferType == KMR_BUFFER_GBM_BUFFER ? \
+			                  "gbm_bo_create" : "gbm_bo_create_with_modifiers2",
+			                  bufferInfo->width, bufferInfo->height);
+			return -1;
+		}
+
+		bufferObject->planeCount = gbm_bo_get_plane_count(bufferObject->bo);
+		bufferObject->modifier = gbm_bo_get_modifier(bufferObject->bo);
+		bufferObject->format = gbm_bo_get_format(bufferObject->bo);
+
 		memset(gemHandles,0,sizeof(gemHandles));
 
-		for (currentPlane = 0; currentPlane < bufferObjects[currentBuffer].planeCount; currentPlane++) {
-			memset(&boHandle,0,sizeof(boHandle));
-
-			boHandle = gbm_bo_get_handle_for_plane(bufferObjects[currentBuffer].bo, currentPlane);
-			if (!boHandle.u32 || boHandle.s32 == -1) {
-				kmr_utils_log(KMR_DANGER,
-				              "[x] failed to get BO plane %d gem handle (modifier 0x%" PRIx64 ")",
-					      currentPlane, bufferObjects[currentBuffer].modifier);
-				return -1;
-			}
-
-			gemHandles[currentPlane] = boHandle.u32;
-
-			bufferObjects[currentBuffer].pitches[currentPlane] = gbm_bo_get_stride_for_plane(bufferObjects[currentBuffer].bo, currentPlane);
-			if (!bufferObjects[currentBuffer].pitches[currentPlane]) {
-				kmr_utils_log(KMR_DANGER,
-				              "[x] failed to get stride/pitch for BO plane %d (modifier 0x%" PRIx64 ")",
-					      currentPlane, bufferObjects[currentBuffer].modifier);
-				return -1;
-			}
-
-			bufferObjects[currentBuffer].offsets[currentPlane] = gbm_bo_get_offset(bufferObjects[currentBuffer].bo, currentPlane);
-
-			drmPrimeRequest.handle = gemHandles[currentPlane];
-			drmPrimeRequest.flags  = DRM_RDWR;
-			drmPrimeRequest.fd     = -1;
-
-			/*
-			 * Retrieve a DMA-BUF fd (PRIME fd) for a given GEM buffer via the GEM handle.
-			 * This fd can be passed along to other processes
-			 */
-			if (ioctl(bufferObjects[currentBuffer].kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &drmPrimeRequest) == -1)  {
-				kmr_utils_log(KMR_DANGER, "[x] ioctl(DRM_IOCTL_PRIME_HANDLE_TO_FD): %s", strerror(errno));
-				return -1;
-			}
-
-			bufferObjects[currentBuffer].dmaBufferFds[currentPlane] = drmPrimeRequest.fd;
-		}
+		ret = create_planes(buffer, currentBuffer, &(gemHandles[0]));
+		if (ret == -1)
+			return -1;
 
 		/*
 		 * TAKEN from Daniel Stone kms-quads
+		 *
 		 * Wrap our GEM buffer in a KMS framebuffer, so we can then attach it
 		 * to a plane.
 		 *
-		 * drmModeAddFB2(struct drm_mode_fb_cmd) accepts multiple image planes (not to be confused with
-		 * the KMS plane objects!), for images which have multiple buffers.
+		 * drmModeAddFB2(struct drm_mode_fb_cmd) accepts multiple image
+		 * planes (not to be confused with the KMS plane objects!), for images
+		 * which have multiple buffers.
+		 *
 		 * For example, YUV images may have the luma (Y) components in a
 		 * separate buffer to the chroma (UV) components.
 		 *
@@ -219,41 +344,49 @@ create_gbm_buffers (struct kmr_buffer *buffer,
 		 * Dump buffers are always strictly single-planar, so we do not need
 		 * the extra planes nor the offset field.
 		 *
-		 * drmModeAddFB2WithModifiers(struct drm_mode_fb_cmd2) takes a list of modifiers per plane, however
-		 * the kernel enforces that they must be the same for each plane
-		 * which is there, and 0 for everything else.
+		 * drmModeAddFB2WithModifiers(struct drm_mode_fb_cmd2) takes a list of
+		 * modifiers per plane, however the kernel enforces that they must be
+		 * the same for each plane which is there, and 0 for everything else.
 		 */
-		bufferObjects[currentBuffer].fbid = \
-			gbmFuncs[bufferInfo->bufferType].get_framebuffer_id(buffer,
-		                                                            bufferInfo,
-			                                                    currentBuffer,
-			                                                    &gemHandles[0]);
-		if (bufferObjects[currentBuffer].fbid == -1)
+		bufferObject->fbid = \
+		gbmFuncs[bufferInfo->bufferType].get_framebuffer_id(buffer,
+	                                                            bufferInfo,
+		                                                    currentBuffer,
+		                                                    &gemHandles[0]);
+		if (bufferObject->fbid == -1)
 			return -1;
 	}
 
-	kmr_utils_log(KMR_SUCCESS, "Successfully create GBM buffers");
+	cando_log(CANDO_LOG_SUCCESS, "Successfully create GBM buffers");
 
 	return 0;
 }
 
 
 struct kmr_buffer *
-kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo)
+kmr_buffer_create (const void *_bufferInfo)
 {
 	int ret = -1;
+
 	struct kmr_buffer *buffer = NULL;
 
-	buffer = calloc(1, sizeof(struct kmr_buffer));
-	if (!buffer) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_buffer_create;
+	const struct kmr_buffer_create_info *bufferInfo = _bufferInfo;
+
+	if (!bufferInfo || \
+	    bufferInfo->bufferCount >= MAX_BUFFER_COUNT)
+	{
+		cando_log_err("Incorrect data passed\n");
+		return NULL;
 	}
 
-	buffer->bufferObjects = calloc(bufferInfo->bufferCount, sizeof(struct kmr_buffer_object));
-	if (!buffer->bufferObjects) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_buffer_create;
+	buffer = mmap(NULL,
+	              sizeof(struct kmr_buffer),
+	              PROT_READ|PROT_WRITE,
+	              MAP_PRIVATE|MAP_ANONYMOUS,
+	              -1, 0);
+	if (buffer == (void*)-1) {
+		kmr_utils_log(KMR_DANGER, "[x] mmap: %s", strerror(errno));
+		return NULL;
 	}
 
 	buffer->bufferCount = bufferInfo->bufferCount;
@@ -262,50 +395,209 @@ kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo)
 		case KMR_BUFFER_GBM_BUFFER:
 		case KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS:
 			ret = create_gbm_buffers(buffer, bufferInfo);
-			if (ret == -1)
-				goto exit_error_kmr_buffer_create;
+			if (ret == -1) {
+				cando_log_err("%s\n", cando_log_get_error(buffer));
+				kmr_buffer_destroy(buffer);
+				return NULL;
+			}
+
 			break;
+
 		case KMR_BUFFER_DUMP_BUFFER:
-			kmr_utils_log(KMR_WARNING, "Dump buffer creation not supported");
-			goto exit_error_kmr_buffer_create;
+			cando_log_err("Dump buffer creation not supported\n");
+			kmr_buffer_destroy(buffer);
+			return NULL;
+
 		default:
-			kmr_utils_log(KMR_DANGER, "[x] Passed incorrect enum kmr_buffer_type");
-			goto exit_error_kmr_buffer_create;
+			cando_log_err("Passed incorrect enum kmr_buffer_type\n");
+			kmr_buffer_destroy(buffer);
+			return NULL;
+	}
+
+	ret = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_buffer));
+	if (ret == -1) {
+		cando_log_err("mprotect: %s\n", strerror(errno));
+		kmr_buffer_destroy(buffer);
+		return NULL;
 	}
 
 	return buffer;
-
-exit_error_kmr_buffer_create:
-	kmr_buffer_destroy(buffer);
-	return NULL;
 }
 
+/**************************************
+ * End of kmr_buffer_create functions *
+ **************************************/
+
+
+/*************************************
+ * Start of kmr_buffer_get functions *
+ *************************************/
+
+int
+kmr_buffer_get_kms_fd (struct kmr_buffer *buffer,
+                       const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].kmsfd;
+}
+
+
+const void *
+kmr_buffer_get_gbm_bo (struct kmr_buffer *buffer,
+                       const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return NULL;
+	}
+
+	return buffer->bufferObjects[bufferIndex].bo;
+}
+
+
+int
+kmr_buffer_get_framebuffer_id (struct kmr_buffer *buffer,
+                               const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].fbid;
+}
+
+
+int
+kmr_buffer_get_pixel_format (struct kmr_buffer *buffer,
+                             const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].format;
+}
+
+
+int
+kmr_buffer_get_format_modifier (struct kmr_buffer *buffer,
+                                const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].modifier;
+}
+
+
+int
+kmr_buffer_get_plane_pitch (struct kmr_buffer *buffer,
+                            const unsigned int bufferIndex,
+                            const unsigned int planeIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount || \
+            planeIndex >= MAX_PLANE_COUNT)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].pitches[planeIndex];
+}
+
+
+int
+kmr_buffer_get_plane_offset (struct kmr_buffer *buffer,
+                             const unsigned int bufferIndex,
+                             const unsigned int planeIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount || \
+            planeIndex >= MAX_PLANE_COUNT)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].offsets[planeIndex];
+}
+
+
+int
+kmr_buffer_get_dma_buf_fd (struct kmr_buffer *buffer,
+                           const unsigned int bufferIndex,
+                           const unsigned int dmaBufIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount || \
+	    dmaBufIndex >= MAX_PLANE_COUNT)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].dmaBufferFds[dmaBufIndex];
+}
+
+/***********************************
+ * End of kmr_buffer_get functions *
+ ***********************************/
+
+
+/*****************************************
+ * Start of kmr_buffer_destroy functions *
+ *****************************************/
 
 void
 kmr_buffer_destroy (struct kmr_buffer *buffer)
 {
-	unsigned int i, j;
+	unsigned int b, p;
+
+	struct kmr_buffer_object *bufferObject = NULL;
 
 	if (!buffer)
 		return;
 
-	for (i = 0; i < buffer->bufferCount; i++) {
-		if (buffer->bufferObjects[i].fbid) {
-			fsync(buffer->bufferObjects[i].fbid);
-			ioctl(buffer->bufferObjects[i].kmsfd, DRM_IOCTL_MODE_RMFB, &buffer->bufferObjects[i].fbid);
+	for (b = 0; b < buffer->bufferCount; b++) {
+		bufferObject = &(buffer->bufferObjects[b]);
+
+		if (bufferObject->fbid) {
+			fsync(bufferObject->fbid);
+			ioctl(bufferObject->kmsfd, DRM_IOCTL_MODE_RMFB, &(bufferObject->fbid));
 		}
-		if (buffer->bufferObjects[i].bo)
-			gbm_bo_destroy(buffer->bufferObjects[i].bo);
-		for (j = 0; j < buffer->bufferObjects[i].planeCount; j++)
-			drmCloseBufferHandle(buffer->bufferObjects[i].kmsfd, buffer->bufferObjects[i].dmaBufferFds[j]);
+
+		if (bufferObject->bo)
+			gbm_bo_destroy(bufferObject->bo);
+
+		for (p = 0; p < bufferObject->planeCount; p++)
+			drmCloseBufferHandle(bufferObject->kmsfd, bufferObject->dmaBufferFds[p]);
 	}
 
 	if (buffer->gbmDevice)
 		gbm_device_destroy(buffer->gbmDevice);
-	free(buffer->bufferObjects);
-	free(buffer);
+
+	munmap(buffer, sizeof(struct kmr_buffer));
 }
 
-/************************************************
- * END OF kmr_buffer_{create,destroy} FUNCTIONS *
- ************************************************/
+/***************************************
+ * End of kmr_buffer_destroy functions *
+ ***************************************/

@@ -3,8 +3,6 @@
 
 #include "utils.h"
 
-#include <gbm.h>
-
 /*
  * Great Info https://afrantzis.com/pixel-format-guide/
  * https://github.com/afrantzis/pixel-format-guide
@@ -12,91 +10,51 @@
 
 
 /*
- * enum kmr_buffer_type (kmsroots Buffer Type)
- *
- * Buffer allocation options used by kmr_buffer_create
+ * Stores information about the kmr_buffer instance.
  */
-enum kmr_buffer_type {
+struct kmr_buffer;
+
+
+/*
+ * @brief enum kmr_buffer_type (kmsroots Buffer Type)
+ *
+ *        Buffer allocation options used by kmr_buffer_create(3)
+ */
+enum kmr_buffer_type
+{
 	KMR_BUFFER_DUMP_BUFFER               = 0,
 	KMR_BUFFER_GBM_BUFFER                = 1,
 	KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS = 2,
-	KMR_BUFFER_MAX_TYPE                  = 3,
+	KMR_BUFFER_MAX_TYPE                  = KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS+1,
 };
 
 
 /*
- * struct kmr_buffer_object (kmsroots Buffer Object)
+ * @brief struct kmr_buffer_create_info (kmsroots Buffer Create Information)
  *
- * members:
- * @bo           - Handle to some GEM allocated buffer. Used to get GEM handles, DMA buffer fds
- *                 (fd associate with GEM buffer), pitches, and offsets for the buffer used by
- *                 DRI device (GPU)
- * @fbid         - Framebuffer ID
- * @format       - The format of an image details how each pixel color channels is laid out in
- *                 memory: (i.e. RAM, VRAM, etc...). So, basically the width in bits, type, and
- *                 ordering of each pixels color channels.
- * @modifier     - The modifier details information on how pixels should be within a buffer for different types
- *                 operations such as scan out or rendering. (i.e linear, tiled, compressed, etc...)
- *                 https://01.org/linuxgraphics/Linux-Window-Systems-with-DRM
- * @planeCount   - Number of Planar Formats. The number of @dmaBufferFds, @offsets, @pitches retrieved per plane.
- *                 More information can be found https://en.wikipedia.org/wiki/Planar_(computer_graphics)
- * @pitches      - width in bytes for each plane
- * @offsets      - offset of each plane
- *                 More information can be found https://gitlab.freedesktop.org/mesa/drm/-/blob/main/include/drm/drm_mode.h#L589
- * @dmaBufferFds - (PRIME fd) Stores file descriptors to buffers that can be shared across hardware
- * @kmsfd        - File descriptor to open DRI device
+ * @member bufferType    - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
+ * @member kmsfd         - Used by gbm_create_device. Must be a valid file descriptor
+ *                         to a DRI device (GPU character device file)
+ * @member bufferCount   - The amount of buffers to allocate.
+ *                         	* 2 for double buffering
+ *                         	* 3 for triple buffering
+ *                         	* Max is set to 5
+ * @member width         - Amount of pixels going width wise on screen.
+ *                         Need to allocate buffer of similar size.
+ * @member height        - Amount of pixels going height wise on screen.
+ *                         Need to allocate buffer of similar size.
+ * @member bitDepth      - Bit depth: https://petapixel.com/2018/09/19/8-12-14-vs-16-bit-depth-what-do-you-really-need/
+ * @member bitsPerPixel  - Pass the amount of bits per pixel.
+ * @member gbmBoFlags    - Flags to indicate gbm_bo usage. More info here:
+ *                         https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h#L213
+ * @member pixelFormat   - The format of an image details how each pixel color channels is laid out in
+ *                         memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
+ *                         ordering of each pixels color channels.
+ * @member modifierCount - Number of drm format modifiers passed
+ * @member modifiers     - List of drm format modifier
  */
-struct kmr_buffer_object {
-	struct gbm_bo *bo;
-	int           fbid;
-	unsigned      format;
-	uint64_t      modifier;
-	unsigned      planeCount;
-	unsigned      pitches[4];
-	unsigned      offsets[4];
-	int           dmaBufferFds[4];
-	int           kmsfd;
-};
-
-
-/*
- * struct kmr_buffer (kmsroots Buffer)
- *
- * members:
- * @gbmDevice     - A handle used to allocate gbm buffers & surfaces
- * @bufferCount   - Array size of @bufferObjects
- * @bufferObjects - Stores an array of gbm_bo's and corresponding information about the individual buffer.
- */
-struct kmr_buffer {
-	struct gbm_device        *gbmDevice;
-	unsigned int             bufferCount;
-	struct kmr_buffer_object *bufferObjects;
-};
-
-
-/*
- * struct kmr_buffer_create_info (kmsroots Buffer Create Information)
- *
- * members:
- * @bufferType    - Determines what type of buffer to allocate (i.e Dump Buffer, GBM buffer)
- * @kmsfd         - Used by gbm_create_device. Must be a valid file descriptor
- *                  to a DRI device (GPU character device file)
- * @bufferCount   - The amount of buffers to allocate.
- *                  * 2 for double buffering
- *                  * 3 for triple buffering
- * @width         - Amount of pixels going width wise on screen. Need to allocate buffer of similar size.
- * @height        - Amount of pixels going height wise on screen. Need to allocate buffer of similar size.
- * @bitDepth      - Bit depth: https://petapixel.com/2018/09/19/8-12-14-vs-16-bit-depth-what-do-you-really-need/
- * @bitsPerPixel  - Pass the amount of bits per pixel
- * @gbmBoFlags    - Flags to indicate gbm_bo usage. More info here:
- *                  https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gbm/main/gbm.h#L213
- * @pixelFormat   - The format of an image details how each pixel color channels is laid out in
- *                  memory: (i.e. RAM, VRAM, etc...). So basically the width in bits, type, and
- *                  ordering of each pixels color channels.
- * @modifierCount - Number of drm format modifiers passed
- * @modifiers     - List of drm format modifier
- */
-struct kmr_buffer_create_info {
+struct kmr_buffer_create_info
+{
 	enum kmr_buffer_type bufferType;
 	unsigned int         kmsfd;
 	unsigned int         bufferCount;
@@ -112,37 +70,174 @@ struct kmr_buffer_create_info {
 
 
 /*
- * kmr_buffer_create: Function creates multiple GPU buffers
+ * @brief Function creates multiple buffers that may be
+ *        used to dump pixels into.
  *
- * parameters:
- * @bufferInfo - Pointer to a struct kmr_buffer_create_info
- * returns:
- *	on success Pointer to a struct kmr_buffer
- *	on failure NULL
+ * @param bufferInfo - Pointer to a struct kmr_buffer_create_info
+ *
+ * @returns
+ *	on success: Pointer to a struct kmr_buffer
+ *	on failure: NULL
  */
 struct kmr_buffer *
-kmr_buffer_create (struct kmr_buffer_create_info *bufferInfo);
+kmr_buffer_create (const void *bufferInfo);
 
 
 /*
- * kmr_buffer_destroy: Frees any allocated memory and closes FD's (if open) created after
- *                     kmr_buffer_create() call.
+ * @brief File descriptor to an open KMS node.
+ *        File descriptor is passed during call to
+ *        kmr_buffer_create(3).
  *
- * parameters:
- * @buffer - Must pass a valid pointer to a struct kmr_buffer
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
  *
- * 	     Free'd members with fd's closed
- *	     struct kmr_buffer {
- *	         struct gbm_device *gbmDevice;
- *	         struct kmr_buffer_object *bufferObjects {
- *	             struct gbm_bo *bo;
- *	             unsigned dmaBufferFds[4];
- *	             unsigned fbid;
- *	         }
- *	     }
+ * @returns
+ * 	on success: File descriptor to an open KMS node
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_kms_fd (struct kmr_buffer *buffer,
+                       const unsigned int bufferIndex);
+
+
+/*
+ * @brief Pointer to a struct gbm_device
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: Pointer to a struct gbm_device
+ * 	on failure: NULL
+ */
+const void *
+kmr_buffer_get_gbm_device (struct kmr_buffer *buffer,
+                           const unsigned int bufferIndex);
+
+
+/*
+ * @brief Pointer to a struct gbm_bo
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: Pointer to a struct gbm_bo
+ * 	on failure: NULL
+ */
+const void *
+kmr_buffer_get_gbm_bo (struct kmr_buffer *buffer,
+                       const unsigned int bufferIndex);
+
+
+/*
+ * @brief Returns the framebuffer id of the given buffer @bufferIndex
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: Framebuffer id
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_framebuffer_id (struct kmr_buffer *buffer,
+                               const unsigned int bufferIndex);
+
+
+/*
+ * @brief Returns the pixel format of given buffer
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: Framebuffer id
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_pixel_format (struct kmr_buffer *buffer,
+                             const unsigned int bufferIndex);
+
+
+/*
+ * @brief Returns the DRM format modifier of given buffer
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: DRM format modifier
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_format_modifier (struct kmr_buffer *buffer,
+                                const unsigned int bufferIndex);
+
+
+/*
+ * @brief Returns the pitch/width/stride in bytes of a
+ *        plane associated with a buffer.
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ * @param planeIndex  - Array index to an individual plane
+ *                      associated with a given buffer.
+ *
+ * @returns
+ * 	on success: Pitch/width/stride in bytes of a plane
+ *                  associated with a buffer.
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_plane_pitch (struct kmr_buffer *buffer,
+                            const unsigned int bufferIndex,
+                            const unsigned int planeIndex);
+
+
+/*
+ * @brief Returns the offset in bytes within the plane
+ *        associated with a buffer.
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ * @param planeIndex  - Array index to an individual plane
+ *                      associated with a given buffer.
+ *
+ * @returns
+ * 	on success: Offset in bytes within a plane associated with a buffer.
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_plane_offset (struct kmr_buffer *buffer,
+                             const unsigned int bufferIndex,
+                             const unsigned int planeIndex);
+
+
+/*
+ * @brief Returns file descriptor to a DMA Buffer.
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ * @param dmaBufIndex - Array index of DMA buffer fd array
+ *
+ * @returns
+ * 	on success: File descriptor to a DMA buffer
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_dma_buf_fd (struct kmr_buffer *buffer,
+                           const unsigned int bufferIndex,
+                           const unsigned int dmaBufIndex);
+
+
+/*
+ * @brief Frees any allocated memory and closes FD's (if open) created after
+ *        kmr_buffer_create() call.
+ *
+ * @param buffer - Must pass a valid pointer to a struct kmr_buffer
  */
 void
 kmr_buffer_destroy (struct kmr_buffer *buffer);
-
 
 #endif /* KMR_BUFFER_H */
