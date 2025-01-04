@@ -1,3 +1,5 @@
+libcmocka = dependency('cmocka', required: true)
+
 progs = [ 'gltf-file-loading.c' ]
 
 if shaderc.enabled()
@@ -7,12 +9,12 @@ else
 endif
 
 if kms.enabled()
-  progs += ['simple-vk-kms.c']
+  progs += ['test-kms.c']
 endif
 
 original_args = pargs
 foreach p : progs
-  exec_name = 'test-' + p.substring(0,-2) # remove .c extension from name
+  exec_name = p.substring(0,-2) # remove .c extension from name
 
   if p == 'shader-file-load.c' and shaderc.disabled()
     pargs += [
@@ -29,7 +31,7 @@ foreach p : progs
 
   exec = executable(exec_name, p,
                     link_with: lib_kmsroots,
-                    dependencies: lib_kmr_deps,
+                    dependencies: [libcmocka, lib_kmr_deps],
                     include_directories: [inc],
                     c_args: pargs,
                     install: false)
