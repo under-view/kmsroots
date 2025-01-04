@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <gbm.h>
+
 #include "vulkan.h"
 #include "drm-node.h"
 #include "buffer.h"
