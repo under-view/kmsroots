@@ -77,7 +77,7 @@ struct app_kms
 	struct kmr_drm_node_display *kmr_drm_node_display;
 	struct kmr_drm_node_atomic_request *kmr_drm_node_atomic_request;
 	struct kmr_buffer *kmr_buffer;
-	struct kmr_dma_buf_export_sync_file *kmr_dma_buf_export_sync_file[PRECEIVED_SWAPCHAIN_IMAGE_SIZE];
+	struct kmr_dma_buf *kmr_dma_buf;
 	struct kmr_input *kmr_input;
 #ifdef INCLUDE_LIBSEAT
 	struct kmr_session *kmr_session;
@@ -492,8 +492,6 @@ main (void)
 	}
 
 exit_error:
-	unsigned int destroyLoop;
-
 	/*
 	 * Let the api know of what addresses to free and fd's to close
 	 */
@@ -527,11 +525,8 @@ exit_error:
 	appd.kmr_vk_descriptor_set = &app.kmr_vk_descriptor_set;
 	kmr_vk_destroy(&appd);
 
-	for (destroyLoop = 0; destroyLoop < ARRAY_LEN(kms.kmr_dma_buf_export_sync_file); destroyLoop++)
-		kmr_dma_buf_export_sync_file_destroy(kms.kmr_dma_buf_export_sync_file[destroyLoop]);
-
+	kmr_dma_buf_destroy(kms.kmr_dma_buf);
 	kmr_buffer_destroy(kms.kmr_buffer);
-
 	kmr_input_destroy(kms.kmr_input);
 
 	kmr_drm_node_atomic_request_destroy(kms.kmr_drm_node_atomic_request);
@@ -1570,29 +1565,6 @@ create_vk_sync_objs (struct app_vk *app, struct app_kms UNUSED *kms)
 	app->kmr_vk_sync_obj = kmr_vk_sync_obj_create(&syncObjsCreateInfo);
 	if (!app->kmr_vk_sync_obj.semaphoreHandles[0].semaphore)
 		return -1;
-
-/*
-	struct kmr_buffer bufferHandle = kms->kmr_buffer;
-	struct kmr_dma_buf_export_sync_file_create_info syncFileCreateInfo;
-	struct kmr_vk_sync_obj_import_external_sync_fd_info importSyncFileInfo;
-
-	for (uint8_t b = 0; b < bufferHandle.bufferCount; b++) {
-		syncFileCreateInfo.dmaBufferFdsCount = bufferHandle.bufferObjects[b].planeCount;
-		syncFileCreateInfo.dmaBufferFds = bufferHandle.bufferObjects[b].dmaBufferFds;
-		syncFileCreateInfo.syncFlags = KMR_DMA_BUF_SYNC_RW;
-
-		kms->kmr_dma_buf_export_sync_file[b] = kmr_dma_buf_export_sync_file_create(&syncFileCreateInfo);
-		if (!kms->kmr_dma_buf_export_sync_file[b].syncFileFds)
-			return -1;
-
-		importSyncFileInfo.logicalDevice = app->kmr_vk_lgdev.logicalDevice;
-		importSyncFileInfo.syncFd = kms->kmr_dma_buf_export_sync_file[b].syncFileFds[0];
-		importSyncFileInfo.syncType = KMR_VK_SYNC_OBJ_SEMAPHORE;
-		importSyncFileInfo.syncHandle.semaphore = app->kmr_vk_sync_obj[0].semaphoreHandles[0].semaphore;
-		if (kmr_vk_sync_obj_import_external_sync_fd(&importSyncFileInfo) == -1)
-			return -1;
-	}
-*/
 
 	return 0;
 }
