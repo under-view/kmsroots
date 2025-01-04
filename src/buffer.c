@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -385,7 +386,7 @@ kmr_buffer_create (const void *_bufferInfo)
 	              MAP_PRIVATE|MAP_ANONYMOUS,
 	              -1, 0);
 	if (buffer == (void*)-1) {
-		kmr_utils_log(KMR_DANGER, "[x] mmap: %s", strerror(errno));
+		cando_log(CANDO_LOG_DANGER, "[x] mmap: %s", strerror(errno));
 		return NULL;
 	}
 

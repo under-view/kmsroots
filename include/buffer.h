@@ -1,8 +1,6 @@
 #ifndef KMR_BUFFER_H
 #define KMR_BUFFER_H
 
-#include "utils.h"
-
 /*
  * Great Info https://afrantzis.com/pixel-format-guide/
  * https://github.com/afrantzis/pixel-format-guide
