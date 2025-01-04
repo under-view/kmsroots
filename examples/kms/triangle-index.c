@@ -6,6 +6,8 @@
 #include <signal.h>
 #include <sys/epoll.h>
 
+#include <gbm.h>
+
 #include <cglm/cglm.h>
 
 #include "drm-node.h"
@@ -24,7 +26,8 @@
  * Structs used by example *
  ***************************/
 
-struct app_vk {
+struct app_vk
+{
 	VkInstance instance;
 	struct kmr_vk_phdev kmr_vk_phdev;
 	struct kmr_vk_lgdev kmr_vk_lgdev;
@@ -56,7 +59,8 @@ struct app_vk {
 };
 
 
-struct app_kms {
+struct app_kms
+{
 	struct kmr_drm_node *kmr_drm_node;
 	struct kmr_drm_node_display *kmr_drm_node_display;
 	struct kmr_drm_node_atomic_request *kmr_drm_node_atomic_request;
@@ -69,13 +73,15 @@ struct app_kms {
 };
 
 
-struct app_vk_kms {
+struct app_vk_kms
+{
 	struct app_kms *app_kms;
 	struct app_vk  *app_vk;
 };
 
 
-struct app_vertex_data {
+struct app_vertex_data
+{
 	vec2 pos;
 	vec3 color;
 };
@@ -211,8 +217,8 @@ render (volatile bool *running, uint8_t *imageIndex, int *fbid, void *data)
 
 	// Write to buffer that'll be displayed at function end
 	// acquire Next Image (TODO: Implement own version)
-	*imageIndex = (*imageIndex + 1) % kms->kmr_buffer->bufferCount;
-	*fbid = kms->kmr_buffer->bufferObjects[*imageIndex].fbid;
+	*imageIndex = (*imageIndex + 1) % kmr_buffer_get_buffer_count(kms->kmr_buffer);
+	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *imageIndex);
 
 	record_vk_draw_commands(app, *((uint32_t*)imageIndex), extent2D);
 
@@ -545,10 +551,14 @@ create_kms_gbm_buffers (struct app_kms *kms)
 static int
 create_kms_set_crtc (struct app_kms *kms)
 {
+	int b, bufferCount;
+
 	struct kmr_drm_node_display_mode_info nextImageInfo;
 
-	for (uint8_t i = 0; i < kms->kmr_buffer->bufferCount; i++) {
-		nextImageInfo.fbid = kms->kmr_buffer->bufferObjects[i].fbid;
+	bufferCount = kmr_buffer_get_buffer_count(kms->kmr_buffer);
+
+	for (b = 0; b < bufferCount; b++) {
+		nextImageInfo.fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, b);
 		nextImageInfo.display = kms->kmr_drm_node_display;
 		if (kmr_drm_node_display_mode_set(&nextImageInfo))
 			return -1;
@@ -566,7 +576,7 @@ create_kms_atomic_request_instance(struct app_vk_kms *passData,
 {
 	struct app_kms *kms = passData->app_kms;
 
-	*fbid = kms->kmr_buffer->bufferObjects[*cbuf].fbid;
+	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *cbuf);
 
 	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
 	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display->kmsfd;
@@ -681,17 +691,22 @@ create_vk_swapchain_images (struct app_vk *app,
 	struct kmr_buffer *bufferHandle = kms->kmr_buffer;
 	struct kmr_drm_node_display *display = kms->kmr_drm_node_display;
 
-	uint8_t curImage, plane, imageCount = bufferHandle->bufferCount;
+	uint8_t curImage, plane, imageCount;
 	VkSubresourceLayout *imageDmaBufferResourceInfos = NULL;
 	uint32_t *imageDmaBufferMemTypeBits = NULL;
 
 	width = display->width;
 	height = display->height;
-	surfaceFormat->format = kmr_pixel_format_convert_name(KMR_PIXEL_FORMAT_CONV_GBM_TO_VK, bufferHandle->bufferObjects[0].format);
+	imageCount = kmr_buffer_get_buffer_count(bufferHandle);
+
+	surfaceFormat->format = \
+	kmr_pixel_format_convert_name(KMR_PIXEL_FORMAT_CONV_GBM_TO_VK, \
+	kmr_buffer_get_pixel_format(bufferHandle, 0));
 	if (surfaceFormat->format == UINT32_MAX)
 		return -1;
 
-	kmr_utils_log(KMR_SUCCESS, "Vulkan format %s", kmr_pixel_format_get_name(KMR_PIXEL_FORMAT_VK, surfaceFormat->format));
+	kmr_utils_log(KMR_SUCCESS, "Vulkan format %s", \
+	kmr_pixel_format_get_name(KMR_PIXEL_FORMAT_VK, surfaceFormat->format));
 
 	struct kmr_vk_image_view_create_info imageViewCreateInfos[imageCount];
 	struct kmr_vk_vimage_create_info imageCreateInfos[imageCount];
@@ -721,9 +736,9 @@ create_vk_swapchain_images (struct app_vk *app,
 		imageCreateInfos[curImage].imageQueueFamilyIndexCount = 0;
 		imageCreateInfos[curImage].imageQueueFamilyIndices = NULL;
 		imageCreateInfos[curImage].imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageCreateInfos[curImage].imageDmaBufferFormatModifier = bufferHandle->bufferObjects[curImage].modifier;
-		imageCreateInfos[curImage].imageDmaBufferCount = bufferHandle->bufferObjects[curImage].planeCount;
-		imageCreateInfos[curImage].imageDmaBufferFds = bufferHandle->bufferObjects[curImage].dmaBufferFds;
+		imageCreateInfos[curImage].imageDmaBufferFormatModifier = kmr_buffer_get_format_modifier(bufferHandle, curImage);
+		imageCreateInfos[curImage].imageDmaBufferCount = kmr_buffer_get_plane_count(bufferHandle, curImage);
+		imageCreateInfos[curImage].imageDmaBufferFds = kmr_buffer_get_dma_buf_fds(bufferHandle, curImage);
 
 		imageDmaBufferMemTypeBits = alloca(imageCreateInfos[curImage].imageDmaBufferCount * sizeof(uint32_t));
 		imageDmaBufferResourceInfos = alloca(imageCreateInfos[curImage].imageDmaBufferCount * sizeof(VkSubresourceLayout));
@@ -731,11 +746,11 @@ create_vk_swapchain_images (struct app_vk *app,
 		for (plane = 0; plane < imageCreateInfos[curImage].imageDmaBufferCount; plane++) {
 			imageDmaBufferMemTypeBits[plane] = \
 				kmr_vk_get_external_fd_memory_properties(app->kmr_vk_lgdev.logicalDevice,
-				                                         bufferHandle->bufferObjects[curImage].dmaBufferFds[plane],
+				                                         kmr_buffer_get_dma_buf_fd(bufferHandle, curImage, plane),
 				                                         VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
 
-			imageDmaBufferResourceInfos[plane].offset = bufferHandle->bufferObjects[curImage].offsets[plane];
-			imageDmaBufferResourceInfos[plane].rowPitch = bufferHandle->bufferObjects[curImage].pitches[plane];
+			imageDmaBufferResourceInfos[plane].offset = kmr_buffer_get_plane_offset(bufferHandle, curImage, plane);
+			imageDmaBufferResourceInfos[plane].rowPitch = kmr_buffer_get_plane_pitch(bufferHandle, curImage, plane);
 			imageDmaBufferResourceInfos[plane].size = 0;
 			imageDmaBufferResourceInfos[plane].arrayPitch = 0;
 			imageDmaBufferResourceInfos[plane].depthPitch = 0;
@@ -879,7 +894,8 @@ create_vk_buffers (struct app_vk *app)
 	vkVertexBufferCreateInfo.bufferSize = singleIndexBufferSize + sizeof(meshData);
 	vkVertexBufferCreateInfo.bufferUsage = (VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU || \
 	                                        VK_PHYSICAL_DEVICE_TYPE == VK_PHYSICAL_DEVICE_TYPE_CPU) ? \
-	                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT : \
+	                                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	vkVertexBufferCreateInfo.bufferSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	vkVertexBufferCreateInfo.queueFamilyIndexCount = 0;
 	vkVertexBufferCreateInfo.queueFamilyIndices = NULL;

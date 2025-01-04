@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 
+#include <gbm.h>
+
 #include "drm-node.h"
 #include "buffer.h"
 #include "input.h"
@@ -17,21 +19,24 @@
 /***************************
  * Structs used by example *
  ***************************/
-struct app_kms {
-	struct kmr_drm_node *kmr_drm_node;
-	struct kmr_drm_node_display *kmr_drm_node_display;
+
+struct app_kms
+{
+	struct kmr_drm_node                *kmr_drm_node;
+	struct kmr_drm_node_display        *kmr_drm_node_display;
 	struct kmr_drm_node_atomic_request *kmr_drm_node_atomic_request;
-	struct kmr_buffer *kmr_buffer;
-	struct kmr_input *kmr_input;
+	struct kmr_buffer                  *kmr_buffer;
+	struct kmr_input                   *kmr_input;
 #ifdef INCLUDE_LIBSEAT
-	struct kmr_session *kmr_session;
+	struct kmr_session                 *kmr_session;
 #endif
 };
 
 
-struct app_kms_pass {
-	unsigned int pixelBufferSize;
-	uint8_t *pixelBuffer;
+struct app_kms_pass
+{
+	unsigned int   pixelBufferSize;
+	uint8_t        *pixelBuffer;
 	struct app_kms *app_kms;
 };
 
@@ -39,12 +44,14 @@ struct app_kms_pass {
 /***********
  * Globals *
  ***********/
+
 static volatile sig_atomic_t prun = 1;
 
 
 /***********************
  * Function Prototypes *
  ***********************/
+
 static int
 create_kms_instance (struct app_kms *kms);
 
@@ -146,8 +153,8 @@ render (volatile bool *running, uint8_t *cbuf, int *fbid, void *data)
 	*cbuf ^= 1;
 
 	// Write to buffer that'll be displayed at function end
-	*fbid = kms->kmr_buffer->bufferObjects[*cbuf].fbid;
-	gbm_bo_write(kms->kmr_buffer->bufferObjects[*cbuf].bo, pixelBuffer, pixelBufferSize);
+	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *cbuf);
+	kmr_buffer_write(kms->kmr_buffer, *cbuf, pixelBuffer, pixelBufferSize);
 
 	*running = prun;
 }
@@ -160,9 +167,12 @@ int
 main (void)
 {
 	uint64_t inputReturnCode = 0;
+
 	int kmsfd = -1, inputfd = -1;
 	int nfds = -1, epollfd = -1, n;
+
 	enum libinput_event_type eventType;
+
 	struct libinput *input = NULL;
 	struct libinput_event *inputEvent = NULL;
 	struct libinput_event_keyboard *keyEvent = NULL;
@@ -345,6 +355,7 @@ static int
 create_kms_gbm_buffers (struct app_kms *kms)
 {
 	struct kmr_buffer_create_info gbmBufferInfo;
+
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
 	gbmBufferInfo.kmsfd = kms->kmr_drm_node->kmsfd;
 	gbmBufferInfo.bufferCount = 2;
@@ -368,11 +379,14 @@ create_kms_gbm_buffers (struct app_kms *kms)
 static int
 create_kms_set_crtc (struct app_kms *kms)
 {
-	uint8_t i;
+	uint8_t b, bufferCount;
+
 	struct kmr_drm_node_display_mode_info nextImageInfo;
 
-	for (i = 0; i < kms->kmr_buffer->bufferCount; i++) {
-		nextImageInfo.fbid = kms->kmr_buffer->bufferObjects[i].fbid;
+	bufferCount = kmr_buffer_get_buffer_count(kms->kmr_buffer);
+
+	for (b = 0; b < bufferCount; b++) {
+		nextImageInfo.fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, b);
 		nextImageInfo.display = kms->kmr_drm_node_display;
 		if (kmr_drm_node_display_mode_set(&nextImageInfo))
 			return -1;
@@ -389,9 +403,10 @@ create_kms_atomic_request_instance (struct app_kms_pass *passData,
                                     volatile bool *running)
 {
 	struct app_kms *kms = passData->app_kms;
+
 	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
 
-	*fbid = kms->kmr_buffer->bufferObjects[*cbuf].fbid;
+	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *cbuf);
 
 	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display->kmsfd;
 	atomicRequestInfo.display = kms->kmr_drm_node_display;
@@ -425,8 +440,11 @@ create_kms_pixel_buffer (struct app_kms_pass *passData)
 	bytesPerPixel = 4;
 	pixelBufferSize = width * height * bytesPerPixel;
 
-	pixelBuffer = mmap(NULL, pixelBufferSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON,
-                           -1, kms->kmr_buffer->bufferObjects[0].offsets[0]);
+	pixelBuffer = mmap(NULL,
+	                   pixelBufferSize,
+	                   PROT_READ|PROT_WRITE,
+	                   MAP_PRIVATE|MAP_ANON,
+                           -1, 0);
 	if (pixelBuffer == MAP_FAILED) {
 		kmr_utils_log(KMR_DANGER, "[x] mmap: %s", strerror(errno));
 		return -1;
