@@ -29,9 +29,9 @@ endif
 ################################################################################
 libseat = dependency('libseat', required: get_option('libseat'))
 libinput = dependency('libinput', required: get_option('libinput'))
-libdrm = dependency('libdrm', required: get_option('kms'))
-libgbm = dependency('gbm', required: get_option('kms'))
-libudev = dependency('libudev', required: get_option('kms').enabled() or get_option('libinput').enabled())
+libdrm = dependency('libdrm', required: kms.enabled())
+libgbm = dependency('gbm', required: kms.enabled())
+libudev = dependency('libudev', required: kms.enabled() or get_option('libinput').enabled())
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
   lib_kmr_deps += [libdrm]

@@ -2,7 +2,7 @@ main_headers = [
   'vulkan.h', 'utils.h', 'gltf-loader.h'
 ]
 
-if get_option('kms').enabled()
+if kms.enabled()
   main_headers += ['drm-node.h', 'buffer.h', 'dma-buf.h', 'pixel-format.h']
 endif
 
