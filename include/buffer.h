@@ -208,6 +208,39 @@ kmr_buffer_get_format_modifier (struct kmr_buffer *buffer,
 
 
 /*
+ * @brief Amount of planes associated with a
+ *        struct kmr_buffer { struct kmr_buffer_object }
+ *        context.
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: plane count
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_plane_count (struct kmr_buffer *buffer,
+                            const unsigned int bufferIndex);
+
+
+/*
+ * @brief Returns starting address to an array of file
+ *        descriptors to DMA buffer.
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer
+ * @param bufferIndex - Array index to an individual buffer
+ *
+ * @returns
+ * 	on success: plane count
+ * 	on failure: NULL
+ */
+int *
+kmr_buffer_get_dma_buf_fds (struct kmr_buffer *buffer,
+                            const unsigned int bufferIndex);
+
+
+/*
  * @brief Returns the pitch/width/stride in bytes of a
  *        plane associated with a buffer.
  *

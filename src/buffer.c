@@ -556,6 +556,36 @@ kmr_buffer_get_format_modifier (struct kmr_buffer *buffer,
 
 
 int
+kmr_buffer_get_plane_count (struct kmr_buffer *buffer,
+                            const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferObjects[bufferIndex].planeCount;
+}
+
+
+int *
+kmr_buffer_get_dma_buf_fds (struct kmr_buffer *buffer,
+                            const unsigned int bufferIndex)
+{
+	if (!buffer || \
+	    bufferIndex >= buffer->bufferCount)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return NULL;
+	}
+
+	return &(buffer->bufferObjects[bufferIndex].dmaBufferFds[0]);
+}
+
+
+int
 kmr_buffer_get_plane_pitch (struct kmr_buffer *buffer,
                             const unsigned int bufferIndex,
                             const unsigned int planeIndex)
