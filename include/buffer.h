@@ -84,6 +84,25 @@ kmr_buffer_create (const void *bufferInfo);
 
 
 /*
+ * @brief Performs write operations into actual framebuffer
+ *
+ * @param buffer      - Pointer to a struct kmr_buffer.
+ * @param bufferIndex - Array index to an individual buffer.
+ * @param data        - Pointer to pixel buffer.
+ * @param dataSize    - Size of @data pixel buffer.
+ *
+ * @returns
+ * 	on success: 0
+ * 	on failure: -1
+ */
+int
+kmr_buffer_write (struct kmr_buffer *buffer,
+                  const unsigned int bufferIndex,
+                  const void *data,
+                  const size_t dataSize);
+
+
+/*
  * @brief File descriptor to an open KMS node.
  *        File descriptor is passed during call to
  *        kmr_buffer_create(3).
@@ -98,6 +117,19 @@ kmr_buffer_create (const void *bufferInfo);
 int
 kmr_buffer_get_kms_fd (struct kmr_buffer *buffer,
                        const unsigned int bufferIndex);
+
+
+/*
+ * @brief Amount of buffers associated with a struct kmr_buffer context.
+ *
+ * @param buffer - Pointer to a struct kmr_buffer
+ *
+ * @returns
+ * 	on success: Buffer count
+ * 	on failure: -1
+ */
+int
+kmr_buffer_get_buffer_count (struct kmr_buffer *buffer);
 
 
 /*
@@ -152,7 +184,7 @@ kmr_buffer_get_framebuffer_id (struct kmr_buffer *buffer,
  * @param bufferIndex - Array index to an individual buffer
  *
  * @returns
- * 	on success: Framebuffer id
+ * 	on success: Pixel format
  * 	on failure: -1
  */
 int

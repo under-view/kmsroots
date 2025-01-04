@@ -134,7 +134,7 @@ gbm_framebuffer_create_impl (struct kmr_buffer *buffer,
 	framebuffer.width  = bufferInfo->width;
 	framebuffer.height = bufferInfo->height;
 	framebuffer.pitch  = bufferObject->pitches[0];
-	framebuffer.handle = gemHandles[0];
+	framebuffer.handle = *gemHandles;
 
 	ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_MODE_ADDFB, &framebuffer);
 	if (ret == -1) {
@@ -429,6 +429,40 @@ kmr_buffer_create (const void *_bufferInfo)
  **************************************/
 
 
+/***************************************
+ * Start of kmr_buffer_write functions *
+ ***************************************/
+
+int
+kmr_buffer_write (struct kmr_buffer *buffer,
+                  const unsigned int bufferIndex,
+                  const void *data,
+                  const size_t dataSize)
+{
+	int ret = -1;
+
+	if (!buffer || \
+	    !data || \
+	    bufferIndex >= buffer->bufferCount || \
+	    dataSize <= 0)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	if (buffer->bufferObjects[bufferIndex].bo) {
+		ret = gbm_bo_write(buffer->bufferObjects[bufferIndex].bo,
+		                   data, dataSize);
+	}
+
+	return ret;
+}
+
+/*************************************
+ * End of kmr_buffer_write functions *
+ *************************************/
+
+
 /*************************************
  * Start of kmr_buffer_get functions *
  *************************************/
@@ -445,6 +479,19 @@ kmr_buffer_get_kms_fd (struct kmr_buffer *buffer,
 	}
 
 	return buffer->bufferObjects[bufferIndex].kmsfd;
+}
+
+
+int
+kmr_buffer_get_buffer_count (struct kmr_buffer *buffer)
+{
+	if (!buffer)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return buffer->bufferCount;
 }
 
 
