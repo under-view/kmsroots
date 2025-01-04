@@ -8,6 +8,8 @@
 #include <sys/utsname.h>
 #include <xf86drm.h>
 
+#include <cando/cando.h>
+
 #include "dma-buf.h"
 
 
@@ -16,8 +18,31 @@
  * https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/render/dmabuf_linux.c
  */
 
+#define SYNC_FDS_MAX 25
+
+/*
+ * @brief struct kmr_dma_buf (kmsroots DMA Buffer)
+ *
+ * @member err          - Stores information about the error that occured
+ *                        for the given instance and may later be retrieved
+ *                        by caller.
+ * @member syncFdsCount - Array size of @syncFds
+ * @member syncFds      - Pointer to an array of file descriptors used for synchronization
+ *                        of size @syncFdsCount. These file descriptors may be imported
+ *                        to a graphics API primitive. In Vulkan you can imported
+ *                        via (VkImportSemaphoreFdInfoKHR -> vkImportSemaphoreFdKHR) or
+ *                        by making a call to kmr_vk_sync_obj_import_external_sync_fd()
+ */
+struct kmr_dma_buf
+{
+	struct cando_log_error_struct err;
+	unsigned int                  syncFdsCount;
+	int                           syncFds[SYNC_FDS_MAX];
+};
+
+
 /************************************
- * START OF STATIC GLOBAL FUNCTIONS *
+ * Start of static global functions *
  ************************************/
 
 /*
@@ -26,31 +51,37 @@
  * If this function returns true, dmabuf_import_sync_file() is supported.
  */
 static int
-dmabuf_check_sync_file_import_export (void)
+dmabuf_check_sync_file_import_export (struct kmr_dma_buf *buffer)
 {
 	/*
 	 * Unfortunately there's no better way to check the availability of the
 	 * IOCTL than to check the kernel version. See the discussion at:
 	 * https://lore.kernel.org/dri-devel/20220601161303.64797-1-contact@emersion.fr/
 	 */
-
 	char ch;
 	size_t i;
+
 	char *rel =  NULL;
+
 	struct utsname utsname = {0};
-	int major = 0, minor = 0, patch = 0;
 
-	if (uname(&utsname) == -1) {
-		kmr_utils_log(KMR_DANGER, "[x] uname: %s", strerror(errno));
-		return false;
+	int major = 0, minor = 0, patch = 0, ret = -1;
+
+	ret = uname(&utsname);
+	if (ret == -1) {
+		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+		                  "uname: %s", strerror(errno));
+		return -2;
 	}
 
-	if (strncmp(utsname.sysname, "Linux", 8) != 0) {
-		kmr_utils_log(KMR_DANGER, "[x] strcmp: operating system name incorrect");
-		return false;
+	ret = strncmp(utsname.sysname, "Linux", 8);
+	if (ret != 0) {
+		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+		                  "strcmp: operating system name incorrect");
+		return -2;
 	}
 
-	// Trim release suffix if any, e.g. "-arch1-1"
+	/* Trim release suffix if any, e.g. "-arch1-1" */
 	for (i = 0; utsname.release[i] != '\0'; i++) {
 		ch = utsname.release[i];
 		if ((ch < '0' || ch > '9') && ch != '.') {
@@ -78,7 +109,8 @@ dmabuf_check_sync_file_import_export (void)
 
 #if !defined(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)
 
-struct dma_buf_import_sync_file {
+struct dma_buf_import_sync_file
+{
 	__u32 flags;
 	__s32 fd;
 };
@@ -90,7 +122,8 @@ struct dma_buf_import_sync_file {
 
 #if !defined(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)
 
-struct dma_buf_export_sync_file {
+struct dma_buf_export_sync_file
+{
 	__u32 flags;
 	__s32 fd;
 };
@@ -100,121 +133,185 @@ struct dma_buf_export_sync_file {
 #endif
 
 /**********************************
- * END OF STATIC GLOBAL FUNCTIONS *
+ * End of static global functions *
  **********************************/
 
-/**********************************************************
- * START OF kmr_dma_buf_import_sync_file_create FUNCTIONS *
- **********************************************************/
+
+/*****************************************
+ * Start of kmr_dma_buf_create functions *
+ *****************************************/
+
+struct kmr_dma_buf *
+kmr_dma_buf_create (void)
+{
+	struct kmr_dma_buf *buffer = NULL;
+
+	buffer = mmap(NULL,
+	              sizeof(struct kmr_dma_buf),
+	              PROT_READ,
+	              MAP_PRIVATE|MAP_ANONYMOUS,
+	              -1, 0);
+	if (buffer == (void*)-1) {
+		cando_log_err("mmap: %s\n", strerror(errno));
+		return NULL;
+	}
+
+	return buffer;
+}
+
+/***************************************
+ * End of kmr_dma_buf_create functions *
+ ***************************************/
+
+
+/*************************************************
+ * Start of kmr_dma_buf_import_sync_fd functions *
+ *************************************************/
 
 int
-kmr_dma_buf_import_sync_file_create (struct kmr_dma_buf_import_sync_file_create_info *importSyncFileInfo)
+kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
+                            const void *_importSyncInfo)
 {
 	int ret;
+
 	uint8_t i;
 
 	struct dma_buf_import_sync_file data;
 
-	ret = dmabuf_check_sync_file_import_export();
-	if (ret == -1) {
-		kmr_utils_log(KMR_DANGER, "[x] Importing external fd used in synchronization to DMA-BUF fds not supported.");
-		kmr_utils_log(KMR_DANGER, "[x] Must use kernel version >=5.20.0");
+	const struct kmr_dma_buf_import_sync_fd_info *importSyncInfo = _importSyncInfo;
+
+	if (!buffer || \
+	    !importSyncInfo)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
-	data.flags = importSyncFileInfo->syncFlags;
-	data.fd = importSyncFileInfo->syncFileFd;
+	ret = dmabuf_check_sync_file_import_export(buffer);
+	if (ret == -1) {
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
+		                  "Importing external fd used in synchronization " \
+		                  "to DMA-BUF fds not supported. " \
+		                  "Must use kernel version >=5.20.0");
+		return -1;
+	} else if (ret == -2) {
+		return -1;
+	}
 
-	for (i = 0; i < importSyncFileInfo->dmaBufferFdsCount; i++) {
-		ret = drmIoctl(importSyncFileInfo->dmaBufferFds[i], DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &data);
+	data.flags = importSyncInfo->syncFlags;
+	data.fd = importSyncInfo->syncFileFd;
+
+	for (i = 0; i < importSyncInfo->dmaBufferFdsCount; i++) {
+		ret = drmIoctl(importSyncInfo->dmaBufferFds[i],
+		               DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &data);
 		if (ret != 0) {
-			kmr_utils_log(KMR_DANGER, "[x] drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s", i, strerror(errno));
-			close(importSyncFileInfo->syncFileFd);
+			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			                  "drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
+			                  i, strerror(errno));
+			close(importSyncInfo->syncFileFd);
 			return -1;
 		}
 	}
 
-	close(importSyncFileInfo->syncFileFd);
+	close(importSyncInfo->syncFileFd);
 
 	return 0;
 }
 
-/********************************************************
- * END OF kmr_dma_buf_import_sync_file_create FUNCTIONS *
- ********************************************************/
+/***********************************************
+ * End of kmr_dma_buf_import_sync_fd functions *
+ ***********************************************/
 
-/**********************************************************
- * START OF kmr_dma_buf_export_sync_file_create FUNCTIONS *
- **********************************************************/
 
-struct kmr_dma_buf_export_sync_file *
-kmr_dma_buf_export_sync_file_create (struct kmr_dma_buf_export_sync_file_create_info *exportSyncFileInfo)
+/*************************************************
+ * Start of kmr_dma_buf_export_sync_fd functions *
+ *************************************************/
+
+int
+kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
+                            const void *_exportSyncInfo)
 {
 	uint8_t i;
+
 	int ret = -1;
 
 	struct dma_buf_export_sync_file data;
-	struct kmr_dma_buf_export_sync_file *exportSyncFile = NULL;
 
-	ret = dmabuf_check_sync_file_import_export();
+	const struct kmr_dma_buf_export_sync_fd_info *exportSyncInfo = _exportSyncInfo;
+
+	if (!buffer || \
+	    !exportSyncInfo)
+	{
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	ret = dmabuf_check_sync_file_import_export(buffer);
 	if (ret == -1) {
-		kmr_utils_log(KMR_DANGER, "[x] Exporting fds used for synchronization from DMA-BUF fds not supported.");
-		kmr_utils_log(KMR_DANGER, "[x] Must use kernel version >=5.20.0");
-		goto exit_error_kmr_dma_buf_export_sync_file;
+		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
+		                  "Exporting fds used for synchronization " \
+		                  "from DMA-BUF fds not supported. " \
+		                  "Must use kernel version >=5.20.0");
+		return -1;
+	} else if (ret == -2) {
+		return -1;
 	}
 
-	exportSyncFile = calloc(1, sizeof(struct kmr_dma_buf_export_sync_file_create_info));
-	if (!exportSyncFile) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_dma_buf_export_sync_file;
+	ret = CANDO_PAGE_SET_WRITE(buffer, sizeof(struct kmr_dma_buf));
+	if (ret == -1) {
+		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON, "mprotect: %s", strerror(errno));
+		return -1;
 	}
 
-	exportSyncFile->syncFileFdsCount = exportSyncFileInfo->dmaBufferFdsCount;
+	buffer->syncFdsCount = exportSyncInfo->dmaBufferFdsCount;
+	data.flags = exportSyncInfo->syncFlags;
 
-	exportSyncFile->syncFileFds = calloc(exportSyncFile->syncFileFdsCount, sizeof(int));
-	if (!exportSyncFile->syncFileFds) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_dma_buf_export_sync_file;
-	}
-
-	data.flags = exportSyncFileInfo->syncFlags;
-	for (i = 0; i < exportSyncFile->syncFileFdsCount; i++) {
+	for (i = 0; i < buffer->syncFdsCount; i++) {
 		data.fd = -1;
 
-		ret = drmIoctl(exportSyncFileInfo->dmaBufferFds[i], DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data);
+		ret = drmIoctl(exportSyncInfo->dmaBufferFds[i], DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data);
 		if (ret != 0) {
-			kmr_utils_log(KMR_DANGER, "[x] drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s", i, strerror(errno));
-			goto exit_error_kmr_dma_buf_export_sync_file;
+			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			                  "drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
+			                  i, strerror(errno));
+			return -1;
 		}
 
-		exportSyncFile->syncFileFds[i] = data.fd;
+		buffer->syncFds[i] = data.fd;
 	}
 
-	return exportSyncFile;
+	ret = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_dma_buf));
+	if (ret == -1) {
+		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON, "mprotect: %s", strerror(errno));
+		return -1;
+	}
 
-exit_error_kmr_dma_buf_export_sync_file:
-	kmr_dma_buf_export_sync_file_destroy(exportSyncFile);
-	return NULL;
+	return 0;
 }
 
+/***********************************************
+ * End of kmr_dma_buf_export_sync_fd functions *
+ ***********************************************/
+
+
+/******************************************
+ * Start of kmr_dma_buf_destroy functions *
+ ******************************************/
 
 void
-kmr_dma_buf_export_sync_file_destroy (struct kmr_dma_buf_export_sync_file *exportSyncFile)
+kmr_dma_buf_destroy (struct kmr_dma_buf *buffer)
 {
-	uint32_t b;
+	unsigned int b;
 
-	if (!exportSyncFile)
+	if (!buffer)
 		return;
 
-	for (b = 0; b < exportSyncFile->syncFileFdsCount; b++) {
-		if (exportSyncFile->syncFileFds[b] >= 0)
-			close(exportSyncFile->syncFileFds[b]);
-	}
+	for (b = 0; b < buffer->syncFdsCount; b++)
+		close(buffer->syncFds[b]);
 
-	free(exportSyncFile->syncFileFds);
-	free(exportSyncFile);
+	munmap(buffer, sizeof(struct kmr_dma_buf));
 }
 
-/******************************************************************
- * END OF kmr_dma_buf_export_sync_file_{create,destroy} FUNCTIONS *
- ******************************************************************/
+/****************************************
+ * End of kmr_dma_buf_destroy functions *
+ ****************************************/
