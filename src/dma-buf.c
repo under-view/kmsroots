@@ -69,8 +69,7 @@ dmabuf_check_sync_file_import_export (struct kmr_dma_buf *buffer)
 
 	ret = uname(&utsname);
 	if (ret == -1) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
-		                  "uname: %s", strerror(errno));
+		cando_log_set_err(buffer, errno, "uname: %s", strerror(errno));
 		return -2;
 	}
 
@@ -205,7 +204,7 @@ kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
 		ret = drmIoctl(importSyncInfo->dmaBufferFds[i],
 		               DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &data);
 		if (ret != 0) {
-			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			cando_log_set_err(buffer, errno,
 			                  "drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
 			                  i, strerror(errno));
 			close(importSyncInfo->syncFileFd);
@@ -259,7 +258,7 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 
 	ret = CANDO_PAGE_SET_WRITE(buffer, sizeof(struct kmr_dma_buf));
 	if (ret == -1) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON, "mprotect: %s", strerror(errno));
+		cando_log_set_err(buffer, errno, "mprotect: %s", strerror(errno));
 		return -1;
 	}
 
@@ -271,7 +270,7 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 
 		ret = drmIoctl(exportSyncInfo->dmaBufferFds[i], DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data);
 		if (ret != 0) {
-			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			cando_log_set_err(buffer, errno,
 			                  "drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
 			                  i, strerror(errno));
 			return -1;
@@ -282,7 +281,7 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 
 	ret = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_dma_buf));
 	if (ret == -1) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON, "mprotect: %s", strerror(errno));
+		cando_log_set_err(buffer, errno, "mprotect: %s", strerror(errno));
 		return -1;
 	}
 
