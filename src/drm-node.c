@@ -13,19 +13,40 @@
 #include <linux/major.h>
 #include <libudev.h>
 
+/*
+ * TAKEN FROM Daniel Stone (gitlab/kms-quads)
+ * Headers from the kernel's DRM uABI, allowing us to use ioctls directly.
+ * These come from the kernel, via libdrm.
+ */
+#include <drm.h>
+#include <drm_fourcc.h>
+#include <drm_mode.h>
+
+/*
+ * TAKEN FROM Daniel Stone (gitlab/kms-quads)
+ * Headers from the libdrm userspace library API, prefixed xf86*. These
+ * mostly provide device and resource enumeration, as well as wrappers
+ * around many ioctls, notably atomic modesetting.
+ */
+#include <xf86drm.h>
+#include <xf86drmMode.h>
+
+#include <cando/cando.h>
+
 #include "drm-node.h"
 
 
-/***************************************
- * START OF GLOBAL TO FILE ENUM MACROS *
- ***************************************/
+/*************************************************
+ * Start of global to file enum macros & structs *
+ *************************************************/
 
 /*
  * No guaranteed that each GPU's driver KMS objects (plane->crtc->connector)
  * will have properties in this exact order or these exact listed properties.
  * But this are the properties that this library supports.
  */
-enum kmr_drm_node_connector_prop_type {
+enum kmr_drm_node_connector_prop_type
+{
 	KMR_KMS_NODE_CONNECTOR_PROP_EDID                = 0,
 	KMR_KMS_NODE_CONNECTOR_PROP_DPMS                = 1,
 	KMR_KMS_NODE_CONNECTOR_PROP_LINK_STATUS         = 2,
@@ -43,7 +64,8 @@ enum kmr_drm_node_connector_prop_type {
 };
 
 
-enum kmr_drm_node_crtc_prop_type {
+enum kmr_drm_node_crtc_prop_type
+{
 	KMR_KMS_NODE_CRTC_PROP_ACTIVE           = 0,
 	KMR_KMS_NODE_CRTC_PROP_MODE_ID          = 1,
 	KMR_KMS_NODE_CRTC_PROP_OUT_FENCE_PTR    = 2,
@@ -57,7 +79,8 @@ enum kmr_drm_node_crtc_prop_type {
 };
 
 
-enum kmr_drm_node_plane_prop_type {
+enum kmr_drm_node_plane_prop_type
+{
 	KMR_KMS_NODE_PLANE_PROP_TYPE           = 0,
 	KMR_KMS_NODE_PLANE_PROP_FB_ID          = 1,
 	KMR_KMS_NODE_PLANE_PROP_IN_FENCE_FD    = 2,
@@ -77,20 +100,211 @@ enum kmr_drm_node_plane_prop_type {
 	KMR_KMS_NODE_PLANE_PROP__COUNT         = 16
 };
 
-/***************************************
- * END OF GLOBAL TO FILE ENUM MACROS *
- ***************************************/
+
+/*
+ * @brief struct kmr_drm_node_device_capabilites (kmsroots DRM Node Device Capabilites)
+ *
+ *        For more info see https://github.com/torvalds/linux/blob/master/include/uapi/drm/drm.h#L627
+ *
+ * @macro CAP_ADDFB2_MODIFIERS     - If or'd in struct kmr_drm_node { @deviceCap}, the driver
+ *                                   supports supplying modifier in the &DRM_IOCTL_MODE_ADDFB2 ioctl.
+ * @macro CAP_TIMESTAMP_MONOTONIC  - If not or'd, the kernel will report timestamps with
+ *                                   ``CLOCK_REALTIME`` in struct drm_event_vblank. If or'd,
+ *                                   the kernel will report timestamps with ``CLOCK_MONOTONIC``.
+ *                                   See ``clock_gettime(2)`` for the definition of these clocks.
+ * @macro CAP_CRTC_IN_VBLANK_EVENT - If or'd, the kernel supports reporting the CRTC ID in
+ *                                   &drm_event_vblank.crtc_id for the &DRM_EVENT_VBLANK and
+ *                                   &DRM_EVENT_FLIP_COMPLETE events.
+ * @macro CAP_DUMB_BUFFER          - If set to true, the driver supports creating dumb buffers via
+ *                                   the &DRM_IOCTL_MODE_CREATE_DUMB ioctl.
+ *
+ */
+enum kmr_drm_node_device_capabilites
+{
+	CAP_ADDFB2_MODIFIERS     = 0x0001,
+	CAP_TIMESTAMP_MONOTONIC  = 0x0002,
+	CAP_CRTC_IN_VBLANK_EVENT = 0x0004,
+	CAP_DUMB_BUFFER          = 0x0008,
+	CAP_UNIVERSAL_PLANES     = 0x0010,
+	CAP_ATOMIC               = 0x0011
+};
 
 
-/****************************************************
- * START OF kmr_drm_node_{create,destroy} FUNCTIONS *
- ****************************************************/
+/*
+ * @brief struct kmr_drm_node_display_object_props_data
+ *        (kmsroots DRM Node Display Object Properties Data)
+ *
+ * @member id    - Driver assigned ID of a given property belonging to a KMS object.
+ * @member value - Enum value of given KMS object property. Can be used for instance
+ *                 to check if plane object is a primary plane (DRM_PLANE_TYPE_PRIMARY).
+ */
+struct kmr_drm_node_display_object_props_data
+{
+	uint32_t id;
+	uint64_t value;
+};
+
+
+/*
+ * @brief struct kmr_drm_node_display_object_props
+ *        (kmsroots DRM Node Display Object Properties)
+ *
+ *        It stores properties of certain KMS objects
+ *        (connectors, CRTC and planes) that are used
+ *        in atomic modeset setup and also in atomic page-flips.
+ *
+ * @member id             - Driver assigned ID of the KMS object.
+ * @member propsDataCount - Array size of @propsData.
+ * @member propsData      - Stores array of data about the properties
+ *                          of a KMS object used during KMS atomic
+ *                          operations.
+ */
+struct kmr_drm_node_display_object_props
+{
+	uint32_t                                      id;
+	uint16_t                                      propsDataCount;
+	struct kmr_drm_node_display_object_props_data propsData[KMR_KMS_NODE_PLANE_PROP__COUNT];
+};
+
+
+/*
+ * @brief struct kmr_drm_node_display_mode_data (kmsroots DRM Node Display Mode Data)
+ *
+ * @member id       - Stores the highest mode (resolution + refresh) property id.
+ *                    When we perform an atomic commit, the driver expects a CRTC
+ *                    property named "MODE_ID", which points to the id given to one
+ *                    of the connected display resolution & refresh rate. At the
+ *                    moment the highest mode is choosen.
+ * @member modeInfo - Stores the highest mode data (display resolution + refresh)
+ *                    associated with display.
+ */
+struct kmr_drm_node_display_mode_data
+{
+	uint32_t        id;
+	drmModeModeInfo modeInfo;
+};
+
+
+/*
+ * @brief struct kmr_drm_node_display (kmsroots DRM Node Display)
+ *
+ * @member width      - Highest mode (display resolution) width for
+ *                      @connector attached to display.
+ * @member height     - Highest mode (display resolution) height for
+ *                      @connector attached to display.
+ * @member presClock  - Presentation clock stores the type of clock to
+ *                      utilize for fps tracking. Clock will either be
+ *                      set to CLOCK_MONOTONIC or CLOCK_REALTIME depending
+ *                      upon the System/DRM device capabilities. CLOCK_MONOTONIC
+ *                      will return the elapsed time from system boot, can only
+ *                      increase, and can't be manually modified. While CLOCK_REALTIME
+ *                      will return the real time system clock as set by the user.
+ *                      This clock can however be modified.
+ * @member modeData   - Stores highest mode (display resolution & refresh)
+ *                      along with the modeid property used during KMS atomic
+ *                      operations.
+ * @member connector  - Anything that can transfer pixels in some form (i.e HDMI).
+ *                      Connectors can be hotplugged and unplugged at runtime.
+ *                      Stores connector properties used during KMS atomic
+ *                      modesetting and page-flips.
+ * @member crtc       - Represents a part of the chip that contains a pointer
+ *                      to a scanout buffer. Stores crtc properties used during
+ *                      KMS atomic modesetting and page-flips.
+ * @member plane      - A plane represents an image source that can be blended
+ *                      with or overlayed on top of a CRTC during the scanout
+ *                      process. Planes are associated with a frame buffer to
+ *                      crop a portion of the image memory (source) and optionally
+ *                      scale it to a destination size. The result is then blended
+ *                      with or overlayed on top of a CRTC. Stores primary plane
+ *                      properties used during KMS atomic modesetting and page-flips.
+ *
+ * For more info see https://manpages.org/drm-kms/7
+ */
+struct kmr_drm_node_display
+{
+	uint16_t                                 width;
+	uint16_t                                 height;
+	clockid_t                                presClock;
+	struct kmr_drm_node_display_mode_data    modeData;
+	struct kmr_drm_node_display_object_props connector;
+	struct kmr_drm_node_display_object_props crtc;
+	struct kmr_drm_node_display_object_props plane;
+};
+
+
+/*
+ * @brief struct kmr_drm_node (kmsroots DRM Node)
+ *
+ * @member err                   - Stores information about the error that occurred
+ *                                 for the given instance and may later be retrieved
+ *                                 by caller.
+ * @member kmsfd                 - Pollable file descriptor to an open KMS (GPU) device file.
+ * @member session               - Stores address of struct kmr_session. Used when
+ *                                 opening and releasing a device.
+ * @member display               - Pointer to a struct containing all plane->crtc->connector
+ *                                 data used during KMS atomic mode setting.
+ * @member renderer              - Function pointer that allows custom external renderers
+ *                                 to be executed by the api upon @kmsfd polled events.
+ * @member rendererRunning       - Pointer to a boolean that determines if a given renderer
+ *                                 is running and in need of stopping.
+ * @member rendererCurrentBuffer - Pointer to an integer used by the api to update the
+ *                                 current displayable buffer.
+ * @member rendererFbId          - Pointer to an integer used as the value of the FB_ID
+ *                                 property for a plane related to he CRTC during the atomic
+ *                                 modeset operation.
+ * @member rendererData          - Pointer to an optional address. This address may be the
+ *                                 address of a struct. Reference/Address passed depends on
+ *                                 external renderer function.
+ * @member atomicRequest         - Pointer to a KMS atomic request instance.
+ * @member display               - Stores critical information about the display.
+ */
+struct kmr_drm_node
+{
+	struct cando_log_error_struct err;
+#ifdef INCLUDE_LIBSEAT
+	struct kmr_session            *session;
+#endif /* INCLUDE_LIBSEAT */
+	int                           kmsfd;
+	uint16_t                      deviceCap;
+	kmr_drm_node_renderer_impl    renderer;
+	volatile bool                 *rendererRunning;
+	unsigned int                  *rendererCurrentBuffer;
+	int                           *rendererFbId;
+	void                          *rendererData;
+	drmModeAtomicReq              *atomicRequest;
+	struct kmr_drm_node_display   display;
+};
+
+/***********************************************
+ * End of global to file enum macros & structs *
+ ***********************************************/
+
+
+/******************************************
+ * Start of kmr_drm_node_create functions *
+ *****************************************/
+
+static void
+destroy_udev (struct udev *udev,
+              struct udev_enumerate *udevEnum)
+{
+	if (udevEnum)
+		udev_enumerate_unref(udevEnum);
+	if (udev)
+		udev_unref(udev);
+}
+
 
 static int
-setup_atomic_modeset (int kmsfd)
+setup_atomic_modeset (struct kmr_drm_node *drmNode)
 {
-	int err = 0;
 	drm_magic_t magic;
+
+	bool supported = false;
+
+	uint64_t capabilites = 0;
+
+	int err = 0, kmsfd = drmNode->kmsfd;
 
 	/*
 	 * TAKEN FROM Daniel Stone (gitlab/kms-quads)
@@ -102,13 +316,17 @@ setup_atomic_modeset (int kmsfd)
 	 */
 	err = drmGetMagic(kmsfd, &magic);
 	if (err < 0) {
-		kmr_utils_log(KMR_DANGER, "[x] drmGetMagic: KMS device '(fd: %d)' could not become master", kmsfd);
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "drmGetMagic: KMS device '(fd: %d)' " \
+		                  "could not become master", kmsfd);
 		return -1;
 	}
 
 	err = drmAuthMagic(kmsfd, magic);
 	if (err < 0) {
-		kmr_utils_log(KMR_DANGER, "[x] drmGetMagic: KMS device '(fd: %d)' could not become master", kmsfd);
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "drmAuthMagic: KMS device '(fd: %d)' " \
+		                  "could not become master", kmsfd);
 		return -1;
 	}
 
@@ -119,9 +337,10 @@ setup_atomic_modeset (int kmsfd)
 	 * DRM_CLIENT_CAP_ASPECT_RATIO     - Tells DRM core to provide aspect ratio information in modes
 	 */
 	err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
-	if (err) {
-		kmr_utils_log(KMR_DANGER, "[x] drmSetClientCap: Failed to set universal "
-				          "planes capability for KMS device '(fd: %d)'", kmsfd);
+	if (err < 0) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "drmSetClientCap: Failed to set universal " \
+		                  "planes capability for KMS device '(fd: %d)'", kmsfd);
 		return -1;
 	}
 
@@ -130,9 +349,60 @@ setup_atomic_modeset (int kmsfd)
 	 * to set the DRM_CLIENT_CAP_UNIVERSAL_PLANES automatically.
 	 */
 	err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_ATOMIC, 1);
-	if (err) {
-		kmr_utils_log(KMR_DANGER, "[x] drmSetClientCap: Failed to set KMS atomic "
-		                          "capability for KMS device '(fd: %d)'", kmsfd);
+	if (err < 0) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "drmSetClientCap: Failed to set KMS atomic " \
+		                  "capability for KMS device '(fd: %d)'", kmsfd);
+		return -1;
+	}
+
+	drmNode->deviceCap |= (CAP_UNIVERSAL_PLANES | CAP_ATOMIC);
+
+	err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &capabilites);
+	supported = (err == 0 && capabilites != 0);
+	drmNode->deviceCap |= supported ? CAP_ADDFB2_MODIFIERS : 0;
+	cando_log(CANDO_LOG_INFO, "device %s framebuffer modifiers", \
+	          supported ? "supports" : "does not support");
+
+	capabilites=0;
+	err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &capabilites);
+	supported = (err == 0 && capabilites != 0);
+	drmNode->deviceCap |= supported ? CAP_TIMESTAMP_MONOTONIC : 0;
+	cando_log(CANDO_LOG_INFO, "device %s clock monotonic timestamps", \
+	          supported ? "supports" : "does not support");
+
+	capabilites=0;
+	err = drmGetCap(kmsfd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &capabilites);
+	supported = (err == 0 && capabilites != 0);
+	drmNode->deviceCap |= supported ? CAP_CRTC_IN_VBLANK_EVENT : 0;
+	cando_log(CANDO_LOG_INFO, "device %s atomic KMS", \
+	          supported ? "supports" : "does not support");
+
+	capabilites=0;
+	err = drmGetCap(kmsfd, DRM_CAP_DUMB_BUFFER, &capabilites);
+	supported = (err == 0 && capabilites != 0);
+	drmNode->deviceCap |= supported ? CAP_DUMB_BUFFER : 0;
+	cando_log(CANDO_LOG_INFO, "device %s dumb bufffers", \
+	          supported ? "supports" : "does not support");
+
+	return 0;
+}
+
+
+static int
+open_drm_node (struct kmr_drm_node *drmNode,
+               const struct kmr_drm_node_create_info CANDO_UNUSED *nodeInfo,
+               const char *deviceNode)
+{
+#ifdef INCLUDE_LIBSEAT
+	drmNode->kmsfd = kmr_session_take_control_of_device(nodeInfo->session, deviceNode);
+#else
+	drmNode->kmsfd = open(deviceNode, O_RDWR|O_CLOEXEC, 0);
+#endif /* INCLUDE_LIBSEAT */
+	if (drmNode->kmsfd < 0) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "open('%s'): %s", deviceNode,
+		                  strerror(errno));
 		return -1;
 	}
 
@@ -141,29 +411,11 @@ setup_atomic_modeset (int kmsfd)
 
 
 static int
-open_drm_node (struct kmr_drm_node_create_info UNUSED *nodeInfo,
-               const char *deviceNode)
+open_drm_node_udev (struct kmr_drm_node *drmNode,
+                    const struct kmr_drm_node_create_info *nodeInfo)
 {
-	int kmsfd = -1;
+	int err = -1;
 
-#ifdef INCLUDE_LIBSEAT
-	kmsfd = kmr_session_take_control_of_device(nodeInfo->session, deviceNode);
-#else
-	kmsfd = open(deviceNode, O_RDWR | O_CLOEXEC, 0);
-#endif
-	if (kmsfd < 0) {
-		kmr_utils_log(KMR_WARNING, "open('%s'): %s", deviceNode, strerror(errno));
-		return -1;
-	}
-
-	return kmsfd;
-}
-
-
-static int
-open_drm_node_udev (struct kmr_drm_node_create_info *nodeInfo,
-                    struct kmr_drm_node *drmNode)
-{
 	const char *devNode = NULL;
 
 	struct udev *udev = NULL;
@@ -171,26 +423,30 @@ open_drm_node_udev (struct kmr_drm_node_create_info *nodeInfo,
 	struct udev_list_entry *entry = NULL;
 	struct udev_device *device = NULL;
 
-	struct kmr_drm_node_device_capabilites deviceCap;
-
 	udev = udev_new();
 	if (!udev) {
-		kmr_utils_log(KMR_DANGER, "[x] udev_new: failed to create udev context.");
-		goto exit_error_open_node_udev;
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "udev_new: failed to create udev context.");
+		return -1;
 	}
 
 	udevEnum = udev_enumerate_new(udev);
 	if (!udevEnum) {
-		kmr_utils_log(KMR_DANGER, "[x] udev_enumerate_new: failed");
-		goto exit_error_open_node_udev;
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "udev_enumerate_new: failed");
+		destroy_udev(udev, udevEnum);
+		return -1;
 	}
 
 	udev_enumerate_add_match_subsystem(udevEnum, "drm");
 	udev_enumerate_add_match_sysname(udevEnum, DRM_PRIMARY_MINOR_NAME "[0-9]*");
 
-	if (udev_enumerate_scan_devices(udevEnum) != 0) {
-		kmr_utils_log(KMR_DANGER, "[x] udev_enumerate_scan_devices: failed");
-		goto exit_error_open_node_udev;
+	err = udev_enumerate_scan_devices(udevEnum);
+	if (err != 0) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "udev_enumerate_scan_devices: failed");
+		destroy_udev(udev, udevEnum);
+		return -1;
 	}
 
 	udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(udevEnum)) {
@@ -200,148 +456,154 @@ open_drm_node_udev (struct kmr_drm_node_create_info *nodeInfo,
 
 		devNode = udev_device_get_devnode(device);
 		if (!devNode) {
-			kmr_utils_log(KMR_WARNING, "udev_device_get_devnode: unable to acquire path to KMS node");
+			cando_log(CANDO_LOG_WARNING, \
+			          "udev_device_get_devnode: unable " \
+			          "to acquire KMS node\n");
 			udev_device_unref(device); device = NULL;
 			continue;
 		}
 
-		drmNode->kmsfd = open_drm_node(nodeInfo, devNode);
-		if (drmNode->kmsfd == -1) {
+		err = open_drm_node(drmNode, nodeInfo, devNode);
+		if (err == -1) {
 			udev_device_unref(device); device = NULL;
 			continue;
 		}
 
-		deviceCap = kmr_drm_node_get_device_capabilities(drmNode->kmsfd);
-		if (!deviceCap.CAP_CRTC_IN_VBLANK_EVENT) {
+		if (!(drmNode->deviceCap & CAP_CRTC_IN_VBLANK_EVENT)) {
 			udev_device_unref(device); device = NULL;
 			continue;
 		}
 
-		if (!deviceCap.CAP_DUMB_BUFFER) {
+		if (!(drmNode->deviceCap & CAP_DUMB_BUFFER)) {
 			udev_device_unref(device); device = NULL;
 			continue;
 		}
 
-		kmr_utils_log(KMR_SUCCESS, "Opened KMS node '%s' associated fd is %d", devNode, drmNode->kmsfd);
+		cando_log(CANDO_LOG_SUCCESS,
+		          "Opened KMS node '%s' associated fd is %d",
+		          devNode, drmNode->kmsfd);
 
 		udev_device_unref(device);
 		udev_enumerate_unref(udevEnum);
 		udev_unref(udev);
-
-		return 0;
 	}
 
-exit_error_open_node_udev:
-	if (udevEnum)
-		udev_enumerate_unref(udevEnum);
-	if (udev)
-		udev_unref(udev);
-	return -1;
+	return 0;
 }
 
 
 struct kmr_drm_node *
-kmr_drm_node_create (struct kmr_drm_node_create_info *nodeInfo)
+kmr_drm_node_create (const void *_nodeInfo)
 {
 	int err = 0;
-	struct kmr_drm_node *kmsNode = NULL;
 
-	kmsNode = calloc(1, sizeof(struct kmr_drm_node));
-	if (!kmsNode) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
+	struct kmr_drm_node *drmNode = NULL;
+
+	const struct kmr_drm_node_create_info *nodeInfo = _nodeInfo;
+
+	if (!nodeInfo) {
+		cando_log_err("Incorrect data passed\n");
 		return NULL;
 	}
 
-	if (nodeInfo->kmsNode) {
-		err = kmsNode->kmsfd = open_drm_node(nodeInfo, nodeInfo->kmsNode);
-	} else {
-		err = open_drm_node_udev(nodeInfo, kmsNode);
+	drmNode = mmap(NULL,
+	               sizeof(struct kmr_drm_node),
+	               PROT_READ|PROT_WRITE,
+	               MAP_PRIVATE|MAP_ANONYMOUS,
+	               -1, 0);
+	if (!drmNode) {
+		cando_log_err("[x] mmap: %s", strerror(errno));
+		return NULL;
 	}
 
-	if (err == -1)
-		goto exit_error_kms_node_create;
+	err = (nodeInfo->kmsNode) ? \
+	open_drm_node(drmNode, nodeInfo, nodeInfo->kmsNode) : \
+	open_drm_node_udev(drmNode, nodeInfo);
 
-	err = setup_atomic_modeset(kmsNode->kmsfd);
-	if (err == -1)
-		goto exit_error_kms_node_create;
+	if (err == -1) {
+		cando_log_err("%s\n", cando_log_get_error(drmNode));
+		kmr_drm_node_destroy(drmNode);
+		return NULL;
+	}
+
+	err = setup_atomic_modeset(drmNode);
+	if (err == -1) {
+		cando_log_err("%s\n", cando_log_get_error(drmNode));
+		kmr_drm_node_destroy(drmNode);
+		return NULL;
+	}
 
 #ifdef INCLUDE_LIBSEAT
-	kmsNode->session = nodeInfo->session;
-#endif
-	return kmsNode;
+	drmNode->session = nodeInfo->session;
+#endif /* INCLUDE_LIBSEAT */
 
-exit_error_kms_node_create:
-	kmr_drm_node_destroy(kmsNode);
-	return NULL;
+	err = CANDO_PAGE_SET_READ(drmNode, sizeof(struct kmr_drm_node));
+	if (err == -1) {
+		cando_log_err("mprotect: %s\n", strerror(errno));
+		kmr_drm_node_destroy(drmNode);
+		return NULL;
+	}
+
+	return drmNode;
+}
+
+/****************************************
+ * End of kmr_drm_node_create functions *
+ ****************************************/
+
+
+/***************************************
+ * Start of kmr_drm_node_set functions *
+ ***************************************/
+
+struct _display
+{
+        int              planesCount;
+	drmModePlane     **planes;
+	drmModeRes       *drmResources;
+	drmModePlaneRes  *drmPlaneResources;
+	drmModeConnector *connector;
+	drmModeEncoder   *encoder;
+	drmModeCrtc      *crtc;
+	drmModePlane     *plane;
+};
+
+
+void
+display_destroy (struct kmr_drm_node *drmNode,
+                 struct _display *display)
+{
+	int p;
+
+	if (drmNode->display.modeData.id)
+		drmModeDestroyPropertyBlob(drmNode->kmsfd, drmNode->display.modeData.id);
+	if (display->crtc)
+		drmModeFreeCrtc(display->crtc);
+	if (display->encoder)
+		drmModeFreeEncoder(display->encoder);
+	if (display->connector)
+		drmModeFreeConnector(display->connector);
+	for (p = 0; p < display->planesCount; p++) {
+		if (display->planes[p])
+			drmModeFreePlane(display->planes[p]);
+	}
+	if (display->drmPlaneResources)
+		drmModeFreePlaneResources(display->drmPlaneResources);
+	if (display->drmResources)
+		drmModeFreeResources(display->drmResources);
 }
 
 
 void
-kmr_drm_node_destroy (struct kmr_drm_node *drmNode)
+mode_prop_destroy (drmModePropertyRes *propData,
+                   drmModeObjectProperties *props)
 {
-	if (!drmNode)
-		return;
-
-#ifdef INCLUDE_LIBSEAT
-	kmr_session_release_device(drmNode->session, drmNode->kmsfd);
-#else
-	close(drmNode->kmsfd);
-#endif
-	free(drmNode);
+	if (propData)
+		drmModeFreeProperty(propData);
+	if (props)
+		drmModeFreeObjectProperties(props);
 }
 
-
-/**************************************************
- * END OF kmr_drm_node_{create,destroy} FUNCTIONS *
- **************************************************/
-
-
-/***********************************************************
- * START OF kmr_drm_node_get_device_capabilities FUNCTIONS *
- ***********************************************************/
-
-struct kmr_drm_node_device_capabilites
-kmr_drm_node_get_device_capabilities (int kmsfd)
-{
-	bool supported = false;
-	uint64_t capabilites = 0, err = 0;
-
-	struct kmr_drm_node_device_capabilites kmsNodeDeviceCapabilites;
-
-	err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &capabilites);
-	supported = (err == 0 && capabilites != 0);
-	kmsNodeDeviceCapabilites.CAP_ADDFB2_MODIFIERS = supported ? true : false;
-	kmr_utils_log(KMR_INFO, "device %s framebuffer modifiers", supported ? "supports" : "does not support");
-
-	capabilites=0;
-	err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &capabilites);
-	supported = (err == 0 && capabilites != 0);
-	kmsNodeDeviceCapabilites.CAP_TIMESTAMP_MONOTONIC = supported ? true : false;
-	kmr_utils_log(KMR_INFO, "device %s clock monotonic timestamps", supported ? "supports" : "does not support");
-
-	capabilites=0;
-	err = drmGetCap(kmsfd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &capabilites);
-	supported = (err == 0 && capabilites != 0);
-	kmsNodeDeviceCapabilites.CAP_CRTC_IN_VBLANK_EVENT = supported ? true : false;
-	kmr_utils_log(KMR_INFO, "device %s atomic KMS", supported ? "supports" : "does not support");
-
-	capabilites=0;
-	err = drmGetCap(kmsfd, DRM_CAP_DUMB_BUFFER, &capabilites);
-	supported = (err == 0 && capabilites != 0);
-	kmsNodeDeviceCapabilites.CAP_DUMB_BUFFER = supported ? true : false;
-	kmr_utils_log(KMR_INFO, "device %s dumb bufffers", supported ? "supports" : "does not support");
-
-	return kmsNodeDeviceCapabilites;
-}
-
-/*********************************************************
- * END OF kmr_drm_node_get_device_capabilities FUNCTIONS *
- *********************************************************/
-
-
-/************************************************************
- * START OF kmr_drm_node_display_{create,destroy} FUNCTIONS *
- ************************************************************/
 
 /*
  * Helper function that retrieves the properties of a certain CRTC, plane or connector kms object.
@@ -352,59 +614,58 @@ kmr_drm_node_get_device_capabilities (int kmsfd)
 static int
 acquire_kms_object_properties (int fd,
                                struct kmr_drm_node_display_object_props *obj,
-			       uint32_t type)
+                               uint32_t type)
 {
-	unsigned int i;
+	unsigned int p;
+
+	char typeStr[32];
+
 	uint16_t propsDataCount = 0;
 
-	char *typeStr = NULL;
 	drmModePropertyRes *propData = NULL;
 	drmModeObjectProperties *props = NULL;
 
 	switch(type) {
 		case DRM_MODE_OBJECT_CONNECTOR:
-			typeStr = "connector";
+			strncpy(typeStr, "connector", sizeof(typeStr));
 			propsDataCount = KMR_KMS_NODE_CONNECTOR_PROP__COUNT;
 			break;
 		case DRM_MODE_OBJECT_PLANE:
-			typeStr = "plane";
+			strncpy(typeStr, "plane", sizeof(typeStr));
 			propsDataCount = KMR_KMS_NODE_PLANE_PROP__COUNT;
 			break;
 		case DRM_MODE_OBJECT_CRTC:
-			typeStr = "CRTC";
+			strncpy(typeStr, "CRTC", sizeof(typeStr));
 			propsDataCount = KMR_KMS_NODE_CRTC_PROP__COUNT;
 			break;
 		default:
-			typeStr = "unknown type";
+			strncpy(typeStr, "unknown type", sizeof(typeStr));
 			break;
 	}
 
 	props = drmModeObjectGetProperties(fd, obj->id, type);
 	if (!props) {
-		kmr_utils_log(KMR_DANGER, "[x] cannot get %s %d properties: %s",
-		                          typeStr, obj->id, strerror(errno));
+		cando_log(CANDO_LOG_DANGER,
+		          "cannot get %s %d properties: %s",
+		          typeStr, obj->id, strerror(errno));
 		return -1;
 	}
 
 	obj->propsDataCount = propsDataCount;
-	obj->propsData = calloc(obj->propsDataCount, sizeof(struct kmr_drm_node_display_object_props_data));
-	if (!obj->propsData) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_acquire_kms_object_properties;
-	}
 
-	for (i = 0; i < obj->propsDataCount; i++) {
-		propData = drmModeGetProperty(fd, props->props[i]);
+	for (p = 0; p < obj->propsDataCount; p++) {
+		propData = drmModeGetProperty(fd, props->props[p]);
 		if (!propData) {
-			kmr_utils_log(KMR_DANGER, "[x] drmModeGetProperty: failed to get property data.");
-			goto exit_error_acquire_kms_object_properties;
+			cando_log(CANDO_LOG_DANGER, "drmModeGetProperty: failed to get property data.");
+			mode_prop_destroy(propData, props);
+			return -1;
 		}
 
 		switch (type) {
 			case DRM_MODE_OBJECT_CONNECTOR:
 				if (!strncmp(propData->name, "CRTC_ID", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_CONNECTOR_PROP_CRTC_ID].value = props->prop_values[p];
 					break;
 				}
 
@@ -412,75 +673,76 @@ acquire_kms_object_properties (int fd,
 			case DRM_MODE_OBJECT_PLANE:
 				if (!strncmp(propData->name, "FB_ID", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_FB_ID].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_FB_ID].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_FB_ID].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "CRTC_ID", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_ID].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_ID].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_ID].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "SRC_X", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_X].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_X].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_X].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "SRC_Y", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_Y].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_Y].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_Y].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "SRC_W", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_W].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_W].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_W].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "SRC_H", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_H].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_H].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_SRC_H].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "CRTC_X", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_X].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_X].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_X].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "CRTC_Y", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_Y].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_Y].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_Y].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "CRTC_W", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_W].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_W].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_W].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "CRTC_H", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_H].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_H].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_PLANE_PROP_CRTC_H].value = props->prop_values[p];
 					break;
 				}
 
 				break;
+
 			case DRM_MODE_OBJECT_CRTC:
 				if (!strncmp(propData->name, "MODE_ID", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_CRTC_PROP_MODE_ID].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_CRTC_PROP_MODE_ID].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_CRTC_PROP_MODE_ID].value = props->prop_values[p];
 					break;
 				}
 
 				if (!strncmp(propData->name, "ACTIVE", DRM_PROP_NAME_LEN)) {
 					obj->propsData[KMR_KMS_NODE_CRTC_PROP_ACTIVE].id = propData->prop_id;
-					obj->propsData[KMR_KMS_NODE_CRTC_PROP_ACTIVE].value = props->prop_values[i];
+					obj->propsData[KMR_KMS_NODE_CRTC_PROP_ACTIVE].value = props->prop_values[p];
 					break;
 				}
 
@@ -495,15 +757,6 @@ acquire_kms_object_properties (int fd,
 	drmModeFreeObjectProperties(props);
 
 	return 0;
-
-exit_error_acquire_kms_object_properties:
-	if (propData)
-		drmModeFreeProperty(propData);
-	if (props)
-		drmModeFreeObjectProperties(props);
-	free(obj->propsData);
-	obj->propsData = NULL;
-	return -1;
 }
 
 
@@ -514,13 +767,18 @@ drm_node_get_connector (int kmsfd, uint32_t connectorID)
 
 	connector = drmModeGetConnector(kmsfd, connectorID);
 	if (!connector) {
-		kmr_utils_log(KMR_DANGER, "[x] drmModeGetConnector: Failed to get connector");
+		cando_log(CANDO_LOG_WARNING, "drmModeGetConnector: Failed to get connector");
 		return NULL;
 	}
 
 	/* check if a monitor is connected */
-	if (connector->encoder_id == 0 || connector->connection != DRM_MODE_CONNECTED) {
-		kmr_utils_log(KMR_INFO, "[CONNECTOR:%" PRIu32 "]: no encoder or not connected to display", connector->connector_id);
+	if (connector->encoder_id == 0 || \
+	    connector->connection != DRM_MODE_CONNECTED)
+	{
+		cando_log(CANDO_LOG_INFO,
+		          "[CONNECTOR:%" PRIu32 "]: no encoder "
+		          "or not connected to display",
+		          connector->connector_id);
 		drmModeFreeConnector(connector);
 		return NULL;
 	}
@@ -530,18 +788,22 @@ drm_node_get_connector (int kmsfd, uint32_t connectorID)
 
 
 static drmModeEncoder *
-drm_node_get_encoder (int kmsfd, uint32_t encoderID)
+drm_node_get_encoder (struct kmr_drm_node *drmNode,
+                      uint32_t encoderID)
 {
 	drmModeEncoder *encoder = NULL;
 
-	encoder = drmModeGetEncoder(kmsfd, encoderID);
+	encoder = drmModeGetEncoder(drmNode->kmsfd, encoderID);
 	if (!encoder) {
-		kmr_utils_log(KMR_DANGER, "[x] drmModeGetEncoder: Failed to get encoder");
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "drmModeGetEncoder: Failed to get encoder");
 		return NULL;
 	}
 
 	if (encoder->crtc_id == 0) {
-		kmr_utils_log(KMR_INFO, "[ENCODER:%" PRIu32 "]: no CRTC", encoder->encoder_id);
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "[ENCODER:%" PRIu32 "]: no CRTC",
+		                  encoder->encoder_id);
 		drmModeFreeEncoder(encoder);
 		return NULL;
 	}
@@ -551,19 +813,23 @@ drm_node_get_encoder (int kmsfd, uint32_t encoderID)
 
 
 static drmModeCrtc *
-drm_node_get_crtc (int kmsfd, uint32_t crtcID)
+drm_node_get_crtc (struct kmr_drm_node *drmNode,
+                   uint32_t crtcID)
 {
 	drmModeCrtc *crtc = NULL;
 
-	crtc = drmModeGetCrtc(kmsfd, crtcID);
+	crtc = drmModeGetCrtc(drmNode->kmsfd, crtcID);
 	if (!crtc) {
-		kmr_utils_log(KMR_DANGER, "[x] drmModeGetCrtc: Failed to get crtc KMS object");
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "drmModeGetCrtc: Failed to get crtc KMS object");
 		return NULL;
 	}
 
 	/* Ensure the CRTC is active. */
 	if (crtc->buffer_id == 0) {
-		kmr_utils_log(KMR_INFO, "[CRTC:%" PRIu32 "]: not active", crtc->crtc_id);
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "[CRTC:%" PRIu32 "]: not active",
+		                  crtc->crtc_id);
 		drmModeFreeCrtc(crtc);
 		return NULL;
 	}
@@ -572,63 +838,69 @@ drm_node_get_crtc (int kmsfd, uint32_t crtcID)
 }
 
 
-struct kmr_drm_node_display *
-kmr_drm_node_display_create (struct kmr_drm_node_display_create_info *displayInfo)
+int
+kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
+                          const void CANDO_UNUSED *_displayInfo)
 {
-	int p, e, c, conn, planesCount = 0, err = -1;
+	int p, e, c, conn, err = -1;
 
-	drmModeRes *drmResources = NULL;
-	drmModePlane **planes = NULL;
-	drmModePlaneRes *drmPlaneResources = NULL;
-	drmModeConnector *connector = NULL;
-	drmModeEncoder *encoder = NULL;
-	drmModeCrtc *crtc = NULL;
-	drmModePlane *plane = NULL;
+	struct _display display;
 
-	struct kmr_drm_node_device_capabilites deviceCap;
-	struct kmr_drm_node_display *display = NULL;
-
-	display = calloc(1, sizeof(struct kmr_drm_node_display));
-	if (!display) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		return NULL;
+	if (!drmNode) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
 	}
 
+	memset(&display, 0, sizeof(struct _display));
+
 	/* Query for connector->encoder->crtc KMS objecs */
-	drmResources = drmModeGetResources(displayInfo->kmsfd);
-	if (!drmResources) {
-		kmr_utils_log(KMR_DANGER, "[x] Couldn't get card resources from KMS fd '%d'", displayInfo->kmsfd);
-		goto exit_error_kms_node_display_create;
+	display.drmResources = drmModeGetResources(drmNode->kmsfd);
+	if (!(display.drmResources)) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "Couldn't get card resources from KMS fd '%d'",
+		                  drmNode->kmsfd);
+		display_destroy(drmNode, &display);
+		return -1;
 	}
 
 	/* Query for plane KMS objecs */
-	drmPlaneResources = drmModeGetPlaneResources(displayInfo->kmsfd);
-	if (!drmPlaneResources) {
-		kmr_utils_log(KMR_DANGER, "[x] KMS fd '%d' has no planes", displayInfo->kmsfd);
-		goto exit_error_kms_node_display_create;
+	display.drmPlaneResources = drmModeGetPlaneResources(drmNode->kmsfd);
+	if (!(display.drmPlaneResources)) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "KMS fd '%d' has no planes",
+		                  drmNode->kmsfd);
+		display_destroy(drmNode, &display);
+		return -1;
 	}
 
 	/* Check if some form of a display output chain exist */
-	if (drmResources->count_crtcs       <= 0 ||
-	    drmResources->count_connectors  <= 0 ||
-	    drmResources->count_encoders    <= 0 ||
-	    drmPlaneResources->count_planes <= 0)
+	if (display.drmResources->count_crtcs       <= 0 ||
+	    display.drmResources->count_connectors  <= 0 ||
+	    display.drmResources->count_encoders    <= 0 ||
+	    display.drmPlaneResources->count_planes <= 0)
 	{
-		kmr_utils_log(KMR_DANGER, "[x] KMS fd '%d' has no way of creating a "
-		                          "display output chain", displayInfo->kmsfd);
-		goto exit_error_kms_node_display_create;
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		                  "KMS fd '%d' has no way of creating a "
+		                  "display output chain", drmNode->kmsfd);
+		display_destroy(drmNode, &display);
+		return -1;
 	}
 
 	/* Query KMS device plane info */
-	planesCount = drmPlaneResources->count_planes;
-	planes = alloca(planesCount * sizeof(drmModePlane));
-	memset(planes, 0, planesCount * sizeof(drmModePlane));
+	display.planesCount = display.drmPlaneResources->count_planes;
+	display.planes = alloca(display.planesCount * sizeof(drmModePlane));
+	memset(display.planes, 0, display.planesCount * sizeof(drmModePlane));
 
-	for (p = 0; p < planesCount; p++) {
-		planes[p] = drmModeGetPlane(displayInfo->kmsfd, drmPlaneResources->planes[p]);
-		if (!planes[p]) {
-			kmr_utils_log(KMR_DANGER, "[x] drmModeGetPlane: Failed to get plane");
-			goto exit_error_kms_node_display_create;
+	for (p = 0; p < display.planesCount; p++) {
+
+		display.planes[p] = drmModeGetPlane(drmNode->kmsfd,
+			display.drmPlaneResources->planes[p]);
+
+		if (!(display.planes[p])) {
+			cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+			                  "drmModeGetPlane: Failed to get plane");
+			display_destroy(drmNode, &display);
+			return -1;
 		}
 	}
 
@@ -638,25 +910,43 @@ kmr_drm_node_display_create (struct kmr_drm_node_display_create_info *displayInf
 	 * @encoder - (Deprecated) Takes pixel data from a crtc and converts it to an output that
 	 *            the connector can understand. This is a Deprecated kms object
 	 */
-	for (conn = 0; conn < drmResources->count_connectors; conn++) {
-		connector = drm_node_get_connector(displayInfo->kmsfd, drmResources->connectors[conn]);
-		if (!connector)
+	for (conn = 0; conn < display.drmResources->count_connectors; conn++) {
+
+		display.connector = drm_node_get_connector(drmNode->kmsfd,
+			display.drmResources->connectors[conn]);
+
+		if (!(display.connector))
 			continue;
 
 		/* Find the encoder (a deprecated KMS object) for this connector. */
-		for (e = 0; e < drmResources->count_encoders; e++) {
-			if (drmResources->encoders[e] == connector->encoder_id) {
-				encoder = drm_node_get_encoder(displayInfo->kmsfd, drmResources->encoders[e]);
-				if (!encoder)
-					goto exit_error_kms_node_display_create;
+		for (e = 0; e < display.drmResources->count_encoders; e++)
+		{
+			if (display.drmResources->encoders[e] == display.connector->encoder_id)
+			{
+				display.encoder = drm_node_get_encoder(drmNode,
+					display.drmResources->encoders[e]);
+
+				if (!(display.encoder))
+				{
+					display_destroy(drmNode, &display);
+					return -1;
+				}
 			}
 		}
 
-		for (c = 0; c < drmResources->count_crtcs; c++) {
-			if (drmResources->crtcs[c] == encoder->crtc_id) {
-				crtc = drm_node_get_crtc(displayInfo->kmsfd, drmResources->crtcs[c]);
-				if (!crtc)
-					goto exit_error_kms_node_display_create;
+		/* Find CRTC associated with encoder */
+		for (c = 0; c < display.drmResources->count_crtcs; c++)
+		{
+			if (display.drmResources->crtcs[c] == display.encoder->crtc_id)
+			{
+				display.crtc = drm_node_get_crtc(drmNode,
+					display.drmResources->crtcs[c]);
+
+				if (!(display.crtc))
+				{
+					display_destroy(drmNode, &display);
+					return -1;
+				}
 			}
 		}
 
@@ -668,132 +958,83 @@ kmr_drm_node_display_create (struct kmr_drm_node_display_create_info *displayInf
 		 * by looking for something displaying the same framebuffer ID,
 		 * since that information is duplicated.
 		 */
-		for (p = 0; p < (int) drmPlaneResources->count_planes; p++) {
-			if (planes[p]->crtc_id == crtc->crtc_id && planes[p]->fb_id == crtc->buffer_id) {
-				plane = planes[p];
+		for (p = 0; p < (int) display.drmPlaneResources->count_planes; p++)
+		{
+			if (display.planes[p]->crtc_id == display.crtc->crtc_id && \
+			    display.planes[p]->fb_id == display.crtc->buffer_id)
+			{
+				display.plane = display.planes[p];
 				break;
 			}
 		}
 
-		kmr_utils_log(KMR_SUCCESS, "Successfully found a display output chain");
+		cando_log(CANDO_LOG_SUCCESS, "Successfully found a display output chain");
 
-		// Stores mode id given to one of the displays resolution + refresh
-		memcpy(&display->modeData.modeInfo, &connector->modes[0], sizeof(drmModeModeInfo));
-		err = drmModeCreatePropertyBlob(displayInfo->kmsfd,
-		                                &connector->modes[0],
-					        sizeof(connector->modes[0]),
-					        &display->modeData.id);
+		/* Stores mode id given to one of the displays resolution + refresh */
+		memcpy(&(drmNode->display.modeData.modeInfo),
+		       &(display.connector->modes[0]),
+		       sizeof(drmModeModeInfo));
+
+		err = drmModeCreatePropertyBlob(drmNode->kmsfd,
+		                                &(display.connector->modes[0]),
+					        sizeof(display.connector->modes[0]),
+					        &(drmNode->display.modeData.id));
 		if (err != 0) {
-			kmr_utils_log(KMR_DANGER, "[x] drmModeCreatePropertyBlob: couldn't create a blob property");
-			goto exit_error_kms_node_display_create;
+			cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+			                  "drmModeCreatePropertyBlob: couldn't create a blob property");
+			display_destroy(drmNode, &display);
+			return -1;
 		}
 
-		display->connector.id = connector->connector_id;
-		err = acquire_kms_object_properties(displayInfo->kmsfd, &display->connector, DRM_MODE_OBJECT_CONNECTOR);
-		if (err == -1)
-			goto exit_error_kms_node_display_create;
+		err = CANDO_PAGE_SET_WRITE(&(drmNode->display), sizeof(drmNode->display));
+		if (err == -1) {
+			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
+			display_destroy(drmNode, &display);
+		}
 
-		display->crtc.id = crtc->crtc_id;
-		err = acquire_kms_object_properties(displayInfo->kmsfd, &display->crtc, DRM_MODE_OBJECT_CRTC);
-		if (err == -1)
-			goto exit_error_kms_node_display_create;
+		drmNode->display.connector.id = display.connector->connector_id;
+		drmNode->display.crtc.id = display.crtc->crtc_id;
+		drmNode->display.plane.id = display.plane->plane_id;
+		drmNode->display.width = display.connector->modes[0].hdisplay;
+		drmNode->display.height = display.connector->modes[0].vdisplay;
+		drmNode->display.presClock = \
+			(drmNode->deviceCap & CAP_TIMESTAMP_MONOTONIC) ? \
+			CLOCK_MONOTONIC : CLOCK_REALTIME;
 
-		display->plane.id = plane->plane_id;
-		err = acquire_kms_object_properties(displayInfo->kmsfd, &display->plane, DRM_MODE_OBJECT_PLANE);
-		if (err == -1)
-			goto exit_error_kms_node_display_create;
+		/* Release memory we no longer require */
+		display_destroy(drmNode, &display);
 
-		kmr_utils_log(KMR_INFO, "Plane ID: %u", plane->plane_id);
-		kmr_utils_log(KMR_INFO, "CRTC ID: %u", crtc->crtc_id);
-		kmr_utils_log(KMR_INFO, "ENCODER ID: %u", encoder->encoder_id);
-		kmr_utils_log(KMR_INFO, "CONNECTOR ID: %u", connector->connector_id);
-		kmr_utils_log(KMR_INFO, "MODE (resolution + refresh) ID: %u", display->modeData.id);
+		err = acquire_kms_object_properties(drmNode->kmsfd,
+		                                    &(drmNode->display.connector),
+		                                    DRM_MODE_OBJECT_CONNECTOR);
+		if (err == -1) {
+			display_destroy(drmNode, &display);
+			return -1;
+		}
 
-		deviceCap = kmr_drm_node_get_device_capabilities(displayInfo->kmsfd);
+		err = acquire_kms_object_properties(drmNode->kmsfd,
+		                                    &(drmNode->display.crtc),
+		                                    DRM_MODE_OBJECT_CRTC);
+		if (err == -1) {
+			display_destroy(drmNode, &display);
+			return -1;
+		}
 
-		display->width = connector->modes[0].hdisplay;
-		display->height = connector->modes[0].vdisplay;
-		display->kmsfd = displayInfo->kmsfd;	
-		display->presClock = (deviceCap.CAP_TIMESTAMP_MONOTONIC) ? CLOCK_MONOTONIC : CLOCK_REALTIME;
+		err = acquire_kms_object_properties(drmNode->kmsfd,
+		                                    &(drmNode->display.plane),
+		                                    DRM_MODE_OBJECT_PLANE);
+		if (err == -1) {
+			display_destroy(drmNode, &display);
+			return -1;
+		}
 
-		/* Free all unused resources */
-		for (p = 0; p < planesCount; p++)
-			drmModeFreePlane(planes[p]);
-		drmModeFreeEncoder(encoder);
-		drmModeFreeCrtc(crtc);
-		drmModeFreeConnector(connector);
-		drmModeFreePlaneResources(drmPlaneResources);
-		drmModeFreeResources(drmResources);
+		err = CANDO_PAGE_SET_READ(&(drmNode->display), sizeof(drmNode->display));
+		if (err == -1) {
+			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
+			display_destroy(drmNode, &display);
+		}
 
-		return display;
-	}
-
-exit_error_kms_node_display_create:
-	free(display->plane.propsData);
-	free(display->crtc.propsData);
-	free(display->connector.propsData);
-	if (display->modeData.id)
-		drmModeDestroyPropertyBlob(displayInfo->kmsfd, display->modeData.id);
-	if (crtc)
-		drmModeFreeCrtc(crtc);
-	if (encoder)
-		drmModeFreeEncoder(encoder);
-	if (connector)
-		drmModeFreeConnector(connector);
-	for (p = 0; p < planesCount; p++)
-		if (planes[p])
-			drmModeFreePlane(planes[p]);
-	if (drmPlaneResources)
-		drmModeFreePlaneResources(drmPlaneResources);
-	if (drmResources)
-		drmModeFreeResources(drmResources);
-	kmr_drm_node_display_destroy(display);
-	return NULL;
-}
-
-
-void
-kmr_drm_node_display_destroy (struct kmr_drm_node_display *display)
-{
-	if (!display)
-		return;
-
-	free(display->plane.propsData);
-	free(display->crtc.propsData);
-	free(display->connector.propsData);
-	if (display->modeData.id)
-		drmModeDestroyPropertyBlob(display->kmsfd, display->modeData.id);
-
-	free(display);
-}
-
-/**********************************************************
- * END OF kmr_drm_node_display_{create,destroy} FUNCTIONS *
- **********************************************************/
-
-
-/************************************************************
- * START OF kmr_drm_node_display_mode_{set,reset} FUNCTIONS *
- ************************************************************/
-
-int
-kmr_drm_node_display_mode_set (struct kmr_drm_node_display_mode_info *displayModeInfo)
-{
-	int ret = -1;
-
-	ret = drmModeSetCrtc(displayModeInfo->display->kmsfd,
-	                     displayModeInfo->display->crtc.id,
-	                     displayModeInfo->fbid,
-			     0,
-			     0,
-			     &displayModeInfo->display->connector.id,
-			     1,
-			     &displayModeInfo->display->modeData.modeInfo);
-
-	if (ret) {
-		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: %s", strerror(errno));
-		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: failed to set preferred display mode");
-		return -1;
+		return 0;
 	}
 
 	return 0;
@@ -801,31 +1042,52 @@ kmr_drm_node_display_mode_set (struct kmr_drm_node_display_mode_info *displayMod
 
 
 int
-kmr_drm_node_display_mode_reset (struct kmr_drm_node_display_mode_info *displayModeInfo)
+kmr_drm_node_set_display_mode (struct kmr_drm_node *drmNode,
+                               const void *_displayModeInfo)
 {
-	int ret = -1;
+	int err = -1;
 
-	ret = drmModeSetCrtc(displayModeInfo->display->kmsfd,
-	                     displayModeInfo->display->crtc.id,
-			     0, 0, 0, NULL, 0, NULL);
+	const struct kmr_drm_node_display_mode_info *displayModeInfo = _displayModeInfo;
 
-	if (ret) {
-		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: %s", strerror(errno));
-		kmr_utils_log(KMR_DANGER, "[x] drmModeSetCrtc: failed to reset current display mode");
+	if (!drmNode || \
+            !displayModeInfo)
+	{
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	switch (displayModeInfo->displayAction) {
+		case KMR_DRM_NODE_DISPLAY_MODE_SET:
+			err = drmModeSetCrtc(drmNode->kmsfd,
+					     drmNode->display.crtc.id,
+					     displayModeInfo->fbid, 0, 0,
+					     &(drmNode->display.connector.id), 1,
+					     &(drmNode->display.modeData.modeInfo));
+
+			break;
+
+		case KMR_DRM_NODE_DISPLAY_MODE_RESET:
+			err = drmModeSetCrtc(drmNode->kmsfd,
+					     drmNode->display.crtc.id,
+					     0, 0, 0, NULL, 0, NULL);
+	}
+
+	if (err != 0) {
+		cando_log_set_err(drmNode, errno, "drmModeSetCrtc: %s", strerror(errno));
 		return -1;
 	}
 
 	return 0;
 }
 
-/**********************************************************
- * END OF kmr_drm_node_display_mode_{set,reset} FUNCTIONS *
- **********************************************************/
+/*************************************
+ * End of kmr_drm_node_set functions *
+ *************************************/
 
 
-/*******************************************************************
- * START OF kmr_drm_node_atomic_request_{create,destroy} FUNCTIONS *
- *******************************************************************/
+/**************************************************
+ * Start of kmr_drm_node_atomic_request functions *
+ **************************************************/
 
 /*
  * Here we set the values of properties (of our connector, CRTC and plane objects)
@@ -833,9 +1095,9 @@ kmr_drm_node_display_mode_reset (struct kmr_drm_node_display_mode_info *displayM
  * in drmModeAtomicReq *atomicRequest until DRM core receives commit.
  */
 static void
-modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest,
-                              struct kmr_drm_node_display *display,
-                              int fbid)
+modeset_atomic_prepare_commit (drmModeAtomicReq *atomicRequest,
+                               struct kmr_drm_node_display *display,
+                               int fbid)
 {
 	/* set id of the CRTC id that the connector is using */
 	drmModeAtomicAddProperty(atomicRequest,
@@ -911,119 +1173,68 @@ modeset_atomic_prepare_commit(drmModeAtomicReq *atomicRequest,
 }
 
 
-/*
- * struct kmr_drm_node_renderer_info (kmsroots KMS Node Renderer Information)
- *
- * members:
- * @display               - Pointer to a struct containing all plane->crtc->connector data used during
- *                          KMS atomic mode setting.
- * @renderer              - Function pointer that allows custom external renderers to be executed by the api
- *                          upon @kmsfd polled events.
- * @rendererRunning       - Pointer to a boolean that determines if a given renderer is running and in need
- *                          of stopping.
- * @rendererCurrentBuffer - Pointer to an integer used by the api to update the current displayable buffer.
- * @rendererFbId          - Pointer to an integer used as the value of the FB_ID property for a plane related to
- *                          the CRTC during the atomic modeset operation
- * @rendererData          - Pointer to an optional address. This address may be the address of a struct.
- *                          Reference/Address passed depends on external renderer function.
- */
-struct kmr_drm_node_renderer_info {
-	struct kmr_drm_node_display *display;
-	kmr_drm_node_renderer_impl  renderer;
-	volatile bool               *rendererRunning;
-	uint8_t                     *rendererCurrentBuffer;
-	drmModeAtomicReq            *rendererAtomicRequest;
-	int                         *rendererFbId;
-	void                        *rendererData;
-};
-
-
-struct kmr_drm_node_atomic_request *
-kmr_drm_node_atomic_request_create (struct kmr_drm_node_atomic_request_create_info *atomicInfo)
+int
+kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
+                             const void *_atomicInfo)
 {
 	int err = -1;
-	struct kmr_drm_node_renderer_info *rendererInfo = NULL;
-	struct kmr_drm_node_atomic_request *atomic = NULL;
 
-	atomic = calloc(1, sizeof(struct kmr_drm_node_atomic_request));
-	if (!atomic) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		return NULL;
+	const struct kmr_drm_node_atomic_request_create_info *atomicInfo = _atomicInfo;
+
+	if (!drmNode || \
+	    !atomicInfo)
+	{
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
 	}
 
-	atomic->atomicRequest = drmModeAtomicAlloc();
-	if (!atomic->atomicRequest)
-		goto exit_error_kmr_drm_node_atomic_request_create;
-
-	rendererInfo = calloc(1, sizeof(struct kmr_drm_node_renderer_info));
-	if (!rendererInfo) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_drm_node_atomic_request_create;
+	drmNode->atomicRequest = drmModeAtomicAlloc();
+	if (!(drmNode->atomicRequest)) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA,
+		                  "drmModeAtomicAlloc: failed to allocate space.");
+		return -1;
 	}
 
-	rendererInfo->display = atomicInfo->display;
-	rendererInfo->renderer = atomicInfo->renderer;
-	rendererInfo->rendererRunning = atomicInfo->rendererRunning;
-	rendererInfo->rendererCurrentBuffer = atomicInfo->rendererCurrentBuffer;
-	rendererInfo->rendererAtomicRequest = atomic->atomicRequest;
-	rendererInfo->rendererFbId = atomicInfo->rendererFbId;
-	rendererInfo->rendererData = atomicInfo->rendererData;
+	drmNode->renderer = atomicInfo->renderer;
+	drmNode->rendererRunning = atomicInfo->rendererRunning;
+	drmNode->rendererCurrentBuffer = atomicInfo->rendererCurrentBuffer;
+	drmNode->rendererFbId = atomicInfo->rendererFbId;
+	drmNode->rendererData = atomicInfo->rendererData;
 
-	modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest,
-	                              rendererInfo->display,
-	                              *rendererInfo->rendererFbId);
+	modeset_atomic_prepare_commit(drmNode->atomicRequest,
+	                              &(drmNode->display),
+	                              *drmNode->rendererFbId);
 
 	/* perform test-only atomic commit */
-	err = drmModeAtomicCommit(atomicInfo->kmsfd,
-	                          rendererInfo->rendererAtomicRequest,
+	err = drmModeAtomicCommit(drmNode->kmsfd,
+	                          drmNode->atomicRequest,
 	                          DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET,
-	                          rendererInfo);
+	                          drmNode);
 	if (err < 0) {
-		kmr_utils_log(KMR_DANGER, "drmModeAtomicCommit: %s", strerror(errno));
-		goto exit_error_kmr_drm_node_atomic_request_create;
+		cando_log_set_err(drmNode, errno, "drmModeAtomicCommit: %s", strerror(errno));
+		return -1;
 	}
 
 	/* initial modeset on all outputs */
-	err = drmModeAtomicCommit(atomicInfo->kmsfd,
-	                          rendererInfo->rendererAtomicRequest,
+	err = drmModeAtomicCommit(drmNode->kmsfd,
+	                          drmNode->atomicRequest,
 	                          DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT,
-	                          rendererInfo);
+	                          drmNode);
 	if (err < 0) {
-		kmr_utils_log(KMR_DANGER, "[x] drmModeAtomicCommit: modeset atomic commit failed.");
-		kmr_utils_log(KMR_DANGER, "[x] drmModeAtomicCommit: %s", strerror(errno));
-		goto exit_error_kmr_drm_node_atomic_request_create;
+		cando_log_set_err(drmNode, errno, "drmModeAtomicCommit: %s", strerror(errno));
+		return -1;
 	}
 
-	atomic->rendererInfo = rendererInfo;
-	return atomic;
-
-exit_error_kmr_drm_node_atomic_request_create:
-	free(rendererInfo);
-	if (atomic) {
-		drmModeAtomicFree(atomic->atomicRequest);
-		free(atomic);
-	}
-	return NULL;
+	return 0;
 }
 
-
-void
-kmr_drm_node_atomic_request_destroy (struct kmr_drm_node_atomic_request *atomic)
-{
-	if (!atomic)
-		return;
-
-	drmModeAtomicFree(atomic->atomicRequest);
-	free(atomic->rendererInfo);
-}
-
-/*****************************************************************
- * END OF kmr_drm_node_atomic_request_{create,destroy} FUNCTIONS *
- *****************************************************************/
+/************************************************
+ * End of kmr_drm_node_atomic_request functions *
+ ************************************************/
 
 
 /****************************************************
- * START OF kmr_drm_node_handle_drm_event FUNCTIONS *
+ * Start of kmr_drm_node_handle_drm_event functions *
  ****************************************************/
 
 static void
@@ -1038,48 +1249,51 @@ handle_page_flip_event (int fd,
 	static uint16_t fpsCounter = 0;
 
 	struct timespec startTime, stopTime;
-	struct kmr_drm_node_renderer_info *rendererInfo = NULL;
-	struct kmr_drm_node_display *displayOutputChain = NULL;
 
-	rendererInfo = data;
-	displayOutputChain = rendererInfo->display;
-	clock_gettime(displayOutputChain->presClock, &startTime);
+	struct kmr_drm_node *drmNode = (struct kmr_drm_node *) data;
+	struct kmr_drm_node_display *display = &(drmNode->display);
+
+	clock_gettime(display->presClock, &startTime);
 
 	/*
 	 * Application updates @rendererFbId to the next displayable
 	 * GBM[GEM]/DUMP buffer and renders into that buffer.
 	 * This buffer is displayed when atomic commit is performed
 	 */
-	rendererInfo->renderer(rendererInfo->rendererRunning,
-	                       rendererInfo->rendererCurrentBuffer,
-	                       rendererInfo->rendererFbId,
-	                       rendererInfo->rendererData);
+	drmNode->renderer(drmNode->rendererRunning,
+	                  drmNode->rendererCurrentBuffer,
+	                  drmNode->rendererFbId,
+	                  drmNode->rendererData);
 
 	/*
 	 * Pepare properties for DRM core and temporarily store
 	 * them in @rendererAtomicRequest. @rendererFbId should be
 	 * an already populated buffer.
 	 */
-	modeset_atomic_prepare_commit(rendererInfo->rendererAtomicRequest,
-	                              rendererInfo->display,
-	                              *rendererInfo->rendererFbId);
+	modeset_atomic_prepare_commit(drmNode->atomicRequest,
+	                              display, *drmNode->rendererFbId);
 
 	/*
-	 * Send properties to DRM core and asks the driver to perform an atomic commit.
-	 * This will lead to a page-flip and the content of the @rendererFbId will be displayed.
+	 * Send properties to DRM core and asks the
+	 * driver to perform an atomic commit. This
+	 * will lead to a page-flip and the content
+	 * of the @rendererFbId will be displayed.
 	 */
 	drmModeAtomicCommit(fd,
-	                    rendererInfo->rendererAtomicRequest,
+	                    drmNode->atomicRequest,
 	                    DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK,
-	                    rendererInfo);
+	                    drmNode);
 
-	clock_gettime(displayOutputChain->presClock, &stopTime);
+	clock_gettime(display->presClock, &stopTime);
 
 	fpsCounter++;
-	finalTime += (stopTime.tv_sec - startTime.tv_sec) + (double) (stopTime.tv_nsec - startTime.tv_nsec) / 1000000000ULL;
+	finalTime += (stopTime.tv_sec - startTime.tv_sec) + \
+	             (double) (stopTime.tv_nsec - startTime.tv_nsec) / 1000000000ULL;
 
 	if (finalTime >= 1.0f) {
-		kmr_utils_log(KMR_INFO, "%u fps in %lf seconds for crtc %u", fpsCounter, finalTime, crtc_id);
+		cando_log(CANDO_LOG_INFO,
+		          "%u fps in %lf seconds for crtc %u",
+		          fpsCounter, finalTime, crtc_id);
 		finalTime = 0; fpsCounter = 0;
 	}
 }
@@ -1095,14 +1309,52 @@ handle_page_flip_event (int fd,
  * the support for DRM_CAP_CRTC_IN_VBLANK_EVENT.
  */
 int
-kmr_drm_node_handle_drm_event (struct kmr_drm_node_handle_drm_event_info *eventInfo)
+kmr_drm_node_handle_drm_event (struct kmr_drm_node *drmNode,
+                               const void CANDO_UNUSED *eventInfo)
 {
 	drmEventContext event;
+
+	if (!drmNode) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
 	event.version = 3;
 	event.page_flip_handler2 = handle_page_flip_event;
-	return drmHandleEvent(eventInfo->kmsfd, &event);
+	return drmHandleEvent(drmNode->kmsfd, &event);
 }
 
 /**************************************************
- * END OF kmr_drm_node_handle_drm_event FUNCTIONS *
+ * End of kmr_drm_node_handle_drm_event functions *
  **************************************************/
+
+
+/*******************************************
+ * Start of kmr_drm_node_destroy functions *
+ *******************************************/
+
+void
+kmr_drm_node_destroy (struct kmr_drm_node *drmNode)
+{
+	if (!drmNode)
+		return;
+
+	if (drmNode->display.modeData.id) {
+		drmModeDestroyPropertyBlob(drmNode->kmsfd,
+			drmNode->display.modeData.id);
+	}
+
+	if (drmNode->atomicRequest)
+		drmModeAtomicFree(drmNode->atomicRequest);
+
+#ifdef INCLUDE_LIBSEAT
+	kmr_session_release_device(drmNode->session, drmNode->kmsfd);
+#else
+	close(drmNode->kmsfd);
+#endif /* INCLUDE_LIBSEAT */
+	munmap(drmNode, sizeof(struct kmr_drm_node));
+}
+
+/*****************************************
+ * End of kmr_drm_node_destroy functions *
+ *****************************************/
