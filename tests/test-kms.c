@@ -23,11 +23,10 @@
 
 struct app_kms
 {
-	struct kmr_drm_node         *kmr_drm_node;
-	struct kmr_drm_node_display *kmr_drm_node_display;
-	struct kmr_buffer           *kmr_buffer;
+	struct kmr_drm_node *kmr_drm_node;
+	struct kmr_buffer   *kmr_buffer;
 #ifdef INCLUDE_LIBSEAT
-	struct kmr_session          *kmr_session;
+	struct kmr_session  *kmr_session;
 #endif /* INCLUDE_LIBSEAT */
 };
 
@@ -40,7 +39,6 @@ static void
 cleanup (struct app_kms *kms)
 {
 	kmr_drm_node_destroy(kms->kmr_drm_node);
-	kmr_drm_node_display_destroy(kms->kmr_drm_node_display);
 	kmr_buffer_destroy(kms->kmr_buffer);
 #ifdef INCLUDE_LIBSEAT
 	kmr_session_destroy(kms->kmr_session);
@@ -51,8 +49,9 @@ cleanup (struct app_kms *kms)
 static int
 create_drm_context (struct app_kms *kms)
 {
+	int err = -1;
+
 	struct kmr_drm_node_create_info kmsNodeCreateInfo;
-	struct kmr_drm_node_display_create_info displayCreateInfo;
 
 #ifdef INCLUDE_LIBSEAT
 	kms->kmr_session = kmr_session_create();
@@ -60,7 +59,7 @@ create_drm_context (struct app_kms *kms)
 		return -1;
 
 	kmsNodeCreateInfo.session = kms->kmr_session;
-#endif
+#endif /* INCLUDE_LIBSEAT */
 
 	kmsNodeCreateInfo.kmsNode = NULL;
 	kms->kmr_drm_node = kmr_drm_node_create(&kmsNodeCreateInfo);
@@ -69,9 +68,8 @@ create_drm_context (struct app_kms *kms)
 		return -1;
 	}
 
-	displayCreateInfo.kmsfd = kms->kmr_drm_node->kmsfd;
-	kms->kmr_drm_node_display = kmr_drm_node_display_create(&displayCreateInfo);
-	if (!(kms->kmr_drm_node_display)) {
+	err = kmr_drm_node_set_display(kms->kmr_drm_node, NULL);
+	if (err == -1) {
 		cleanup(kms);
 		return -1;
 	}
@@ -87,10 +85,10 @@ create_gbm_buffers (struct app_kms *kms)
 	memset(&bufferCreateInfo, 0, sizeof(bufferCreateInfo));
 
 	bufferCreateInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
-	bufferCreateInfo.kmsfd = kms->kmr_drm_node_display->kmsfd;
+	bufferCreateInfo.kmsfd = kmr_drm_node_get_kms_fd(kms->kmr_drm_node);
 	bufferCreateInfo.bufferCount = 2;
-	bufferCreateInfo.width = kms->kmr_drm_node_display->width;
-	bufferCreateInfo.height = kms->kmr_drm_node_display->height;
+	bufferCreateInfo.width = kmr_drm_node_get_display_width(kms->kmr_drm_node);
+	bufferCreateInfo.height = kmr_drm_node_get_display_height(kms->kmr_drm_node);
 	bufferCreateInfo.bitDepth = 24;
 	bufferCreateInfo.bitsPerPixel = 32;
 	bufferCreateInfo.gbmBoFlags = GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
