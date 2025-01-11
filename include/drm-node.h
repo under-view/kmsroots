@@ -118,6 +118,45 @@ kmr_drm_node_set_display_mode (struct kmr_drm_node *drmNode,
 
 
 /*
+ * @brief Returns file descriptor to an open DRM device
+ *
+ * @param drmNode - Pointer to a valid struct kmr_drm_node
+ *
+ * @return
+ * 	on success: File descriptor to open DRM device node
+ * 	on failure: -1
+ */
+int
+kmr_drm_node_get_kms_fd (struct kmr_drm_node *drmNode);
+
+
+/*
+ * @brief Returns amount of pixels in width
+ *
+ * @param drmNode - Pointer to a valid struct kmr_drm_node
+ *
+ * @return
+ * 	on success: Amount of pixels in width
+ * 	on failure: -1
+ */
+int
+kmr_drm_node_get_display_width (struct kmr_drm_node *drmNode);
+
+
+/*
+ * @brief Returns amount of pixels in height
+ *
+ * @param drmNode - Pointer to a valid struct kmr_drm_node
+ *
+ * @return
+ * 	on success: Amount of pixels in height
+ * 	on failure: -1
+ */
+int
+kmr_drm_node_get_display_height (struct kmr_drm_node *drmNode);
+
+
+/*
  * kmsroots Implementation
  * Function pointer used by struct kmr_drm_node_atomic_request_create_info
  * used to pass the address of an external function you want to run

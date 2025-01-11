@@ -1085,6 +1085,50 @@ kmr_drm_node_set_display_mode (struct kmr_drm_node *drmNode,
  *************************************/
 
 
+/***************************************
+ * Start of kmr_drm_node_get functions *
+ ***************************************/
+
+int
+kmr_drm_node_get_kms_fd (struct kmr_drm_node *drmNode)
+{
+	if (!drmNode) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return drmNode->kmsfd;
+}
+
+
+int
+kmr_drm_node_get_display_width (struct kmr_drm_node *drmNode)
+{
+	if (!drmNode) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return drmNode->display.width;
+}
+
+
+int
+kmr_drm_node_get_display_height (struct kmr_drm_node *drmNode)
+{
+	if (!drmNode) {
+		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return drmNode->display.height;
+}
+
+/*************************************
+ * End of kmr_drm_node_get functions *
+ *************************************/
+
+
 /**************************************************
  * Start of kmr_drm_node_atomic_request functions *
  **************************************************/
