@@ -122,6 +122,8 @@ test_kms_create_gbm_buffer (void CANDO_UNUSED **state)
 	struct app_kms app;
 	memset(&app, 0, sizeof(app));
 
+	cando_log_set_level(CANDO_LOG_ALL);
+
 	ret = create_drm_context(&app);
 	assert_int_equal(ret, 0);
 

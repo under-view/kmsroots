@@ -10,6 +10,7 @@
 #include <sys/sysmacros.h>
 #include <sys/vt.h>
 #include <sys/kd.h>
+#include <inttypes.h>
 #include <linux/major.h>
 #include <libudev.h>
 
@@ -361,28 +362,28 @@ setup_atomic_modeset (struct kmr_drm_node *drmNode)
 	err = drmGetCap(kmsfd, DRM_CAP_ADDFB2_MODIFIERS, &capabilites);
 	supported = (err == 0 && capabilites != 0);
 	drmNode->deviceCap |= supported ? CAP_ADDFB2_MODIFIERS : 0;
-	cando_log(CANDO_LOG_INFO, "device %s framebuffer modifiers", \
+	cando_log(CANDO_LOG_INFO, "device %s framebuffer modifiers\n", \
 	          supported ? "supports" : "does not support");
 
 	capabilites=0;
 	err = drmGetCap(kmsfd, DRM_CAP_TIMESTAMP_MONOTONIC, &capabilites);
 	supported = (err == 0 && capabilites != 0);
 	drmNode->deviceCap |= supported ? CAP_TIMESTAMP_MONOTONIC : 0;
-	cando_log(CANDO_LOG_INFO, "device %s clock monotonic timestamps", \
+	cando_log(CANDO_LOG_INFO, "device %s clock monotonic timestamps\n", \
 	          supported ? "supports" : "does not support");
 
 	capabilites=0;
 	err = drmGetCap(kmsfd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &capabilites);
 	supported = (err == 0 && capabilites != 0);
 	drmNode->deviceCap |= supported ? CAP_CRTC_IN_VBLANK_EVENT : 0;
-	cando_log(CANDO_LOG_INFO, "device %s atomic KMS", \
+	cando_log(CANDO_LOG_INFO, "device %s atomic KMS\n", \
 	          supported ? "supports" : "does not support");
 
 	capabilites=0;
 	err = drmGetCap(kmsfd, DRM_CAP_DUMB_BUFFER, &capabilites);
 	supported = (err == 0 && capabilites != 0);
 	drmNode->deviceCap |= supported ? CAP_DUMB_BUFFER : 0;
-	cando_log(CANDO_LOG_INFO, "device %s dumb bufffers", \
+	cando_log(CANDO_LOG_INFO, "device %s dumb bufffers\n", \
 	          supported ? "supports" : "does not support");
 
 	return 0;
@@ -777,7 +778,7 @@ drm_node_get_connector (int kmsfd, uint32_t connectorID)
 	{
 		cando_log(CANDO_LOG_INFO,
 		          "[CONNECTOR:%" PRIu32 "]: no encoder "
-		          "or not connected to display",
+		          "or not connected to display\n",
 		          connector->connector_id);
 		drmModeFreeConnector(connector);
 		return NULL;
@@ -968,7 +969,11 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 			}
 		}
 
-		cando_log(CANDO_LOG_SUCCESS, "Successfully found a display output chain");
+		err = CANDO_PAGE_SET_WRITE(&(drmNode->display), sizeof(drmNode->display));
+		if (err == -1) {
+			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
+			display_destroy(drmNode, &display);
+		}
 
 		/* Stores mode id given to one of the displays resolution + refresh */
 		memcpy(&(drmNode->display.modeData.modeInfo),
@@ -985,13 +990,6 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 			display_destroy(drmNode, &display);
 			return -1;
 		}
-
-		err = CANDO_PAGE_SET_WRITE(&(drmNode->display), sizeof(drmNode->display));
-		if (err == -1) {
-			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
-			display_destroy(drmNode, &display);
-		}
-
 		drmNode->display.connector.id = display.connector->connector_id;
 		drmNode->display.crtc.id = display.crtc->crtc_id;
 		drmNode->display.plane.id = display.plane->plane_id;
@@ -1033,6 +1031,8 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
 			display_destroy(drmNode, &display);
 		}
+
+		cando_log(CANDO_LOG_SUCCESS, "Successfully found a display output chain\n");
 
 		return 0;
 	}
@@ -1283,10 +1283,10 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 
 static void
 handle_page_flip_event (int fd,
-                        unsigned int UNUSED seq,
-                        unsigned int UNUSED tv_sec,
-                        unsigned int UNUSED tv_usec,
-                        unsigned int UNUSED crtc_id,
+                        unsigned int CANDO_UNUSED seq,
+                        unsigned int CANDO_UNUSED tv_sec,
+                        unsigned int CANDO_UNUSED tv_usec,
+                        unsigned int CANDO_UNUSED crtc_id,
                         void *data)
 {
 	static double finalTime = 0;

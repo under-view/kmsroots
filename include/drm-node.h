@@ -1,6 +1,8 @@
 #ifndef KMR_DRM_NODE_H
 #define KMR_DRM_NODE_H
 
+#include <stdbool.h>
+
 #ifdef INCLUDE_LIBSEAT
 #include "session.h"
 #endif /* INCLUDE_LIBSEAT */
