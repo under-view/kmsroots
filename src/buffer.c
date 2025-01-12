@@ -358,7 +358,7 @@ create_gbm_buffers (struct kmr_buffer *buffer,
 			return -1;
 	}
 
-	cando_log(CANDO_LOG_SUCCESS, "Successfully create GBM buffers");
+	cando_log(CANDO_LOG_SUCCESS, "Successfully create GBM buffers\n");
 
 	return 0;
 }
