@@ -330,7 +330,7 @@ setup_atomic_modeset (struct kmr_drm_node *drmNode)
 	 */
 	err = drmGetMagic(kmsfd, &magic);
 	if (err < 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "drmGetMagic: KMS device '(fd: %d)' " \
 		                  "could not become master", kmsfd);
 		return -1;
@@ -338,7 +338,7 @@ setup_atomic_modeset (struct kmr_drm_node *drmNode)
 
 	err = drmAuthMagic(kmsfd, magic);
 	if (err < 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "drmAuthMagic: KMS device '(fd: %d)' " \
 		                  "could not become master", kmsfd);
 		return -1;
@@ -352,7 +352,7 @@ setup_atomic_modeset (struct kmr_drm_node *drmNode)
 	 */
 	err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	if (err < 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "drmSetClientCap: Failed to set universal " \
 		                  "planes capability for KMS device '(fd: %d)'", kmsfd);
 		return -1;
@@ -364,7 +364,7 @@ setup_atomic_modeset (struct kmr_drm_node *drmNode)
 	 */
 	err = drmSetClientCap(kmsfd, DRM_CLIENT_CAP_ATOMIC, 1);
 	if (err < 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "drmSetClientCap: Failed to set KMS atomic " \
 		                  "capability for KMS device '(fd: %d)'", kmsfd);
 		return -1;
@@ -414,7 +414,7 @@ open_drm_node (struct kmr_drm_node *drmNode,
 	drmNode->kmsfd = open(deviceNode, O_RDWR|O_CLOEXEC, 0);
 #endif /* INCLUDE_LIBSEAT */
 	if (drmNode->kmsfd < 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "open('%s'): %s", deviceNode,
 		                  strerror(errno));
 		return -1;
@@ -439,14 +439,14 @@ open_drm_node_udev (struct kmr_drm_node *drmNode,
 
 	udev = udev_new();
 	if (!udev) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "udev_new: failed to create udev context.");
 		return -1;
 	}
 
 	udevEnum = udev_enumerate_new(udev);
 	if (!udevEnum) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "udev_enumerate_new: failed");
 		destroy_udev(udev, udevEnum);
 		return -1;
@@ -457,7 +457,7 @@ open_drm_node_udev (struct kmr_drm_node *drmNode,
 
 	err = udev_enumerate_scan_devices(udevEnum);
 	if (err != 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "udev_enumerate_scan_devices: failed");
 		destroy_udev(udev, udevEnum);
 		return -1;
@@ -516,7 +516,7 @@ kmr_drm_node_create (const void *_nodeInfo)
 	const struct kmr_drm_node_create_info *nodeInfo = _nodeInfo;
 
 	if (!nodeInfo) {
-		cando_log_err("Incorrect data passed\n");
+		cando_log_error("Incorrect data passed\n");
 		return NULL;
 	}
 
@@ -526,7 +526,7 @@ kmr_drm_node_create (const void *_nodeInfo)
 	               MAP_PRIVATE|MAP_ANONYMOUS,
 	               -1, 0);
 	if (!drmNode) {
-		cando_log_err("[x] mmap: %s", strerror(errno));
+		cando_log_error("[x] mmap: %s", strerror(errno));
 		return NULL;
 	}
 
@@ -535,14 +535,14 @@ kmr_drm_node_create (const void *_nodeInfo)
 	open_drm_node_udev(drmNode, nodeInfo);
 
 	if (err == -1) {
-		cando_log_err("%s\n", cando_log_get_error(drmNode));
+		cando_log_error("%s\n", cando_log_get_error(drmNode));
 		kmr_drm_node_destroy(drmNode);
 		return NULL;
 	}
 
 	err = setup_atomic_modeset(drmNode);
 	if (err == -1) {
-		cando_log_err("%s\n", cando_log_get_error(drmNode));
+		cando_log_error("%s\n", cando_log_get_error(drmNode));
 		kmr_drm_node_destroy(drmNode);
 		return NULL;
 	}
@@ -553,7 +553,7 @@ kmr_drm_node_create (const void *_nodeInfo)
 
 	err = CANDO_PAGE_SET_READ(drmNode, sizeof(struct kmr_drm_node));
 	if (err == -1) {
-		cando_log_err("mprotect: %s\n", strerror(errno));
+		cando_log_error("mprotect: %s\n", strerror(errno));
 		kmr_drm_node_destroy(drmNode);
 		return NULL;
 	}
@@ -809,13 +809,13 @@ drm_node_get_encoder (struct kmr_drm_node *drmNode,
 
 	encoder = drmModeGetEncoder(drmNode->kmsfd, encoderID);
 	if (!encoder) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "drmModeGetEncoder: Failed to get encoder");
 		return NULL;
 	}
 
 	if (encoder->crtc_id == 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "[ENCODER:%" PRIu32 "]: no CRTC",
 		                  encoder->encoder_id);
 		drmModeFreeEncoder(encoder);
@@ -834,14 +834,14 @@ drm_node_get_crtc (struct kmr_drm_node *drmNode,
 
 	crtc = drmModeGetCrtc(drmNode->kmsfd, crtcID);
 	if (!crtc) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "drmModeGetCrtc: Failed to get crtc KMS object");
 		return NULL;
 	}
 
 	/* Ensure the CRTC is active. */
 	if (crtc->buffer_id == 0) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "[CRTC:%" PRIu32 "]: not active",
 		                  crtc->crtc_id);
 		drmModeFreeCrtc(crtc);
@@ -861,7 +861,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 	struct _display display;
 
 	if (!drmNode) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -870,7 +870,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 	/* Query for connector->encoder->crtc KMS objecs */
 	display.drmResources = drmModeGetResources(drmNode->kmsfd);
 	if (!(display.drmResources)) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "Couldn't get card resources from KMS fd '%d'",
 		                  drmNode->kmsfd);
 		display_destroy(drmNode, &display);
@@ -880,7 +880,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 	/* Query for plane KMS objecs */
 	display.drmPlaneResources = drmModeGetPlaneResources(drmNode->kmsfd);
 	if (!(display.drmPlaneResources)) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "KMS fd '%d' has no planes",
 		                  drmNode->kmsfd);
 		display_destroy(drmNode, &display);
@@ -893,7 +893,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 	    display.drmResources->count_encoders    <= 0 ||
 	    display.drmPlaneResources->count_planes <= 0)
 	{
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 		                  "KMS fd '%d' has no way of creating a "
 		                  "display output chain", drmNode->kmsfd);
 		display_destroy(drmNode, &display);
@@ -911,7 +911,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 			display.drmPlaneResources->planes[p]);
 
 		if (!(display.planes[p])) {
-			cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+			cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 			                  "drmModeGetPlane: Failed to get plane");
 			display_destroy(drmNode, &display);
 			return -1;
@@ -984,7 +984,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 
 		err = CANDO_PAGE_SET_WRITE(&(drmNode->display), sizeof(drmNode->display));
 		if (err == -1) {
-			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
+			cando_log_set_error(drmNode, errno, "mprotect: %s", strerror(errno));
 			display_destroy(drmNode, &display);
 		}
 
@@ -998,7 +998,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 					        sizeof(display.connector->modes[0]),
 					        &(drmNode->display.modeData.id));
 		if (err != 0) {
-			cando_log_set_err(drmNode, CANDO_LOG_ERR_UNCOMMON,
+			cando_log_set_error(drmNode, CANDO_LOG_ERR_UNCOMMON,
 			                  "drmModeCreatePropertyBlob: couldn't create a blob property");
 			display_destroy(drmNode, &display);
 			return -1;
@@ -1041,7 +1041,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
 
 		err = CANDO_PAGE_SET_READ(&(drmNode->display), sizeof(drmNode->display));
 		if (err == -1) {
-			cando_log_set_err(drmNode, errno, "mprotect: %s", strerror(errno));
+			cando_log_set_error(drmNode, errno, "mprotect: %s", strerror(errno));
 			display_destroy(drmNode, &display);
 		}
 
@@ -1065,7 +1065,7 @@ kmr_drm_node_set_display_mode (struct kmr_drm_node *drmNode,
 	if (!drmNode || \
             !displayModeInfo)
 	{
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -1086,7 +1086,7 @@ kmr_drm_node_set_display_mode (struct kmr_drm_node *drmNode,
 	}
 
 	if (err != 0) {
-		cando_log_set_err(drmNode, errno, "drmModeSetCrtc: %s", strerror(errno));
+		cando_log_set_error(drmNode, errno, "drmModeSetCrtc: %s", strerror(errno));
 		return -1;
 	}
 
@@ -1106,7 +1106,7 @@ int
 kmr_drm_node_get_kms_fd (struct kmr_drm_node *drmNode)
 {
 	if (!drmNode) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -1118,7 +1118,7 @@ int
 kmr_drm_node_get_display_width (struct kmr_drm_node *drmNode)
 {
 	if (!drmNode) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -1130,7 +1130,7 @@ int
 kmr_drm_node_get_display_height (struct kmr_drm_node *drmNode)
 {
 	if (!drmNode) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -1241,20 +1241,20 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 	if (!drmNode || \
 	    !atomicInfo)
 	{
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
 	bytes = sizeof(drmNode->renderer) + sizeof(drmNode->display);
 	err = CANDO_PAGE_SET_WRITE(&(drmNode->renderer), bytes);
 	if (err == -1) {
-		cando_log_set_err(drmNode, errno, "mprotect: %s\n", strerror(errno));
+		cando_log_set_error(drmNode, errno, "mprotect: %s\n", strerror(errno));
 		return -1;
 	}
 
 	drmNode->renderer.atomicRequest = drmModeAtomicAlloc();
 	if (!(drmNode->renderer.atomicRequest)) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA,
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA,
 		                  "drmModeAtomicAlloc: failed to allocate space.");
 		return -1;
 	}
@@ -1271,7 +1271,7 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 
 	err = CANDO_PAGE_SET_READ(&(drmNode->renderer), bytes);
 	if (err == -1) {
-		cando_log_set_err(drmNode, errno, "mprotect: %s\n", strerror(errno));
+		cando_log_set_error(drmNode, errno, "mprotect: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -1281,7 +1281,7 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 	                          DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET,
 	                          drmNode);
 	if (err < 0) {
-		cando_log_set_err(drmNode, errno, "drmModeAtomicCommit: %s", strerror(errno));
+		cando_log_set_error(drmNode, errno, "drmModeAtomicCommit: %s", strerror(errno));
 		return -1;
 	}
 
@@ -1291,7 +1291,7 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 	                          DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT,
 	                          drmNode);
 	if (err < 0) {
-		cando_log_set_err(drmNode, errno, "drmModeAtomicCommit: %s", strerror(errno));
+		cando_log_set_error(drmNode, errno, "drmModeAtomicCommit: %s", strerror(errno));
 		return -1;
 	}
 
@@ -1386,7 +1386,7 @@ kmr_drm_node_handle_drm_event (struct kmr_drm_node *drmNode,
 	drmEventContext event;
 
 	if (!drmNode) {
-		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(drmNode, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 

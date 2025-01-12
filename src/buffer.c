@@ -139,7 +139,7 @@ gbm_framebuffer_create_impl (struct kmr_buffer *buffer,
 
 	ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_MODE_ADDFB, &framebuffer);
 	if (ret == -1) {
-		cando_log_set_err(buffer, errno,
+		cando_log_set_error(buffer, errno,
 		                  "ioctl(DRM_IOCTL_MODE_ADDFB): %s",
 		                  strerror(errno));
 		return -1;
@@ -191,7 +191,7 @@ gbm_framebuffer_create_with_modifiers_impl (struct kmr_buffer *buffer,
 
 	ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_MODE_ADDFB2, &framebuffer);
 	if (ret == -1) {
-		cando_log_set_err(buffer, errno,
+		cando_log_set_error(buffer, errno,
 		                  "ioctl(DRM_IOCTL_MODE_ADDFB2): %s",
 		                  strerror(errno));
 		return -1;
@@ -244,7 +244,7 @@ create_planes (struct kmr_buffer *buffer,
 
 		boHandle = gbm_bo_get_handle_for_plane(bufferObject->bo, currentPlane);
 		if (!boHandle.u32 || boHandle.s32 == -1) {
-			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			cando_log_set_error(buffer, CANDO_LOG_ERR_UNCOMMON,
 					  "failed to get BO plane %d gem handle (modifier 0x%" PRIx64 ")",
 					  currentPlane, bufferObject->modifier);
 			return -1;
@@ -264,7 +264,7 @@ create_planes (struct kmr_buffer *buffer,
 		 */
 		ret = ioctl(bufferObject->kmsfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &drmPrimeRequest);
 		if (ret == -1)  {
-			cando_log_set_err(buffer, errno,
+			cando_log_set_error(buffer, errno,
 					  "ioctl(DRM_IOCTL_PRIME_HANDLE_TO_FD): %s",
 					  strerror(errno));
 			return -1;
@@ -295,7 +295,7 @@ create_gbm_buffers (struct kmr_buffer *buffer,
 
 	buffer->gbmDevice = gbm_create_device(bufferInfo->kmsfd);
 	if (!(buffer->gbmDevice)) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(buffer, CANDO_LOG_ERR_UNCOMMON,
 		                  "Failed to create gbm device context.");
 		return -1;
 	}
@@ -307,7 +307,7 @@ create_gbm_buffers (struct kmr_buffer *buffer,
 		bufferObject->kmsfd = bufferInfo->kmsfd;
 		bufferObject->bo = gbmFuncs[bufferInfo->bufferType].gbm_bo_create(buffer->gbmDevice, bufferInfo);
 		if (!(bufferObject->bo)) {
-			cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+			cando_log_set_error(buffer, CANDO_LOG_ERR_UNCOMMON,
 			                  "%s: failed to create gbm_bo with res %u x %u",
 			                  bufferInfo->bufferType == KMR_BUFFER_GBM_BUFFER ? \
 			                  "gbm_bo_create" : "gbm_bo_create_with_modifiers2",
@@ -376,7 +376,7 @@ kmr_buffer_create (const void *_bufferInfo)
 	if (!bufferInfo || \
 	    bufferInfo->bufferCount >= MAX_BUFFER_COUNT)
 	{
-		cando_log_err("Incorrect data passed\n");
+		cando_log_error("Incorrect data passed\n");
 		return NULL;
 	}
 
@@ -397,7 +397,7 @@ kmr_buffer_create (const void *_bufferInfo)
 		case KMR_BUFFER_GBM_BUFFER_WITH_MODIFIERS:
 			ret = create_gbm_buffers(buffer, bufferInfo);
 			if (ret == -1) {
-				cando_log_err("%s\n", cando_log_get_error(buffer));
+				cando_log_error("%s\n", cando_log_get_error(buffer));
 				kmr_buffer_destroy(buffer);
 				return NULL;
 			}
@@ -405,19 +405,19 @@ kmr_buffer_create (const void *_bufferInfo)
 			break;
 
 		case KMR_BUFFER_DUMP_BUFFER:
-			cando_log_err("Dump buffer creation not supported\n");
+			cando_log_error("Dump buffer creation not supported\n");
 			kmr_buffer_destroy(buffer);
 			return NULL;
 
 		default:
-			cando_log_err("Passed incorrect enum kmr_buffer_type\n");
+			cando_log_error("Passed incorrect enum kmr_buffer_type\n");
 			kmr_buffer_destroy(buffer);
 			return NULL;
 	}
 
 	ret = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_buffer));
 	if (ret == -1) {
-		cando_log_err("mprotect: %s\n", strerror(errno));
+		cando_log_error("mprotect: %s\n", strerror(errno));
 		kmr_buffer_destroy(buffer);
 		return NULL;
 	}
@@ -447,7 +447,7 @@ kmr_buffer_write (struct kmr_buffer *buffer,
 	    bufferIndex >= buffer->bufferCount || \
 	    dataSize <= 0)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -475,7 +475,7 @@ kmr_buffer_get_kms_fd (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -488,7 +488,7 @@ kmr_buffer_get_buffer_count (struct kmr_buffer *buffer)
 {
 	if (!buffer)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -503,7 +503,7 @@ kmr_buffer_get_gbm_bo (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return NULL;
 	}
 
@@ -518,7 +518,7 @@ kmr_buffer_get_framebuffer_id (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -533,7 +533,7 @@ kmr_buffer_get_pixel_format (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -548,7 +548,7 @@ kmr_buffer_get_format_modifier (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -563,7 +563,7 @@ kmr_buffer_get_plane_count (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -578,7 +578,7 @@ kmr_buffer_get_dma_buf_fds (struct kmr_buffer *buffer,
 	if (!buffer || \
 	    bufferIndex >= buffer->bufferCount)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return NULL;
 	}
 
@@ -595,7 +595,7 @@ kmr_buffer_get_plane_pitch (struct kmr_buffer *buffer,
 	    bufferIndex >= buffer->bufferCount || \
             planeIndex >= MAX_PLANE_COUNT)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -612,7 +612,7 @@ kmr_buffer_get_plane_offset (struct kmr_buffer *buffer,
 	    bufferIndex >= buffer->bufferCount || \
             planeIndex >= MAX_PLANE_COUNT)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
@@ -629,7 +629,7 @@ kmr_buffer_get_dma_buf_fd (struct kmr_buffer *buffer,
 	    bufferIndex >= buffer->bufferCount || \
 	    dmaBufIndex >= MAX_PLANE_COUNT)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 

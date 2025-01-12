@@ -583,7 +583,7 @@ create_kms_instance (struct app_kms *kms)
 
 	err = kmr_drm_node_set_display(kms->kmr_drm_node, NULL);
 	if (err == -1) {
-		cando_log_err("%s\n", cando_log_get_error(kms->kmr_drm_node));
+		cando_log_error("%s\n", cando_log_get_error(kms->kmr_drm_node));
 		return -1;
 	}
 
@@ -660,7 +660,7 @@ create_kms_atomic_request_instance (struct app_vk_kms *passData,
 
 	err = kmr_drm_node_atomic_request(kms->kmr_drm_node, &atomicRequestInfo);
 	if (err == -1) {
-		cando_log_err("%s\n", cando_log_get_error(kms->kmr_drm_node));
+		cando_log_error("%s\n", cando_log_get_error(kms->kmr_drm_node));
 		return -1;
 	}
 

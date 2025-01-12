@@ -69,13 +69,13 @@ dmabuf_check_sync_file_import_export (struct kmr_dma_buf *buffer)
 
 	ret = uname(&utsname);
 	if (ret == -1) {
-		cando_log_set_err(buffer, errno, "uname: %s", strerror(errno));
+		cando_log_set_error(buffer, errno, "uname: %s", strerror(errno));
 		return -2;
 	}
 
 	ret = strncmp(utsname.sysname, "Linux", 8);
 	if (ret != 0) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_UNCOMMON,
+		cando_log_set_error(buffer, CANDO_LOG_ERR_UNCOMMON,
 		                  "strcmp: operating system name incorrect");
 		return -2;
 	}
@@ -151,7 +151,7 @@ kmr_dma_buf_create (void)
 	              MAP_PRIVATE|MAP_ANONYMOUS,
 	              -1, 0);
 	if (buffer == (void*)-1) {
-		cando_log_err("mmap: %s\n", strerror(errno));
+		cando_log_error("mmap: %s\n", strerror(errno));
 		return NULL;
 	}
 
@@ -182,13 +182,13 @@ kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
 	if (!buffer || \
 	    !importSyncInfo)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
 	ret = dmabuf_check_sync_file_import_export(buffer);
 	if (ret == -1) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
 		                  "Importing external fd used in synchronization " \
 		                  "to DMA-BUF fds not supported. " \
 		                  "Must use kernel version >=5.20.0");
@@ -204,7 +204,7 @@ kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
 		ret = drmIoctl(importSyncInfo->dmaBufferFds[i],
 		               DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &data);
 		if (ret != 0) {
-			cando_log_set_err(buffer, errno,
+			cando_log_set_error(buffer, errno,
 			                  "drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
 			                  i, strerror(errno));
 			close(importSyncInfo->syncFileFd);
@@ -241,13 +241,13 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 	if (!buffer || \
 	    !exportSyncInfo)
 	{
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
 	ret = dmabuf_check_sync_file_import_export(buffer);
 	if (ret == -1) {
-		cando_log_set_err(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
+		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
 		                  "Exporting fds used for synchronization " \
 		                  "from DMA-BUF fds not supported. " \
 		                  "Must use kernel version >=5.20.0");
@@ -258,7 +258,7 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 
 	ret = CANDO_PAGE_SET_WRITE(buffer, sizeof(struct kmr_dma_buf));
 	if (ret == -1) {
-		cando_log_set_err(buffer, errno, "mprotect: %s", strerror(errno));
+		cando_log_set_error(buffer, errno, "mprotect: %s", strerror(errno));
 		return -1;
 	}
 
@@ -270,7 +270,7 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 
 		ret = drmIoctl(exportSyncInfo->dmaBufferFds[i], DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data);
 		if (ret != 0) {
-			cando_log_set_err(buffer, errno,
+			cando_log_set_error(buffer, errno,
 			                  "drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
 			                  i, strerror(errno));
 			return -1;
@@ -281,7 +281,7 @@ kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
 
 	ret = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_dma_buf));
 	if (ret == -1) {
-		cando_log_set_err(buffer, errno, "mprotect: %s", strerror(errno));
+		cando_log_set_error(buffer, errno, "mprotect: %s", strerror(errno));
 		return -1;
 	}
 
