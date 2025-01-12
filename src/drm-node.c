@@ -234,30 +234,48 @@ struct kmr_drm_node_display
 
 
 /*
+ * @brief struct kmr_drm_node_renderer (kmsroots DRM Node Renderer)
+ *
+ * @member func          - Function pointer that allows custom external renderers
+ *                         to be executed by the api upon @kmsfd polled events.
+ * @member running       - Pointer to a boolean that determines if a given renderer
+ *                         is running and in need of stopping.
+ * @member currentBuffer - Pointer to an integer used by the api to update the
+ *                         current displayable buffer.
+ * @member fbid          - Pointer to an integer used as the value of the FB_ID
+ *                         property for a plane related to he CRTC during the atomic
+ *                         modeset operation.
+ * @member data          - Pointer to an optional address. This address may be the
+ *                         address of a struct. Reference/Address passed depends on
+ *                         external renderer function.
+ * @member atomicRequest - Pointer to a KMS atomic request instance.
+ */
+struct kmr_drm_node_renderer
+{
+	kmr_drm_node_renderer_impl func;
+	volatile bool              *running;
+	unsigned int               *currentBuffer;
+	int                        *fbid;
+	void                       *data;
+	drmModeAtomicReq           *atomicRequest;
+};
+
+
+/*
  * @brief struct kmr_drm_node (kmsroots DRM Node)
  *
- * @member err                   - Stores information about the error that occurred
- *                                 for the given instance and may later be retrieved
- *                                 by caller.
- * @member kmsfd                 - Pollable file descriptor to an open KMS (GPU) device file.
- * @member session               - Stores address of struct kmr_session. Used when
- *                                 opening and releasing a device.
- * @member display               - Pointer to a struct containing all plane->crtc->connector
- *                                 data used during KMS atomic mode setting.
- * @member renderer              - Function pointer that allows custom external renderers
- *                                 to be executed by the api upon @kmsfd polled events.
- * @member rendererRunning       - Pointer to a boolean that determines if a given renderer
- *                                 is running and in need of stopping.
- * @member rendererCurrentBuffer - Pointer to an integer used by the api to update the
- *                                 current displayable buffer.
- * @member rendererFbId          - Pointer to an integer used as the value of the FB_ID
- *                                 property for a plane related to he CRTC during the atomic
- *                                 modeset operation.
- * @member rendererData          - Pointer to an optional address. This address may be the
- *                                 address of a struct. Reference/Address passed depends on
- *                                 external renderer function.
- * @member atomicRequest         - Pointer to a KMS atomic request instance.
- * @member display               - Stores critical information about the display.
+ * @member err       - Stores information about the error that occurred
+ *                     for the given instance and may later be retrieved
+ *                     by caller.
+ * @member kmsfd     - Pollable file descriptor to an open KMS (GPU) device file.
+ * @member session   - Stores address of struct kmr_session. Used when
+ *                     opening and releasing a device.
+ * @member deviceCap - Unsigned 16-bit integer that stores what capabilites
+ *                     a given device (i.e GPU) has.
+ * @member renderer  - struct containing information about the extenal function
+ *                     and function parameters used for rendering operations.
+ * @member display   - struct containing all plane->crtc->connector
+ *                     data used during KMS atomic mode setting.
  */
 struct kmr_drm_node
 {
@@ -267,12 +285,7 @@ struct kmr_drm_node
 #endif /* INCLUDE_LIBSEAT */
 	int                           kmsfd;
 	uint16_t                      deviceCap;
-	kmr_drm_node_renderer_impl    renderer;
-	volatile bool                 *rendererRunning;
-	unsigned int                  *rendererCurrentBuffer;
-	int                           *rendererFbId;
-	void                          *rendererData;
-	drmModeAtomicReq              *atomicRequest;
+	struct kmr_drm_node_renderer  renderer;
 	struct kmr_drm_node_display   display;
 };
 
@@ -1221,7 +1234,7 @@ int
 kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
                              const void *_atomicInfo)
 {
-	int err = -1;
+	int bytes, err = -1;
 
 	const struct kmr_drm_node_atomic_request_info *atomicInfo = _atomicInfo;
 
@@ -1232,26 +1245,39 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 		return -1;
 	}
 
-	drmNode->atomicRequest = drmModeAtomicAlloc();
-	if (!(drmNode->atomicRequest)) {
+	bytes = sizeof(drmNode->renderer) + sizeof(drmNode->display);
+	err = CANDO_PAGE_SET_WRITE(&(drmNode->renderer), bytes);
+	if (err == -1) {
+		cando_log_set_err(drmNode, errno, "mprotect: %s\n", strerror(errno));
+		return -1;
+	}
+
+	drmNode->renderer.atomicRequest = drmModeAtomicAlloc();
+	if (!(drmNode->renderer.atomicRequest)) {
 		cando_log_set_err(drmNode, CANDO_LOG_ERR_INCORRECT_DATA,
 		                  "drmModeAtomicAlloc: failed to allocate space.");
 		return -1;
 	}
 
-	drmNode->renderer = atomicInfo->renderer;
-	drmNode->rendererRunning = atomicInfo->rendererRunning;
-	drmNode->rendererCurrentBuffer = atomicInfo->rendererCurrentBuffer;
-	drmNode->rendererFbId = atomicInfo->rendererFbId;
-	drmNode->rendererData = atomicInfo->rendererData;
+	drmNode->renderer.func = atomicInfo->renderer;
+	drmNode->renderer.running = atomicInfo->rendererRunning;
+	drmNode->renderer.currentBuffer = atomicInfo->rendererCurrentBuffer;
+	drmNode->renderer.fbid = atomicInfo->rendererFbId;
+	drmNode->renderer.data = atomicInfo->rendererData;
 
-	modeset_atomic_prepare_commit(drmNode->atomicRequest,
+	modeset_atomic_prepare_commit(drmNode->renderer.atomicRequest,
 	                              &(drmNode->display),
-	                              *drmNode->rendererFbId);
+	                              *drmNode->renderer.fbid);
+
+	err = CANDO_PAGE_SET_READ(&(drmNode->renderer), bytes);
+	if (err == -1) {
+		cando_log_set_err(drmNode, errno, "mprotect: %s\n", strerror(errno));
+		return -1;
+	}
 
 	/* perform test-only atomic commit */
 	err = drmModeAtomicCommit(drmNode->kmsfd,
-	                          drmNode->atomicRequest,
+	                          drmNode->renderer.atomicRequest,
 	                          DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET,
 	                          drmNode);
 	if (err < 0) {
@@ -1261,7 +1287,7 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 
 	/* initial modeset on all outputs */
 	err = drmModeAtomicCommit(drmNode->kmsfd,
-	                          drmNode->atomicRequest,
+	                          drmNode->renderer.atomicRequest,
 	                          DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT,
 	                          drmNode);
 	if (err < 0) {
@@ -1296,6 +1322,7 @@ handle_page_flip_event (int fd,
 
 	struct kmr_drm_node *drmNode = (struct kmr_drm_node *) data;
 	struct kmr_drm_node_display *display = &(drmNode->display);
+	struct kmr_drm_node_renderer *renderer = &(drmNode->renderer);
 
 	clock_gettime(display->presClock, &startTime);
 
@@ -1304,18 +1331,18 @@ handle_page_flip_event (int fd,
 	 * GBM[GEM]/DUMP buffer and renders into that buffer.
 	 * This buffer is displayed when atomic commit is performed
 	 */
-	drmNode->renderer(drmNode->rendererRunning,
-	                  drmNode->rendererCurrentBuffer,
-	                  drmNode->rendererFbId,
-	                  drmNode->rendererData);
+	renderer->func(renderer->running,
+	               renderer->currentBuffer,
+	               renderer->fbid,
+	               renderer->data);
 
 	/*
 	 * Pepare properties for DRM core and temporarily store
 	 * them in @rendererAtomicRequest. @rendererFbId should be
 	 * an already populated buffer.
 	 */
-	modeset_atomic_prepare_commit(drmNode->atomicRequest,
-	                              display, *drmNode->rendererFbId);
+	modeset_atomic_prepare_commit(renderer->atomicRequest,
+	                              display, *(renderer->fbid));
 
 	/*
 	 * Send properties to DRM core and asks the
@@ -1324,7 +1351,7 @@ handle_page_flip_event (int fd,
 	 * of the @rendererFbId will be displayed.
 	 */
 	drmModeAtomicCommit(fd,
-	                    drmNode->atomicRequest,
+	                    renderer->atomicRequest,
 	                    DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK,
 	                    drmNode);
 
@@ -1388,8 +1415,8 @@ kmr_drm_node_destroy (struct kmr_drm_node *drmNode)
 			drmNode->display.modeData.id);
 	}
 
-	if (drmNode->atomicRequest)
-		drmModeAtomicFree(drmNode->atomicRequest);
+	if (drmNode->renderer.atomicRequest)
+		drmModeAtomicFree(drmNode->renderer.atomicRequest);
 
 #ifdef INCLUDE_LIBSEAT
 	kmr_session_release_device(drmNode->session, drmNode->kmsfd);

@@ -1,3 +1,11 @@
+/*
+ * This C source test the functions in three
+ * different interfaces:
+ * 	* buffer
+ * 	* drm-node
+ * 	* session.c
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
