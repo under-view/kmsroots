@@ -60,3 +60,6 @@ build/
 
 # Ignore vim swap file
 .*.swp
+
+# Ignore anything gdb
+*.gdb*
