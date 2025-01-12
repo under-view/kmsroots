@@ -10,6 +10,8 @@
 
 #include <gbm.h>
 
+#include <cando/cando.h>
+
 #include "drm-node.h"
 #include "buffer.h"
 #include "input.h"
@@ -22,13 +24,11 @@
 
 struct app_kms
 {
-	struct kmr_drm_node                *kmr_drm_node;
-	struct kmr_drm_node_display        *kmr_drm_node_display;
-	struct kmr_drm_node_atomic_request *kmr_drm_node_atomic_request;
-	struct kmr_buffer                  *kmr_buffer;
-	struct kmr_input                   *kmr_input;
+	struct kmr_drm_node *kmr_drm_node;
+	struct kmr_buffer   *kmr_buffer;
+	struct kmr_input    *kmr_input;
 #ifdef INCLUDE_LIBSEAT
-	struct kmr_session                 *kmr_session;
+	struct kmr_session  *kmr_session;
 #endif
 };
 
@@ -63,7 +63,7 @@ create_kms_set_crtc(struct app_kms *kms);
 
 static int
 create_kms_atomic_request_instance(struct app_kms_pass *passData,
-                                   uint8_t *cbuf,
+                                   unsigned int *cbuf,
                                    int *fbid,
                                    volatile bool *running);
 
@@ -109,10 +109,13 @@ next_color (bool *up, uint8_t cur, unsigned int mod)
  * 4. Update choosen buffer and Redo steps 1-3.
  */
 static void
-render (volatile bool *running, uint8_t *cbuf, int *fbid, void *data)
+render (volatile bool *running,
+        unsigned int *cbuf,
+        int *fbid,
+        void *data)
 {
-	struct app_kms_pass *passData;
-	struct app_kms *kms;
+	struct app_kms *kms = NULL;
+	struct app_kms_pass *passData = NULL;
 
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
@@ -131,8 +134,8 @@ render (volatile bool *running, uint8_t *cbuf, int *fbid, void *data)
 	pixelBuffer = passData->pixelBuffer;
 	pixelBufferSize = passData->pixelBufferSize;
 
-	width = kms->kmr_drm_node_display->width;
-	height = kms->kmr_drm_node_display->height;
+	width = kmr_drm_node_get_display_width(kms->kmr_drm_node);
+	height = kmr_drm_node_get_display_height(kms->kmr_drm_node);
 
 	bytesPerPixel = 4, offset = 0;
 	r_up = true, g_up = true, b_up = true;
@@ -179,14 +182,13 @@ main (void)
 	struct epoll_event event, events[MAX_EPOLL_EVENTS];
 
 	struct kmr_input_create_info inputInfo;
-	struct kmr_drm_node_handle_drm_event_info drmEventInfo;
 
 	struct app_kms kms;
 
-	static int fbid = 0;
-	static uint8_t cbuf = 0;
-	static volatile bool running = true;
-	static struct app_kms_pass passData;
+	int fbid = 0;
+	unsigned int cbuf = 0;
+	volatile bool running = true;
+	struct app_kms_pass passData;
 
 	memset(&kms, 0, sizeof(kms));
 	passData.app_kms = &kms;
@@ -232,8 +234,7 @@ main (void)
 
 	input = kms.kmr_input->inputInst;
 	inputfd = kms.kmr_input->inputfd;
-	kmsfd = kms.kmr_drm_node->kmsfd;
-	drmEventInfo.kmsfd = kmsfd;
+	kmsfd = kmr_drm_node_get_kms_fd(kms.kmr_drm_node);
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
@@ -295,7 +296,7 @@ main (void)
 			}
 
 			if (events[n].data.fd == kmsfd) {
-				kmr_drm_node_handle_drm_event(&drmEventInfo);
+				kmr_drm_node_handle_drm_event(kms.kmr_drm_node, NULL);
 			}
 		}
 	}
@@ -308,11 +309,7 @@ exit_error:
 	 * Let the api know of what addresses to free and fd's to close
 	 */
 	kmr_buffer_destroy(kms.kmr_buffer);
-
 	kmr_input_destroy(kms.kmr_input);
-
-	kmr_drm_node_atomic_request_destroy(kms.kmr_drm_node_atomic_request);
-	kmr_drm_node_display_destroy(kms.kmr_drm_node_display);
 	kmr_drm_node_destroy(kms.kmr_drm_node);
 
 #ifdef INCLUDE_LIBSEAT
@@ -325,6 +322,8 @@ exit_error:
 static int
 create_kms_instance (struct app_kms *kms)
 {
+	int err = -1;
+
 	struct kmr_drm_node_create_info kmsNodeCreateInfo;
 
 #ifdef INCLUDE_LIBSEAT
@@ -337,15 +336,14 @@ create_kms_instance (struct app_kms *kms)
 
 	kmsNodeCreateInfo.kmsNode = NULL;
 	kms->kmr_drm_node = kmr_drm_node_create(&kmsNodeCreateInfo);
-	if (!kms->kmr_drm_node)
+	if (!(kms->kmr_drm_node))
 		return -1;
 
-	struct kmr_drm_node_display_create_info displayCreateInfo;
-	displayCreateInfo.kmsfd = kms->kmr_drm_node->kmsfd;
-
-	kms->kmr_drm_node_display = kmr_drm_node_display_create(&displayCreateInfo);
-	if (!kms->kmr_drm_node_display)
+	err = kmr_drm_node_set_display(kms->kmr_drm_node, NULL);
+	if (err == -1) {
+		cando_log_err("%s\n", cando_log_get_error(kms->kmr_drm_node));
 		return -1;
+	}
 
 	return 0;
 }
@@ -357,10 +355,10 @@ create_kms_gbm_buffers (struct app_kms *kms)
 	struct kmr_buffer_create_info gbmBufferInfo;
 
 	gbmBufferInfo.bufferType = KMR_BUFFER_GBM_BUFFER;
-	gbmBufferInfo.kmsfd = kms->kmr_drm_node->kmsfd;
+	gbmBufferInfo.kmsfd = kmr_drm_node_get_kms_fd(kms->kmr_drm_node);
 	gbmBufferInfo.bufferCount = 2;
-	gbmBufferInfo.width = kms->kmr_drm_node_display->width;
-	gbmBufferInfo.height = kms->kmr_drm_node_display->height;
+	gbmBufferInfo.width = kmr_drm_node_get_display_width(kms->kmr_drm_node);
+	gbmBufferInfo.height = kmr_drm_node_get_display_height(kms->kmr_drm_node);
 	gbmBufferInfo.bitDepth = 24;
 	gbmBufferInfo.bitsPerPixel = 32;
 	gbmBufferInfo.gbmBoFlags = GBM_BO_USE_SCANOUT | GBM_BO_USE_WRITE;
@@ -369,7 +367,7 @@ create_kms_gbm_buffers (struct app_kms *kms)
 	gbmBufferInfo.modifierCount = 0;
 
 	kms->kmr_buffer = kmr_buffer_create(&gbmBufferInfo);
-	if (!kms->kmr_buffer)
+	if (!(kms->kmr_buffer))
 		return -1;
 
 	return 0;
@@ -379,17 +377,22 @@ create_kms_gbm_buffers (struct app_kms *kms)
 static int
 create_kms_set_crtc (struct app_kms *kms)
 {
+	int err = -1;
+
 	uint8_t b, bufferCount;
 
 	struct kmr_drm_node_display_mode_info nextImageInfo;
+	nextImageInfo.displayAction = KMR_DRM_NODE_DISPLAY_MODE_SET;
 
 	bufferCount = kmr_buffer_get_buffer_count(kms->kmr_buffer);
 
 	for (b = 0; b < bufferCount; b++) {
 		nextImageInfo.fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, b);
-		nextImageInfo.display = kms->kmr_drm_node_display;
-		if (kmr_drm_node_display_mode_set(&nextImageInfo))
+		err = kmr_drm_node_set_display_mode(kms->kmr_drm_node, &nextImageInfo);
+		if (err == -1) {
+			cando_log_err("%s\n", cando_log_get_error(kms->kmr_drm_node));
 			return -1;
+		}
 	}
 
 	return 0;
@@ -398,27 +401,29 @@ create_kms_set_crtc (struct app_kms *kms)
 
 static int
 create_kms_atomic_request_instance (struct app_kms_pass *passData,
-                                    uint8_t *cbuf,
+                                    unsigned int *cbuf,
                                     int *fbid,
                                     volatile bool *running)
 {
+	int err = -1;
+
 	struct app_kms *kms = passData->app_kms;
 
 	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
 
 	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *cbuf);
 
-	atomicRequestInfo.kmsfd = kms->kmr_drm_node_display->kmsfd;
-	atomicRequestInfo.display = kms->kmr_drm_node_display;
 	atomicRequestInfo.renderer = &render;
 	atomicRequestInfo.rendererRunning = running;
 	atomicRequestInfo.rendererCurrentBuffer = cbuf;
 	atomicRequestInfo.rendererFbId = fbid;
 	atomicRequestInfo.rendererData = passData;
 
-	kms->kmr_drm_node_atomic_request = kmr_drm_node_atomic_request_create(&atomicRequestInfo);
-	if (!kms->kmr_drm_node_atomic_request)
+	err = kmr_drm_node_atomic_request(kms->kmr_drm_node, &atomicRequestInfo);
+	if (err == -1) {
+		cando_log_err("%s\n", cando_log_get_error(kms->kmr_drm_node));
 		return -1;
+	}
 
 	return 0;
 }
@@ -430,14 +435,14 @@ create_kms_pixel_buffer (struct app_kms_pass *passData)
 	struct app_kms *kms = NULL;
 
 	uint8_t *pixelBuffer = NULL; 
+
 	unsigned int width = 0, height = 0;
-	unsigned int bytesPerPixel = 0, pixelBufferSize = 0;
+	unsigned int bytesPerPixel = 4, pixelBufferSize = 0;
 
 	kms = passData->app_kms;
-	width = kms->kmr_drm_node_display->width;
-	height = kms->kmr_drm_node_display->height;
+	width = kmr_drm_node_get_display_width(kms->kmr_drm_node);
+	height = kmr_drm_node_get_display_height(kms->kmr_drm_node);
 
-	bytesPerPixel = 4;
 	pixelBufferSize = width * height * bytesPerPixel;
 
 	pixelBuffer = mmap(NULL,

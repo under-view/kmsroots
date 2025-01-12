@@ -79,7 +79,7 @@ kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
  */
 enum kmr_drm_node_display_mode
 {
-	KMR_DRM_NODE_DISPLAY_MODE_SET = 0,
+	KMR_DRM_NODE_DISPLAY_MODE_SET   = 0,
 	KMR_DRM_NODE_DISPLAY_MODE_RESET = 1,
 };
 
