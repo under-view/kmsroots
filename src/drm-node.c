@@ -1223,7 +1223,7 @@ kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
 {
 	int err = -1;
 
-	const struct kmr_drm_node_atomic_request_create_info *atomicInfo = _atomicInfo;
+	const struct kmr_drm_node_atomic_request_info *atomicInfo = _atomicInfo;
 
 	if (!drmNode || \
 	    !atomicInfo)

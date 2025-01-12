@@ -409,7 +409,7 @@ create_kms_atomic_request_instance (struct app_kms_pass *passData,
 
 	struct app_kms *kms = passData->app_kms;
 
-	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
+	struct kmr_drm_node_atomic_request_info atomicRequestInfo;
 
 	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *cbuf);
 

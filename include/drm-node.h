@@ -158,7 +158,7 @@ kmr_drm_node_get_display_height (struct kmr_drm_node *drmNode);
 
 /*
  * kmsroots Implementation
- * Function pointer used by struct kmr_drm_node_atomic_request_create_info
+ * Function pointer used by struct kmr_drm_node_atomic_request_info
  * used to pass the address of an external function you want to run
  * Given that the arguments of the function are:
  * 	1. A pointer to a boolean determining if the renderer is running.
@@ -175,7 +175,7 @@ typedef void (*kmr_drm_node_renderer_impl) (volatile bool*, unsigned int*, int*,
 
 
 /*
- * @brief struct kmr_drm_node_atomic_request_create_info
+ * @brief struct kmr_drm_node_atomic_request_info
  *        (kmsroots DRM Node Atomic Request Create Information)
  *
  * @member renderer              - Function pointer that allows custom external renderers
@@ -192,7 +192,7 @@ typedef void (*kmr_drm_node_renderer_impl) (volatile bool*, unsigned int*, int*,
  *                                 the address of a struct. Reference/Address passed
  *                                 depends on external renderer function.
  */
-struct kmr_drm_node_atomic_request_create_info
+struct kmr_drm_node_atomic_request_info
 {
 	kmr_drm_node_renderer_impl renderer;
 	volatile bool              *rendererRunning;
@@ -210,7 +210,7 @@ struct kmr_drm_node_atomic_request_create_info
  *        needs to do is wait for page-flip events to happen.
  *
  * @param drmNode    - Pointer to a valid struct kmr_drm_node.
- * @param atomicInfo - Pointer to a struct kmr_drm_node_atomic_request_create_info
+ * @param atomicInfo - Pointer to a struct kmr_drm_node_atomic_request_info
  *                     used to set external renderer and arguments of the external
  *                     renderer.
  *

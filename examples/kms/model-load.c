@@ -651,7 +651,7 @@ create_kms_atomic_request_instance (struct app_vk_kms *passData,
 
 	*fbid = kmr_buffer_get_framebuffer_id(kms->kmr_buffer, *cbuf);
 
-	struct kmr_drm_node_atomic_request_create_info atomicRequestInfo;
+	struct kmr_drm_node_atomic_request_info atomicRequestInfo;
 	atomicRequestInfo.renderer = &render;
 	atomicRequestInfo.rendererRunning = running;
 	atomicRequestInfo.rendererCurrentBuffer = cbuf;
