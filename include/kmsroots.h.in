@@ -1,0 +1,13 @@
+#ifndef KMSROOTS_H
+#define KMSROOTS_H
+
+#include "vulkan.h"
+#include "gltf-loader.h"
+@KMS_INTERFACE@
+@SESSION_INTERFACE@
+@INPUT_INTERFACE@
+@SHADERC_INTERFACE@
+@X_INTERFACE@
+@WAYLAND_INTERFACE@
+
+#endif /* KMSROOTS_H */
