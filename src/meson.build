@@ -1,6 +1,7 @@
-################################################################################
-# Core files and dependency
-################################################################################
+#############################
+# Core files and dependency #
+#############################
+
 libcando = dependency('cando', version: '>= 0.1.4', required: true)
 vulkan = dependency('vulkan', version: '>=1.3.213', required: true)
 libmath = cc.find_library('m', required: true)
@@ -13,10 +14,12 @@ fs = [ 'src/vulkan.c', 'src/utils.c', 'src/gltf-loader.c', 'src/stb_image.c' ]
 lib_kmr_deps = [vulkan, libmath, librt, libcando]
 
 
-################################################################################
-# Shaderc libs, files, & extra compiler args
-################################################################################
-libshaderc = dependency('shaderc', required: get_option('shaderc'))
+################################################################
+# Shader interface required libs, files, & extra compiler args #
+################################################################
+
+libshaderc = dependency('shaderc', required: shaderc.enabled())
+
 if libshaderc.found()
   pargs += ['-DINCLUDE_SHADERC=1']
   lib_kmr_deps += [libshaderc]
@@ -24,14 +27,16 @@ if libshaderc.found()
 endif
 
 
-################################################################################
-# KMS libs, files, & extra compiler args
-################################################################################
-libseat = dependency('libseat', required: get_option('libseat'))
-libinput = dependency('libinput', required: get_option('libinput'))
+##########################################################################
+# kms/session/buffer/input interfaces libs, files, & extra compiler args #
+##########################################################################
+
+libseat = dependency('libseat', required: libseat.enabled())
+libinput = dependency('libinput', required: libinput.enabled())
 libdrm = dependency('libdrm', required: kms.enabled())
 libgbm = dependency('gbm', required: kms.enabled())
-libudev = dependency('libudev', required: kms.enabled() or get_option('libinput').enabled())
+libudev = dependency('libudev', required: kms.enabled() or libinput.enabled())
+
 if libdrm.found()
   pargs += ['-DINCLUDE_KMS=1']
   lib_kmr_deps += [libdrm]
@@ -62,11 +67,13 @@ if libgbm.found() and libdrm.found() and vulkan.found()
   fs += ['src/pixel-format.c']
 endif
 
-################################################################################
-# X11 libs, files, & extra compiler args
-################################################################################
-libxcb = dependency('xcb', required: get_option('xcb'))
-libxcbewmh = dependency('xcb-ewmh', required: get_option('xcb'))
+
+#########################################################
+# X Client interface libs, files, & extra compiler args #
+#########################################################
+
+libxcb = dependency('xcb', required: xcb.enabled())
+libxcbewmh = dependency('xcb-ewmh', required: xcb.enabled())
 
 if libxcb.found() and libxcbewmh.found()
   pargs += ['-DINCLUDE_XCB=1']
@@ -75,10 +82,11 @@ if libxcb.found() and libxcbewmh.found()
 endif
 
 
-################################################################################
-# Wayland libs, files, & extra compiler args
-################################################################################
-wayland_client = dependency('wayland-client', required: get_option('wayland'))
+###############################################################
+# Wayland Client interface libs, files, & extra compiler args #
+###############################################################
+
+wayland_client = dependency('wayland-client', required: wayland.enabled())
 
 # Needed to stored corresponding C glue code
 # from wayland xml protocls extension files

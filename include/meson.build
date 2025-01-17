@@ -13,15 +13,16 @@ if kms.enabled()
     'pixel-format.h'
   ]
 
-  kms_headers = ''.join([
+  headers = ''.join([
     '#include "drm-node.h"\n',
     '#include "buffer.h"\n',
     '#include "dma-buf.h"\n',
     '#include "pixel-format.h"',
   ])
 
-  main_headers_dict += {'KMS_INTERFACE': kms_headers}
+  main_headers_dict += {'KMS_INTERFACE': headers}
 endif
+
 
 if libseat.enabled()
   main_headers += ['session.h']
@@ -31,6 +32,7 @@ if libseat.enabled()
   main_headers_dict += {'SESSION_INTERFACE': headers}
 endif
 
+
 if libinput.enabled()
   main_headers += ['input.h']
 
@@ -38,6 +40,7 @@ if libinput.enabled()
 
   main_headers_dict += {'INPUT_INTERFACE': headers}
 endif
+
 
 if shaderc.enabled()
   main_headers += ['shader.h']
@@ -47,6 +50,7 @@ if shaderc.enabled()
   main_headers_dict += {'SHADERC_INTERFACE': headers}
 endif
 
+
 if xcb.enabled()
   main_headers += ['xclient.h']
 
@@ -54,6 +58,7 @@ if xcb.enabled()
 
   main_headers_dict += {'X_INTERFACE': headers}
 endif
+
 
 if wayland.enabled()
   main_headers += ['wclient.h']
