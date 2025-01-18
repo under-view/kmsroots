@@ -69,6 +69,8 @@ static struct libseat_seat_listener seat_listener = {
 struct kmr_session *
 kmr_session_create (void)
 {
+	int err = -1;
+
 	struct kmr_session *session = NULL;
 
 	// libseat will take care of updating the logind state if necessary
@@ -84,6 +86,8 @@ kmr_session_create (void)
 		kmr_session_destroy(session);
 		return NULL;
 	}
+
+	// libseat_set_log_level(LIBSEAT_LOG_LEVEL_DEBUG);
 
 	session->seat = libseat_open_seat(&seat_listener, session);
 	if (!(session->seat)) {
@@ -109,7 +113,7 @@ kmr_session_create (void)
 		return NULL;
 	}
 
-	cando_log(CANDO_LOG_INFO, "seatName: %s", session->seatName);
+	cando_log(CANDO_LOG_INFO, "seatName: %s\n", session->seatName);
 
 	session->seatfd = libseat_get_fd(session->seat);
 	if (session->seatfd == -1) {
@@ -119,6 +123,13 @@ kmr_session_create (void)
 	}
 
 	cando_log(CANDO_LOG_INFO, "libseat instance pollable fd: %d\n", session->seatfd);
+
+	err = CANDO_PAGE_SET_READ(session, sizeof(struct kmr_session));
+	if (err == -1) {
+		cando_log_error("mprotect: %s\n", strerror(errno));
+		kmr_session_destroy(session);
+		return NULL;
+	}
 
 	return session;
 }
