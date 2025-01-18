@@ -13,6 +13,7 @@
 
 #include "session.h"
 
+
 /*
  * @brief struct kmr_session (kmsroots Session)
  *
@@ -182,6 +183,38 @@ kmr_session_release_device (struct kmr_session *session,
 /*****************************************************************
  * End of kmr_session_{take_control_of,release}_device functions *
  *****************************************************************/
+
+
+/**************************************
+ * Start of kmr_session_get functions *
+ **************************************/
+
+const char *
+kmr_session_get_seat_name (struct kmr_session *session)
+{
+	if (!session) {
+		cando_log_set_error(session, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return NULL;
+	}
+
+	return session->seatName;
+}
+
+
+int
+kmr_session_get_seat_fd (struct kmr_session *session)
+{
+	if (!session) {
+		cando_log_set_error(session, CANDO_LOG_ERR_INCORRECT_DATA, "");
+		return -1;
+	}
+
+	return session->seatfd;
+}
+
+/************************************
+ * End of kmr_session_get functions *
+ ************************************/
 
 
 /******************************************

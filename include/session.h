@@ -2,7 +2,7 @@
 #define KMR_SESSION_H
 
 /*
- * Stores information about the kmr_buffer instance.
+ * Stores information about the kmr_session instance.
  */
 struct kmr_session;
 
@@ -70,6 +70,34 @@ kmr_session_take_control_of_device (struct kmr_session *session,
 void
 kmr_session_release_device (struct kmr_session *session,
                             const int fd);
+
+
+/*
+ * @brief Returns seat name in string format associated
+ *        with the struct kmr_session context.
+ *
+ * @param session - Must pass a pointer to a struct kmr_session
+ *
+ * @return
+ * 	on success: Seat name in string format
+ * 	on failure: NULL
+ */
+const char *
+kmr_session_get_seat_name (struct kmr_session *session);
+
+
+/*
+ * @brief Returns pollable file descriptor to a
+ *        libseat seatd/systemd-logind D-Bus session.
+ *
+ * @param session - Must pass a pointer to a struct kmr_session
+ *
+ * @return
+ * 	on success: File descriptor to libseat seatd/systemd-logind D-Bus session
+ * 	on failure: -1
+ */
+int
+kmr_session_get_seat_fd (struct kmr_session *session);
 
 
 /*

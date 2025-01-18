@@ -88,7 +88,7 @@ kmr_input_create (struct kmr_input_create_info UNUSED *inputInfo)
 	}
 
 #ifdef INCLUDE_LIBSEAT
-	seatName = inputInfo->session->seatName;
+	seatName = kmr_session_get_seat_name(inputInfo->session);
 #else
 	seatName = "seat0";
 #endif
