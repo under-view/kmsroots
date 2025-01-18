@@ -24,7 +24,7 @@ if kms.enabled()
 endif
 
 
-if libseat.enabled()
+if session.enabled()
   main_headers += ['session.h']
 
   headers = '#include "session.h"'

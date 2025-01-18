@@ -31,7 +31,7 @@ endif
 # kms/session/buffer/input interfaces libs, files, & extra compiler args #
 ##########################################################################
 
-libseat = dependency('libseat', required: libseat.enabled())
+libseat = dependency('libseat', required: session.enabled())
 libinput = dependency('libinput', required: libinput.enabled())
 libdrm = dependency('libdrm', required: kms.enabled())
 libgbm = dependency('gbm', required: kms.enabled())
