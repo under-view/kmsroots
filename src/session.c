@@ -176,7 +176,7 @@ kmr_session_take_control_of_device (struct kmr_session *session,
 	}
 
 	cando_log(CANDO_LOG_INFO,
-	          "libseat_open_device(seat: %p, path: %s, fd: %p) = %d",
+	          "libseat_open_device(seat: %p, path: %s, fd: %p) = %d\n",
 	          (void*) session->seat, devpath, (void*) &fd, fd);
 
 	return fd;
