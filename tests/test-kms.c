@@ -76,6 +76,7 @@ create_drm_context (struct app_kms *kms)
 		return -1;
 	}
 
+	/* Finds a display output chain */
 	err = kmr_drm_node_set_display(kms->kmr_drm_node, NULL);
 	if (err == -1) {
 		cleanup(kms);
@@ -123,6 +124,23 @@ create_gbm_buffers (struct app_kms *kms)
  **************************************/
 
 static void CANDO_UNUSED
+test_kms_create_drm_node (void CANDO_UNUSED **state)
+{
+	int ret = -1;
+
+	struct app_kms app;
+	memset(&app, 0, sizeof(app));
+
+	cando_log_set_level(CANDO_LOG_ALL);
+
+	ret = create_drm_context(&app);
+	assert_int_equal(ret, 0);
+
+	cleanup(&app);
+}
+
+
+static void CANDO_UNUSED
 test_kms_create_gbm_buffer (void CANDO_UNUSED **state)
 {
 	int ret = -1;
@@ -150,6 +168,7 @@ main (void)
 {
 	const struct CMUnitTest tests[] =
 	{
+		cmocka_unit_test(test_kms_create_drm_node),
 		cmocka_unit_test(test_kms_create_gbm_buffer),
 	};
 
