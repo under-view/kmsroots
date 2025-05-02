@@ -2,7 +2,7 @@
 # Core files and dependency #
 #############################
 
-libcando = dependency('cando', version: '>= 0.1.4', required: true)
+libcando = dependency('cando', version: '>= 0.1.7', required: true)
 vulkan = dependency('vulkan', version: '>=1.3.213', required: true)
 libmath = cc.find_library('m', required: true)
 # Needed by `utils.c` for shm_{open/close}
