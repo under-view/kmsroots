@@ -118,32 +118,6 @@ struct kmr_utils_image_buffer kmr_utils_image_buffer_create(struct kmr_utils_ima
 
 
 /*
- * struct kmr_utils_file (kmsroots Utils File)
- *
- * members:
- * @bytes    - Buffer that stores a given file's content
- * @byteSize - Size of buffer storing a given file's content
- */
-struct kmr_utils_file {
-	unsigned char *bytes;
-	unsigned long byteSize;
-};
-
-
-/*
- * kmr_utils_file_load: Takes a file and loads its contents into a memory buffer.
- *                      Application's  must take up the mantel and call free on @bytes member.
- *
- * parameters:
- * @filename - Must pass path to file to load
- * returns:
- *	on success struct kmr_utils_file
- *	on failure struct kmr_utils_file { with member nulled }
- */
-struct kmr_utils_file kmr_utils_file_load(const char *filename);
-
-
-/*
  * kmr_utils_nanosecond: Function returns the current time in nanosecond
  *
  * returns:
@@ -151,7 +125,6 @@ struct kmr_utils_file kmr_utils_file_load(const char *filename);
  *	on failure no checks occur
  */
 uint64_t kmr_utils_nanosecond();
-
 
 /*
  * kmr_utils_concat_file_to_dir: Function acquires absolute path to a file, Given either the directory the file resides in
@@ -168,56 +141,5 @@ uint64_t kmr_utils_nanosecond();
  *	on failure NULL
  */
 char *kmr_utils_concat_file_to_dir(const char *directory, const char *filename, uint16_t maxStrLen);
-
-
-/*
- * kmr_utils_update_fd_flags: Updates the flags set on a file descriptor
- *
- * parameters:
- * @fd    - File descriptor to updates
- * @flags - Flags to update
- * returns:
- *	on success 0
- *	on failure -1
- */
-int kmr_utils_update_fd_flags(int fd, int flags);
-
-
-int allocate_shm_file(size_t size);
-
-
-/*
- * enum kmr_utils_log_level_type (kmsroots Utils Log Level Type)
- *
- * Sets which messages of a given type to print and is used to
- * help determine which ANSI Escape Codes to utilize.
- */
-typedef enum _kmr_utils_log_type {
-	KMR_NONE     = 0x00000000,
-	KMR_SUCCESS  = 0x00000001,
-	KMR_DANGER   = 0x00000002,
-	KMR_INFO     = 0x00000004,
-	KMR_WARNING  = 0x00000008,
-	KMR_RESET    = 0x00000010,
-	KMR_ALL      = 0xFFFFFFFF
-} kmr_utils_log_type;
-
-
-void _kmr_utils_log(kmr_utils_log_type type, FILE *stream, const char *fmt, ...);
-const char *_kmr_utils_strip_path(const char *filepath);
-
-
-/* Macros defined to help better structure the message */
-#define kmr_utils_log(logType, fmt, ...) \
-	_kmr_utils_log(logType, stdout, "[%s:%d] " fmt, _kmr_utils_strip_path(__FILE__), __LINE__, ##__VA_ARGS__)
-
-
-/*
- * kmr_utils_set_log_level: Sets which messages of kmr_utils_log_type allowed to be printed to stdout.
- *
- * parameters:
- * @level - 32-bit integer representing the logs to print to stdout.
- */
-void kmr_utils_set_log_level(kmr_utils_log_type level);
 
 #endif
