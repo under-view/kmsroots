@@ -20,5 +20,9 @@ endif
 
 subdir('textures')
 subdir('kms')
-subdir('wayland')
+
+if wayland.enabled()
+  subdir('wayland')
+endif
+
 subdir('xcb')
