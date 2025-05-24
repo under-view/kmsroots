@@ -66,17 +66,3 @@ endif
 if libgbm.found() and libdrm.found() and vulkan.found()
   fs += ['src/pixel-format.c']
 endif
-
-
-#########################################################
-# X Client interface libs, files, & extra compiler args #
-#########################################################
-
-libxcb = dependency('xcb', required: xcb.enabled())
-libxcbewmh = dependency('xcb-ewmh', required: xcb.enabled())
-
-if libxcb.found() and libxcbewmh.found()
-  pargs += ['-DINCLUDE_XCB=1']
-  fs += ['src/xclient.c']
-  lib_kmr_deps += [libxcb, libxcbewmh]
-endif

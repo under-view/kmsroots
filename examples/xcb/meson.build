@@ -1,43 +1,45 @@
+libxcb = dependency('xcb', required: xcb.enabled())
+libxcbewmh = dependency('xcb-ewmh', required: xcb.enabled())
 
-if libxcb.found() and libxcbewmh.found()
-  progs = [
-    'triangle.c', 'triangle-index.c', 'spin-rectangle.c',
-    'texture-mapping.c', 'model-load.c'
-  ]
+example_deps += [libxcb, libxcbewmh]
 
-  original_args = pargs
-  foreach p : progs
-    shader_name_prefix = p.substring(0,-2) # remove .c extension from name
+progs = [
+  'triangle.c', 'triangle-index.c', 'spin-rectangle.c',
+  'texture-mapping.c', 'model-load.c'
+]
 
-    if p == 'triangle-index.c'
-      shader_name_prefix = 'triangle'
-    endif
+original_args = pargs
+foreach p : progs
+  shader_name_prefix = p.substring(0,-2) # remove .c extension from name
 
-    if p == 'texture-mapping.c'
-      pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
-    endif
+  if p == 'triangle-index.c'
+    shader_name_prefix = 'triangle'
+  endif
 
-    if p == 'model-load.c'
-      pargs += [
-        '-DGLTF_MODEL="' + build_textures_dir + '/data/models/FlightHelmet/glTF/FlightHelmet.gltf"',
-      ]
-    endif
+  if p == 'texture-mapping.c'
+    pargs += ['-DTEXTURE_IMAGE="' + examples_dir + '/textures/snorlax-thinking.png"']
+  endif
 
-    if shaderc.disabled()
-      pargs += [
-        '-DVERTEX_SHADER_SPIRV='   + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-vert.spv"',
-        '-DFRAGMENT_SHADER_SPIRV=' + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-frag.spv"',
-      ]
-    endif
+  if p == 'model-load.c'
+    pargs += [
+      '-DGLTF_MODEL="' + build_textures_dir + '/data/models/FlightHelmet/glTF/FlightHelmet.gltf"',
+    ]
+  endif
 
-    exec_name = 'kmsroots-xcb-client-' + p.substring(0,-2) # remove .c extension from name
-    executable(exec_name, p,
-               link_with: lib_kmsroots,
-               dependencies: example_deps,
-               include_directories: [inc],
-               c_args: pargs,
-               install: false)
+  if shaderc.disabled()
+    pargs += [
+      '-DVERTEX_SHADER_SPIRV='   + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-vert.spv"',
+      '-DFRAGMENT_SHADER_SPIRV=' + '"@0@'.format(shader_build_dir) + '/' + shader_name_prefix + '-shader-frag.spv"',
+    ]
+  endif
 
-    pargs = original_args
-  endforeach
-endif
+  exec_name = 'kmsroots-xcb-client-' + p.substring(0,-2) # remove .c extension from name
+  executable(exec_name, files([p, 'xclient.c']),
+             link_with: lib_kmsroots,
+             dependencies: example_deps,
+             include_directories: [inc],
+             c_args: pargs,
+             install: false)
+
+  pargs = original_args
+endforeach

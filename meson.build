@@ -22,8 +22,7 @@ kms = get_option('kms')
 session = get_option('libseat')
 libinput = get_option('libinput')
 shaderc = get_option('shaderc')
-xcb = get_option('xcb')
-wayland = get_option('wayland')
+
 
 inc = include_directories('include', 'external/include')
 

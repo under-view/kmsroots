@@ -1,3 +1,6 @@
+xcb = get_option('xcb')
+wayland = get_option('wayland')
+
 gpu = get_option('gpu')
 if gpu == 'integrated'
   pargs += ['-DVK_PHYSICAL_DEVICE_TYPE=1']
@@ -25,4 +28,6 @@ if wayland.enabled()
   subdir('wayland')
 endif
 
-subdir('xcb')
+if xcb.enabled()
+  subdir('xcb')
+endif
