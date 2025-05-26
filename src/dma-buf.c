@@ -21,23 +21,27 @@
 #define SYNC_FDS_MAX 25
 
 /*
- * @brief struct kmr_dma_buf (kmsroots DMA Buffer)
+ * @brief Structure defining kmsroots DMA Buffer instance.
  *
- * @member err          - Stores information about the error that occured
- *                        for the given instance and may later be retrieved
- *                        by caller.
- * @member syncFdsCount - Array size of @syncFds
- * @member syncFds      - Pointer to an array of file descriptors used for synchronization
- *                        of size @syncFdsCount. These file descriptors may be imported
- *                        to a graphics API primitive. In Vulkan you can imported
- *                        via (VkImportSemaphoreFdInfoKHR -> vkImportSemaphoreFdKHR) or
- *                        by making a call to kmr_vk_sync_obj_import_external_sync_fd()
+ * @member err            - Stores information about the error that occured
+ *                          for the given instance and may later be retrieved
+ *                          by caller.
+ * @member free           - If structure allocated with calloc(3) member will be
+ *                          set to true so that, we know to call free(3) when
+ *                          destroying the instance.
+ * @member sync_fds_count - Array size of @sync_fds
+ * @member sync_fds       - Pointer to an array of file descriptors used for synchronization
+ *                          of size @sync_fds_count. These file descriptors may be imported
+ *                          to a graphics API primitive. In Vulkan you can imported
+ *                          via (VkImportSemaphoreFdInfoKHR -> vkImportSemaphoreFdKHR) or
+ *                          by making a call to kmr_vk_sync_obj_import_external_sync_fd()
  */
 struct kmr_dma_buf
 {
 	struct cando_log_error_struct err;
-	unsigned int                  syncFdsCount;
-	int                           syncFds[SYNC_FDS_MAX];
+	bool                          free;
+	unsigned int                  sync_fds_count;
+	int                           sync_fds[SYNC_FDS_MAX];
 };
 
 
@@ -141,18 +145,16 @@ struct dma_buf_export_sync_file
  *****************************************/
 
 struct kmr_dma_buf *
-kmr_dma_buf_create (void)
+kmr_dma_buf_create (struct kmr_dma_buf *p_buffer)
 {
-	struct kmr_dma_buf *buffer = NULL;
+	struct kmr_dma_buf *buffer = p_buffer;
 
-	buffer = mmap(NULL,
-	              sizeof(struct kmr_dma_buf),
-	              PROT_READ,
-	              MAP_PRIVATE|MAP_ANONYMOUS,
-	              -1, 0);
-	if (buffer == (void*)-1) {
-		cando_log_error("mmap: %s\n", strerror(errno));
-		return NULL;
+	if (!buffer) {
+		buffer = calloc(1, sizeof(struct kmr_dma_buf));
+		if (!buffer) {
+			cando_log_error("calloc: %s\n", strerror(errno));
+			return NULL;
+		}
 	}
 
 	return buffer;
@@ -169,7 +171,7 @@ kmr_dma_buf_create (void)
 
 int
 kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
-                            const void *_importSyncInfo)
+                            const void *p_import_sync_info)
 {
 	int ret;
 
@@ -177,10 +179,10 @@ kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
 
 	struct dma_buf_import_sync_file data;
 
-	const struct kmr_dma_buf_import_sync_fd_info *importSyncInfo = _importSyncInfo;
+	const struct kmr_dma_buf_import_sync_fd_info *import_sync_info = p_import_sync_info;
 
 	if (!buffer || \
-	    !importSyncInfo)
+	    !import_sync_info)
 	{
 		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
@@ -189,30 +191,30 @@ kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
 	ret = dmabuf_check_sync_file_import_export(buffer);
 	if (ret == -1) {
 		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
-		                  "Importing external fd used in synchronization " \
-		                  "to DMA-BUF fds not supported. " \
-		                  "Must use kernel version >=5.20.0");
+		                    "Importing external fd used in synchronization " \
+		                    "to DMA-BUF fds not supported. " \
+		                    "Must use kernel version >=5.20.0");
 		return -1;
 	} else if (ret == -2) {
 		return -1;
 	}
 
-	data.flags = importSyncInfo->syncFlags;
-	data.fd = importSyncInfo->syncFileFd;
+	data.flags = import_sync_info->sync_flags;
+	data.fd = import_sync_info->sync_fd;
 
-	for (i = 0; i < importSyncInfo->dmaBufferFdsCount; i++) {
-		ret = drmIoctl(importSyncInfo->dmaBufferFds[i],
+	for (i = 0; i < import_sync_info->dma_buf_fds_count; i++) {
+		ret = drmIoctl(import_sync_info->dma_buf_fds[i],
 		               DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &data);
 		if (ret != 0) {
 			cando_log_set_error(buffer, errno,
-			                  "drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
-			                  i, strerror(errno));
-			close(importSyncInfo->syncFileFd);
+				"drmIoctl(DMA_BUF_IOCTL_IMPORT_SYNC_FILE)[dma_buf_fds[%u]]: %s",
+				i, strerror(errno));
+			close(import_sync_info->sync_fd);
 			return -1;
 		}
 	}
 
-	close(importSyncInfo->syncFileFd);
+	close(import_sync_info->sync_fd);
 
 	return 0;
 }
@@ -228,59 +230,60 @@ kmr_dma_buf_import_sync_fd (struct kmr_dma_buf *buffer,
 
 int
 kmr_dma_buf_export_sync_fd (struct kmr_dma_buf *buffer,
-                            const void *_exportSyncInfo)
+                            const void *p_export_sync_info)
 {
 	uint8_t i;
 
-	int ret = -1;
+	int err = -1;
 
 	struct dma_buf_export_sync_file data;
 
-	const struct kmr_dma_buf_export_sync_fd_info *exportSyncInfo = _exportSyncInfo;
+	const struct kmr_dma_buf_export_sync_fd_info *export_sync_info = p_export_sync_info;
 
 	if (!buffer || \
-	    !exportSyncInfo)
+	    !export_sync_info)
 	{
 		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA, "");
 		return -1;
 	}
 
-	ret = dmabuf_check_sync_file_import_export(buffer);
-	if (ret == -1) {
+	err = dmabuf_check_sync_file_import_export(buffer);
+	if (err == -1) {
 		cando_log_set_error(buffer, CANDO_LOG_ERR_INCORRECT_DATA,
-		                  "Exporting fds used for synchronization " \
-		                  "from DMA-BUF fds not supported. " \
-		                  "Must use kernel version >=5.20.0");
+		                    "Exporting fds used for synchronization " \
+		                    "from DMA-BUF fds not supported. " \
+		                    "Must use kernel version >=5.20.0");
 		return -1;
-	} else if (ret == -2) {
+	} else if (err == -2) {
 		return -1;
 	}
 
-	ret = CANDO_PAGE_SET_WRITE(buffer, sizeof(struct kmr_dma_buf));
-	if (ret == -1) {
+	err = CANDO_PAGE_SET_WRITE(buffer, sizeof(struct kmr_dma_buf));
+	if (err == -1) {
 		cando_log_set_error(buffer, errno, "mprotect: %s", strerror(errno));
 		return -1;
 	}
 
-	buffer->syncFdsCount = exportSyncInfo->dmaBufferFdsCount;
-	data.flags = exportSyncInfo->syncFlags;
+	buffer->sync_fds_count = export_sync_info->dma_buf_fds_count;
+	data.flags = export_sync_info->sync_flags;
 
-	for (i = 0; i < buffer->syncFdsCount; i++) {
+	for (i = 0; i < buffer->sync_fds_count; i++) {
 		data.fd = -1;
 
-		ret = drmIoctl(exportSyncInfo->dmaBufferFds[i], DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data);
-		if (ret != 0) {
+		err = drmIoctl(export_sync_info->dma_buf_fds[i],
+		               DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data);
+		if (err != 0) {
 			cando_log_set_error(buffer, errno,
-			                  "drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)[dmaBufferFds[%u]]: %s",
-			                  i, strerror(errno));
+				"drmIoctl(DMA_BUF_IOCTL_EXPORT_SYNC_FILE)[dma_buf_fds[%u]]: %s",
+				i, strerror(errno));
 			return -1;
 		}
 
-		buffer->syncFds[i] = data.fd;
+		buffer->sync_fds[i] = data.fd;
 	}
 
-	ret = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_dma_buf));
-	if (ret == -1) {
+	err = CANDO_PAGE_SET_READ(buffer, sizeof(struct kmr_dma_buf));
+	if (err == -1) {
 		cando_log_set_error(buffer, errno, "mprotect: %s", strerror(errno));
 		return -1;
 	}
@@ -305,12 +308,33 @@ kmr_dma_buf_destroy (struct kmr_dma_buf *buffer)
 	if (!buffer)
 		return;
 
-	for (b = 0; b < buffer->syncFdsCount; b++)
-		close(buffer->syncFds[b]);
+	for (b = 0; b < buffer->sync_fds_count; b++) {
+		close(buffer->sync_fds[b]);
+		buffer->sync_fds[b] = -1;
+	}
 
-	munmap(buffer, sizeof(struct kmr_dma_buf));
+	if (buffer->free) {
+		free(buffer);
+	} else {
+		memset(buffer, 0, sizeof(struct kmr_dma_buf));
+	}
 }
 
 /****************************************
  * End of kmr_dma_buf_destroy functions *
  ****************************************/
+
+
+/***************************************************
+ * Start of non struct kmr_dma_buf param functions *
+ ***************************************************/
+
+int
+kmr_dma_buf_get_sizeof (void)
+{
+	return sizeof(struct kmr_dma_buf);
+}
+
+/*************************************************
+ * End of non struct kmr_dma_buf param functions *
+ *************************************************/
