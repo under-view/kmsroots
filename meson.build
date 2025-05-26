@@ -23,14 +23,13 @@ session = get_option('libseat')
 libinput = get_option('libinput')
 shaderc = get_option('shaderc')
 
-
 inc = include_directories('include', 'external/include')
 
 subdir('include')
 subdir('src')
 
 lib_kmsroots = library(project_name,
-                       cglue_code, files(fs),
+                       files(fs),
                        version: '.'.join(so_version),
                        include_directories: inc,
                        dependencies: lib_kmr_deps,

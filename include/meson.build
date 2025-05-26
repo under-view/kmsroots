@@ -50,24 +50,6 @@ if shaderc.enabled()
   main_headers_dict += {'SHADERC_INTERFACE': headers}
 endif
 
-
-if xcb.enabled()
-  main_headers += ['xclient.h']
-
-  headers = '#include "xclient.h"'
-
-  main_headers_dict += {'X_INTERFACE': headers}
-endif
-
-
-if wayland.enabled()
-  main_headers += ['wclient.h']
-
-  headers = '#include "wclient.h"'
-
-  main_headers_dict += {'WAYLAND_INTERFACE': headers}
-endif
-
 conf_data = configuration_data(main_headers_dict)
 
 conf = configure_file(input: 'kmsroots.h.in',
