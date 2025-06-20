@@ -12,10 +12,6 @@ if kms.enabled()
   progs += ['test-kms.c']
 endif
 
-if session.enabled()
-  progs += ['test-session.c']
-endif
-
 original_args = pargs
 foreach p : progs
   exec_name = p.substring(0,-2) # remove .c extension from name

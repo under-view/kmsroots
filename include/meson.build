@@ -23,25 +23,6 @@ if kms.enabled()
   main_headers_dict += {'KMS_INTERFACE': headers}
 endif
 
-
-if session.enabled()
-  main_headers += ['session.h']
-
-  headers = '#include "session.h"'
-
-  main_headers_dict += {'SESSION_INTERFACE': headers}
-endif
-
-
-if libinput.enabled()
-  main_headers += ['input.h']
-
-  headers = '#include "input.h"'
-
-  main_headers_dict += {'INPUT_INTERFACE': headers}
-endif
-
-
 if shaderc.enabled()
   main_headers += ['shader.h']
 

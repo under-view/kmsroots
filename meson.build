@@ -19,8 +19,6 @@ cc = meson.get_compiler('c')
 debuging = get_option('debugging')
 shaderc = get_option('shaderc')
 kms = get_option('kms')
-session = get_option('libseat')
-libinput = get_option('libinput')
 shaderc = get_option('shaderc')
 
 inc = include_directories('include', 'external/include')
