@@ -16,7 +16,7 @@ struct kmr_drm_node;
 /*
  * @brief struct kmr_drm_node_create_info (kmsroots DRM Node Create Information)
  *
- * @member kmsNode - Path to character device associated with GPU.
+ * @member kms_node - Path to character device associated with GPU.
  *                   If set to NULL. List of available kmsnode's will
  *                   be queried and one will be automatically choosen
  *                   for you.
@@ -28,53 +28,59 @@ struct kmr_drm_node;
  */
 struct kmr_drm_node_create_info
 {
-	const char         *kmsNode;
-#ifdef INCLUDE_LIBSEAT
-	struct kmr_session *session;
-#endif
+	const char *kms_node;
+	const void *session;
 };
 
 
 /*
- * @brief Function opens a DRI device node. If a systemd-logind session available one can take
- *        control of a device node. Returned fd is exposed to all planes (overlay, primary, and cursor)
- *        and has access to the aspect ratio information in modes in userspace. In order
- *        to drive KMS, we need to be 'master'. Function fails if we aren't DRM-Master more
- *        info here: https://en.wikipedia.org/wiki/Direct_Rendering_Manager#DRM-Master_and_DRM-Auth
+ * @brief Function opens a DRI device node. If a systemd-logind session available
+ *        one can take control of a device node. Returned fd is exposed to all
+ *        planes (overlay, primary, and cursor) and has access to the aspect ratio
+ *        information in modes in userspace. In order to drive KMS, we need to be
+ *        'master'. Function fails if we aren't DRM-Master more info may be found
+ *        here: https://en.wikipedia.org/wiki/Direct_Rendering_Manager#DRM-Master_and_DRM-Auth
  *        So, if a graphical session is already active on the current VT function fails.
  *
- * @param nodeInfo - Pointer to a struct kmr_drm_node_create_info used to pass a DRI/KMS
- *                   device file that we may want to use and to store information about
- *                   the current seatd/sytemd-logind D-bus session.
+ * @param drm_node  - May be NULL or a pointer to a struct kmr_drm_node.
+ *                    If NULL memory will be allocated and return to
+ *                    caller. If not NULL address passed will be used
+ *                    to store the newly created struct kmr_buffer
+ *                    instance.
+ * @param node_info - Pointer to a struct kmr_drm_node_create_info used
+ *                    to pass a DRI/KMS device file that we may want to
+ *                    use and to store information about the current
+ *                    seatd/sytemd-logind D-bus session.
  *
  * @return
  *	on success: Pointer to a struct kmr_drm_node
  *	on failure: NULL
  */
 struct kmr_drm_node *
-kmr_drm_node_create (const void *nodeInfo);
+kmr_drm_node_create (struct kmr_drm_node *drm_node,
+                     const void *node_info);
 
 
 /*
- * @brief Function produces one connector->encoder->CRTC->plane display output chain.
- *        Populating the members of struct kmr_drm_node_display whose information
+ * @brief Function produces one connector->encoder->CRTC->plane
+ *        display output chain. Populating the members of
+ *        struct kmr_drm_node_display whose information
  *        will be later used in modesetting.
  *
- * @param drmNode     - Pointer to a valid struct kmr_drm_node
- * @param displayInfo - NULL for now
+ * @param drm_node     - Pointer to a valid struct kmr_drm_node.
+ * @param display_info - NULL for now.
  *
  * @return
  *	on success: 0
  *	on failure: -1
  */
 int
-kmr_drm_node_set_display (struct kmr_drm_node *drmNode,
-                          const void *displayInfo);
+kmr_drm_node_set_display (struct kmr_drm_node *drm_node,
+                          const void *display_info);
 
 
 /*
- * @brief enum kmr_drm_node_display_mode
- *        (kmsroots DRM Display Mode Information)
+ * @brief kmsroots DRM Node Display Mode Enumeration.
  *
  * @macro KMR_DRM_NODE_DISPLAY_MODE_SET   - Set current display to values passed.
  * @macro KMR_DRM_NODE_DISPLAY_MODE_RESET - Resets current display to default.
@@ -87,18 +93,19 @@ enum kmr_drm_node_display_mode
 
 
 /*
- * @brief struct kmr_drm_node_display_mode_info
- *        (kmsroots DRM Display Mode Information)
+ * @brief kmsroots DRM Display Mode Information Structure.
  *
- * @member fbid          - KMS ID of framebuffer associated with gbm or dump buffer.
- *                         This ID is used during kms atomic modesetting.
- * @member displayAction - Action function call will take. Must be a
- *                         enum kmr_drm_node_display_mode macro.
+ * @member fbid           - KMS ID of framebuffer associated with
+ *                          gbm or dump buffer. This ID is used
+ *                          during kms atomic modesetting.
+ * @member display_action - Action function call will take. Must
+ *                          be a enum kmr_drm_node_display_mode
+ *                          macro.
  */
 struct kmr_drm_node_display_mode_info
 {
 	int                            fbid;
-	enum kmr_drm_node_display_mode displayAction;
+	enum kmr_drm_node_display_mode display_action;
 };
 
 
@@ -106,61 +113,61 @@ struct kmr_drm_node_display_mode_info
  * @brief Sets the display connected to @display->connecter screen
  *        resolution and refresh to the highest possible value.
  *
- * @param drmNode     - Pointer to a valid struct kmr_drm_node
- * @param displayInfo - Pointer to a struct kmr_drm_node_display_mode_info
- *                      used to set highest display mode
+ * @param drm_node     - Pointer to a valid struct kmr_drm_node.
+ * @param display_info - Pointer to a struct kmr_drm_node_display_mode_info
+ *                       used to set highest display mode.
  *
  * @return
  *	on success: 0
  *	on failure: -1
  */
 int
-kmr_drm_node_set_display_mode (struct kmr_drm_node *drmNode,
-                               const void *displayInfo);
+kmr_drm_node_set_display_mode (struct kmr_drm_node *drm_node,
+                               const void *display_info);
 
 
 /*
- * @brief Returns file descriptor to an open DRM device
+ * @brief Returns file descriptor to an open DRM device.
  *
- * @param drmNode - Pointer to a valid struct kmr_drm_node
+ * @param drm_node - Pointer to a valid struct kmr_drm_node.
  *
  * @return
  * 	on success: File descriptor to open DRM device node
  * 	on failure: -1
  */
 int
-kmr_drm_node_get_kms_fd (struct kmr_drm_node *drmNode);
+kmr_drm_node_get_kms_fd (struct kmr_drm_node *drm_node);
 
 
 /*
- * @brief Returns amount of pixels in width
+ * @brief Returns amount of pixels in width.
  *
- * @param drmNode - Pointer to a valid struct kmr_drm_node
+ * @param drm_node - Pointer to a valid struct kmr_drm_node.
  *
  * @return
  * 	on success: Amount of pixels in width
  * 	on failure: -1
  */
 int
-kmr_drm_node_get_display_width (struct kmr_drm_node *drmNode);
+kmr_drm_node_get_display_width (struct kmr_drm_node *drm_node);
 
 
 /*
- * @brief Returns amount of pixels in height
+ * @brief Returns amount of pixels in height.
  *
- * @param drmNode - Pointer to a valid struct kmr_drm_node
+ * @param drm_node - Pointer to a valid struct kmr_drm_node.
  *
  * @return
  * 	on success: Amount of pixels in height
  * 	on failure: -1
  */
 int
-kmr_drm_node_get_display_height (struct kmr_drm_node *drmNode);
+kmr_drm_node_get_display_height (struct kmr_drm_node *drm_node);
 
 
 /*
  * kmsroots Implementation
- * Function pointer used by struct kmr_drm_node_atomic_request_info
+ * Function pointer used by struct kmr_drm_node_atomic_req_info
  * used to pass the address of an external function you want to run
  * Given that the arguments of the function are:
  * 	1. A pointer to a boolean determining if the renderer is running.
@@ -177,30 +184,31 @@ typedef void (*kmr_drm_node_renderer_impl) (volatile bool*, unsigned int*, int*,
 
 
 /*
- * @brief struct kmr_drm_node_atomic_request_info
+ * @brief struct kmr_drm_node_atomic_req_info
  *        (kmsroots DRM Node Atomic Request Create Information)
  *
- * @member renderer              - Function pointer that allows custom external renderers
- *                                 to be executed by the api upon struct kmr_drm_node { @kmsfd }
- *                                 polled events.
- * @member rendererRunning       - Pointer to a boolean that determines if a given renderer is
- *                                 running and in need of stopping.
- * @member rendererCurrentBuffer - Pointer to an integer used by the api to update the
- *                                 current displayable buffer.
- * @member rendererFbId          - Pointer to an integer used as the value of the FB_ID
- *                                 property for a plane related to the CRTC during the
- *                                 atomic modeset operation.
- * @member rendererData          - Pointer to an optional address. This address may be
- *                                 the address of a struct. Reference/Address passed
- *                                 depends on external renderer function.
+ * @member renderer          - Function pointer that allows custom external
+ *                             renderers to be executed by the api upon
+ *                             struct kmr_drm_node { @kmsfd } polled events.
+ * @member renderer_running  - Pointer to a boolean that determines if a
+ *                             given renderer is running and in need of
+ *                             stopping.
+ * @member renderer_cur_buff - Pointer to an integer used by the api to
+ *                             update the current displayable buffer.
+ * @member renderer_fbid     - Pointer to an integer used as the value
+ *                             of the FB_ID property for a plane related
+ *                             to the CRTC during the atomic modeset operation.
+ * @member renderer_data     - Pointer to an optional address. This address may be
+ *                             the address of a struct. Reference/Address passed
+ *                             depends on external renderer function.
  */
-struct kmr_drm_node_atomic_request_info
+struct kmr_drm_node_atomic_req_info
 {
 	kmr_drm_node_renderer_impl renderer;
-	volatile bool              *rendererRunning;
-	unsigned int               *rendererCurrentBuffer;
-	int                        *rendererFbId;
-	void                       *rendererData;
+	volatile bool              *renderer_running;
+	unsigned int               *renderer_cur_buff;
+	int                        *renderer_fbid;
+	void                       *renderer_data;
 };
 
 
@@ -211,35 +219,36 @@ struct kmr_drm_node_atomic_request_info
  *        initial modeset operation. After all the application
  *        needs to do is wait for page-flip events to happen.
  *
- * @param drmNode    - Pointer to a valid struct kmr_drm_node.
- * @param atomicInfo - Pointer to a struct kmr_drm_node_atomic_request_info
- *                     used to set external renderer and arguments of the external
- *                     renderer.
+ * @param drm_node    - Pointer to a valid struct kmr_drm_node.
+ * @param atomic_info - Pointer to a struct kmr_drm_node_atomic_req_info
+ *                      used to set external renderer and arguments of
+ *                      the external renderer.
  *
  * @returns
  *	on success: 0
  *	on failure: -1
  */
 int
-kmr_drm_node_atomic_request (struct kmr_drm_node *drmNode,
-                             const void *atomicInfo);
+kmr_drm_node_atomic_request (struct kmr_drm_node *drm_node,
+                             const void *atomic_info);
 
 
 /*
- * @brief Function calls drmHandleEvent() which processes outstanding DRM events
- *        on the DRM file-descriptor. This function should be called after the DRM
- *        file-descriptor has polled readable.
+ * @brief Function calls drmHandleEvent() which processes
+ *        outstanding DRM events on the DRM file-descriptor.
+ *        This function should be called after the DRM
+ *        file-descriptor has been polled readable.
  *
- * @param drmNode   - Pointer to a valid struct kmr_drm_node
- * @param eventInfo - NULL for now
+ * @param drm_node   - Pointer to a valid struct kmr_drm_node.
+ * @param event_info - NULL for now.
  *
  * @returns
  *	on success: 0
  *	on failure: -1
  */
 int
-kmr_drm_node_handle_drm_event (struct kmr_drm_node *drmNode,
-                               const void *eventInfo);
+kmr_drm_node_handle_drm_event (struct kmr_drm_node *drm_node,
+                               const void *event_info);
 
 
 /*
