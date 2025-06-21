@@ -2,310 +2,488 @@
 #include <string.h>
 #include <errno.h>
 
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+
+#include <cglm/cglm.h>
+#include <cando/cando.h>
+
 #include "gltf-loader.h"
 
+/**********************************************
+ * Start of kmr_gltf_loader_file_* functions. *
+ **********************************************/
 
-/************************************************************
- * START OF kmr_gltf_loader_file_{create,destroy} FUNCTIONS *
- ************************************************************/
+/*
+ * @brief Structure defining kmsroots GLTF Loader File.
+ *
+ * @member err       - Stores information about the error that occured
+ *                     for the given instance and may later be retrieved
+ *                     by caller.
+ * @member free      - If structure allocated with calloc(3) member will be
+ *                     set to true so that, we know to call free(3) when
+ *                     destroying the instance.
+ * @member gltf_data - Buffer that stores a given gltf file's content.
+ */
+struct kmr_gltf_loader_file
+{
+	struct cando_log_error_struct err;
+	bool                          free;
+	cgltf_data                    *gltf_data;
+};
+
 
 struct kmr_gltf_loader_file *
-kmr_gltf_loader_file_create (struct kmr_gltf_loader_file_create_info *gltfFileInfo)
+kmr_gltf_loader_file_create (struct kmr_gltf_loader_file *p_gltf_file,
+                             const void *p_gltf_info)
 {
 	cgltf_options options;
+
 	cgltf_result res = cgltf_result_max_enum;
 
-	struct kmr_gltf_loader_file *gltfFile = NULL;
+	struct kmr_gltf_loader_file *gltf_file = p_gltf_file;
 
-	gltfFile = calloc(1, sizeof(struct kmr_gltf_loader_file));
-	if (!gltfFile) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		return NULL;
+	const struct kmr_gltf_loader_file_create_info *gltf_info = p_gltf_info;
+
+	if (!gltf_file) {
+		gltf_file = calloc(1, sizeof(struct kmr_gltf_loader_file));
+		if (!gltf_file) {
+			cando_log_error("calloc: %s", strerror(errno));
+			return NULL;
+		}
 	}
 
 	memset(&options, 0, sizeof(cgltf_options));
-	res = cgltf_parse_file(&options, gltfFileInfo->fileName, &gltfFile->gltfData);
+	res = cgltf_parse_file(&options, gltf_info->fname, &(gltf_file->gltf_data));
 	if (res != cgltf_result_success) {
-		kmr_utils_log(KMR_DANGER, "[x] cgltf_parse_file: Could not load %s", gltfFileInfo->fileName);
-		goto exit_error_kmr_gltf_loader_file_load;
+		cando_log_error("cgltf_parse_file: Could not load %s", gltf_info->fname);
+		kmr_gltf_loader_file_destroy(gltf_file);
+		return NULL;
 	}
 
-	res = cgltf_load_buffers(&options, gltfFile->gltfData, gltfFileInfo->fileName);
+	res = cgltf_load_buffers(&options, gltf_file->gltf_data, gltf_info->fname);
 	if (res != cgltf_result_success) {
-		kmr_utils_log(KMR_DANGER, "[x] cgltf_load_buffers: Could not load buffers in %s", gltfFileInfo->fileName);
-		goto exit_error_kmr_gltf_loader_file_load;
+		cando_log_error("cgltf_load_buffers: Could not load buffers in %s", gltf_info->fname);
+		kmr_gltf_loader_file_destroy(gltf_file);
+		return NULL;
 	}
 
-	res = cgltf_validate(gltfFile->gltfData);
+	res = cgltf_validate(gltf_file->gltf_data);
 	if (res != cgltf_result_success) {
-		kmr_utils_log(KMR_DANGER, "[x] cgltf_validate: Failed to load content in %s", gltfFileInfo->fileName);
-		goto exit_error_kmr_gltf_loader_file_load;
+		cando_log_error("cgltf_validate: Failed to load content in %s", gltf_info->fname);
+		kmr_gltf_loader_file_destroy(gltf_file);
+		return NULL;
 	}
 
-	return gltfFile;
-
-exit_error_kmr_gltf_loader_file_load:
-	kmr_gltf_loader_file_destroy(gltfFile);
-	return NULL;
+	return gltf_file;
 }
 
 
 void
-kmr_gltf_loader_file_destroy (struct kmr_gltf_loader_file *gltfFile)
+kmr_gltf_loader_file_destroy (struct kmr_gltf_loader_file *gltf)
 {
-	if (!gltfFile)
+	if (!gltf)
 		return;
 
-	cgltf_free(gltfFile->gltfData);
-	free(gltfFile);
+	cgltf_free(gltf->gltf_data);
+
+	if (gltf->free) {
+		free(gltf);
+	} else {
+		memset(gltf, 0, sizeof(struct kmr_gltf_loader_file));
+	}
 }
 
-/**********************************************************
- * END OF kmr_gltf_loader_file_{create,destroy} FUNCTIONS *
- **********************************************************/
+
+int
+kmr_gltf_loader_file_get_sizeof (void)
+{
+	return sizeof(struct kmr_gltf_loader_file);
+}
+
+/*******************************************
+ * End of kmr_gltf_loader_file_* functions *
+ *******************************************/
 
 
-/************************************************************
- * START OF kmr_gltf_loader_mesh_{create,destroy} FUNCTIONS *
- ************************************************************/
+/*********************************************
+ * Start of kmr_gltf_loader_mesh_* functions *
+ *********************************************/
+
+/*
+ * @brief Structure defining kmsroots GLTF Loader Mesh Vertex Data.
+ *
+ *        Struct member order is arbitrary. SHOULD NOT BE USED DIRECTLY.
+ *        Advise to create second stack buffer and copy data over to it.
+ *        Members populated with vertices from GLTF file buffer.
+ *
+ * @member position  - Vertex position coordinates.
+ * @member normal    - Vertex normal (direction vertex points).
+ * @member tex_coord - Texture coordinate.
+ * @member color     - Color.
+ */
+struct kmr_gltf_loader_mesh_vertex_data
+{
+	vec3 position;
+	vec3 normal;
+	vec2 tex_coord;
+	vec3 color;
+};
+
+
+/*
+ * @brief Structure defining kmsroots GLTF Loader Mesh Data.
+ *
+ * @member first_index            - Array index within the index buffer. Calculated in kmr_gltf_loader_mesh_create()
+ *                                  first_index = first_index + buff_element_count (GLTF file accessor[index].count).
+ *                                  Can be used by the application to fill in vkCmdDrawIndexed(3) function.
+ * @member index_buff_data        - Buffer of index data belonging to mesh populated from GLTF file buffer at
+ *                                  struct kmr_gltf_loader_mesh { @buffer_idx }.
+ * @member index_buff_data_count  - Amount of elements in @index_buff_data array.
+ * @member index_buff_data_size   - The total size in bytes of the @index_buff_data array.
+ * @member vertex_buff_data       - Pointer to a buffer containing position vertices, normal,
+ *                                  texture coordinates, and color populated from GLTF file buffer at
+ *                                  struct kmr_gltf_loader_mesh { @buffer_idx }.
+ * @member vertex_buff_data_count - Amount of elements in @vertex_buff_data array.
+ * @member vertex_buff_data_size  - The total size in bytes of the @vertex_buff_data array.
+ */
+struct kmr_gltf_loader_mesh_data
+{
+	uint32_t                                first_index;
+	uint32_t                                index_buff_data[4096];
+	uint32_t                                index_buff_data_count;
+	uint32_t                                index_buff_data_size;
+	struct kmr_gltf_loader_mesh_vertex_data vertex_buff_data[4096];
+	uint32_t                                vertex_buff_data_count;
+	uint32_t                                vertex_buff_data_size;
+};
+
+
+/*
+ * @brief Structure defining kmsroots GLTF Loader Mesh.
+ *
+ * @member err             - Stores information about the error that occured
+ *                           for the given instance and may later be retrieved
+ *                           by caller.
+ * @member free            - If structure allocated with calloc(3) member will be
+ *                           set to true so that, we know to call free(3) when
+ *                           destroying the instance.
+ * @member buffer_idx      - The index in the "buffers" (json key) array of give GLTF file.
+ * @member mesh_data_count - Amount of meshes associated with a @buffer_idx.
+ *                           The array size of @mesh_data array.
+ * @member mesh_data       - Pointer to an array of struct kmr_gltf_loader_mesh_data
+ *                           storing all important data related to each mesh.
+ */
+struct kmr_gltf_loader_mesh
+{
+	struct cando_log_error_struct    err;
+	bool                             free;
+	uint16_t                         buffer_idx;
+	uint16_t                         mesh_data_count;
+	struct kmr_gltf_loader_mesh_data mesh_data[4096];
+};
+
+
+static void
+p_populate_vertex_buffer (struct kmr_gltf_loader_mesh_data *mesh_data,
+			  cgltf_accessor *vertices,
+                          uint32_t buff_type,
+                          void *data)
+{
+	vec4 vec4_dest;
+
+	void *final_addr = NULL;
+
+	uint32_t buff_offset, index;
+	uint32_t buff_element_count, buff_element_size;
+	uint32_t buff_view_element_type, buff_view_comp_type;
+
+	/*
+	 * buffer_view associated with accessor which
+	 * is associated with a mesh->primitive->attribute.
+	 */
+
+	buff_offset = vertices->buffer_view->offset;
+	buff_view_element_type = vertices->type;
+	buff_view_comp_type = vertices->component_type;
+	buff_element_count = vertices->count;
+	buff_element_size = cgltf_calc_size(buff_view_element_type, buff_view_comp_type);
+
+	mesh_data->vertex_buff_data_count = buff_element_count;
+	mesh_data->vertex_buff_data_size = buff_element_count * sizeof(struct kmr_gltf_loader_mesh_vertex_data);
+
+	for (index = 0; index < buff_element_count; index++) {
+		/*
+		 * Base buffer data adress + \
+		 * base byte offset address + \
+		 * (index * buff_element_size) = \
+		 * address in buffer where data resides
+		 */
+		final_addr = data + buff_offset + (index * buff_element_size);
+
+		switch (buff_type) {
+			case cgltf_attribute_type_texcoord: /* Texture Coordinate Buffer */
+				glm_vec2((float*) final_addr,
+				mesh_data->vertex_buff_data[index].tex_coord);
+				break;
+
+			case cgltf_attribute_type_normal: /* Normal buffer */
+				glm_vec3_normalize_to((float*) final_addr,
+				mesh_data->vertex_buff_data[index].normal);
+				break;
+
+			case cgltf_attribute_type_position: /* Position buffer */
+				glm_vec4((float*) final_addr, 1.0f, vec4_dest);
+				glm_vec3(vec4_dest, mesh_data->vertex_buff_data[index].position);
+				break;
+
+			default:
+				/*
+				 * Color buffer (want values all set to 1.0f).
+				 * If not defined in meshes->primitive->attribute.
+				 */
+				glm_vec3_one(mesh_data->vertex_buff_data[index].color);
+				break;
+		}
+	}
+}
+
+
+static void
+p_populate_index_buffer (struct kmr_gltf_loader_mesh_data *mesh_data,
+                         cgltf_accessor *indices,
+                         void *data,
+                         uint32_t *first_index)
+{
+	void *final_addr = NULL;
+
+	uint32_t buff_offset, index;
+	uint32_t buff_element_count, buff_element_size;
+	uint32_t buff_view_element_type, buff_view_comp_type;
+
+	buff_offset = indices->buffer_view->offset;
+	buff_view_element_type = indices->type;
+	buff_view_comp_type = indices->component_type;
+	buff_element_count = indices->count;
+	buff_element_size = cgltf_calc_size(buff_view_element_type, buff_view_comp_type);
+
+	mesh_data->index_buff_data_count = buff_element_count;
+	mesh_data->index_buff_data_size = buff_element_count * sizeof(uint32_t);
+
+	for (index = 0; index < buff_element_count; index++) {
+		/*
+		 * Base buffer data adress + \
+		 * base byte offset address + \
+		 * (index * buff_element_size) = \
+		 * address in buffer where data resides
+		 */
+		final_addr = data + buff_offset + (index * buff_element_size);
+
+		switch (buff_view_comp_type) {
+			case cgltf_component_type_r_8u:
+				mesh_data->index_buff_data[index] = *((uint8_t*)final_addr);
+				break;
+
+			case cgltf_component_type_r_16u:
+				mesh_data->index_buff_data[index] = *((uint16_t*)final_addr);
+				break;
+
+			case cgltf_component_type_r_32u:
+				mesh_data->index_buff_data[index] = *((uint32_t*)final_addr);
+				break;
+
+			default:
+				cando_log_error("Somethings gone horribly wrong here. "
+						"GLTF buffer indices section doesn't "
+						"have correct data type\n");
+				break;
+		}
+	}
+
+	mesh_data->first_index = *first_index;
+	*first_index += buff_element_count;
+}
+
 
 struct kmr_gltf_loader_mesh *
-kmr_gltf_loader_mesh_create (struct kmr_gltf_loader_mesh_create_info *meshInfo)
+kmr_gltf_loader_mesh_create (struct kmr_gltf_loader_mesh *p_mesh,
+                             const void *p_mesh_info)
 {
+	void *data = NULL;
+
 	cgltf_size i, j, k;
-	uint32_t bufferOffset, bufferType, bufferViewElementType, bufferViewComponentType;
-	uint32_t bufferElementCount, bufferElementSize, vertexIndex, firstIndex = 0;
 
-	cgltf_data *gltfData = NULL;
-	cgltf_buffer_view *bufferView = NULL;
+	cgltf_data *gltf_data = NULL;
 
-	vec4 vec4Dest;
-	void *finalAddress = NULL;
+	uint32_t first_index = 0, buffer_type;
 
-	struct kmr_gltf_loader_mesh *mesh = NULL;
-	struct kmr_gltf_loader_mesh_data *meshData = NULL;
+	struct kmr_gltf_loader_mesh *mesh = p_mesh;
+	struct kmr_gltf_loader_mesh_data *mesh_data = NULL;
 
-	mesh = calloc(1, sizeof(struct kmr_gltf_loader_mesh));
+	cgltf_accessor *vertices = NULL, *indices = NULL;
+
+	const struct kmr_gltf_loader_mesh_create_info *mesh_info = p_mesh_info;
+
 	if (!mesh) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc(mesh): %s", strerror(errno));
-		return NULL;
+		mesh = calloc(1, sizeof(struct kmr_gltf_loader_mesh));
+		if (!mesh) {
+			cando_log_error("calloc: %s", strerror(errno));
+			return NULL;
+		}
 	}
 
-	/* Allocate large enough buffer to store all mesh data in array */
-	gltfData = meshInfo->gltfFile->gltfData;
-	meshData = calloc(gltfData->meshes_count, sizeof(struct kmr_gltf_loader_mesh_data));
-	if (!meshData) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc(meshData): %s", strerror(errno));
-		goto exit_error_kmr_gltf_loader_mesh_create;
-	}
+	mesh_data = &(mesh->mesh_data[0]);
+	gltf_data = mesh_info->gltf_file->gltf_data;
+	mesh->mesh_data_count = gltf_data->meshes_count;
+	data = gltf_data->buffers[mesh_info->buffer_idx].data;
 
-	mesh->meshData = meshData;
-	mesh->meshDataCount = gltfData->meshes_count;
+	// TODO: account for accessor buff_offset
 
-	// TODO: account for accessor bufferOffset
 	/*
 	 * Retrieve important elements from buffer views/accessors associated with
-	 * each GLTF mesh that's associated with buffers[kmsgltf->bufferIndex].buffer.
-	 * Mesh->primitive->attribute->accessor->bufferView->buffer
-	 * Mesh->primitive->indices->accessor->bufferView->buffer
+	 * each GLTF mesh that's associated with buffers[kmsgltf->buffer_idx].buffer.
+	 * Mesh->primitive->attribute->accessor->buffer_view->buffer
+	 * Mesh->primitive->indices->accessor->buffer_view->buffer
 	 * Normally would want to avoid, but in this case it's fine
 	 */
-	for (i = 0; i < gltfData->meshes_count; i++) {
-		for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
-			for (k = 0; k < gltfData->meshes[i].primitives[j].attributes_count; k++) {
-
-				// bufferView associated with accessor which is associated with a mesh->primitive->attribute
-				bufferView = gltfData->meshes[i].primitives[j].attributes[k].data->buffer_view;
-
-				bufferOffset = bufferView->offset;
-				bufferViewElementType = gltfData->meshes[i].primitives[j].attributes[k].data->type;
-				bufferViewComponentType = gltfData->meshes[i].primitives[j].attributes[k].data->component_type;
-				bufferElementCount = gltfData->meshes[i].primitives[j].attributes[k].data->count;
-				bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-				bufferType = gltfData->meshes[i].primitives[j].attributes[k].type;
-
-				if (!meshData[i].vertexBufferData) {
-					meshData[i].vertexBufferData = calloc(bufferElementCount, sizeof(struct kmr_gltf_loader_mesh_vertex_data));
-					if (!meshData[i].vertexBufferData) {
-						kmr_utils_log(KMR_DANGER, "[x] calloc(meshData[%u].vertexBufferData): %s", i, strerror(errno));
-					}
-
-					meshData[i].vertexBufferDataCount = bufferElementCount;
-					meshData[i].vertexBufferDataSize = bufferElementCount * sizeof(struct kmr_gltf_loader_mesh_vertex_data);
-				}
-
-				for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
-					// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
-					finalAddress = gltfData->buffers[meshInfo->bufferIndex].data + bufferOffset + (vertexIndex * bufferElementSize);
-
-					switch (bufferType) {
-						case cgltf_attribute_type_texcoord: // Texture Coordinate Buffer
-							glm_vec2((float*) finalAddress, meshData[i].vertexBufferData[vertexIndex].texCoord);
-							break;
-						case cgltf_attribute_type_normal: // Normal buffer
-							glm_vec3_normalize_to((float*) finalAddress, meshData[i].vertexBufferData[vertexIndex].normal);
-							break;
-						case cgltf_attribute_type_position: // position buffer
-							glm_vec4((float*) finalAddress, 1.0f, vec4Dest);
-							glm_vec3(vec4Dest, meshData[i].vertexBufferData[vertexIndex].position);
-							break;
-						default:
-							// color buffer (want values all set to 1.0f). if not defined in meshes->primitive->attribute
-							glm_vec3_one(meshData[i].vertexBufferData[vertexIndex].color);
-							break;
-					}
-				}
+	for (i = 0; i < gltf_data->meshes_count; i++) {
+		for (j = 0; j < gltf_data->meshes[i].primitives_count; j++) {
+			for (k = 0; k < gltf_data->meshes[i].primitives[j].attributes_count; k++) {
+				vertices = gltf_data->meshes[i].primitives[j].attributes[k].data;
+				buffer_type = gltf_data->meshes[i].primitives[j].attributes[k].type;
+				p_populate_vertex_buffer(&(mesh_data[i]), vertices, buffer_type, data);
 			}
 
-			// Store index buffer data
-			if (!gltfData->meshes[i].primitives[j].indices)
+			indices = gltf_data->meshes[i].primitives[j].indices;
+			if (!indices)
 				continue;
 
-			bufferView = gltfData->meshes[i].primitives[j].indices->buffer_view;
-	
-			bufferOffset = bufferView->offset;
-			bufferViewElementType = gltfData->meshes[i].primitives[j].indices->type;
-			bufferViewComponentType = gltfData->meshes[i].primitives[j].indices->component_type;
-			bufferElementCount = gltfData->meshes[i].primitives[j].indices->count;
-			bufferElementSize = cgltf_calc_size(bufferViewElementType, bufferViewComponentType);
-
-			if (!meshData[i].indexBufferData) {
-				meshData[i].indexBufferData = calloc(bufferElementCount, sizeof(uint32_t));
-				if (!meshData[i].indexBufferData) {
-					kmr_utils_log(KMR_DANGER, "[x] calloc(meshData[%u].indexBufferData): %s", i, strerror(errno));
-					goto exit_error_kmr_gltf_loader_mesh_create;
-				}
-
-				meshData[i].indexBufferDataCount = bufferElementCount;
-				meshData[i].indexBufferDataSize = bufferElementCount * sizeof(uint32_t);
-			}
-
-			for (vertexIndex = 0; vertexIndex < bufferElementCount; vertexIndex++) {
-				// Base buffer data adress + base byte offset address + (index * bufferElementSize) = address in buffer where data resides
-				finalAddress = gltfData->buffers[meshInfo->bufferIndex].data + bufferOffset + (vertexIndex * bufferElementSize);
-				switch (bufferViewComponentType) {
-					case cgltf_component_type_r_8u:
-						meshData[i].indexBufferData[vertexIndex] = *((uint8_t*) finalAddress);
-						break;
-					case cgltf_component_type_r_16u:
-						meshData[i].indexBufferData[vertexIndex] = *((uint16_t*) finalAddress);
-						break;
-					case cgltf_component_type_r_32u:
-						meshData[i].indexBufferData[vertexIndex] = *((uint32_t*) finalAddress);
-						break;
-					default:
-						kmr_utils_log(KMR_DANGER, "[x] Somethings gone horribly wrong here. GLTF buffer indices section doesn't have correct data type");
-						goto exit_error_kmr_gltf_loader_mesh_create;
-				}
-			}
-
-			meshData[i].firstIndex = firstIndex;
-			firstIndex += bufferElementCount;
+			p_populate_index_buffer(&(mesh_data[i]), indices, data, &first_index);
 		}
 	}
 
 	return mesh;
-
-exit_error_kmr_gltf_loader_mesh_create:
-	kmr_gltf_loader_mesh_destroy(mesh);
-	return NULL;
 }
 
 
 void
 kmr_gltf_loader_mesh_destroy (struct kmr_gltf_loader_mesh *mesh)
 {
-	uint32_t i;
-
 	if (!mesh)
 		return;
 
-	for (i = 0; i < mesh->meshDataCount; i++) {
-		free(mesh->meshData[i].vertexBufferData);
-		free(mesh->meshData[i].indexBufferData);
+	if (mesh->free) {
+		free(mesh);
+	} else {
+		memset(mesh, 0, sizeof(struct kmr_gltf_loader_mesh));
 	}
-
-	free(mesh->meshData);
-	free(mesh);
 }
 
-/**********************************************************
- * END OF kmr_gltf_loader_mesh_{create,destroy} FUNCTIONS *
- **********************************************************/
 
-
-/*********************************************************************
- * START OF kmr_gltf_loader_texture_image_{create,destroy} FUNCTIONS *
- *********************************************************************/
-
-struct kmr_gltf_loader_texture_image *
-kmr_gltf_loader_texture_image_create (struct kmr_gltf_loader_texture_image_create_info *textureImageInfo)
+int
+kmr_gltf_loader_mesh_get_sizeof (void)
 {
-	cgltf_data *gltfData = NULL;
-	uint32_t curImage = 0, totalBufferSize = 0;
+	return sizeof(struct kmr_gltf_loader_mesh);
+}
 
-	struct kmr_gltf_loader_texture_image *textureImage = NULL;
-	struct kmr_utils_image_buffer_create_info imageDataCreateInfo;
+/*******************************************
+ * End of kmr_gltf_loader_mesh_* functions *
+ *******************************************/
 
-	textureImage = calloc(1, sizeof(struct kmr_gltf_loader_texture_image));
-	if (!textureImage) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_gltf_loader_texture_image_create;
+
+/******************************************************
+ * Start of kmr_gltf_loader_image_texture_* functions *
+ ******************************************************/
+
+/*
+ * @brief Structure defining kmsroots GLTF Loader Texture Image.
+ *
+ * @image_count      - Amount of images associated with a given GLTF file
+ * @total_buff_sz - Collective size of each image associated with a given GLTF file.
+ *                    Best utilized when creating single VkBuffer.
+ * @imageData       - Pointer to an array of image metadata and pixel buffer.
+ */
+struct kmr_gltf_loader_image_texture
+{
+	uint32_t                      image_count;
+	uint32_t                      total_buff_sz;
+	struct kmr_utils_image_buffer *imageData;
+};
+
+
+struct kmr_gltf_loader_image_texture *
+kmr_gltf_loader_image_texture_create (struct kmr_gltf_loader_image_texture *p_texture,
+                                      const void *p_image_texture_info)
+{
+	cgltf_data *gltf_data = NULL;
+
+	uint32_t cur_img = 0, total_buff_sz = 0;
+
+	struct kmr_gltf_loader_image_texture *texture = p_texture;
+	struct kmr_gltf_loader_image_texture_create_info *image_texture_info = p_image_texture_info;
+
+	struct kmr_utils_image_buffer_create_info image_data_create_info;
+
+	if (!texture) {
+		texture = calloc(1, sizeof(struct kmr_gltf_loader_image_texture));
+		if (!texture) {
+			cando_log_error("calloc: %s", strerror(errno));
+			return NULL;
+		}
 	}
 
-	gltfData = textureImageInfo->gltfFile->gltfData;
+	gltf_data = image_texture_info->gltf_file->gltf_data;
 
-	textureImage->imageData = calloc(gltfData->images_count, sizeof(struct kmr_utils_image_buffer));
-	if (!textureImage->imageData) {
+	texture->image_data = calloc(gltf_data->images_count, sizeof(struct kmr_utils_image_buffer));
+	if (!texture->image_data) {
 		kmr_utils_log(KMR_DANGER, "[x] calloc: %s", strerror(errno));
-		goto exit_error_kmr_gltf_loader_texture_image_create;
+		goto exit_error_kmr_gltf_loader_image_texture_create;
 	}
 
-	imageDataCreateInfo.maxStrLen = (1<<8);
+	image_data_create_info.maxStrLen = (1<<8);
 
 	/* Load all images associated with GLTF file into memory */
-	for (curImage = 0; curImage < gltfData->images_count; curImage++) {
-		imageDataCreateInfo.directory = textureImageInfo->directory;
-		imageDataCreateInfo.filename = gltfData->images[curImage].uri;
+	for (cur_img = 0; cur_img < gltf_data->images_count; cur_img++) {
+		image_data_create_info.directory = image_texture_info->directory;
+		image_data_create_info.filename = gltf_data->images[cur_img].uri;
 
-		textureImage->imageData[curImage] = kmr_utils_image_buffer_create(&imageDataCreateInfo);
-		if (!textureImage->imageData[curImage].pixels)
-			goto exit_error_kmr_gltf_loader_texture_image_create;
+		texture->image_data[cur_img] = kmr_utils_image_buffer_create(&image_data_create_info);
+		if (!(texture->image_data[cur_img].pixels)) {
+			kmr_gltf_loader_image_texture_destroy(texture);
+			return NULL;
+		}
 
-		textureImage->imageData[curImage].imageBufferOffset = totalBufferSize;
-		totalBufferSize += textureImage->imageData[curImage].imageSize;
+		texture->image_data[cur_img].imageBufferOffset = total_buff_sz;
+		total_buff_sz += texture->image_data[cur_img].imageSize;
 	}
 
-	textureImage->totalBufferSize = totalBufferSize;
-	textureImage->imageCount = gltfData->images_count;
-	return textureImage;
+	texture->total_buff_sz = total_buff_sz;
+	texture->image_count = gltf_data->images_count;
 
-exit_error_kmr_gltf_loader_texture_image_create:
-	kmr_gltf_loader_texture_image_destroy(textureImage);
-	return NULL;
+	return texture;
 }
 
 
 void
-kmr_gltf_loader_texture_image_destroy (struct kmr_gltf_loader_texture_image *textureImage)
+kmr_gltf_loader_image_texture_destroy (struct kmr_gltf_loader_image_texture *texture)
 {
 	uint32_t i;
 
-	if (!textureImage)
+	if (!texture)
 		return;
 
-	for (i=0; i < textureImage->imageCount; i++) {
-		if (textureImage->imageData[i].pixels)
-			free(textureImage->imageData[i].pixels);
+	for (i=0; i < texture->image_count; i++) {
+		if (texture->image_data[i].pixels)
+			free(texture->image_data[i].pixels);
 	}
 
-	free(textureImage->imageData);
-	free(textureImage);
+	free(texture->image_data);
+	free(texture);
 }
 
 
 /*******************************************************************
- * END OF kmr_gltf_loader_texture_image_{create,destroy} FUNCTIONS *
+ * END OF kmr_gltf_loader_image_texture_{create,destroy} FUNCTIONS *
  *******************************************************************/
 
 
@@ -314,28 +492,28 @@ kmr_gltf_loader_texture_image_destroy (struct kmr_gltf_loader_texture_image *tex
  ****************************************************************/
 
 static uint32_t
-material_count_get (cgltf_data *gltfData)
+material_count_get (cgltf_data *gltf_data)
 {
-	uint32_t i, j, materialDataCount = 0;
+	uint32_t i, j, material_data_count = 0;
 
-	for (i = 0; i < gltfData->meshes_count; i++)
-		for (j = 0; j < gltfData->meshes[i].primitives_count; j++)
-			if (gltfData->meshes[i].primitives[j].material)
-				materialDataCount++;
+	for (i = 0; i < gltf_data->meshes_count; i++)
+		for (j = 0; j < gltf_data->meshes[i].primitives_count; j++)
+			if (gltf_data->meshes[i].primitives[j].material)
+				material_data_count++;
 
-	return materialDataCount;
+	return material_data_count;
 }
 
 
 struct kmr_gltf_loader_material *
 kmr_gltf_loader_material_create (struct kmr_gltf_loader_material_create_info *materialInfo)
 {
-	cgltf_data *gltfData = NULL;
+	cgltf_data *gltf_data = NULL;
 	cgltf_material *gltfMaterial = NULL;
-	uint32_t i, j, materialDataCount = 0;
+	uint32_t i, j, material_data_count = 0;
 
 	struct kmr_gltf_loader_material *material = NULL;
-	struct kmr_gltf_loader_material_data *materialData = NULL;
+	struct kmr_gltf_loader_material_data *material_data = NULL;
 
 	material = calloc(1, sizeof(struct kmr_gltf_loader_material));
 	if (!material) {
@@ -343,16 +521,16 @@ kmr_gltf_loader_material_create (struct kmr_gltf_loader_material_create_info *ma
 		goto exit_error_kmr_gltf_loader_material_create;
 	}
 
-	gltfData = materialInfo->gltfFile->gltfData;
-	materialDataCount = material_count_get(gltfData);
+	gltf_data = materialInfo->gltf_file->gltf_data;
+	material_data_count = material_count_get(gltf_data);
 
-	materialData = calloc(materialDataCount, sizeof(struct kmr_gltf_loader_material_data));
-	if (!materialData) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc(materialData): %s", strerror(errno));
+	material_data = calloc(material_data_count, sizeof(struct kmr_gltf_loader_material_data));
+	if (!material_data) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc(material_data): %s", strerror(errno));
 		goto exit_error_kmr_gltf_loader_material_create;
 	}
 
-	material->materialData = materialData;
+	material->material_data = material_data;
 
 	/*
 	 * Mesh->primitive->material->pbr_metallic_roughness->base_color_texture
@@ -360,52 +538,52 @@ kmr_gltf_loader_material_create (struct kmr_gltf_loader_material_create_info *ma
 	 * Mesh->primitive->material->normal_texture
 	 * Mesh->primitive->material->occlusion_texture
 	 */
-	materialDataCount=0;
-	for (i = 0; i < gltfData->meshes_count; i++) {
-		for (j = 0; j < gltfData->meshes[i].primitives_count; j++) {
-			gltfMaterial = gltfData->meshes[i].primitives[j].material;
+	material_data_count=0;
+	for (i = 0; i < gltf_data->meshes_count; i++) {
+		for (j = 0; j < gltf_data->meshes[i].primitives_count; j++) {
+			gltfMaterial = gltf_data->meshes[i].primitives[j].material;
 			if (!gltfMaterial) continue;
 
-			materialData[materialDataCount].materialName = strndup(gltfMaterial->name, (1<<6));
+			material_data[material_data_count].material_name = strndup(gltfMaterial->name, (1<<6));
 
 			/* Physically-Based Rendering Metallic Roughness Model */
-			materialData[materialDataCount].pbrMetallicRoughness.baseColorTexture.textureIndex = \
-				cgltf_texture_index(gltfData, gltfMaterial->pbr_metallic_roughness.base_color_texture.texture);
-			materialData[materialDataCount].pbrMetallicRoughness.baseColorTexture.imageIndex = \
-				cgltf_image_index(gltfData, gltfMaterial->pbr_metallic_roughness.base_color_texture.texture->image);
-			materialData[materialDataCount].pbrMetallicRoughness.baseColorTexture.scale = \
+			material_data[material_data_count].pbrMetallicRoughness.baseColorTexture.textureIndex = \
+				cgltf_texture_index(gltf_data, gltfMaterial->pbr_metallic_roughness.base_color_texture.texture);
+			material_data[material_data_count].pbrMetallicRoughness.baseColorTexture.imageIndex = \
+				cgltf_image_index(gltf_data, gltfMaterial->pbr_metallic_roughness.base_color_texture.texture->image);
+			material_data[material_data_count].pbrMetallicRoughness.baseColorTexture.scale = \
 				gltfMaterial->pbr_metallic_roughness.base_color_texture.scale;
-			materialData[materialDataCount].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = \
-				cgltf_texture_index(gltfData, gltfMaterial->pbr_metallic_roughness.metallic_roughness_texture.texture);
-			materialData[materialDataCount].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = \
-				cgltf_image_index(gltfData, gltfMaterial->pbr_metallic_roughness.metallic_roughness_texture.texture->image);
-			materialData[materialDataCount].pbrMetallicRoughness.metallicRoughnessTexture.scale = \
+			material_data[material_data_count].pbrMetallicRoughness.metallicRoughnessTexture.textureIndex = \
+				cgltf_texture_index(gltf_data, gltfMaterial->pbr_metallic_roughness.metallic_roughness_texture.texture);
+			material_data[material_data_count].pbrMetallicRoughness.metallicRoughnessTexture.imageIndex = \
+				cgltf_image_index(gltf_data, gltfMaterial->pbr_metallic_roughness.metallic_roughness_texture.texture->image);
+			material_data[material_data_count].pbrMetallicRoughness.metallicRoughnessTexture.scale = \
 				gltfMaterial->pbr_metallic_roughness.metallic_roughness_texture.scale;
 
-			materialData[materialDataCount].pbrMetallicRoughness.metallicFactor = gltfMaterial->pbr_metallic_roughness.metallic_factor;
-			materialData[materialDataCount].pbrMetallicRoughness.roughnessFactor = gltfMaterial->pbr_metallic_roughness.roughness_factor;
-			memcpy(materialData[materialDataCount].pbrMetallicRoughness.baseColorFactor,
+			material_data[material_data_count].pbrMetallicRoughness.metallicFactor = gltfMaterial->pbr_metallic_roughness.metallic_factor;
+			material_data[material_data_count].pbrMetallicRoughness.roughnessFactor = gltfMaterial->pbr_metallic_roughness.roughness_factor;
+			memcpy(material_data[material_data_count].pbrMetallicRoughness.baseColorFactor,
 			       gltfMaterial->pbr_metallic_roughness.base_color_factor,
 			       STRUCT_MEMBER_SIZE(struct kmr_gltf_loader_cgltf_pbr_metallic_roughness, baseColorFactor));
 
-			materialData[materialDataCount].normalTexture.scale = gltfMaterial->normal_texture.scale;
-			materialData[materialDataCount].normalTexture.textureIndex = \
-				cgltf_texture_index(gltfData, gltfMaterial->normal_texture.texture);
-			materialData[materialDataCount].normalTexture.imageIndex = \
-				cgltf_image_index(gltfData, gltfMaterial->normal_texture.texture->image);
+			material_data[material_data_count].normalTexture.scale = gltfMaterial->normal_texture.scale;
+			material_data[material_data_count].normalTexture.textureIndex = \
+				cgltf_texture_index(gltf_data, gltfMaterial->normal_texture.texture);
+			material_data[material_data_count].normalTexture.imageIndex = \
+				cgltf_image_index(gltf_data, gltfMaterial->normal_texture.texture->image);
 
-			materialData[materialDataCount].occlusionTexture.scale = gltfMaterial->occlusion_texture.scale;
-			materialData[materialDataCount].occlusionTexture.textureIndex = \
-				cgltf_texture_index(gltfData, gltfMaterial->occlusion_texture.texture);
-			materialData[materialDataCount].occlusionTexture.imageIndex = \
-				cgltf_image_index(gltfData, gltfMaterial->occlusion_texture.texture->image);
+			material_data[material_data_count].occlusionTexture.scale = gltfMaterial->occlusion_texture.scale;
+			material_data[material_data_count].occlusionTexture.textureIndex = \
+				cgltf_texture_index(gltf_data, gltfMaterial->occlusion_texture.texture);
+			material_data[material_data_count].occlusionTexture.imageIndex = \
+				cgltf_image_index(gltf_data, gltfMaterial->occlusion_texture.texture->image);
 
-			materialData[materialDataCount].meshIndex = i;
-			materialDataCount++;
+			material_data[material_data_count].meshIndex = i;
+			material_data_count++;
 		}
 	}
 
-	material->materialDataCount = materialDataCount;
+	material->material_data_count = material_data_count;
 	return material;
 
 exit_error_kmr_gltf_loader_material_create:
@@ -422,11 +600,11 @@ kmr_gltf_loader_material_destroy (struct kmr_gltf_loader_material *material)
 	if (!material)
 		return;
 
-	for (i=0; i < material->materialDataCount; i++) {
-		free(material->materialData[i].materialName);
+	for (i=0; i < material->material_data_count; i++) {
+		free(material->material_data[i].material_name);
 	}
 
-	free(material->materialData);
+	free(material->material_data);
 	free(material);
 }
 
@@ -440,20 +618,20 @@ kmr_gltf_loader_material_destroy (struct kmr_gltf_loader_material *material)
  ************************************************************/
 
 struct kmr_gltf_loader_node *
-kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *nodeInfo)
+kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *node_info)
 {
-	uint32_t n, c, nodeDataCount = 0;
+	uint32_t n, c, node_data_count = 0;
 
 	float matrix[16];
 	vec4 rotation; vec3 translation, scale;
-	mat4 parentNodeMatrix, childNodeMatrix, rotationMatrix;
+	mat4 parent_node_matrix, child_node_matrix, rotation_matrix;
 
-	cgltf_data *gltfData = NULL;
-	cgltf_node *parentNode = NULL;
-	cgltf_node *childNode = NULL;
+	cgltf_data *gltf_data = NULL;
+	cgltf_node *parent_node = NULL;
+	cgltf_node *child_node = NULL;
 
 	struct kmr_gltf_loader_node *node = NULL;
-	struct kmr_gltf_loader_node_data *nodeData = NULL;
+	struct kmr_gltf_loader_node_data *node_data = NULL;
 
 	node = calloc(1, sizeof(struct kmr_gltf_loader_node));
 	if (!node) {
@@ -461,12 +639,12 @@ kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *nodeInfo)
 		goto exit_error_kmr_gltf_loader_material_create;
 	}
 
-	gltfData = nodeInfo->gltfFile->gltfData;
+	gltf_data = node_info->gltf_file->gltf_data;
 
 	/* Acquire amount of nodes associate with scene */
-	for (n = 0; n < gltfData->scenes[nodeInfo->sceneIndex].nodes_count; n++) {
-		parentNode = gltfData->scenes[nodeInfo->sceneIndex].nodes[n];
-		nodeDataCount += parentNode->children_count;
+	for (n = 0; n < gltf_data->scenes[node_info->scene_index].nodes_count; n++) {
+		parent_node = gltf_data->scenes[node_info->scene_index].nodes[n];
+		node_data_count += parent_node->children_count;
 	}
 
 	/*
@@ -475,111 +653,111 @@ kmr_gltf_loader_node_create (struct kmr_gltf_loader_node_create_info *nodeInfo)
 	 * stack->heap & heap->stack.
 	 */
 
-	nodeData = calloc(nodeDataCount, sizeof(struct kmr_gltf_loader_node_data));
-	if (!nodeData) {
-		kmr_utils_log(KMR_DANGER, "[x] calloc(nodeData): %s", strerror(errno));
+	node_data = calloc(node_data_count, sizeof(struct kmr_gltf_loader_node_data));
+	if (!node_data) {
+		kmr_utils_log(KMR_DANGER, "[x] calloc(node_data): %s", strerror(errno));
 		goto exit_error_kmr_gltf_loader_material_create;
 	}
 
-	nodeDataCount = 0;
-	node->nodeData = nodeData;
-	for (n = 0; n < gltfData->scenes[nodeInfo->sceneIndex].nodes_count; n++) {
-		parentNode = gltfData->scenes[nodeInfo->sceneIndex].nodes[n];
+	node_data_count = 0;
+	node->node_data = node_data;
+	for (n = 0; n < gltf_data->scenes[node_info->scene_index].nodes_count; n++) {
+		parent_node = gltf_data->scenes[node_info->scene_index].nodes[n];
 
 		/* Clear stack array */
 		memset(translation, 0, sizeof(translation));
 		memset(rotation, 0, sizeof(rotation));
 		memset(scale, 0, sizeof(scale));
 		memset(matrix, 0, sizeof(matrix));
-		memset(rotationMatrix, 0, sizeof(rotationMatrix));
-		memset(parentNodeMatrix, 0, sizeof(parentNodeMatrix));
+		memset(rotation_matrix, 0, sizeof(rotation_matrix));
+		memset(parent_node_matrix, 0, sizeof(parent_node_matrix));
 
 		/* Copy from heap to stack */
-		memcpy(translation, parentNode->translation, sizeof(translation));
-		memcpy(rotation, parentNode->rotation, sizeof(rotation));
-		memcpy(scale, parentNode->scale, sizeof(scale));
-		memcpy(matrix, parentNode->matrix, sizeof(matrix));
+		memcpy(translation, parent_node->translation, sizeof(translation));
+		memcpy(rotation, parent_node->rotation, sizeof(rotation));
+		memcpy(scale, parent_node->scale, sizeof(scale));
+		memcpy(matrix, parent_node->matrix, sizeof(matrix));
 
-		glm_mat4_identity(parentNodeMatrix);
+		glm_mat4_identity(parent_node_matrix);
 
 		/*
 		 * GLTF: The node's unit quaternion rotation in the order (x, y, z, w), where w is the scalar.
 		 * NOTE: cglm stores quaternion as [x, y, z, w] in memory since v0.4.0 it was [w, x, y, z] before v0.4.0 ( v0.3.5 and earlier )
 		 */
-		if (parentNode->has_translation)
-			glm_translate(parentNodeMatrix, translation);
+		if (parent_node->has_translation)
+			glm_translate(parent_node_matrix, translation);
 
-		if (parentNode->has_rotation) {
-			glm_quat_mat4(rotation, rotationMatrix);
-			glm_mat4_mul(rotationMatrix, parentNodeMatrix, parentNodeMatrix);
+		if (parent_node->has_rotation) {
+			glm_quat_mat4(rotation, rotation_matrix);
+			glm_mat4_mul(rotation_matrix, parent_node_matrix, parent_node_matrix);
 		}
 
-		if (parentNode->has_scale)
-			glm_scale(parentNodeMatrix, scale);
+		if (parent_node->has_scale)
+			glm_scale(parent_node_matrix, scale);
 
-		if (parentNode->has_matrix)
-			glm_mat4_make(matrix, parentNodeMatrix); // Not CGLM function
+		if (parent_node->has_matrix)
+			glm_mat4_make(matrix, parent_node_matrix); // Not CGLM function
 
 		/* Start child node's loop */
-		for (c = 0; c < parentNode->children_count; c++) {
-			childNode = parentNode->children[c];
+		for (c = 0; c < parent_node->children_count; c++) {
+			child_node = parent_node->children[c];
 
 			/* Clear stack array */
 			memset(translation, 0, sizeof(translation));
 			memset(rotation, 0, sizeof(rotation));
 			memset(scale, 0, sizeof(scale));
 			memset(matrix, 0, sizeof(matrix));
-			memset(childNodeMatrix, 0, sizeof(childNodeMatrix));
-			memset(rotationMatrix, 0, sizeof(rotationMatrix));
+			memset(child_node_matrix, 0, sizeof(child_node_matrix));
+			memset(rotation_matrix, 0, sizeof(rotation_matrix));
 
 			/* Copy from heap to stack */
-			memcpy(translation, childNode->translation, sizeof(translation));
-			memcpy(rotation, childNode->rotation, sizeof(rotation));
-			memcpy(scale, childNode->scale, sizeof(scale));
-			memcpy(matrix, childNode->matrix, sizeof(matrix));
+			memcpy(translation, child_node->translation, sizeof(translation));
+			memcpy(rotation, child_node->rotation, sizeof(rotation));
+			memcpy(scale, child_node->scale, sizeof(scale));
+			memcpy(matrix, child_node->matrix, sizeof(matrix));
 
-			glm_mat4_identity(childNodeMatrix);
-			if (childNode->has_translation)
-				glm_translate(childNodeMatrix, translation);
+			glm_mat4_identity(child_node_matrix);
+			if (child_node->has_translation)
+				glm_translate(child_node_matrix, translation);
 
-			if (childNode->has_rotation) {
-				glm_quat_mat4(rotation, rotationMatrix);
-				glm_mat4_mul(rotationMatrix, childNodeMatrix, childNodeMatrix);
+			if (child_node->has_rotation) {
+				glm_quat_mat4(rotation, rotation_matrix);
+				glm_mat4_mul(rotation_matrix, child_node_matrix, child_node_matrix);
 			}
 
-			if (childNode->has_scale)
-				glm_scale(childNodeMatrix, scale);
+			if (child_node->has_scale)
+				glm_scale(child_node_matrix, scale);
 
-			if (childNode->has_matrix)
-				glm_mat4_make(matrix, childNodeMatrix); // Not CGLM function
+			if (child_node->has_matrix)
+				glm_mat4_make(matrix, child_node_matrix); // Not CGLM function
 
 			/* Multiply the parent matrix by the child */
-			glm_mat4_mul(parentNodeMatrix, childNodeMatrix, childNodeMatrix);
+			glm_mat4_mul(parent_node_matrix, child_node_matrix, child_node_matrix);
 
 			/* copy final stack matrix into heap memory matrix */
-			memcpy(nodeData[nodeDataCount].matrixTransform, childNodeMatrix, sizeof(childNodeMatrix));
+			memcpy(node_data[node_data_count].matrix_transform, child_node_matrix, sizeof(child_node_matrix));
 
-			if (childNode->skin) {
-				nodeData[nodeDataCount].objectIndex = cgltf_skin_index(gltfData, childNode->skin);
-				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_SKIN;
-			} else if (childNode->mesh) {
-				nodeData[nodeDataCount].objectIndex = cgltf_mesh_index(gltfData, childNode->mesh);
-				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_MESH;
-			} else if (childNode->camera) {
-				nodeData[nodeDataCount].objectIndex = cgltf_camera_index(gltfData, childNode->camera);
-				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_CAMERA;
+			if (child_node->skin) {
+				node_data[node_data_count].obj_index = cgltf_skin_index(gltf_data, child_node->skin);
+				node_data[node_data_count].obj_type = KMR_GLTF_LOADER_GLTF_SKIN;
+			} else if (child_node->mesh) {
+				node_data[node_data_count].obj_index = cgltf_mesh_index(gltf_data, child_node->mesh);
+				node_data[node_data_count].obj_type = KMR_GLTF_LOADER_GLTF_MESH;
+			} else if (child_node->camera) {
+				node_data[node_data_count].obj_index = cgltf_camera_index(gltf_data, child_node->camera);
+				node_data[node_data_count].obj_type = KMR_GLTF_LOADER_GLTF_CAMERA;
 			} else {
-				nodeData[nodeDataCount].objectIndex = cgltf_node_index(gltfData, childNode);
-				nodeData[nodeDataCount].objectType = KMR_GLTF_LOADER_GLTF_NODE;
+				node_data[node_data_count].obj_index = cgltf_node_index(gltf_data, child_node);
+				node_data[node_data_count].obj_type = KMR_GLTF_LOADER_GLTF_NODE;
 			}
 
-			nodeData[nodeDataCount].parentNodeIndex = cgltf_node_index(gltfData, parentNode);
-			nodeData[nodeDataCount].nodeIndex = cgltf_node_index(gltfData, childNode);
-			nodeDataCount++;
+			node_data[node_data_count].parent_node_index = cgltf_node_index(gltf_data, parent_node);
+			node_data[node_data_count].node_index = cgltf_node_index(gltf_data, child_node);
+			node_data_count++;
 		}
 	}
 
-	node->nodeDataCount = nodeDataCount;
+	node->node_data_count = node_data_count;
 	return node;
 
 exit_error_kmr_gltf_loader_material_create:
@@ -594,7 +772,7 @@ kmr_gltf_loader_node_destroy (struct kmr_gltf_loader_node *node)
 	if (!node)
 		return;
 
-	free(node->nodeData);
+	free(node->node_data);
 	free(node);	
 }
 
@@ -608,11 +786,11 @@ kmr_gltf_loader_node_destroy (struct kmr_gltf_loader_node *node)
  ********************************************************************/
 
 void
-kmr_gltf_loader_node_display_matrix_transform (struct kmr_gltf_loader_node *nodeInfo)
+kmr_gltf_loader_node_display_matrix_transform (struct kmr_gltf_loader_node *node_info)
 {
 	uint32_t n, i, j;
 
-	const char *objectNames[] = {
+	const char *obj_name[] = {
 		[KMR_GLTF_LOADER_GLTF_NODE] = "nodes",
 		[KMR_GLTF_LOADER_GLTF_MESH] = "meshes",
 		[KMR_GLTF_LOADER_GLTF_SKIN] = "skins",
@@ -620,13 +798,20 @@ kmr_gltf_loader_node_display_matrix_transform (struct kmr_gltf_loader_node *node
 	};
 
 	fprintf(stdout, "\nGLTF File \"nodes\" Array Matrix Transforms = [\n");
-	for (n = 0; n < nodeInfo->nodeDataCount; n++) {
-		fprintf(stdout, "[Parent:Child] [%s[%u]]\n", objectNames[nodeInfo->nodeData[n].objectType], nodeInfo->nodeData[n].objectIndex);
-		fprintf(stdout, "\t[%u:%u] = {\n", nodeInfo->nodeData[n].parentNodeIndex, nodeInfo->nodeData[n].nodeIndex);
+	for (n = 0; n < node_info->node_data_count; n++) {
+		fprintf(stdout, "[Parent:Child] [%s[%u]]\n",
+		        obj_name[node_info->node_data[n].obj_type], 
+		        node_info->node_data[n].obj_index);
+
+		fprintf(stdout, "\t[%u:%u] = {\n",
+		        node_info->node_data[n].parent_node_index,
+		        node_info->node_data[n].node_index);
+
 		for (i = 0; i < 4; i++) {
 			fprintf(stdout, "\t");
 			for (j = 0; j < 4; j++)
-				fprintf(stdout, "   %f   ", nodeInfo->nodeData[n].matrixTransform[i][j]);
+				fprintf(stdout, "   %f   ",
+				        node_info->node_data[n].matrix_transform[i][j]);
 			fprintf(stdout, "\n");
 		}
 		fprintf(stdout, "\t}\n\n");
